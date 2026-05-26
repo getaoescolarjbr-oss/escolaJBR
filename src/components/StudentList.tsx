@@ -451,26 +451,29 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
           <table className="min-w-full divide-y divide-ms-border/50">
             <thead className={theme === 'light' ? 'bg-ms-blue' : 'bg-ms-accent'}>
               <tr>
-                <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-white uppercase tracking-widest">
+                <th scope="col" className="md:px-6 px-2 md:py-4 py-2.5 text-left text-[10px] md:text-xs font-bold text-white uppercase tracking-widest">
                   Aluno
                 </th>
-                <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-widest w-24">
-                  % Realizado
+                <th scope="col" className="md:px-6 px-1 md:py-4 py-2.5 text-center text-[10px] md:text-xs font-bold text-white uppercase tracking-widest w-16 md:w-24">
+                  <span className="hidden md:inline">% Realizado</span>
+                  <span className="md:hidden">% Real.</span>
                 </th>
                 {professor.habilitar_chamada_interna && (
-                  <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-widest w-32">
-                    Chamada
+                  <th scope="col" className="md:px-6 px-1 md:py-4 py-2.5 text-center text-[10px] md:text-xs font-bold text-white uppercase tracking-widest w-20 md:w-32">
+                    <span className="hidden md:inline">Chamada</span>
+                    <span className="md:hidden">Presença</span>
                   </th>
                 )}
-                <th scope="col" className="px-4 py-4 text-center text-xs font-bold text-white uppercase tracking-widest">
+                <th scope="col" className="md:px-4 px-1 md:py-4 py-2.5 text-center text-[10px] md:text-xs font-bold text-white uppercase tracking-widest">
                   {bulkAtividades.length > 1 ? (
-                    <div className="flex flex-col items-center gap-2">
-                       <span>Vistos por Atividade ({bulkAtividades.length})</span>
+                    <div className="flex flex-col items-center gap-1 md:gap-2">
+                       <span className="hidden md:inline">Vistos por Atividade ({bulkAtividades.length})</span>
+                       <span className="md:hidden">Vistos ({bulkAtividades.length})</span>
                        {!isLocked && (
                          <button 
                            onClick={handleMarkAllAll}
                            disabled={isMarkingAll}
-                           className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[9px] border transition-all ${isMarkingAll ? 'opacity-50' : 'hover:scale-105 active:scale-95'} ${theme === 'light' ? 'bg-white text-blue-800 border-blue-200' : 'bg-ms-dark text-blue-200 border-blue-500/30'}`}
+                           className={`flex items-center gap-1 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[8px] md:text-[9px] border transition-all ${isMarkingAll ? 'opacity-50' : 'hover:scale-105 active:scale-95'} ${theme === 'light' ? 'bg-white text-blue-800 border-blue-200' : 'bg-ms-dark text-blue-200 border-blue-500/30'}`}
                            title="Marcar todas as atividades selecionadas para TODOS os alunos"
                          >
                            {isMarkingAll ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Marcar todas'}
@@ -478,10 +481,13 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                        )}
                     </div>
                   ) : (
-                    `Lançar Visto (${configEfetivo.config_visto_metodo})`
+                    <>
+                      <span className="hidden md:inline">Lançar Visto ({configEfetivo.config_visto_metodo})</span>
+                      <span className="md:hidden">Visto ({configEfetivo.config_visto_metodo})</span>
+                    </>
                   )}
                 </th>
-                <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-widest w-40">
+                <th scope="col" className="md:px-6 px-1 md:py-4 py-2.5 text-center text-[10px] md:text-xs font-bold text-white uppercase tracking-widest w-20 md:w-40">
                   Ações
                 </th>
               </tr>

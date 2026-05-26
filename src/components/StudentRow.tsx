@@ -396,14 +396,14 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
       <tr className={`transition-all duration-200 border-b border-ms-border/30 bg-[var(--bg-row-even)] ${
         index % 2 !== 0 ? 'bg-[var(--bg-row-odd)]' : ''
       } ${isFora ? 'bg-amber-900/10' : 'hover:bg-ms-dark/5'}`}>
-        <td className="px-6 py-5 whitespace-nowrap">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 font-black text-base flex-shrink-0 border border-blue-500/20 shadow-sm">
+        <td className="md:px-6 px-1.5 md:py-5 py-2.5 whitespace-nowrap">
+          <div className="flex items-center gap-1.5 md:gap-4">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 font-black text-xs md:text-base flex-shrink-0 border border-blue-500/20 shadow-sm">
               {aluno.aluno_numero || aluno.aluno_nome?.charAt(0)?.toUpperCase() || '?'}
             </div>
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <p className={`text-sm font-black tracking-tight uppercase ${
+              <div className="flex items-center gap-1 md:gap-2 flex-wrap">
+                <p className={`text-xs md:text-sm font-black tracking-tight uppercase ${
                   aluno.status === 'Transferido' || aluno.status === 'Remanejado'
                     ? 'line-through text-gray-500 opacity-60'
                     : theme === 'light' ? 'text-[#003366]' : 'text-ms-main'
@@ -412,7 +412,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                   {aluno.aluno_nome}
                 </p>
                 {aluno.status && aluno.status !== 'Ativo' && (
-                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[8px] font-black uppercase border tracking-normal ${
+                  <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[7px] md:text-[8px] font-black uppercase border tracking-normal ${
                     aluno.status === 'Transferido' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
                     aluno.status === 'Remanejado' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
                     aluno.status === 'Atestado' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
@@ -422,16 +422,16 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 mt-1">
+              <div className="flex items-center gap-1.5 md:gap-2 mt-0.5 md:mt-1">
                 {!isPosterior && !isTransferido && (
                   percentual < 40 ? (
-                    <span className="flex items-center gap-1 text-[8px] font-black bg-red-600 text-white px-2 py-0.5 rounded-full animate-pulse">CRÍTICO</span>
+                    <span className="flex items-center gap-1 text-[7px] md:text-[8px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded-full animate-pulse">CRÍTICO</span>
                   ) : percentual <= 59 ? (
-                    <span className="flex items-center gap-1 text-[8px] font-black bg-yellow-500 text-white px-2 py-0.5 rounded-full">ALERTA</span>
+                    <span className="flex items-center gap-1 text-[7px] md:text-[8px] font-black bg-yellow-500 text-white px-1.5 py-0.5 rounded-full">ALERTA</span>
                   ) : percentual <= 79 ? (
-                    <span className="flex items-center gap-1 text-[8px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">BOM</span>
+                    <span className="flex items-center gap-1 text-[7px] md:text-[8px] font-black bg-blue-600 text-white px-1.5 py-0.5 rounded-full">BOM</span>
                   ) : (
-                    <span className="flex items-center gap-1 text-[8px] font-black bg-green-600 text-white px-2 py-0.5 rounded-full">ÓTIMO</span>
+                    <span className="flex items-center gap-1 text-[7px] md:text-[8px] font-black bg-green-600 text-white px-1.5 py-0.5 rounded-full">ÓTIMO</span>
                   )
                 )}
               </div>
@@ -439,7 +439,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
           </div>
         </td>
 
-        <td className="px-6 py-5 text-center">
+        <td className="md:px-6 px-1 md:py-5 py-2 text-center">
             <div className="inline-flex flex-col items-center gap-1">
                 {isPosterior ? (
                   <span className="text-[11px] font-black text-gray-500 italic">N/A</span>
@@ -453,7 +453,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                     }`}>
                         {percentual}%
                     </span>
-                    <div className="w-12 h-1 bg-gray-800 rounded-full overflow-hidden">
+                    <div className="w-12 h-1 bg-gray-800 rounded-full overflow-hidden hidden md:block">
                         <div className={`h-full transition-all ${
                           percentual >= 80 ? 'bg-green-500' :
                           percentual >= 60 ? 'bg-blue-500' :
@@ -470,14 +470,14 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                     <button 
                       onClick={() => setShowGradeBreakdown(!showGradeBreakdown)}
 
-                      className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg border shadow-sm transition-all hover:scale-105 active:scale-95 ${
+                      className={`flex flex-col items-center justify-center md:px-3 px-1.5 md:py-1 py-0.5 rounded-lg border shadow-sm transition-all hover:scale-105 active:scale-95 ${
                         gradeBreakdown.mediaFinal >= 6.0 
                           ? 'border-blue-500/30 text-blue-600 bg-blue-500/5 hover:bg-blue-500/10' 
                           : 'border-red-500/30 text-red-500 bg-red-500/5 hover:bg-red-500/10'
                       }`}
                     >
                       <span className={`text-[8px] uppercase tracking-widest font-black opacity-70 mb-0.5 leading-tight text-center ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>Nota<br />Vistos</span>
-                      <span className="text-sm leading-none font-black">{gradeBreakdown.mediaFinal.toFixed(1)}</span>
+                      <span className="text-xs md:text-sm leading-none font-black">{gradeBreakdown.mediaFinal.toFixed(1)}</span>
                     </button>
 
                     {/* Breakdown Modal/Popup */}
@@ -523,12 +523,12 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
         </td>
         
         {professor.habilitar_chamada_interna && (
-          <td className="px-6 py-5 text-center">
-             <div className="flex items-center justify-center gap-2">
+          <td className="md:px-6 px-1 md:py-5 py-2 text-center">
+             <div className="flex items-center justify-center gap-1 md:gap-2">
                 <button 
                   onClick={() => handleChamada(true)} 
                   disabled={isChamadaLoading || isLocked || isPosterior}
-                  className={`p-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`p-1.5 md:p-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     presenca === true 
                       ? 'bg-green-500 text-white shadow-lg shadow-green-900/50 scale-110' 
                       : theme === 'light' 
@@ -536,12 +536,12 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         : 'bg-gray-800 text-blue-200 hover:bg-gray-700'
                   }`}
                 >
-                  {isChamadaLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  {isChamadaLoading ? <Loader2 className="w-3.5 h-3.5 md:w-4 md:h-4 animate-spin" /> : <Check className="w-3.5 h-3.5 md:w-4 md:h-4" />}
                 </button>
                 <button 
                   onClick={() => handleChamada(false)} 
                   disabled={isChamadaLoading || isLocked || isPosterior}
-                  className={`p-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                  className={`p-1.5 md:p-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     presenca === false 
                       ? 'bg-red-500 text-white shadow-lg shadow-red-900/50 scale-110' 
                       : theme === 'light' 
@@ -549,22 +549,22 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         : 'bg-gray-800 text-blue-200 hover:bg-gray-700'
                   }`}
                 >
-                  <X className="w-4 h-4" />
+                  <X className="w-3.5 h-3.5 md:w-4 md:h-4" />
                 </button>
              </div>
           </td>
         )}
 
-        <td className="px-4 py-4 text-center">
+        <td className="md:px-4 px-1 md:py-4 py-2 text-center">
             {bulkAtividades.length > 1 ? (
               // ── MODO LOTE: controles individuais por atividade ─────────────
-              <div className="flex items-end gap-3 justify-center flex-wrap">
+              <div className="flex items-end gap-1 md:gap-3 justify-center flex-wrap">
                 {bulkAtividades.map(ativ => {
                   const [, month, day] = ativ.data.split('-');
                   const dateLabel = `${day}/${month}`;
                   const val = bulkVistos[ativ.id] ?? null;
                   const isLdg = bulkVistoLoading[ativ.id] ?? false;
-                  const selectCls = `text-xs font-bold rounded border outline-none cursor-pointer transition-all focus:ring-2 focus:ring-blue-500 ${
+                  const selectCls = `text-[10px] md:text-xs font-bold rounded border outline-none cursor-pointer transition-all focus:ring-2 focus:ring-blue-500 ${
                     theme === 'light' ? 'bg-white border-blue-200 text-blue-900' : 'bg-gray-900 border-gray-700 text-white'
                   }`;
 
@@ -603,15 +603,15 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         <button
                           onClick={() => handleBulkVistoAction(ativ.id, '.')}
                           disabled={isLdg || isLocked || isPosterior || isTransferido}
-                          className={`w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
+                          className={`w-6 md:w-8 h-6 md:h-8 rounded-full border-2 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
                             val === '.'
                               ? 'bg-blue-600 border-blue-400 scale-110 shadow-lg shadow-blue-900/40'
                               : theme === 'light' ? 'bg-blue-50 border-blue-300 hover:bg-blue-100' : 'bg-gray-800 border-gray-600 hover:border-blue-500'
                           }`}
                         >
                           {isLdg
-                            ? <Loader2 className="w-3 h-3 animate-spin text-blue-400" />
-                            : <div className={`w-2.5 h-2.5 rounded-full ${val === '.' ? 'bg-white' : theme === 'light' ? 'bg-blue-400' : 'bg-blue-400'}`} />
+                            ? <Loader2 className="w-2.5 h-2.5 md:w-3 md:h-3 animate-spin text-blue-400" />
+                            : <div className={`w-1.5 md:w-2.5 h-1.5 md:h-2.5 rounded-full ${val === '.' ? 'bg-white' : theme === 'light' ? 'bg-blue-400' : 'bg-blue-400'}`} />
                           }
                         </button>
                       )}
@@ -624,7 +624,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                           onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value)}
                           disabled={isLdg || isLocked || isPosterior || isTransferido}
                           placeholder="0"
-                          className={`w-12 text-center py-1 px-1 rounded border outline-none font-bold text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-blue-500 ${
+                          className={`w-10 md:w-12 text-center py-0.5 md:py-1 px-0.5 md:px-1 rounded border outline-none font-bold text-[10px] md:text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-blue-500 ${
                             theme === 'light' ? 'bg-blue-50 border-blue-200 text-blue-900' : 'bg-gray-900 border-gray-700 text-white'
                           }`}
                         />
@@ -636,7 +636,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                           value={val || ''}
                           onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value)}
                           disabled={isLdg || isLocked || isPosterior || isTransferido}
-                          className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed py-1 px-1 w-12`}
+                          className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed py-0.5 md:py-1 px-0.5 md:px-1 w-10 md:w-12`}
                         >
                           <option value="">—</option>
                           <option value="+">+</option>
@@ -650,7 +650,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                           value={val || ''}
                           onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value)}
                           disabled={isLdg || isLocked || isPosterior || isTransferido}
-                          className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed py-1 px-1 w-14`}
+                          className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed py-0.5 md:py-1 px-0.5 md:px-1 w-12 md:w-14`}
                         >
                           <option value="">—</option>
                           <option value="0">0</option>
@@ -671,7 +671,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                    <button
                      onClick={handleMarkAllIndividual}
                      disabled={isVistoLoading}
-                     className={`ml-2 px-2 py-1.5 rounded text-[9px] font-black uppercase tracking-widest transition-all ${theme === 'light' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-800 text-blue-400 hover:bg-gray-700'} disabled:opacity-50`}
+                     className={`ml-1 md:ml-2 px-1.5 md:px-2 py-1 md:py-1.5 rounded text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all ${theme === 'light' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-800 text-blue-400 hover:bg-gray-700'} disabled:opacity-50`}
                      title="Marcar todas as atividades para este aluno"
                    >
                      {isVistoLoading ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : 'Marcar todas'}
@@ -684,21 +684,21 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 {configEfetivo.config_visto_metodo === 'gradual' && (
                     <div className="flex gap-1">
                         {['0', '0.5', '1.0'].map(v => (
-                            <button key={v} onClick={() => handleVistoAction(v)} disabled={isLocked || isPosterior || isTransferido} className={`px-2 py-1.5 rounded-md text-[10px] font-black border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === v ? 'bg-blue-600 text-white border-blue-400' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}>{v}</button>
+                            <button key={v} onClick={() => handleVistoAction(v)} disabled={isLocked || isPosterior || isTransferido} className={`md:px-2 px-1 md:py-1.5 py-1 rounded-md text-[9px] md:text-[10px] font-black border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === v ? 'bg-blue-600 text-white border-blue-400' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}>{v}</button>
                         ))}
                     </div>
                 )}
                 {configEfetivo.config_visto_metodo === 'simbolico' && (
                     <div className="flex gap-1">
-                        <button onClick={() => handleVistoAction('+')} disabled={isLocked || isPosterior || isTransferido} className={`p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '+' ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-900/50' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Plus className="w-4 h-4" /></button>
-                        <button onClick={() => handleVistoAction('-')} disabled={isLocked || isPosterior || isTransferido} className={`p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '-' ? 'bg-red-600 text-white border-red-400 shadow-lg shadow-red-900/50' : theme === 'light' ? 'bg-red-500/25 text-red-700 border-red-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Minus className="w-4 h-4" /></button>
+                        <button onClick={() => handleVistoAction('+')} disabled={isLocked || isPosterior || isTransferido} className={`p-1.5 md:p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '+' ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-900/50' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
+                        <button onClick={() => handleVistoAction('-')} disabled={isLocked || isPosterior || isTransferido} className={`p-1.5 md:p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '-' ? 'bg-red-600 text-white border-red-400 shadow-lg shadow-red-900/50' : theme === 'light' ? 'bg-red-500/25 text-red-700 border-red-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Minus className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
                     </div>
                 )}
                 {configEfetivo.config_visto_metodo === 'ponto' && (
                     <button
                         onClick={() => handleVistoAction('.')}
                         disabled={isLocked || isPosterior || isTransferido}
-                        className={`w-10 h-10 rounded-full border-2 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
+                        className={`w-8 md:w-10 h-8 md:h-10 rounded-full border-2 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
                             valorVisto === '.'
                                 ? 'bg-blue-600 text-white border-blue-400 scale-110 shadow-lg'
                                 : theme === 'light'
@@ -706,17 +706,17 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                                     : 'bg-gray-800 text-blue-200 border-gray-700'
                         }`}
                     >
-                        <div className={`w-2 h-2 rounded-full ${valorVisto === '.' ? 'bg-white' : theme === 'light' ? 'bg-blue-400' : 'bg-blue-300'}`}></div>
+                        <div className={`w-1.5 md:w-2 h-1.5 md:h-2 rounded-full ${valorVisto === '.' ? 'bg-white' : theme === 'light' ? 'bg-blue-400' : 'bg-blue-300'}`}></div>
                     </button>
                 )}
                 {configEfetivo.config_visto_metodo === 'aberto' && (
-                    <div className="relative w-20">
+                    <div className="relative w-14 md:w-20">
                         <input
                             type="number" min="0" max="10" step="0.1"
                             value={valorVisto || ''}
                             onChange={(e) => handleVistoAction(e.target.value)}
                             disabled={isLocked || isPosterior || isTransferido}
-                            className={`w-full text-center p-2 rounded-lg border outline-none font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                            className={`w-full text-center p-1 md:p-2 rounded-lg border outline-none font-bold text-xs md:text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                                 theme === 'light'
                                     ? 'bg-blue-50 border-blue-100 text-blue-900 focus:ring-2 focus:ring-blue-500'
                                     : 'bg-gray-900 border-gray-700 text-white focus:ring-2 focus:ring-ms-gold'
@@ -731,15 +731,15 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
         </td>
 
         {/* ─── Ações: Ocorrência + Saída de Sala ─── */}
-        <td className="px-6 py-4 whitespace-nowrap text-center">
+        <td className="md:px-6 px-1 md:py-4 py-2 whitespace-nowrap text-center">
           {/* relative aqui para o dropdown se posicionar corretamente */}
-          <div className="relative flex items-center justify-center gap-2" ref={destinoMenuRef}>
+          <div className="relative flex items-center justify-center gap-1 md:gap-2" ref={destinoMenuRef}>
             <button
               onClick={() => setIsOcorrenciaOpen(true)}
               disabled={isLocked}
-              className="p-2.5 rounded-lg border border-amber-500/30 text-amber-500 hover:bg-amber-500/20 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="p-1.5 md:p-2.5 rounded-lg border border-amber-500/30 text-amber-500 hover:bg-amber-500/20 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <AlertTriangle className="w-4 h-4" />
+              <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4" />
             </button>
 
             <button
@@ -751,13 +751,13 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 }
               }}
               disabled={(isLocked && !isFora) || isPosterior}
-              className={`p-2.5 rounded-lg border transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`p-1.5 md:p-2.5 rounded-lg border transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
                 isFora
                   ? 'bg-amber-500 text-white border-amber-400'
                   : 'border-red-500/30 text-red-500 hover:bg-red-500/10'
               }`}
             >
-              <LogOut className={`w-4 h-4 ${isFora ? 'rotate-180' : ''}`} />
+              <LogOut className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isFora ? 'rotate-180' : ''}`} />
             </button>
 
             {/* Dropdown de destinos — fecha ao clicar fora via useEffect */}
