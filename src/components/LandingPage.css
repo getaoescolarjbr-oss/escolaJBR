@@ -1022,3 +1022,97 @@ section { padding: 80px 24px; position: relative; margin: 0 !important; border: 
   .quick-card p { display: none; }
   .quick-card { padding: 16px 8px !important; }
 }
+
+/* ===== CORREÇÕES ADICIONAIS MOBILE ===== */
+@media (max-width: 768px) {
+
+  /* --- Instagram cards --- */
+  /* Remove altura fixa da imagem para não ficar gigante no mobile */
+  .instagram-card-image img,
+  .instagram-image {
+    height: 200px !important;
+    width: 100% !important;
+    object-fit: cover !important;
+  }
+  /* Fallback sem imagem também menor */
+  .instagram-card-image .flex { height: 200px !important; }
+
+  /* --- Identidade Institucional (#identidade) --- */
+  #identidade {
+    padding: 36px 16px !important;
+  }
+  /* Título principal menor */
+  #identidade h2 {
+    font-size: 22px !important;
+    line-height: 1.2 !important;
+  }
+  /* Cards de Missão/Visão: padding reduzido */
+  #identidade .bg-white.p-8 {
+    padding: 18px !important;
+    border-radius: 16px !important;
+  }
+  #identidade .bg-white.p-8.md\:p-12 {
+    padding: 16px !important;
+  }
+  /* Subtítulos (Missão, Visão) */
+  #identidade h3 {
+    font-size: 18px !important;
+  }
+  /* Texto corrido dentro dos cards */
+  #identidade p.text-lg {
+    font-size: 13px !important;
+    line-height: 1.55 !important;
+  }
+  /* Gap entre cards menor */
+  #identidade .grid.gap-8 {
+    gap: 12px !important;
+  }
+  #identidade .mb-12 {
+    margin-bottom: 16px !important;
+  }
+  #identidade .mb-10 {
+    margin-bottom: 12px !important;
+  }
+  /* Ícone de cabeçalho do card (w-14 h-14) */
+  #identidade .w-14 {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 12px !important;
+  }
+  #identidade .w-14 svg {
+    width: 20px !important;
+    height: 20px !important;
+  }
+  /* Valores: ícones menores */
+  #identidade .w-12 {
+    width: 36px !important;
+    height: 36px !important;
+    flex-shrink: 0;
+  }
+  #identidade h4.text-lg {
+    font-size: 14px !important;
+  }
+  /* Decorativo de canto (w-32 h-32) — esconder no mobile para economizar espaço */
+  #identidade .w-32.h-32 {
+    display: none !important;
+  }
+
+  /* --- Footer --- */
+  .footer-brand img {
+    width: 70px !important;
+    margin-bottom: 12px !important;
+  }
+  .footer-brand p {
+    font-size: 12px !important;
+  }
+  .footer-col h4 {
+    font-size: 15px !important;
+    margin-bottom: 12px !important;
+  }
+  .footer-col ul li {
+    margin-bottom: 8px !important;
+  }
+  .footer-col ul li a {
+    font-size: 13px !important;
+  }
+}
