@@ -19,6 +19,7 @@ interface StudentRowProps {
   onUpdateVisto: (alunoId: string, valorAntigo: string | null, novoValor: string | null) => void;
   initialVisto?: string;
   initialPresenca?: boolean;
+  initialSaidaId?: string | null;
   atividadeIdHoje: string | null;
   onAtividadeCreated?: (id: string) => void;
   bulkAtividades?: { id: string; data: string; descricao: string }[];
@@ -27,14 +28,14 @@ interface StudentRowProps {
   isLocked?: boolean;
 }
 
-export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAtividade, atividadesRealizadas, totalAtividades, index, theme, onUpdateVisto, initialVisto, initialPresenca, atividadeIdHoje, onAtividadeCreated, bulkAtividades = [], bulkRefreshTrigger = 0, gradeBreakdown, isLocked = false }: StudentRowProps) {
+export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAtividade, atividadesRealizadas, totalAtividades, index, theme, onUpdateVisto, initialVisto, initialPresenca, initialSaidaId, atividadeIdHoje, onAtividadeCreated, bulkAtividades = [], bulkRefreshTrigger = 0, gradeBreakdown, isLocked = false }: StudentRowProps) {
   // Configuração efetiva: per-turma se definida, senão usa padrão global
   const configEfetivo = getConfigPorTurma(professor, aluno.turma_id);
   const [presenca, setPresenca] = useState<boolean | null>(initialPresenca ?? null);
   const [valorVisto, setValorVisto] = useState<string | null>(initialVisto ?? null);
   const [atividadeId, setAtividadeId] = useState<string | null>(atividadeIdHoje);
   
-  const isTransferido = aluno.status === 'Transferido';
+  const isTransferido = aluno.status === 'Transferido' || aluno.status === 'Remanejado' || aluno.status === 'Cancelada';
 
   const isPosterior = useMemo(() => {
     if (aluno.status !== 'Transferido' && aluno.status !== 'Remanejado' && aluno.status !== 'Cancelada') {
@@ -52,9 +53,10 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
   const [bulkVistoLoading, setBulkVistoLoading] = useState<Record<string, boolean>>({});
 
   // Saida de sala state
-  const [isFora, setIsFora] = useState(false);
+  // Saida de sala state
+  const [isFora, setIsFora] = useState(!!initialSaidaId);
   const [showDestinoMenu, setShowDestinoMenu] = useState(false);
-  const [saidaId, setSaidaId] = useState<string | null>(null);
+  const [saidaId, setSaidaId] = useState<string | null>(initialSaidaId || null);
   const [isOcorrenciaOpen, setIsOcorrenciaOpen] = useState(false);
 
   // Ref para fechar o menu ao clicar fora
@@ -77,12 +79,14 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showGradeBreakdown]);
 
-  // Atualiza estados locais se as props iniciais mudarem (ex: mudança de data)
+  // Atualiza estados locais se as props iniciais mudarem (ex: mudança de data ou sync mobile)
   useEffect(() => {
     setPresenca(initialPresenca ?? null);
     setValorVisto(initialVisto ?? null);
     setAtividadeId(atividadeIdHoje);
-  }, [initialPresenca, initialVisto, atividadeIdHoje]);
+    setSaidaId(initialSaidaId || null);
+    setIsFora(!!initialSaidaId);
+  }, [initialPresenca, initialVisto, atividadeIdHoje, initialSaidaId]);
 
   // ─── Fecha menu de saída ao clicar fora ───────────────────────────────────
   useEffect(() => {
@@ -477,7 +481,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
 
         <td className="md:px-6 px-0.5 md:py-5 py-2 text-center">
             <div className="inline-flex flex-col items-center gap-1">
-                {isPosterior ? (
+                {isPosterior || isTransferido ? (
                   <span className="text-[11px] font-black text-gray-500 italic">N/A</span>
                 ) : (
                   <>
@@ -501,7 +505,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 )}
 
                 {/* Grade Breakdown Trigger */}
-                {gradeBreakdown && !isPosterior && (
+                {gradeBreakdown && !isPosterior && !isTransferido && (
                   <div className="relative mt-2" ref={gradeBreakdownRef}>
                     <button 
                       onClick={() => setShowGradeBreakdown(!showGradeBreakdown)}
@@ -563,7 +567,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
              <div className="flex items-center justify-center gap-1 md:gap-2">
                 <button 
                   onClick={() => handleChamada(true)} 
-                  disabled={isChamadaLoading || isLocked || isPosterior}
+                  disabled={isChamadaLoading || isLocked || isPosterior || isTransferido}
                   className={`p-1.5 md:p-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     presenca === true 
                       ? 'bg-green-500 text-white shadow-lg shadow-green-900/50 scale-110' 
@@ -576,7 +580,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 </button>
                 <button 
                   onClick={() => handleChamada(false)} 
-                  disabled={isChamadaLoading || isLocked || isPosterior}
+                  disabled={isChamadaLoading || isLocked || isPosterior || isTransferido}
                   className={`p-1.5 md:p-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     presenca === false 
                       ? 'bg-red-500 text-white shadow-lg shadow-red-900/50 scale-110' 

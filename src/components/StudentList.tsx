@@ -46,6 +46,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
   const [bulkRefreshTrigger, setBulkRefreshTrigger] = useState(0);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [saidasAtivas, setSaidasAtivas] = useState<Record<string, string>>({});
 
   // Callback chamado quando um StudentRow cria uma nova atividade —
   // garante que todos os rows subsequentes usem o mesmo ID.
@@ -246,6 +247,23 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
       setEstatisticasVistos(currentStats);
       setNotasDetalhes(breakdownObj);
 
+      setNotasDetalhes(breakdownObj);
+
+      // 8. Buscar Saídas de Sala (Sincronização)
+      const { data: saidas } = await supabase
+        .from('saidas_sala')
+        .select('id, aluno_id')
+        .eq('turma_id', turmaId)
+        .eq('status', 'Fora');
+      
+      if (saidas) {
+          const mapSaidas: Record<string, string> = {};
+          saidas.forEach(s => { mapSaidas[String(s.aluno_id).trim()] = s.id; });
+          setSaidasAtivas(mapSaidas);
+      } else {
+          setSaidasAtivas({});
+      }
+
       setLoading(false);
     }
     
@@ -253,6 +271,29 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
       fetchData();
     }
   }, [professor.id, turmaId, disciplinaId, bimestreId, dataAula, refreshTrigger]);
+
+  // Polling para saidas_sala para manter sincronizado com o mobile
+  useEffect(() => {
+    if (!turmaId) return;
+    const fetchSaidas = async () => {
+      const { data: saidas } = await supabase
+        .from('saidas_sala')
+        .select('id, aluno_id')
+        .eq('turma_id', turmaId)
+        .eq('status', 'Fora');
+      
+      if (saidas) {
+          const mapSaidas: Record<string, string> = {};
+          saidas.forEach(s => { mapSaidas[String(s.aluno_id).trim()] = s.id; });
+          setSaidasAtivas(mapSaidas);
+      } else {
+          setSaidasAtivas({});
+      }
+    };
+    
+    const interval = setInterval(fetchSaidas, 15000); // sync a cada 15 segundos
+    return () => clearInterval(interval);
+  }, [turmaId]);
 
   const handleUpdateVistoStat = (alunoId: string, valorAntigo: string | null, novoValor: string | null) => {
     const getPeso = (v: string | null) => {
@@ -539,6 +580,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                   onUpdateVisto={handleUpdateVistoStat}
                   initialVisto={vistosDoDia[String(aluno.aluno_id).trim()]}
                   initialPresenca={presencasDoDia[String(aluno.aluno_id).trim()]}
+                  initialSaidaId={saidasAtivas[String(aluno.aluno_id).trim()] || null}
                   atividadeIdHoje={atividadeIdHoje}
                   onAtividadeCreated={handleAtividadeCreated}
                   bulkAtividades={bulkAtividades}
