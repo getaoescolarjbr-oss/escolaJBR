@@ -396,14 +396,14 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
       <tr className={`transition-all duration-200 border-b border-ms-border/30 bg-[var(--bg-row-even)] ${
         index % 2 !== 0 ? 'bg-[var(--bg-row-odd)]' : ''
       } ${isFora ? 'bg-amber-900/10' : 'hover:bg-ms-dark/5'}`}>
-        <td className="md:px-6 px-1.5 md:py-5 py-2.5 whitespace-nowrap max-w-[135px] md:max-w-none truncate">
+        <td className="md:px-6 px-1.5 md:py-5 py-2.5 whitespace-nowrap">
           <div className="flex items-center gap-1.5 md:gap-4">
             <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 font-black text-xs md:text-base flex-shrink-0 border border-blue-500/20 shadow-sm">
               {aluno.aluno_numero || aluno.aluno_nome?.charAt(0)?.toUpperCase() || '?'}
             </div>
             <div className="truncate">
               <div className="flex items-center gap-1 md:gap-2 flex-wrap truncate">
-                <p className={`text-xs md:text-sm font-black tracking-tight uppercase max-w-[90px] sm:max-w-[120px] md:max-w-none truncate ${
+                <p className={`text-xs md:text-sm font-black tracking-tight uppercase max-w-[130px] sm:max-w-[160px] md:max-w-none truncate ${
                   aluno.status === 'Transferido' || aluno.status === 'Remanejado'
                     ? 'line-through text-gray-500 opacity-60'
                     : theme === 'light' ? 'text-[#003366]' : 'text-ms-main'
@@ -450,7 +450,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
           </div>
         </td>
 
-        <td className="md:px-6 px-1 md:py-5 py-2 text-center">
+        <td className="md:px-6 px-0.5 md:py-5 py-2 text-center">
             <div className="inline-flex flex-col items-center gap-1">
                 {isPosterior ? (
                   <span className="text-[11px] font-black text-gray-500 italic">N/A</span>
@@ -534,7 +534,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
         </td>
         
         {professor.habilitar_chamada_interna && (
-          <td className="md:px-6 px-1 md:py-5 py-2 text-center">
+          <td className="md:px-6 px-0.5 md:py-5 py-2 text-center">
              <div className="flex items-center justify-center gap-1 md:gap-2">
                 <button 
                   onClick={() => handleChamada(true)} 
@@ -566,7 +566,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
           </td>
         )}
 
-        <td className="md:px-4 px-1 md:py-4 py-2 text-center">
+        <td className="md:px-4 px-0.5 md:py-4 py-2 text-center">
             {bulkAtividades.length > 1 ? (
               // ── MODO LOTE: controles individuais por atividade ─────────────
               <div className="flex items-end gap-1 md:gap-3 justify-center flex-wrap">
@@ -742,7 +742,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
         </td>
 
         {/* ─── Ações: Ocorrência + Saída de Sala ─── */}
-        <td className="md:px-6 px-1 md:py-4 py-2 whitespace-nowrap text-center">
+        <td className="md:px-6 px-0.5 md:py-4 py-2 whitespace-nowrap text-center">
           {/* relative aqui para o dropdown se posicionar corretamente */}
           <div className="relative flex items-center justify-center gap-1 md:gap-2" ref={destinoMenuRef}>
             <button

@@ -451,10 +451,10 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
           <table className="min-w-full divide-y divide-ms-border/50">
             <thead className={theme === 'light' ? 'bg-ms-blue' : 'bg-ms-accent'}>
               <tr>
-                <th scope="col" className="md:px-6 px-2 md:py-4 py-2.5 text-left text-[10px] md:text-xs font-bold text-white uppercase tracking-widest max-w-[135px] md:max-w-none truncate">
+                <th scope="col" className="md:px-6 px-2 md:py-4 py-2.5 text-left text-[10px] md:text-xs font-bold text-white uppercase tracking-widest">
                   Aluno
                 </th>
-                <th scope="col" className="md:px-6 px-1 md:py-4 py-2.5 text-center text-[10px] md:text-xs font-bold text-white uppercase tracking-widest w-16 md:w-24">
+                <th scope="col" className="md:px-6 px-0.5 md:py-4 py-2.5 text-center text-[10px] md:text-xs font-bold text-white uppercase tracking-widest w-10 md:w-24">
                   <span className="hidden md:inline">% Realizado</span>
                   <span className="md:hidden">% Real.</span>
                 </th>
@@ -464,7 +464,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                     <span className="md:hidden">Presença</span>
                   </th>
                 )}
-                <th scope="col" className="md:px-4 px-1 md:py-4 py-2.5 text-center text-[10px] md:text-xs font-bold text-white uppercase tracking-widest">
+                <th scope="col" className="md:px-4 px-0.5 md:py-4 py-2.5 text-center text-[10px] md:text-xs font-bold text-white uppercase tracking-widest">
                   {bulkAtividades.length > 1 ? (
                     <div className="flex flex-col items-center gap-1 md:gap-2">
                        <span className="hidden md:inline">Vistos por Atividade ({bulkAtividades.length})</span>
@@ -487,7 +487,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                     </>
                   )}
                 </th>
-                <th scope="col" className="md:px-6 px-1 md:py-4 py-2.5 text-center text-[10px] md:text-xs font-bold text-white uppercase tracking-widest w-20 md:w-40">
+                <th scope="col" className="md:px-6 px-0.5 md:py-4 py-2.5 text-center text-[10px] md:text-xs font-bold text-white uppercase tracking-widest w-16 md:w-40">
                   Ações
                 </th>
               </tr>
