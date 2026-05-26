@@ -317,48 +317,58 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
     const pesoAntigo = getPeso(valorAntigo);
     const pesoNovo = getPeso(novoValor);
 
-    if (pesoAntigo !== pesoNovo) {
-      let newTotal = totalAtividades;
-      if (totalAtividades === 0 && pesoNovo > 0) {
-        setTotalAtividades(1);
-        newTotal = 1;
-      }
+    if (pesoAntigo === pesoNovo) return;
 
-      // Limita o contador ao máximo de atividades para evitar que duplicatas inflem o percentual
-      const rawCount = Math.max(0, (estatisticasVistos[alunoId] || 0) - pesoAntigo + pesoNovo);
-      const newVistosCount = Math.min(rawCount, newTotal);
-      setEstatisticasVistos(prev => ({
-        ...prev,
-        [alunoId]: newVistosCount
-      }));
-
-      setNotasDetalhes(prev => {
-        const studentBreakdown = prev[alunoId];
-        if (!studentBreakdown) return prev;
-        
-        const maxVistosPoints = configEfetivo.config_visto_valor_total || 2.0;
-        // Capped: nunca pode ultrapassar o valor máximo configurado
-        const rawNota = newTotal > 0 ? (newVistosCount / newTotal) * maxVistosPoints : 0;
-        const newNotaVisto = Math.min(rawNota, maxVistosPoints);
-        const somaNotas = studentBreakdown.avaliacoes.reduce((acc, curr) => acc + curr.nota, 0);
-        
-        return {
-          ...prev,
-          [alunoId]: {
-            ...studentBreakdown,
-            notaVistos: newNotaVisto,
-            mediaFinal: somaNotas + newNotaVisto
-          }
-        };
-      });
-
-      // Atualiza também o mapa local de vistos do dia para persistência imediata
-      setVistosDoDia(prev => ({
-          ...prev,
-          [alunoId]: novoValor || ''
-      }));
+    let newTotal = totalAtividades;
+    if (totalAtividades === 0 && pesoNovo > 0) {
+      setTotalAtividades(1);
+      newTotal = 1;
     }
+
+    const maxVistosPoints = configEfetivo.config_visto_valor_total || 2.0;
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // CORREÇÃO: usa o functional updater (prev) em vez da closure stale.
+    // Quando "Desmarcar Todas" chama onUpdateVisto N vezes em sequência, cada
+    // chamada recebe o valor JÁ ATUALIZADO de prev, acumulando corretamente.
+    // Usando a closure (estatisticasVistos[alunoId]) todas as chamadas leriam
+    // o mesmo valor antigo e o resultado final seria errado.
+    // ──────────────────────────────────────────────────────────────────────────
+    setEstatisticasVistos(prev => {
+      const currentCount = prev[alunoId] || 0;
+      const rawCount = Math.max(0, currentCount - pesoAntigo + pesoNovo);
+      const newCount = Math.min(rawCount, newTotal); // cap ao total de atividades
+      return { ...prev, [alunoId]: newCount };
+    });
+
+    setNotasDetalhes(prev => {
+      const studentBreakdown = prev[alunoId];
+      if (!studentBreakdown) return prev;
+
+      // Delta-based: ajusta o notaVistos atual pelo delta da mudança.
+      // Lê studentBreakdown.notaVistos do prev (já atualizado) a cada chamada.
+      const deltaNota = newTotal > 0 ? ((pesoNovo - pesoAntigo) / newTotal) * maxVistosPoints : 0;
+      const rawNota = studentBreakdown.notaVistos + deltaNota;
+      const newNotaVisto = Math.min(maxVistosPoints, Math.max(0, rawNota));
+      const somaNotas = studentBreakdown.avaliacoes.reduce((acc, curr) => acc + curr.nota, 0);
+
+      return {
+        ...prev,
+        [alunoId]: {
+          ...studentBreakdown,
+          notaVistos: newNotaVisto,
+          mediaFinal: somaNotas + newNotaVisto
+        }
+      };
+    });
+
+    // Atualiza o mapa local de vistos do dia para persistência imediata
+    setVistosDoDia(prev => ({
+        ...prev,
+        [alunoId]: novoValor || ''
+    }));
   };
+
 
   const handleManualSave = async () => {
     setIsSaving(true);
