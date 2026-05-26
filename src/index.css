@@ -129,10 +129,16 @@
 }
 
 /* Correção para botões dentro de cabeçalhos de tabela no modo claro (como o botão de Vistar Todas) */
-.light-theme thead button,
-.light-theme thead button *,
-.light-theme th button,
-.light-theme th button * {
+/* Especificidade: 0,3,1 — supera .light-theme .bg-ms-blue * (0,2,0) e .light-theme thead * (0,1,1) */
+.light-theme .bg-ms-blue button.vistar-todas-btn,
+.light-theme .bg-ms-blue button.vistar-todas-btn span,
+.light-theme .bg-ms-blue button.vistar-todas-btn *,
+.light-theme thead button.vistar-todas-btn,
+.light-theme thead button.vistar-todas-btn span,
+.light-theme thead button.vistar-todas-btn *,
+.light-theme th button.vistar-todas-btn,
+.light-theme th button.vistar-todas-btn span,
+.light-theme th button.vistar-todas-btn * {
   color: #003366 !important;
 }
 
