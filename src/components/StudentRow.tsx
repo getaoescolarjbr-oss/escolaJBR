@@ -195,30 +195,55 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
     
     const alunoId = String(aluno.aluno_id).trim();
     const newBulkVistos = { ...bulkVistos };
-    const inserts: any[] = [];
-    const deletes: string[] = [];
     
-    bulkAtividades.forEach(ativ => {
-      const prevVal = bulkVistos[ativ.id];
-      if (prevVal !== defaultVal) {
-        newBulkVistos[ativ.id] = defaultVal;
-        inserts.push({
-          atividade_id: ativ.id,
-          aluno_id: alunoId,
-          valor: defaultVal
-        });
-        deletes.push(ativ.id);
-        
-        onUpdateVisto(aluno.aluno_id, prevVal ?? null, defaultVal);
+    // Verifica se TODAS as atividades selecionadas já possuem o visto marcado como defaultVal
+    const allAreMarked = bulkAtividades.length > 0 && bulkAtividades.every(ativ => bulkVistos[ativ.id] === defaultVal);
+    
+    if (allAreMarked) {
+      // ── DESMARCAR TODAS ───────────────────────────────────────────
+      const deletes: string[] = [];
+      bulkAtividades.forEach(ativ => {
+        const prevVal = bulkVistos[ativ.id];
+        if (prevVal !== undefined && prevVal !== null && prevVal !== '') {
+          newBulkVistos[ativ.id] = '';
+          deletes.push(ativ.id);
+          onUpdateVisto(aluno.aluno_id, prevVal, null);
+        }
+      });
+      
+      if (deletes.length > 0) {
+        setBulkVistos(newBulkVistos);
+        await supabase.from('vistos_v2').delete()
+          .in('atividade_id', deletes)
+          .eq('aluno_id', alunoId);
       }
-    });
-    
-    if (inserts.length > 0) {
-      setBulkVistos(newBulkVistos);
-      await supabase.from('vistos_v2').delete()
-        .in('atividade_id', deletes)
-        .eq('aluno_id', alunoId);
-      await supabase.from('vistos_v2').insert(inserts);
+    } else {
+      // ── MARCAR/VISTAR TODAS ─────────────────────────────────────────
+      const inserts: any[] = [];
+      const deletes: string[] = [];
+      
+      bulkAtividades.forEach(ativ => {
+        const prevVal = bulkVistos[ativ.id];
+        if (prevVal !== defaultVal) {
+          newBulkVistos[ativ.id] = defaultVal;
+          inserts.push({
+            atividade_id: ativ.id,
+            aluno_id: alunoId,
+            valor: defaultVal
+          });
+          deletes.push(ativ.id);
+          
+          onUpdateVisto(aluno.aluno_id, prevVal ?? null, defaultVal);
+        }
+      });
+      
+      if (inserts.length > 0) {
+        setBulkVistos(newBulkVistos);
+        await supabase.from('vistos_v2').delete()
+          .in('atividade_id', deletes)
+          .eq('aluno_id', alunoId);
+        await supabase.from('vistos_v2').insert(inserts);
+      }
     }
     
     setIsVistoLoading(false);
@@ -678,16 +703,26 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 })}
                 
                 {/* Botão Marcar Todos (Individual) */}
-                {!isPosterior && !isTransferido && !isLocked && bulkAtividades.length > 1 && (
-                   <button
-                     onClick={handleMarkAllIndividual}
-                     disabled={isVistoLoading}
-                     className={`ml-1 md:ml-2 px-1.5 md:px-2 py-1 md:py-1.5 rounded text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all ${theme === 'light' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-800 text-blue-400 hover:bg-gray-700'} disabled:opacity-50`}
-                     title="Marcar todas as atividades para este aluno"
-                   >
-                     {isVistoLoading ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : 'Marcar todas'}
-                   </button>
-                )}
+                {!isPosterior && !isTransferido && !isLocked && bulkAtividades.length > 1 && (() => {
+                   const defaultVal = configEfetivo.config_visto_metodo === 'ponto' ? '.' : 
+                                      configEfetivo.config_visto_metodo === 'simbolico' ? '+' : 
+                                      configEfetivo.config_visto_metodo === 'gradual' ? '1.0' : '10';
+                   const allAreMarked = bulkAtividades.length > 0 && bulkAtividades.every(ativ => bulkVistos[ativ.id] === defaultVal);
+                   return (
+                     <button
+                       onClick={handleMarkAllIndividual}
+                       disabled={isVistoLoading}
+                       className={`ml-1 md:ml-2 px-1.5 md:px-2 py-1 md:py-1.5 rounded text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all ${
+                         allAreMarked
+                           ? (theme === 'light' ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-red-950/40 text-red-400 hover:bg-red-900/40')
+                           : (theme === 'light' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-800 text-blue-400 hover:bg-gray-700')
+                       } disabled:opacity-50`}
+                       title={allAreMarked ? "Desmarcar todas as atividades para este aluno" : "Vistar todas as atividades para este aluno"}
+                     >
+                       {isVistoLoading ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : (allAreMarked ? 'Desmarcar Todas' : 'Vistar Todas')}
+                     </button>
+                   );
+                })()}
               </div>
             ) : (
               // ── MODO NORMAL: visto da atividade do dia ──────────────────
