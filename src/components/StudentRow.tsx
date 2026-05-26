@@ -396,20 +396,31 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
       <tr className={`transition-all duration-200 border-b border-ms-border/30 bg-[var(--bg-row-even)] ${
         index % 2 !== 0 ? 'bg-[var(--bg-row-odd)]' : ''
       } ${isFora ? 'bg-amber-900/10' : 'hover:bg-ms-dark/5'}`}>
-        <td className="md:px-6 px-1.5 md:py-5 py-2.5 whitespace-nowrap">
+        <td className="md:px-6 px-1.5 md:py-5 py-2.5 whitespace-nowrap max-w-[135px] md:max-w-none truncate">
           <div className="flex items-center gap-1.5 md:gap-4">
             <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 font-black text-xs md:text-base flex-shrink-0 border border-blue-500/20 shadow-sm">
               {aluno.aluno_numero || aluno.aluno_nome?.charAt(0)?.toUpperCase() || '?'}
             </div>
-            <div>
-              <div className="flex items-center gap-1 md:gap-2 flex-wrap">
-                <p className={`text-xs md:text-sm font-black tracking-tight uppercase ${
+            <div className="truncate">
+              <div className="flex items-center gap-1 md:gap-2 flex-wrap truncate">
+                <p className={`text-xs md:text-sm font-black tracking-tight uppercase max-w-[90px] sm:max-w-[120px] md:max-w-none truncate ${
                   aluno.status === 'Transferido' || aluno.status === 'Remanejado'
                     ? 'line-through text-gray-500 opacity-60'
                     : theme === 'light' ? 'text-[#003366]' : 'text-ms-main'
                 }`}>
-                  {aluno.aluno_numero && <span className="text-ms-gold font-black mr-2">{aluno.aluno_numero}.</span>}
-                  {aluno.aluno_nome}
+                  {aluno.aluno_numero && <span className="text-ms-gold font-black mr-1">{aluno.aluno_numero}.</span>}
+                  <span className="hidden md:inline">{aluno.aluno_nome}</span>
+                  <span className="md:hidden inline">{(() => {
+                    if (!aluno.aluno_nome) return '';
+                    const parts = aluno.aluno_nome.split(' ').filter(Boolean);
+                    if (parts.length <= 3) return aluno.aluno_nome;
+                    const prepositions = ['de', 'da', 'do', 'das', 'dos', 'e'];
+                    let nameParts = parts.slice(0, 3);
+                    if (prepositions.includes(nameParts[2].toLowerCase())) {
+                      nameParts = parts.slice(0, 2);
+                    }
+                    return nameParts.join(' ');
+                  })()}</span>
                 </p>
                 {aluno.status && aluno.status !== 'Ativo' && (
                   <span className={`inline-flex px-1.5 py-0.5 rounded-full text-[7px] md:text-[8px] font-black uppercase border tracking-normal ${

@@ -451,7 +451,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
           <table className="min-w-full divide-y divide-ms-border/50">
             <thead className={theme === 'light' ? 'bg-ms-blue' : 'bg-ms-accent'}>
               <tr>
-                <th scope="col" className="md:px-6 px-2 md:py-4 py-2.5 text-left text-[10px] md:text-xs font-bold text-white uppercase tracking-widest">
+                <th scope="col" className="md:px-6 px-2 md:py-4 py-2.5 text-left text-[10px] md:text-xs font-bold text-white uppercase tracking-widest max-w-[135px] md:max-w-none truncate">
                   Aluno
                 </th>
                 <th scope="col" className="md:px-6 px-1 md:py-4 py-2.5 text-center text-[10px] md:text-xs font-bold text-white uppercase tracking-widest w-16 md:w-24">
