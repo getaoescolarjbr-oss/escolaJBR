@@ -128,6 +128,14 @@
   color: #003366 !important;
 }
 
+/* Correção para botões dentro de cabeçalhos de tabela no modo claro (como o botão de Vistar Todas) */
+.light-theme thead button,
+.light-theme thead button *,
+.light-theme th button,
+.light-theme th button * {
+  color: #003366 !important;
+}
+
 /* C. Botões, Links Primários e Classes de Hover e Ação */
 .light-theme button.text-white,
 .light-theme button .text-white,
