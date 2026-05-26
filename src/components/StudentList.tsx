@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Professor, ListaParaVistos } from '../types';
 import { supabase } from '../lib/supabase';
 import { StudentRow } from './StudentRow';
+import { getBimestreFromDate } from '../utils/academicUtils';
 import { AlertTriangle, Info, Loader2, Save } from 'lucide-react';
 
 export interface StudentGradeBreakdown {
@@ -40,6 +41,8 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
   const [vistosDoDia, setVistosDoDia] = useState<Record<string, string>>({});
   const [presencasDoDia, setPresencasDoDia] = useState<Record<string, boolean>>({});
   const [atividadeIdHoje, setAtividadeIdHoje] = useState<string | null>(null);
+  const [bulkRefreshTrigger, setBulkRefreshTrigger] = useState(0);
+  const [isMarkingAll, setIsMarkingAll] = useState(false);
 
   // Callback chamado quando um StudentRow cria uma nova atividade —
   // garante que todos os rows subsequentes usem o mesmo ID.
@@ -316,6 +319,75 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
     setTimeout(() => setShowSuccess(false), 3000);
   };
 
+  const handleMarkAllAll = async () => {
+    if (isLocked) return;
+    if (!confirm('Deseja marcar todas as atividades pendentes para todos os alunos (exceto transferidos)?\nIsso pode demorar alguns segundos.')) return;
+    
+    setIsMarkingAll(true);
+    const defaultVal = professor.config_visto_metodo === 'ponto' ? '.' : 
+                       professor.config_visto_metodo === 'simbolico' ? '+' : 
+                       professor.config_visto_metodo === 'gradual' ? '1.0' : '10';
+    
+    const inserts: any[] = [];
+    const deletes: string[] = [];
+    
+    const ativIds = bulkAtividades.map(a => a.id);
+    
+    // Filter out posterior students
+    const validAlunos = alunos.filter(a => {
+      if (a.status !== 'Transferido' && a.status !== 'Remanejado' && a.status !== 'Cancelada') return true;
+      const exitBim = getBimestreFromDate(a.atestado_inicio);
+      return !(exitBim !== null && bimestreId > exitBim);
+    });
+    
+    const alunoIds = validAlunos.map(a => String(a.aluno_id).trim());
+    
+    if (ativIds.length > 0 && alunoIds.length > 0) {
+      // Get existing ones to calculate stats
+      const { data: existing } = await supabase
+        .from('vistos_v2')
+        .select('atividade_id, aluno_id, valor')
+        .in('atividade_id', ativIds)
+        .in('aluno_id', alunoIds);
+        
+      const existingMap = new Set(existing?.map(e => `${e.atividade_id}_${e.aluno_id}`) || []);
+      
+      validAlunos.forEach(aluno => {
+        const cleanId = String(aluno.aluno_id).trim();
+        bulkAtividades.forEach(ativ => {
+           if (!existingMap.has(`${ativ.id}_${cleanId}`)) {
+               inserts.push({
+                   atividade_id: ativ.id,
+                   aluno_id: cleanId,
+                   valor: defaultVal
+               });
+           }
+        });
+      });
+      
+      if (inserts.length > 0) {
+         // To be safe, delete all before insert (in case of race conditions)
+         await supabase.from('vistos_v2').delete()
+            .in('atividade_id', ativIds)
+            .in('aluno_id', alunoIds);
+            
+         // Re-insert existing + new
+         const allInserts = [
+            ...(existing?.map(e => ({ atividade_id: e.atividade_id, aluno_id: e.aluno_id, valor: defaultVal })) || []),
+            ...inserts
+         ];
+         
+         // In Supabase, bulk inserts might have a limit. We can chunk if it's too large, but typically < 1000 is fine.
+         await supabase.from('vistos_v2').insert(allInserts);
+         
+         setBulkRefreshTrigger(prev => prev + 1);
+         setShowSuccess(true);
+         setTimeout(() => setShowSuccess(false), 3000);
+      }
+    }
+    setIsMarkingAll(false);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -389,10 +461,23 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                   </th>
                 )}
                 <th scope="col" className="px-4 py-4 text-center text-xs font-bold text-white uppercase tracking-widest">
-                  {bulkAtividades.length > 1
-                    ? `Vistos por Atividade (${bulkAtividades.length} selecionadas)`
-                    : `Lançar Visto (${professor.config_visto_metodo})`
-                  }
+                  {bulkAtividades.length > 1 ? (
+                    <div className="flex flex-col items-center gap-2">
+                       <span>Vistos por Atividade ({bulkAtividades.length})</span>
+                       {!isLocked && (
+                         <button 
+                           onClick={handleMarkAllAll}
+                           disabled={isMarkingAll}
+                           className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[9px] border transition-all ${isMarkingAll ? 'opacity-50' : 'hover:scale-105 active:scale-95'} ${theme === 'light' ? 'bg-white text-blue-800 border-blue-200' : 'bg-ms-dark text-blue-200 border-blue-500/30'}`}
+                           title="Marcar todas as atividades selecionadas para TODOS os alunos"
+                         >
+                           {isMarkingAll ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Preencher Todos'}
+                         </button>
+                       )}
+                    </div>
+                  ) : (
+                    `Lançar Visto (${professor.config_visto_metodo})`
+                  )}
                 </th>
                 <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-widest w-40">
                   Ações
@@ -418,6 +503,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                   atividadeIdHoje={atividadeIdHoje}
                   onAtividadeCreated={handleAtividadeCreated}
                   bulkAtividades={bulkAtividades}
+                  bulkRefreshTrigger={bulkRefreshTrigger}
                   gradeBreakdown={notasDetalhes[aluno.aluno_id]}
                   isLocked={isLocked}
                 />

@@ -22,11 +22,12 @@ interface StudentRowProps {
   atividadeIdHoje: string | null;
   onAtividadeCreated?: (id: string) => void;
   bulkAtividades?: { id: string; data: string; descricao: string }[];
+  bulkRefreshTrigger?: number;
   gradeBreakdown?: StudentGradeBreakdown;
   isLocked?: boolean;
 }
 
-export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAtividade, atividadesRealizadas, totalAtividades, index, theme, onUpdateVisto, initialVisto, initialPresenca, atividadeIdHoje, onAtividadeCreated, bulkAtividades = [], gradeBreakdown, isLocked = false }: StudentRowProps) {
+export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAtividade, atividadesRealizadas, totalAtividades, index, theme, onUpdateVisto, initialVisto, initialPresenca, atividadeIdHoje, onAtividadeCreated, bulkAtividades = [], bulkRefreshTrigger = 0, gradeBreakdown, isLocked = false }: StudentRowProps) {
   const [presenca, setPresenca] = useState<boolean | null>(initialPresenca ?? null);
   const [valorVisto, setValorVisto] = useState<string | null>(initialVisto ?? null);
   const [atividadeId, setAtividadeId] = useState<string | null>(atividadeIdHoje);
@@ -137,7 +138,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
     setIsChamadaLoading(false);
   };
 
-  // Carrega os vistos existentes para as atividades em lote sempre que a seleção muda
+  // Carrega os vistos existentes para as atividades em lote sempre que a seleção muda ou refreshTrigger disparar
   useEffect(() => {
     if (bulkAtividades.length <= 1) { setBulkVistos({}); return; }
     const alunoId = String(aluno.aluno_id).trim();
@@ -153,7 +154,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
           setBulkVistos(map);
         }
       });
-  }, [bulkAtividades, aluno.aluno_id]);
+  }, [bulkAtividades, aluno.aluno_id, bulkRefreshTrigger]);
 
   // Salva visto individual de uma atividade específica (modo lote)
   const handleBulkVistoAction = async (ativId: string, valor: string) => {
@@ -178,6 +179,45 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
 
     setBulkVistoLoading(prev => ({ ...prev, [ativId]: false }));
     onUpdateVisto(aluno.aluno_id, prevVal, newVal);
+  };
+
+  const handleMarkAllIndividual = async () => {
+    if (isPosterior || isLocked) return;
+    
+    setIsVistoLoading(true);
+    const defaultVal = professor.config_visto_metodo === 'ponto' ? '.' : 
+                       professor.config_visto_metodo === 'simbolico' ? '+' : 
+                       professor.config_visto_metodo === 'gradual' ? '1.0' : '10';
+    
+    const alunoId = String(aluno.aluno_id).trim();
+    const newBulkVistos = { ...bulkVistos };
+    const inserts: any[] = [];
+    const deletes: string[] = [];
+    
+    bulkAtividades.forEach(ativ => {
+      const prevVal = bulkVistos[ativ.id];
+      if (prevVal !== defaultVal) {
+        newBulkVistos[ativ.id] = defaultVal;
+        inserts.push({
+          atividade_id: ativ.id,
+          aluno_id: alunoId,
+          valor: defaultVal
+        });
+        deletes.push(ativ.id);
+        
+        onUpdateVisto(aluno.aluno_id, prevVal ?? null, defaultVal);
+      }
+    });
+    
+    if (inserts.length > 0) {
+      setBulkVistos(newBulkVistos);
+      await supabase.from('vistos_v2').delete()
+        .in('atividade_id', deletes)
+        .eq('aluno_id', alunoId);
+      await supabase.from('vistos_v2').insert(inserts);
+    }
+    
+    setIsVistoLoading(false);
   };
 
   const handleVistoAction = async (valor: string) => {
@@ -621,6 +661,18 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                     </div>
                   );
                 })}
+                
+                {/* Botão Marcar Todos (Individual) */}
+                {!isPosterior && !isLocked && bulkAtividades.length > 1 && (
+                   <button
+                     onClick={handleMarkAllIndividual}
+                     disabled={isVistoLoading}
+                     className={`ml-2 px-2 py-1.5 rounded text-[9px] font-black uppercase tracking-widest transition-all ${theme === 'light' ? 'bg-blue-100 text-blue-700 hover:bg-blue-200' : 'bg-gray-800 text-blue-400 hover:bg-gray-700'} disabled:opacity-50`}
+                     title="Marcar todas as atividades para este aluno"
+                   >
+                     {isVistoLoading ? <Loader2 className="w-3 h-3 animate-spin mx-auto" /> : 'Todos'}
+                   </button>
+                )}
               </div>
             ) : (
               // ── MODO NORMAL: visto da atividade do dia ──────────────────
