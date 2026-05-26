@@ -99,3 +99,35 @@ export function calcularMediaFinalPosExame(ma: number, ef: number): number {
   const mf = (ma * 3 + ef * 2) / 5;
   return arredondarNotaMS(mf);
 }
+
+/**
+ * Determina o bimestre letivo vigente com base na data atual (calendário de 2026).
+ */
+export function getCurrentBimestre(): number {
+  const now = new Date();
+  const month = now.getMonth();
+  const day = now.getDate();
+
+  // Converter para data comparável em 2026
+  const currentDate = new Date(2026, month, day);
+
+  // Intervalos de 2026:
+  // 1º Bimestre: 03/02/2026 a 30/04/2026
+  // 2º Bimestre: 04/05/2026 a 16/07/2026
+  // 3º Bimestre: 03/08/2026 a 01/10/2026
+  // 4º Bimestre: 02/10/2026 a 31/12/2026
+  const b1End = new Date(2026, 3, 30);   // Apr 30
+  const b2End = new Date(2026, 6, 16);   // Jul 16
+  const b3End = new Date(2026, 9, 1);    // Oct 1
+
+  if (currentDate <= b1End) {
+    return 1;
+  } else if (currentDate <= b2End) {
+    return 2;
+  } else if (currentDate <= b3End) {
+    return 3;
+  } else {
+    return 4;
+  }
+}
+

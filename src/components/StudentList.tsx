@@ -23,7 +23,7 @@ interface StudentListProps {
   bimestreId: number;
   descricaoAtividade: string;
   theme: 'dark' | 'light';
-  onAtividadeLoaded?: (descricao: string) => void;
+  onAtividadeLoaded?: (descricao: string, id: string | null) => void;
   bulkAtividades?: { id: string; data: string; descricao: string }[];
   isLocked?: boolean;
 }
@@ -86,8 +86,8 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
 
       if (atividadeHoje) {
         setAtividadeIdHoje(atividadeHoje.id);
-        if (atividadeHoje.descricao && onAtividadeLoaded) {
-            onAtividadeLoaded(atividadeHoje.descricao);
+        if (onAtividadeLoaded) {
+            onAtividadeLoaded(atividadeHoje.descricao || '', atividadeHoje.id);
         }
         // 3. Buscar Vistos da Atividade de Hoje
         const { data: vistosHoje } = await supabase
@@ -106,6 +106,9 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
       } else {
         setAtividadeIdHoje(null);
         setVistosDoDia({});
+        if (onAtividadeLoaded) {
+            onAtividadeLoaded('', null);
+        }
       }
 
       // 4. Buscar Presenças do Dia (Chamada) — usa professor_id

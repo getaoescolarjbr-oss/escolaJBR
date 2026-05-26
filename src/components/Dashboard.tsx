@@ -2,12 +2,14 @@ import { useState, useEffect, useRef } from 'react';
 import type { Professor } from '../types';
 import { supabase } from '../lib/supabase';
 import { StudentList } from './StudentList';
-import { Filter, Users, Calendar, ChevronDown, BookOpen, LayoutDashboard, FileSpreadsheet, ClipboardList, CheckCircle, PlusCircle, Layers, ShieldAlert } from 'lucide-react';
+import { Filter, Users, Calendar, ChevronDown, BookOpen, LayoutDashboard, FileSpreadsheet, ClipboardList, CheckCircle, PlusCircle, Layers, ShieldAlert, Trash2, Save } from 'lucide-react';
 import { EmptyState } from './EmptyState';
 import { GradesPanel } from './GradesPanel';
 import { ExameFinalPanel } from './ExameFinalPanel';
 import { ReportsPanel } from './ReportsPanel';
 import { CalendarioLetivoModal } from './CalendarioLetivoModal';
+import { getCurrentBimestre } from '../utils/academicUtils';
+
 
 const TEMPO_RANGES = [
   { tempo: 1, start: '07:30', end: '08:20' },
@@ -441,6 +443,37 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
     setTimeout(() => setRegistroSucesso(false), 2500);
   };
 
+  const handleExcluirAtividade = async () => {
+    if (!selectedAtividadeId || !selectedTurma || !selectedDisciplina || isBimestreLocked) return;
+    
+    const confirmDelete = window.confirm("Tem certeza que deseja excluir esta atividade? Isso apagará permanentemente todos os vistos associados a ela.");
+    if (!confirmDelete) return;
+
+    setIsRegistrando(true);
+    try {
+      // 1. Excluir vistos da atividade
+      await supabase.from('vistos_v2')
+        .delete()
+        .eq('atividade_id', selectedAtividadeId);
+
+      // 2. Excluir a atividade diária
+      await supabase.from('atividades_diárias')
+        .delete()
+        .eq('id', selectedAtividadeId);
+
+      // Limpar campos
+      setSelectedAtividadeId(null);
+      setDescricaoAtividade('');
+      setAtividadesRefreshKey(k => k + 1);
+    } catch (err) {
+      console.error('Erro ao excluir atividade:', err);
+      alert('Ocorreu um erro ao excluir a atividade.');
+    } finally {
+      setIsRegistrando(false);
+    }
+  };
+
+
   const turmaAtual = turmas.find(t => t.id === selectedTurma);
   const disciplinaAtual = disciplinas.find(d => d.id === selectedDisciplina);
 
@@ -643,7 +676,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                   <button
                     onClick={handleRegistrarAtividade}
                     disabled={isRegistrando || !descricaoAtividade.trim() || !selectedDisciplina || isBimestreLocked}
-                    title={isBimestreLocked ? "Bimestre bloqueado para lançamentos" : "Registrar atividade para a data selecionada"}
+                    title={isBimestreLocked ? "Bimestre bloqueado para lançamentos" : selectedAtividadeId ? "Salvar alterações da atividade" : "Registrar atividade para a data selecionada"}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed ${
                       registroSucesso
                         ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-900/30'
@@ -651,12 +684,24 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                     }`}
                   >
                     {registroSucesso
-                      ? <><CheckCircle className="w-4 h-4" /> Registrado!</>
+                      ? <><CheckCircle className="w-4 h-4" /> {selectedAtividadeId ? 'Salvo!' : 'Registrado!'}</>
                       : isRegistrando
                         ? <><span className="animate-spin inline-block w-4 h-4 border-2 border-white/40 border-t-white rounded-full" /></>
-                        : <><PlusCircle className="w-4 h-4" /> Registrar</>
+                        : selectedAtividadeId
+                          ? <><Save className="w-4 h-4" /> Salvar</>
+                          : <><PlusCircle className="w-4 h-4" /> Registrar</>
                     }
                   </button>
+                  {selectedAtividadeId && (
+                    <button
+                      onClick={handleExcluirAtividade}
+                      disabled={isRegistrando || isBimestreLocked}
+                      title={isBimestreLocked ? "Bimestre bloqueado" : "Excluir esta atividade permanentemente"}
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider border border-red-500/30 text-red-500 hover:bg-red-500/10 shadow-md transition-all whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+                    >
+                      <Trash2 className="w-4 h-4" /> Excluir
+                    </button>
+                  )}
                 </div>
 
                 {/* Atalhos Rápidos — Atividades do Bimestre */}
@@ -717,6 +762,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                                 // Modo normal: navega para a data
                                 setDataAula(ativ.data);
                                 setDescricaoAtividade(ativ.descricao || '');
+                                setSelectedAtividadeId(ativ.id);
                               }
                             }}
                             title={ativ.descricao}
@@ -786,9 +832,9 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                 bimestreId={selectedBimestre}
                 descricaoAtividade={descricaoAtividade}
                 theme={theme}
-                onAtividadeLoaded={(desc) => {
+                onAtividadeLoaded={(desc, id) => {
                   setDescricaoAtividade(desc);
-                  setAtividadesRefreshKey(k => k + 1);
+                  setSelectedAtividadeId(id);
                 }}
                 bulkAtividades={
                   isBulkMode && bulkSelectedIds.length > 1

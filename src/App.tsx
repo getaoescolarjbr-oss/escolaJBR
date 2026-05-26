@@ -8,6 +8,7 @@ import { AdminPanel } from './components/admin/AdminPanel';
 import { CoordinatorDashboard } from './components/CoordinatorDashboard';
 import { InspetorDashboard } from './components/InspetorDashboard';
 import { LandingPage } from './components/LandingPage';
+import { getCurrentBimestre } from './utils/academicUtils';
 
 
 function App() {
@@ -96,7 +97,7 @@ function App() {
         ...data,
         config_visto_metodo: configBackup.config_visto_metodo || data.config_visto_metodo || 'gradual',
         config_visto_valor_total: configBackup.config_visto_valor_total || data.config_visto_valor_total || 10,
-        bimestre_atual: configBackup.bimestre_atual || data.bimestre_atual || 1
+        bimestre_atual: getCurrentBimestre()
       };
 
       setProfessor(mergedProfessor);
@@ -139,7 +140,7 @@ function App() {
           user_id: userId,
           config_visto_metodo: configBackup.config_visto_metodo || profByEmail.config_visto_metodo || 'gradual',
           config_visto_valor_total: configBackup.config_visto_valor_total || profByEmail.config_visto_valor_total || 10,
-          bimestre_atual: configBackup.bimestre_atual || profByEmail.bimestre_atual || 1
+          bimestre_atual: getCurrentBimestre()
         };
 
         setProfessor(mergedProfessor);
@@ -178,7 +179,7 @@ function App() {
           email: 'gestaoescolarjbr@gmail.com',
           cargo: 'Diretor',
           theme: theme,
-          bimestre_atual: 1,
+          bimestre_atual: getCurrentBimestre(),
           config_visto_metodo: 'gradual',
           config_visto_valor_total: 10
         };
