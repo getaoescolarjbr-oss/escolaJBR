@@ -61,6 +61,7 @@
   width: 65px !important; 
   height: 65px !important; 
   object-fit: contain; 
+  flex-shrink: 0;
 }
 .school-name h1 { 
   font-family: 'Playfair Display', serif; 
@@ -367,20 +368,22 @@ section { padding: 80px 24px; position: relative; margin: 0 !important; border: 
 .quick-bg { background: #F0F2F5 !important; }
 .quick-grid { 
   display: grid; 
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); 
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
   gap: 20px; 
 }
 .quick-card { 
   background: #003366 !important; 
   border: none !important; 
   border-radius: 12px; 
-  padding: 32px 24px; 
+  padding: 28px 20px; 
   text-align: center; 
   cursor: pointer; 
   transition: all 0.3s; 
   text-decoration: none; 
   color: #FFFFFF !important; 
-  display: block; 
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   box-shadow: 0 4px 12px rgba(0,51,102,0.2);
 }
 .quick-card:hover { 
@@ -390,19 +393,27 @@ section { padding: 80px 24px; position: relative; margin: 0 !important; border: 
   border: 1px solid var(--gold) !important;
 }
 .quick-card .icon { 
-  font-size: 42px; 
-  margin-bottom: 20px; 
-  display: block; 
+  font-size: 32px; 
+  margin-bottom: 14px; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--gold) !important;
+  width: 48px;
+  height: 48px;
+}
+.quick-card .icon svg { 
+  width: 32px !important;
+  height: 32px !important;
 }
 .quick-card h4 { 
-  font-size: 18px; 
+  font-size: 16px; 
   font-weight: 700; 
   color: #FFFFFF !important; 
-  margin-bottom: 8px; 
+  margin-bottom: 6px; 
 }
 .quick-card p { 
-  font-size: 14px; 
+  font-size: 13px; 
   color: rgba(255,255,255,0.7) !important; 
 }
 
@@ -946,9 +957,68 @@ section { padding: 80px 24px; position: relative; margin: 0 !important; border: 
 }
 
 @media (max-width: 768px) {
-  .hero-inner, .about-grid, .access-cards, .calendar-warnings-grid { grid-template-columns: 1fr; }
-  .hero-text h2 { font-size: 36px; }
-  .section-title { font-size: 28px; }
-  .nav-inner { display: none; } 
-  .topbar-inner { flex-direction: column; gap: 8px; text-align: center; }
+  /* Layout */
+  .hero-inner, .about-grid, .calendar-warnings-grid { grid-template-columns: 1fr; }
+  .hero-cards { display: none; }
+  .hero-text h2 { font-size: 30px !important; }
+  .hero-text p { font-size: 14px !important; }
+  .hero-btns { flex-direction: column; gap: 10px; }
+  .hero-btns .btn-primary, .hero-btns .btn-outline { text-align: center; }
+
+  /* Seções */
+  section { padding: 48px 16px !important; }
+  #noticias, #calendario, #sobre, .quick-bg { padding: 48px 16px !important; }
+  .section-title { font-size: 24px !important; }
+  .section-inner { padding: 0 !important; }
+
+  /* Header */
+  .landing-header-main { padding: 10px 16px; }
+  .header-inner { padding: 4px 0 !important; gap: 10px; }
+  .logo-wrap img { width: 48px !important; height: 48px !important; }
+  .school-name h1 { font-size: 14px !important; }
+  .school-name span { font-size: 11px !important; }
+  .btn-portal { padding: 8px 14px; font-size: 12px; }
+  .btn-portal svg { width: 14px !important; height: 14px !important; }
+
+  /* Topbar */
+  .topbar { padding: 6px 16px; font-size: 11px; }
+  .topbar-inner { flex-direction: column; gap: 4px; text-align: center; }
+
+  /* Nav */
+  .nav-inner { display: none; }
+
+  /* Quick access: 2 colunas no mobile */
+  .quick-grid { grid-template-columns: repeat(2, 1fr) !important; gap: 12px !important; }
+  .quick-card { padding: 20px 12px !important; border-radius: 10px; }
+  .quick-card .icon { width: 36px; height: 36px; margin-bottom: 10px; }
+  .quick-card .icon svg { width: 24px !important; height: 24px !important; }
+  .quick-card h4 { font-size: 13px !important; margin-bottom: 4px; }
+  .quick-card p { font-size: 11px !important; }
+
+  /* News: coluna única */
+  .news-grid { grid-template-columns: 1fr !important; gap: 16px !important; }
+
+  /* Instagram cards menores */
+  .instagram-card { border-radius: 12px; }
+
+  /* Footer */
+  .footer-grid { grid-template-columns: 1fr !important; gap: 32px; }
+  .landing-footer-main { padding: 48px 16px 32px; }
+  .footer-bottom { flex-direction: column; gap: 8px; text-align: center; }
+
+  /* About facts: 2 colunas */
+  .about-facts { grid-template-columns: 1fr 1fr !important; gap: 12px !important; }
+  .fact-wide { grid-column: span 2 !important; }
+  .fact-card { padding: 16px !important; }
+  .fact-card strong { font-size: 22px !important; }
+
+  /* Calendar */
+  .cal-item { padding: 14px !important; gap: 12px !important; }
+  .cal-badge { position: static; margin-left: auto; }
+}
+
+@media (max-width: 400px) {
+  .quick-card h4 { font-size: 12px !important; }
+  .quick-card p { display: none; }
+  .quick-card { padding: 16px 8px !important; }
 }

@@ -480,42 +480,42 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
           <div className="divider"></div>
           <div className="quick-grid">
             <a className="quick-card" href="#" onClick={(e) => { e.preventDefault(); setShowCalendarModal(true); }}>
-              <Calendar className="icon text-gold mx-auto" />
+              <span className="icon"><Calendar size={32} strokeWidth={1.5} /></span>
               <h4>Calendário Letivo</h4>
               <p>Datas e eventos 2026</p>
             </a>
             <a className="quick-card" href="#">
-              <FileText className="icon text-sed-blue mx-auto" />
+              <span className="icon"><FileText size={32} strokeWidth={1.5} /></span>
               <h4>Matrícula</h4>
               <p>Informações e formulários</p>
             </a>
             <a className="quick-card" href="#">
-              <BookOpen className="icon text-teal mx-auto" />
+              <span className="icon"><BookOpen size={32} strokeWidth={1.5} /></span>
               <h4>Cardápio Escolar</h4>
               <p>Merenda da semana</p>
             </a>
             <a className="quick-card" href="#">
-              <Users className="icon text-crimson mx-auto" />
+              <span className="icon"><Users size={32} strokeWidth={1.5} /></span>
               <h4>Biblioteca</h4>
               <p>BiblioClube JBR</p>
             </a>
             <a className="quick-card" href="#">
-              <Layers className="icon text-gold mx-auto" />
+              <span className="icon"><Layers size={32} strokeWidth={1.5} /></span>
               <h4>Lab. Ciências</h4>
               <p>Reservas e atividades</p>
             </a>
             <a className="quick-card" href="#">
-              <Globe className="icon text-sed-blue mx-auto" />
+              <span className="icon"><Globe size={32} strokeWidth={1.5} /></span>
               <h4>Lab. Informática</h4>
               <p>Agendamentos</p>
             </a>
             <a className="quick-card" href="#">
-              <Trophy className="icon text-teal mx-auto" />
+              <span className="icon"><Trophy size={32} strokeWidth={1.5} /></span>
               <h4>Quadra Esportiva</h4>
               <p>Horários e reservas</p>
             </a>
             <a className="quick-card" href="#">
-              <Phone className="icon text-crimson mx-auto" />
+              <span className="icon"><Phone size={32} strokeWidth={1.5} /></span>
               <h4>Fale com a Escola</h4>
               <p>Canais de atendimento</p>
             </a>
