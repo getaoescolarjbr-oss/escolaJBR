@@ -45,6 +45,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
   const [atividadeIdHoje, setAtividadeIdHoje] = useState<string | null>(null);
   const [bulkRefreshTrigger, setBulkRefreshTrigger] = useState(0);
   const [isMarkingAll, setIsMarkingAll] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Callback chamado quando um StudentRow cria uma nova atividade —
   // garante que todos os rows subsequentes usem o mesmo ID.
@@ -221,10 +222,16 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                   };
               }) || [];
 
-              const somaNotas = detalheAvaliacoes.reduce((acc, curr) => acc + curr.nota, 0);
+              let somaNotas = detalheAvaliacoes.reduce((acc, curr) => acc + curr.nota, 0);
+              let pesosVistoAluno = currentStats[cleanId] || 0;
+              
+              if (aluno.status === 'Transferido' || aluno.status === 'Remanejado' || aluno.status === 'Cancelada') {
+                  somaNotas = 0;
+                  pesosVistoAluno = 0;
+                  currentStats[cleanId] = 0;
+              }
               
               const totalAtivCalculado = totalComHoje;
-              const pesosVistoAluno = currentStats[cleanId] || 0;
               const maxVistosPoints = configEfetivo.config_visto_valor_total || 2.0;
               const notaVistoFinal = totalAtivCalculado > 0 ? (pesosVistoAluno / totalAtivCalculado) * maxVistosPoints : 0;
 
@@ -236,6 +243,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
               };
           });
       }
+      setEstatisticasVistos(currentStats);
       setNotasDetalhes(breakdownObj);
 
       setLoading(false);
@@ -244,7 +252,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
     if (turmaId && disciplinaId) {
       fetchData();
     }
-  }, [professor.id, turmaId, disciplinaId, bimestreId, dataAula]);
+  }, [professor.id, turmaId, disciplinaId, bimestreId, dataAula, refreshTrigger]);
 
   const handleUpdateVistoStat = (alunoId: string, valorAntigo: string | null, novoValor: string | null) => {
     const getPeso = (v: string | null) => {
@@ -323,29 +331,21 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
 
   const handleMarkAllAll = async () => {
     if (isLocked) return;
-    if (!confirm('Deseja marcar todas as atividades pendentes para todos os alunos (exceto transferidos)?\nIsso pode demorar alguns segundos.')) return;
     
     setIsMarkingAll(true);
     const defaultVal = configEfetivo.config_visto_metodo === 'ponto' ? '.' : 
                        configEfetivo.config_visto_metodo === 'simbolico' ? '+' : 
                        configEfetivo.config_visto_metodo === 'gradual' ? '1.0' : '10';
     
-    const inserts: any[] = [];
-    const deletes: string[] = [];
-    
     const ativIds = bulkAtividades.map(a => a.id);
-    
-    // Filter out posterior students
     const validAlunos = alunos.filter(a => {
-      if (a.status !== 'Transferido' && a.status !== 'Remanejado' && a.status !== 'Cancelada') return true;
-      const exitBim = getBimestreFromDate(a.atestado_inicio);
-      return !(exitBim !== null && bimestreId > exitBim);
+      if (a.status === 'Transferido' || a.status === 'Remanejado' || a.status === 'Cancelada') return false;
+      return true;
     });
     
     const alunoIds = validAlunos.map(a => String(a.aluno_id).trim());
     
     if (ativIds.length > 0 && alunoIds.length > 0) {
-      // Get existing ones to calculate stats
       const { data: existing } = await supabase
         .from('vistos_v2')
         .select('atividade_id, aluno_id, valor')
@@ -354,37 +354,64 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
         
       const existingMap = new Set(existing?.map(e => `${e.atividade_id}_${e.aluno_id}`) || []);
       
-      validAlunos.forEach(aluno => {
-        const cleanId = String(aluno.aluno_id).trim();
-        bulkAtividades.forEach(ativ => {
-           if (!existingMap.has(`${ativ.id}_${cleanId}`)) {
-               inserts.push({
-                   atividade_id: ativ.id,
-                   aluno_id: cleanId,
-                   valor: defaultVal
-               });
-           }
-        });
+      const totalPossible = validAlunos.length * bulkAtividades.length;
+      let existingDefaultCount = 0;
+      
+      existing?.forEach(e => {
+          if (e.valor === defaultVal) existingDefaultCount++;
       });
       
-      if (inserts.length > 0) {
-         // To be safe, delete all before insert (in case of race conditions)
-         await supabase.from('vistos_v2').delete()
+      const isAllMarked = existingDefaultCount === totalPossible;
+
+      if (isAllMarked) {
+          if (!confirm('Deseja DESMARCAR todas as atividades para todos os alunos válidos?')) {
+             setIsMarkingAll(false);
+             return;
+          }
+          await supabase.from('vistos_v2').delete()
             .in('atividade_id', ativIds)
             .in('aluno_id', alunoIds);
             
-         // Re-insert existing + new
-         const allInserts = [
-            ...(existing?.map(e => ({ atividade_id: e.atividade_id, aluno_id: e.aluno_id, valor: defaultVal })) || []),
-            ...inserts
-         ];
-         
-         // In Supabase, bulk inserts might have a limit. We can chunk if it's too large, but typically < 1000 is fine.
-         await supabase.from('vistos_v2').insert(allInserts);
-         
-         setBulkRefreshTrigger(prev => prev + 1);
-         setShowSuccess(true);
-         setTimeout(() => setShowSuccess(false), 3000);
+          setBulkRefreshTrigger(prev => prev + 1);
+          setRefreshTrigger(prev => prev + 1);
+          setShowSuccess(true);
+          setTimeout(() => setShowSuccess(false), 3000);
+      } else {
+          if (!confirm('Deseja MARCAR todas as atividades pendentes para todos os alunos válidos?')) {
+             setIsMarkingAll(false);
+             return;
+          }
+          const inserts: any[] = [];
+          validAlunos.forEach(aluno => {
+            const cleanId = String(aluno.aluno_id).trim();
+            bulkAtividades.forEach(ativ => {
+               if (!existingMap.has(`${ativ.id}_${cleanId}`)) {
+                   inserts.push({
+                       atividade_id: ativ.id,
+                       aluno_id: cleanId,
+                       valor: defaultVal
+                   });
+               }
+            });
+          });
+          
+          if (inserts.length > 0) {
+              const allInserts = [
+                ...(existing?.map(e => ({ atividade_id: e.atividade_id, aluno_id: e.aluno_id, valor: defaultVal })) || []),
+                ...inserts
+              ];
+              
+              await supabase.from('vistos_v2').delete()
+                 .in('atividade_id', ativIds)
+                 .in('aluno_id', alunoIds);
+                 
+              await supabase.from('vistos_v2').insert(allInserts);
+              
+              setBulkRefreshTrigger(prev => prev + 1);
+              setRefreshTrigger(prev => prev + 1);
+              setShowSuccess(true);
+              setTimeout(() => setShowSuccess(false), 3000);
+          }
       }
     }
     setIsMarkingAll(false);
@@ -474,12 +501,12 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                            onClick={handleMarkAllAll}
                            disabled={isMarkingAll}
                            className={`flex flex-col items-center justify-center text-center gap-0.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[8px] md:text-[9px] font-black uppercase leading-tight border transition-all ${isMarkingAll ? 'opacity-50' : 'hover:scale-105 active:scale-95'} ${theme === 'light' ? 'bg-white text-blue-800 border-blue-200 shadow-sm' : 'bg-ms-dark text-blue-200 border-blue-500/30 shadow-sm'}`}
-                           title="Lançar visto em todas as atividades selecionadas para TODOS os alunos"
+                           title="Vistar todas as atividades da turma"
                          >
                            {isMarkingAll ? (
                              <Loader2 className="w-3 h-3 animate-spin" />
                            ) : (
-                             <span>Vistar todas<br/>as atividades</span>
+                             <span>Vistar todas as<br/>atividades da turma</span>
                            )}
                          </button>
                        )}
