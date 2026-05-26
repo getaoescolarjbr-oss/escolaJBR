@@ -21,6 +21,7 @@ function App() {
   });
   const [isAdmin, setIsAdmin] = useState(false);
   const [view, setView] = useState<'dashboard' | 'admin'>('dashboard');
+  const [forceLanding, setForceLanding] = useState(() => new URLSearchParams(window.location.search).has('home'));
 
   useEffect(() => {
     localStorage.setItem('portal-theme', theme);
@@ -206,6 +207,14 @@ function App() {
         <div className="animate-spin rounded-full h-10 w-10 border-4 border-ms-blue border-t-transparent shadow-[0_0_15px_rgba(0,38,119,0.5)]"></div>
       </div>
     );
+  }
+
+  if (forceLanding) {
+    return <LandingPage onEnterPortal={() => {
+      setForceLanding(false);
+      if (!session) setShowLogin(true);
+      window.history.replaceState({}, '', '/');
+    }} />;
   }
 
   if (!session) {

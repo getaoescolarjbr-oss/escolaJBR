@@ -29,7 +29,7 @@ export function Header({ professor, onLogout, onUpdateProfessor, theme, onToggle
             {/* Logo area */}
             <div 
               className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-              onClick={() => window.location.href = '/'}
+              onClick={() => window.location.href = '/?home=1'}
               title="Voltar à página inicial"
             >
               <img src="/logo.png.png" alt="Logo" className="w-10 h-10 object-contain" />
