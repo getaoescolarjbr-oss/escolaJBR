@@ -117,7 +117,7 @@ export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onT
         </div>
 
         {/* Conteúdo */}
-        <div className="p-6 space-y-6 max-height-[70vh] overflow-y-auto">
+        <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
           
           {/* Seletor de Turma Global/Individual */}
           <div className={`p-4 rounded-xl border ${theme === 'light' ? 'bg-blue-50/50 border-blue-100' : 'bg-gray-900/40 border-gray-800'}`}>
