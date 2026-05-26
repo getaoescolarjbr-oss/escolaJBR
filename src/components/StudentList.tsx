@@ -563,9 +563,16 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                          <button 
                            onClick={handleMarkAllAll}
                            disabled={isMarkingAll}
-                           className={`flex flex-col items-center justify-center text-center gap-0.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[8px] md:text-[9px] font-black uppercase leading-tight border transition-all ${isMarkingAll ? 'opacity-50' : 'hover:scale-105 active:scale-95'} ${theme === 'light' ? 'bg-white !text-[#003366] border-blue-200 shadow-sm' : 'bg-ms-dark !text-blue-200 border-blue-500/30 shadow-sm'}`}
+                           className={`vistar-todas-btn flex flex-col items-center justify-center text-center gap-0.5 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[8px] md:text-[9px] font-black uppercase leading-tight border transition-all ${isMarkingAll ? 'opacity-50' : 'hover:scale-105 active:scale-95'} ${theme === 'light' ? 'bg-white !text-[#003366] border-blue-200 shadow-sm' : 'bg-ms-dark !text-blue-200 border-blue-500/30 shadow-sm'}`}
                            title="Vistar todas as atividades da turma"
                          >
+                           <style dangerouslySetInnerHTML={{ __html: `
+                             .light-theme .vistar-todas-btn,
+                             .light-theme .vistar-todas-btn span,
+                             .light-theme .vistar-todas-btn * {
+                               color: #003366 !important;
+                             }
+                           ` }} />
                            {isMarkingAll ? (
                              <Loader2 className="w-3 h-3 animate-spin !text-[#003366] dark:!text-blue-200" />
                            ) : (
