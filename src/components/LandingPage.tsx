@@ -547,28 +547,6 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
                 if (isInstagram) {
                   return (
                     <div key={item.id} className="instagram-card">
-                      <div className="instagram-card-header">
-                        <div className="instagram-header-left">
-                          <img 
-                            src="/logo.png.png" 
-                            alt="JBR Logo" 
-                            className="instagram-profile-pic"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1546410531-bb4caa6b424d?w=80&auto=format&fit=crop';
-                            }}
-                          />
-                          <div className="instagram-user-info text-left">
-                            <span className="instagram-username">
-                              jbrautoria
-                              <svg className="w-3.5 h-3.5 text-[#0095f6] inline ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
-                            </span>
-                            <span className="instagram-location">Escola de Autoria JBR</span>
-                          </div>
-                        </div>
-                        <div className="instagram-icon-wrap">
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
-                        </div>
-                      </div>
                       <a 
                         href={item.conteudo || "https://www.instagram.com/jbrautoria/"}
                         target="_blank"
@@ -580,12 +558,12 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
                             src={item.imagem_url} 
                             alt={item.titulo} 
                             className="instagram-image group-hover/img:scale-105 transition-transform duration-500"
-                            style={{ width: '100%', height: 'clamp(160px, 50vw, 320px)', objectFit: 'cover' }}
+                            style={{ width: '100%', height: 'clamp(140px, 40vw, 240px)', objectFit: 'cover' }}
                             onError={(e) => {
                               (e.target as HTMLImageElement).style.display = 'none';
                               const parent = (e.target as HTMLElement).parentElement;
                               if (parent) {
-                                parent.className = "instagram-card-image flex flex-col justify-center items-center p-8 bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white w-full h-[320px]";
+                                parent.className = "instagram-card-image flex flex-col justify-center items-center p-8 bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white w-full h-[240px]";
                                 parent.innerHTML = `
                                   <svg class="w-12 h-12 mb-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
                                 `;
@@ -593,18 +571,18 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
                             }}
                           />
                         ) : (
-                          <div className="flex flex-col justify-center items-center p-8 bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white w-full" style={{ height: 'clamp(160px, 50vw, 320px)' }}>
+                          <div className="flex flex-col justify-center items-center p-8 bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] text-white w-full" style={{ height: 'clamp(140px, 40vw, 240px)' }}>
                             <svg className="w-12 h-12 mb-3" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.051.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
                           </div>
                         )}
                       </a>
-                      <div className="instagram-card-body !pt-4 !pb-5 !px-5 flex flex-col justify-between" style={{ minHeight: '130px' }}>
+                      <div className="instagram-card-body !pt-3 !pb-4 !px-4 flex flex-col justify-between" style={{ minHeight: 'auto' }}>
                         <a href={item.conteudo || "https://www.instagram.com/jbrautoria/"} target="_blank" rel="noopener noreferrer" className="hover:opacity-80">
-                          <p className="instagram-caption !text-sm !mb-2 line-clamp-3">
+                          <p className="instagram-caption !text-xs !mb-2 line-clamp-3">
                             <strong>jbrautoria</strong> {item.subtitulo || item.titulo}
                           </p>
                         </a>
-                        <div className="instagram-date !text-[11px] !mt-0">
+                        <div className="instagram-date !text-[10px] !mt-1">
                           {new Date(item.data_publicacao).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })}
                         </div>
                       </div>

@@ -838,7 +838,7 @@ section { padding: 80px 24px; position: relative; margin: 0 !important; border: 
 .instagram-card-image {
   position: relative;
   width: 100%;
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 16 / 10;
   overflow: hidden;
   background: #f8fafc;
   display: flex;
@@ -1030,12 +1030,13 @@ section { padding: 80px 24px; position: relative; margin: 0 !important; border: 
   /* Remove altura fixa da imagem para não ficar gigante no mobile */
   .instagram-card-image img,
   .instagram-image {
-    height: 200px !important;
+    height: auto !important;
+    aspect-ratio: 16 / 10 !important;
     width: 100% !important;
     object-fit: cover !important;
   }
   /* Fallback sem imagem também menor */
-  .instagram-card-image .flex { height: 200px !important; }
+  .instagram-card-image .flex { height: auto !important; aspect-ratio: 16 / 10 !important; }
 
   /* --- Identidade Institucional (#identidade) --- */
   #identidade {
