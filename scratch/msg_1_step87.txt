@@ -1,0 +1,34 @@
+<USER_REQUEST>
+O máximo de faltas que o aluno pode ter é 450 faltas. utilize isso para determinar a reprovação dos 25%. pode gerar chamadasretroativas. Ja irei enviar agora a tabela das demais turmas a seguir:
+
+Turma	Nome do Estudante	Apoio e Orientação de Estudos	Arte	Ciências	Ciências Humanas e Sociedade	Ciências Naturais na Contemporaneidade	Educação Física	Ensino Religioso	Geografia	História	Letramento e Raciocínio Matemático	Leitura e Produção Textual	Literatura Arte e Movimento	Língua Espanhola	Língua Inglesa	Língua Portuguesa - RA	Matemática	Matemática - RA	Língua Portuguesa	Tecnologia e Cidadania Digital	Faltas	Situação
+7º Ano A	ANA CARLA BATISTA NASCIMENTO	-	6.5	7.0	9.0	9.0	10.0	-	9.0	10.0	8.5	6.0	8.5	6.0	7.5	SN	6.0	SN	7.0	6.0	12	Em curso
+7º Ano A	ARON TALGATTI DOS SANTOS	-	10.0	10.0	9.0	10.0	10.0	-	9.5	10.0	9.0	10.0	6.5	10.0	10.0	SN	9.5	SN	9.5	10.0	50	Transferido
+7º Ano A	BRENDA DE OLIVEIRA ROCHA	-	7.5	8.0	9.0	8.0	10.0	-	8.5	10.0	9.0	8.0	7.0	8.0	7.0	SN	8.5	SN	8.5	8.0	27	Em curso
+7º Ano A	BRENO GUSTAVO VALEJO DA SILVA	-	9.0	8.0	7.0	6.0	10.0	-	9.0	9.0	8.0	6.5	7.0	6.0	5.0	SN	5.5	SN	5.5	6.5	11	Em curso
+7º Ano A	BRUNO GABRIEL NASCIMENTO DE ALMEIDA	-	7.0	5.0	5.0	6.0	9.0	-	6.0	5.5	7.0	6.0	7.5	6.5	4.0	SN	4.5	SN	4.0	6.0	35	Em curso
+7º Ano A	CLARA VITÓRIA VIEIRA GIMENEZ DE CARVALHO	-	10.0	7.5	9.0	8.0	10.0	-	9.0	9.0	9.0	7.5	9.0	6.0	7.0	SN	6.5	SN	7.0	7.5	10	Em curso
+7º Ano A	DANILO NUNES DOS SANTOS	-	10.0	8.0	9.0	10.0	10.0	-	8.5	10.0	9.0	9.0	8.0	7.5	7.0	SN	6.0	SN	7.5	9.0	26	Em curso
+7º Ano A	EMANUELLY LIMA DA SILVA DE SOUZA	-	7.0	7.5	7.0	8.0	8.5	-	7.0	10.0	7.0	6.0	8.0	9.0	6.0	SN	4.5	SN	6.0	6.0	50	Em curso
+7º Ano A	EMILI DE DEUS DA SILVA	-	8.0	6.5	8.0	8.0	9.0	-	6.0	8.0	9.0	7.5	7.5	6.0	7.0	SN	6.0	SN	7.5	7.5	23.2	Em curso
+7º Ano A	ESTEFANY VIEIRA RODRIGUES	-	5.5	7.5	9.0	9.0	8.5	-	7.0	10.0	9.0	5.0	7.5	7.5	6.0	SN	5.0	SN	6.0	5.0	21	Em curso
+7º Ano A	GIOVANI COURA DE CASTRO	-	9.5	8.0	9.0	8.0	10.0	-	8.5	10.0	9.0	8.0	8.0	8.0	7.5	SN	6.5	SN	7.5	8.0	13.1	Em curso
+7º Ano A	GUILH
+<truncated 45215 bytes>
+O	7.0	8.0	9.0	-	8.0	6.5	7.0	7.0	7.5	10.0	9.0	SN	8.5	6.5	SN	6.5	10.0	8.5	7.5	8.0	8.0	8.5	9.0	6.0	9	Em curso
+2º Ano B	MARIA ISABEL LEAL DOS SANTOS	-	SN	-	-	-	-	-	-	-	-	-	SN	-	-	SN	-	-	SN	-	-	-	-	-	-	96	Transferido
+2º Ano B	MARIA JÚLIA SIBEMOL MASCARENHAS BEZERRA	7.5	10.0	9.0	-	9.5	10.0	9.0	9.0	8.0	6.5	9.0	SN	9.5	9.0	SN	9.0	10.0	9.5	10.0	9.5	10.0	10.0	9.0	7.0	37	Em curso
+2º Ano B	MYLENA GABRIELLA VASCONCELOS DA SILVA	7.5	7.5	8.5	-	6.0	4.0	5.5	7.0	7.5	6.0	6.5	SN	7.5	6.0	SN	6.0	5.0	7.5	6.0	5.5	9.0	6.0	9.0	4.0	31	Em curso
+2º Ano B	NADIELLY PRADO DE ALMEIDA	7.0	8.0	7.5	-	8.0	6.5	6.5	6.5	7.0	8.5	7.5	SN	6.0	5.0	SN	5.0	8.0	6.0	8.5	8.0	6.0	8.0	9.0	3.5	23	Em curso
+2º Ano B	PEDRO GUILHERME PEDROZA GOMES	7.5	8.5	9.0	-	9.0	8.5	9.0	8.0	8.0	6.5	8.5	SN	8.5	8.5	SN	8.5	10.0	8.5	8.5	9.0	8.0	9.5	9.0	7.5	37	Em curso
+2º Ano B	PIETTRO CARVALHO SILVA	-	SN	-	-	-	-	-	-	-	-	-	SN	-	-	SN	-	-	SN	-	-	-	-	-	-	8	Transferido
+2º Ano B	RAONY RIAN DE SOUSA RIBEIRO	9.5	7.0	9.0	-	9.0	8.0	8.0	8.0	8.0	7.5	9.0	SN	8.0	8.0	SN	8.0	8.5	8.0	8.5	8.5	10.0	9.0	9.0	6.0	32	Em curso
+2º Ano B	RAPHAEL DE LARA CORRÊA	7.5	6.5	9.0	-	8.5	6.0	7.0	6.0	6.0	7.0	8.0	SN	6.5	5.5	SN	5.5	7.0	6.5	6.0	-	6.0	6.0	9.0	7.5	70	Em curso
+2º Ano B	RAPHAEL DE SOUZA DA SILVA	5.0	9.5	6.0	-	9.0	7.5	8.5	6.0	7.5	10.0	5.5	SN	8.0	9.5	SN	9.5	6.5	8.0	7.0	9.0	8.0	9.0	9.0	6.0	52	Em curso
+2º Ano B	RYAN KAIO FEDERIGI DANTAS	7.0	7.0	7.5	-	7.5	7.0	6.5	6.0	7.5	8.5	7.5	SN	7.0	6.5	SN	6.5	10.0	7.0	6.5	7.5	7.0	7.0	9.0	6.5	36	Em curso
+2º Ano B	SAMARA ORTEGA SILVA	9.0	8.0	9.0	-	8.0	8.0	7.5	9.0	7.5	6.0	8.0	SN	8.0	9.0	SN	9.0	9.0	8.0	6.0	9.0	9.0	9.0	9.0	7.0	44	Em curso
+2º Ano B	SAMIRA ORTEGA SILVA	8.5	6.5	9.5	-	6.0	7.0	5.0	5.0	6.0	6.0	7.5	SN	7.5	5.0	SN	5.0	9.5	7.5	6.5	5.0	7.0	8.0	9.0	3.5	49	Em curso
+2º Ano B	SIBELY FERREIRA MARTINS	8.5	8.5	8.0	-	8.0	7.0	7.0	6.5	7.5	10.0	9.0	SN	8.5	8.5	SN	8.5	10.0	8.5	7.5	8.5	8.0	10.0	9.0	6.0	10	Em cu
+<truncated 14417 bytes>
+
+NOTE: The output was truncated because it was too long. Use a more targeted query or a smaller range to get the information you need.

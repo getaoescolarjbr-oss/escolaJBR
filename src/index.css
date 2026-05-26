@@ -1,0 +1,163 @@
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Cores JBR do Cloud */
+  --gold: #C9A227;
+  --gold-light: #F0D060;
+  --gold-pale: rgba(240,208,96,0.15);
+  
+  --sed-blue: #003F8A;
+  --sed-blue-dark: #002D64;
+  --sed-blue-mid: #0050A8;
+  --sed-blue-light: #1A6BC4;
+  
+  --crimson: #8B1A2A;
+  --crimson-light: #B02236;
+  --teal: #0F6B6B;
+
+  --bg-page: #00040a; /* True black-blue */
+  --bg-card: #0d1117;
+  --bg-row-even: #161b22;
+  --bg-row-odd: rgba(22, 27, 34, 0.5);
+  --text-main: #e6edf3;
+  --text-muted: #848d97;
+  --border-main: #30363d;
+  --header-bg: #002677; /* MS Blue (Official) */
+  --header-text: #ffffff;
+  --accent-ms: #002677;
+}
+
+.light-theme {
+  --bg-page: #f6f8fa;
+  --bg-card: #ffffff;
+  --bg-row-even: #ffffff;
+  --bg-row-odd: #f6f8fa;
+  --text-main: #1f2328;
+  --text-muted: #656d76;
+  --border-main: #d0d7de;
+  --header-bg: #002677; /* MS Blue */
+  --accent-ms: #21732e; /* MS Green */
+  --header-text: #ffffff;
+  --hover-row: #f3f4f6;
+}
+
+@layer base {
+  body {
+    @apply antialiased transition-colors duration-300;
+    background-color: var(--bg-page);
+    color: var(--text-main);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer utilities {
+  .animate-in {
+    animation: animateIn 0.2s ease-out;
+  }
+  
+  @keyframes animateIn {
+    from {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
+}
+
+/* Correção de Contraste para o Modo Claro */
+.light-theme .text-white {
+  color: #003366 !important;
+}
+
+.light-theme .text-gray-100 {
+  color: #003366 !important;
+}
+
+.light-theme .text-gray-200 {
+  color: #003366 !important;
+}
+
+.light-theme .text-gray-300 {
+  color: #334e68 !important;
+}
+
+/* Blindagem e Preservação de Texto Claro em Containers com Fundo Escuro Sólido */
+
+/* A. Menu Superior (Header) */
+.light-theme header,
+.light-theme header *,
+.light-theme .bg-ms-header,
+.light-theme .bg-ms-header * {
+  color: #ffffff !important;
+}
+.light-theme header .text-gray-300,
+.light-theme header .text-gray-300 * {
+  color: #d1d5db !important;
+}
+
+/* B. Cabeçalhos de Tabelas (thead, th) */
+.light-theme thead,
+.light-theme thead *,
+.light-theme th,
+.light-theme th *,
+.light-theme .bg-\[\#0a1a3a\],
+.light-theme .bg-\[\#0a1a3a\] * {
+  color: #ffffff !important;
+}
+
+/* Correção para tabelas com cabeçalho claro no modo claro (como a Lista de Alunos na Coordenação) */
+.light-theme thead.bg-ms-card th,
+.light-theme thead.bg-ms-card th * {
+  color: #003366 !important;
+}
+
+/* C. Botões, Links Primários e Classes de Hover e Ação */
+.light-theme button.text-white,
+.light-theme button .text-white,
+.light-theme button.bg-ms-blue,
+.light-theme button.bg-ms-blue *,
+.light-theme a.text-white,
+.light-theme a .text-white,
+.light-theme a.bg-ms-blue,
+.light-theme a.bg-ms-blue * {
+  color: #ffffff !important;
+}
+
+/* D. Suporte ao estado de hover dinâmico em botões inativos/translúcidos */
+.light-theme .hover\:text-white:hover {
+  color: #ffffff !important;
+}
+
+/* E. Áreas e Cards Especiais de Fundo Escuro Sólido ou Gradiente */
+.light-theme .bg-ms-blue,
+.light-theme .bg-ms-blue *,
+.light-theme .bg-\[\#003366\],
+.light-theme .bg-\[\#003366\] *,
+.light-theme .bg-gradient-to-br,
+.light-theme .bg-gradient-to-br * {
+  color: #ffffff !important;
+}
+
+/* F. Badges e Textos Translúcidos Específicos */
+.light-theme .bg-white\/10,
+.light-theme .bg-white\/10 * {
+  color: #ffffff !important;
+}
+

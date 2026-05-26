@@ -1,0 +1,37 @@
+<USER_REQUEST>
+Vou enviar o restante novamente a partir da aluna que citou, ela é a primeira da lista e depois vem o restante:
+
+2º Ano B	SIBELY FERREIRA MARTINS	8.5	8.5	8.0	-	8.0	7.0	7.0	6.5	7.5	10.0	9.0	SN	8.5	8.5	SN	8.5	10.0	8.5	7.5	8.5	8.0	10.0	9.0	6.0	10	Em curso
+2º Ano B	VICTOR MORAES DOS SANTOS	6.0	7.0	7.0	-	8.0	4.5	8.0	8.0	7.0	9.5	6.0	SN	6.0	5.0	SN	5.0	8.0	6.0	6.0	9.0	8.0	8.0	9.0	3.5	61	Em curso
+2º Ano B	LUCAS JEFERSON FLORENCIO COSTA	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	0	Em curso
+
+
+Turma	Nome do Estudante	Arte	Biologia	Educação Física	Estudo Orientado	Filosofia	Física	Geografia	História	Laboratório de Linguas	Língua Espanhola	Língua Inglesa	Língua Portuguesa - RA	Língua Portuguesa - Literatura e Produção Textual	Matemática	Matemática - RA	Matemática - Geometria	Prática de Escrita e Estilo	Língua Portuguesa	Química	Sociologia	Unidade Curricular I	Unidade Curricular II	Unidade Curricular III	Unidade Curricular IV	Faltas	Situação
+2º Ano C	BRAYAN ROCHA PEDREIRO	6.0	9.0	8.0	SN	7.0	5.0	4.0	3.5	7.5	4.5	6.5	SN	6.5	5.0	SN	5.0	4.5	6.5	5.0	7.5	4.0	4.0	8.0	7.5	33	Em curso
+2º Ano C	CAUÃ RICARDO FONTOURA PAIM ALMEIDA	6.0	6.0	6.0	SN	6.5	3.0	5.5	3.5	7.5	3.5	4.0	SN	5.5	5.0	SN	5.0	4.0	5.5	5.0	7.0	6.0	7.0	8.0	8.0	48	Em curso
+2º Ano C	DIEGO DE OLIVEIRA REGINALDO	6.0	6.5	6.5	SN	6.5	4.5	5.0	4.5	6.5	6.0	4.0	SN	4.5	3.0	SN	3.0	4.5	4.5	5.0	7.5	4.0	5.5	8.0	6.5	17	Em curso
+2º Ano C	ELOIZA ALMEIDA DE OLIVEIRA	5.5	7.0	8.0	SN	7.0	6.0	5.5	5.5	8.0	6.5	7.0	SN	8.0	4.5	SN	4.5	4.5	8.0	6.5	7.5	7.5	7.0	8.0	7.5	24	Em curso
+2º Ano C	FRED GONÇALVES MARTINS JUNIOR	6.5	6.0	8.0	SN	6.0	5.0	4.5	4.5	7.5	6.5	6.0	SN	4.5	5.0	SN	5.0	6.0	4.5	5.0	6.0	4.5	6.0	8.0	5.5	89	Em curso
+2º Ano C	GABRIEL MARQUES CORTES	6.0	6.5	8.0	SN	7.0	6.5	5.5	6.0	7.5	7.5	4.5	SN	5.0	6.0	SN	6.0	6.0	5.0	5.0	7.5	6.0	5.0	8.0	7.0	18	Em curso
+2º Ano C	GUSTAVO DE SOUZA SALES	8.0	9.5	7.5	SN	6.0	7.0	7.0	6.5	7.5	7.0	8.5	SN	7.0	6.5	SN	6.5	6.0	7.0	7.5	8.0	4.0	7.0	8.0	6.0	53	Em curso
+2º Ano C	GUSTAVO PINHEIRO DA SILVA	9.5	7.0	10.0	SN	8.0
+<truncated 10586 bytes>
+5	SN	8.5	6.5	SN	6.5	9.0	8.5	9.0	10.0	9.0	9.5	10.0	8.0	65	Em curso
+3º Ano B	LAUANE VALENTE FERREIRA	7.5	8.5	8.0	-	7.5	8.5	9.0	10.0	-	-	7.5	SN	8.5	6.0	SN	6.0	-	8.5	8.5	9.5	-	-	-	-	53	Transferido
+3º Ano B	LUIS FELIPE NOGUEIRA VILLALBA	8.5	9.0	9.5	-	8.0	9.0	8.0	8.0	8.0	9.0	8.5	SN	9.5	8.0	SN	8.0	6.0	9.5	9.0	8.0	8.0	10.0	10.0	8.0	20	Em curso
+3º Ano B	MARIA RHAYSSA PAULINO GOMES	7.0	8.0	7.0	-	7.5	7.5	9.0	8.0	8.0	9.0	5.0	SN	7.0	6.0	SN	6.0	4.5	7.0	7.0	9.0	9.0	7.0	10.0	7.5	37	Em curso
+3º Ano B	MARIA VITÓRIA DIAS DA SILVA	7.5	9.0	8.5	-	8.0	9.0	7.5	7.5	8.0	9.0	8.5	SN	8.5	6.0	SN	6.0	9.0	8.5	9.0	8.0	8.0	9.5	10.0	8.0	18	Em curso
+3º Ano B	MATEUS TEIXEIRA FERREIRA	8.5	9.5	9.0	-	8.5	9.0	8.0	8.0	8.0	8.0	9.5	SN	9.5	6.5	SN	6.5	9.5	9.5	9.5	8.5	9.0	9.0	10.0	8.0	19	Em curso
+3º Ano B	MILLENY PEREIRA DOMINGOS CASTILHO	8.0	7.5	8.5	-	8.5	7.5	9.5	10.0	7.5	7.5	7.0	SN	8.0	6.5	SN	6.5	6.5	8.0	8.0	9.5	9.0	6.5	10.0	6.0	45	Em curso
+3º Ano B	PEDRO HENRIQUE DE OLIVEIRA CAMPOS	6.0	9.0	8.0	-	8.0	9.5	8.5	9.0	8.0	9.5	8.0	SN	7.5	8.5	SN	8.5	7.0	7.5	9.0	9.0	9.0	8.0	10.0	8.0	25	Em curso
+3º Ano B	TAUANY LIMA DE SOUZA	7.0	7.5	7.5	-	7.5	7.0	8.0	8.5	8.0	8.0	6.0	SN	6.0	7.0	SN	7.0	4.0	6.0	6.5	8.5	9.0	6.5	10.0	6.5	47	Em curso
+3º Ano B	THAILYNE VITÓRIA DOS SANTOS	7.0	8.0	7.5	-	8.5	8.0	9.0	9.0	7.5	8.0	8.0	SN	7.0	6.5	SN	6.5	8.0	7.0	7.5	8.5	10.0	9.5	10.0	6.5	29	Em curso
+3º Ano B	VICTOR ESPÍNDOLA  ALVES	-	SN	-	-	-	-	-	-	-	-	-	SN	-	-	SN	-	-	-	-	-	-	-	-	-	59	Transferido
+3º Ano B	VÍTOR HUGO VIEIRA SAMBRANA	-	SN	-	-	-	-	-	-	-	-	-	SN	-	-	SN	-	-	-	-	-	-	-	-	-	10	Transferido
+3º Ano B	VÍTOR HUGO VIEIRA SAMBRANA	6.0	6.0	6.0	-	6.0	6.0	6.0	7.5	6.0	2.0	6.0	SN	6.0	6.0	SN	6.0	6.0	6.0	5.0	6.0	7.5	7.5	10.0	3.5	22	Em curso
+3º Ano B	PEDRO HENRIQUE SANTOS PEREIRA	-	5.0	8.0	-	7.5	6.0	7.0	6.0	6.0	-	6.0	SN	-	7.0	-	7.0	6.0	-	-	8.5	5.0	6.0	4.5	-	19	Em curso
+3º Ano B	VINICIUS FRÔES DA SILVA	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	-	0	Em curso
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-05-22T09:31:09-04:00.
+</ADDITIONAL_METADATA>
