@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, Turma, Student } from '../types';
-import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer } from 'lucide-react';
+import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer, AlertTriangle, CheckCheck, Clock } from 'lucide-react';
 import { printReport } from '../utils/printUtils';
 import { getCurrentBimestre } from '../utils/academicUtils';
 import { StudentProfileModal } from './StudentProfileModal';
@@ -28,7 +28,12 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<{ id: string, nome: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'painel_turma' | 'site' | 'atas' | 'agenda_avaliacoes'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'painel_turma' | 'site' | 'atas' | 'agenda_avaliacoes' | 'novas_ocorrencias'>('overview');
+  const [ocorrenciasPendentes, setOcorrenciasPendentes] = useState<any[]>([]);
+  const [loadingOcorrencias, setLoadingOcorrencias] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [ocorrenciasRevisadas, setOcorrenciasRevisadas] = useState<any[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
   const [avaliacoesAgenda, setAvaliacoesAgenda] = useState<any[]>([]);
   const [loadingAgenda, setLoadingAgenda] = useState(false);
   const agendaTableRef = useRef<HTMLTableElement>(null);
@@ -68,6 +73,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
 
   useEffect(() => {
     fetchTurmas();
+    fetchOcorrenciasPendentes();
   }, []);
 
   useEffect(() => {
@@ -576,6 +582,125 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
     }
   }
 
+  const fetchOcorrenciasPendentes = async () => {
+    setLoadingOcorrencias(true);
+    try {
+      const { data: rawOcorrencias, error } = await supabase
+        .from('ocorrências')
+        .select('*')
+        .or('visto_coordenador.eq.false,visto_coordenador.is.null')
+        .order('data_registro', { ascending: false });
+
+      if (error) throw error;
+
+      if (rawOcorrencias && rawOcorrencias.length > 0) {
+        const studentIds = [...new Set(rawOcorrencias.map(o => o.aluno_id).filter(Boolean))];
+        const teacherIds = [...new Set(rawOcorrencias.map(o => o.id_do_professor).filter(Boolean))];
+        const classIds = [...new Set(rawOcorrencias.map(o => o.turma_id).filter(Boolean))];
+
+        const [studentsRes, teachersRes, classesRes] = await Promise.all([
+          supabase.from('alunos').select('id, nome, aluno_numero, turma_id').in('id', studentIds),
+          supabase.from('professores').select('id, nome, cargo').in('id', teacherIds),
+          supabase.from('turmas').select('id, nome').in('id', classIds)
+        ]);
+
+        const studentsMap = new Map(studentsRes.data?.map(s => [s.id, s]) || []);
+        const teachersMap = new Map(teachersRes.data?.map(t => [t.id, t]) || []);
+        const classesMap = new Map(classesRes.data?.map(c => [c.id, c]) || []);
+
+        const mapped = rawOcorrencias.map(o => {
+          return {
+            ...o,
+            aluno: o.aluno_id ? studentsMap.get(o.aluno_id) : { nome: 'Aluno Desconhecido' },
+            turma: o.turma_id ? classesMap.get(o.turma_id) : { nome: 'Sem Turma' },
+            professor: o.id_do_professor ? teachersMap.get(o.id_do_professor) : null
+          };
+        });
+        
+        setOcorrenciasPendentes(mapped);
+      } else {
+        setOcorrenciasPendentes([]);
+      }
+    } catch (err) {
+      console.error('Error fetching pending occurrences:', err);
+    } finally {
+      setLoadingOcorrencias(false);
+    }
+  };
+
+  const fetchOcorrenciasRevisadas = async () => {
+    setLoadingHistory(true);
+    try {
+      const { data: rawOcorrencias, error } = await supabase
+        .from('ocorrências')
+        .select('*')
+        .eq('visto_coordenador', true)
+        .order('data_visualizacao_coordenador', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      if (rawOcorrencias && rawOcorrencias.length > 0) {
+        const studentIds = [...new Set(rawOcorrencias.map(o => o.aluno_id).filter(Boolean))];
+        const teacherIds = [...new Set(rawOcorrencias.map(o => o.id_do_professor).filter(Boolean))];
+        const classIds = [...new Set(rawOcorrencias.map(o => o.turma_id).filter(Boolean))];
+
+        const [studentsRes, teachersRes, classesRes] = await Promise.all([
+          supabase.from('alunos').select('id, nome, aluno_numero, turma_id').in('id', studentIds),
+          supabase.from('professores').select('id, nome, cargo').in('id', teacherIds),
+          supabase.from('turmas').select('id, nome').in('id', classIds)
+        ]);
+
+        const studentsMap = new Map(studentsRes.data?.map(s => [s.id, s]) || []);
+        const teachersMap = new Map(teachersRes.data?.map(t => [t.id, t]) || []);
+        const classesMap = new Map(classesRes.data?.map(c => [c.id, c]) || []);
+
+        const mapped = rawOcorrencias.map(o => {
+          return {
+            ...o,
+            aluno: o.aluno_id ? studentsMap.get(o.aluno_id) : { nome: 'Aluno Desconhecido' },
+            turma: o.turma_id ? classesMap.get(o.turma_id) : { nome: 'Sem Turma' },
+            professor: o.id_do_professor ? teachersMap.get(o.id_do_professor) : null
+          };
+        });
+        
+        setOcorrenciasRevisadas(mapped);
+      } else {
+        setOcorrenciasRevisadas([]);
+      }
+    } catch (err) {
+      console.error('Error fetching reviewed occurrences:', err);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const handleConfirmLeitura = async (ocorrenciaId: string) => {
+    try {
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('ocorrências')
+        .update({
+          visto_coordenador: true,
+          data_visualizacao_coordenador: now
+        })
+        .eq('id', ocorrenciaId);
+
+      if (error) throw error;
+
+      setOcorrenciasPendentes(prev => prev.filter(o => o.id !== ocorrenciaId));
+    } catch (err: any) {
+      console.error('Error confirming occurrence read:', err);
+      alert('Erro ao confirmar leitura da ocorrência: ' + err.message);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 'novas_ocorrencias') {
+      fetchOcorrenciasPendentes();
+    }
+  }, [activeTab]);
+
   const filteredStudents = students.filter(s => 
     s.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -613,6 +738,17 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
           className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'agenda_avaliacoes' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
           <Calendar className="w-4 h-4" /> Agenda de Avaliações
+        </button>
+        <button 
+          onClick={() => setActiveTab('novas_ocorrencias')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all relative ${activeTab === 'novas_ocorrencias' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+        >
+          <AlertTriangle className="w-4 h-4" /> Novas Ocorrências
+          {ocorrenciasPendentes.length > 0 && (
+            <span className="ml-1 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-md">
+              {ocorrenciasPendentes.length}
+            </span>
+          )}
         </button>
       </div>
       <div className="flex items-center gap-2">
@@ -1056,7 +1192,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
          <SiteManager theme={theme} />
        ) : activeTab === 'atas' ? (
          <GestaoAtasPanel />
-       ) : (
+       ) : activeTab === 'agenda_avaliacoes' ? (
          /* ===== ABA AGENDA DE AVALIAÇÕES ===== */
          <div className="space-y-6">
            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -1178,7 +1314,165 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
              )}
            </div>
          </div>
-       )}
+       ) : activeTab === 'novas_ocorrencias' ? (
+         /* ===== ABA NOVAS OCORRÊNCIAS ===== */
+         <div className="space-y-6">
+           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+             <div>
+               <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
+                 <AlertTriangle className="w-6 h-6 text-red-500" />
+                 Novas Ocorrências
+               </h2>
+               <p className="text-sm text-[#003366] font-bold">Ocorrências registradas pelos professores aguardando confirmação de leitura</p>
+             </div>
+             <button
+               onClick={() => {
+                 setShowHistory(!showHistory);
+                 if (!showHistory && ocorrenciasRevisadas.length === 0) {
+                   fetchOcorrenciasRevisadas();
+                 }
+               }}
+               className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all border shadow-lg ${
+                 showHistory
+                   ? 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-900/30'
+                   : 'bg-ms-card text-gray-400 border-ms-border hover:text-white hover:border-gray-500'
+               }`}
+             >
+               <Clock className="w-4 h-4" />
+               {showHistory ? 'Ocultar Histórico' : 'Ver Histórico Revisado'}
+             </button>
+           </div>
+
+           {/* Pending Occurrences */}
+           {loadingOcorrencias ? (
+             <div className="py-20 flex flex-col items-center justify-center">
+               <Loader2 className="w-10 h-10 animate-spin text-ms-blue mb-4" />
+               <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Carregando ocorrências pendentes...</p>
+             </div>
+           ) : ocorrenciasPendentes.length === 0 ? (
+             <div className="bg-ms-card rounded-2xl border border-ms-border p-12 text-center shadow-xl">
+               <CheckCheck className="w-12 h-12 text-emerald-500 mx-auto mb-4" />
+               <p className="text-white font-bold text-lg">Nenhuma ocorrência pendente!</p>
+               <p className="text-gray-500 text-sm mt-1">Todas as ocorrências foram revisadas pela coordenação.</p>
+             </div>
+           ) : (
+             <div className="space-y-4">
+               <p className="text-xs font-black text-red-400 uppercase tracking-widest">
+                 {ocorrenciasPendentes.length} ocorrência{ocorrenciasPendentes.length > 1 ? 's' : ''} aguardando leitura
+               </p>
+               {ocorrenciasPendentes.map((oc) => (
+                 <div key={oc.id} className="bg-ms-card rounded-2xl border border-red-500/30 shadow-xl overflow-hidden hover:border-red-500/60 transition-all group">
+                   <div className="flex items-stretch">
+                     {/* Red accent bar */}
+                     <div className="w-1.5 bg-gradient-to-b from-red-500 to-red-700 shrink-0" />
+                     <div className="flex-1 p-5">
+                       <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+                         <div className="flex-1 space-y-2">
+                           <div className="flex items-center gap-3 flex-wrap">
+                             <span className="text-white font-black text-sm">
+                               {oc.aluno?.nome || 'Aluno Desconhecido'}
+                             </span>
+                             <span className="text-[9px] font-black uppercase bg-ms-blue/20 text-ms-blue px-2 py-0.5 rounded-full border border-ms-blue/30">
+                               {oc.turma?.nome || 'Sem Turma'}
+                             </span>
+                             {oc.tipo && (
+                               <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                                 oc.tipo === 'Disciplinar' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
+                                 oc.tipo === 'Pedagógica' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                                 'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                               }`}>
+                                 {oc.tipo}
+                               </span>
+                             )}
+                           </div>
+                           <p className="text-gray-300 text-sm leading-relaxed">
+                             {oc.descricao || oc.observacao || 'Sem descrição'}
+                           </p>
+                           <div className="flex items-center gap-4 text-[10px] text-gray-500 font-bold">
+                             <span className="flex items-center gap-1">
+                               <Users className="w-3 h-3" />
+                               Prof. {oc.professor?.nome || 'Desconhecido'}
+                             </span>
+                             <span className="flex items-center gap-1">
+                               <Clock className="w-3 h-3" />
+                               {oc.data_registro ? new Date(oc.data_registro).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Data desconhecida'}
+                             </span>
+                           </div>
+                         </div>
+                         <button
+                           onClick={() => handleConfirmLeitura(oc.id)}
+                           className="shrink-0 flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-900/30 transition-all hover:scale-105"
+                         >
+                           <CheckCheck className="w-4 h-4" />
+                           Confirmar Leitura
+                         </button>
+                       </div>
+                     </div>
+                   </div>
+                 </div>
+               ))}
+             </div>
+           )}
+
+           {/* Reviewed History */}
+           {showHistory && (
+             <div className="space-y-4 mt-6">
+               <div className="flex items-center gap-3">
+                 <div className="h-px flex-1 bg-ms-border" />
+                 <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Histórico Revisado</span>
+                 <div className="h-px flex-1 bg-ms-border" />
+               </div>
+
+               {loadingHistory ? (
+                 <div className="py-12 flex flex-col items-center justify-center">
+                   <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mb-3" />
+                   <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Carregando histórico...</p>
+                 </div>
+               ) : ocorrenciasRevisadas.length === 0 ? (
+                 <div className="py-8 text-center text-gray-500 italic text-sm">Nenhuma ocorrência revisada encontrada.</div>
+               ) : (
+                 ocorrenciasRevisadas.map((oc) => (
+                   <div key={oc.id} className="bg-ms-card/60 rounded-2xl border border-emerald-500/20 shadow-md overflow-hidden opacity-80 hover:opacity-100 transition-all">
+                     <div className="flex items-stretch">
+                       <div className="w-1.5 bg-gradient-to-b from-emerald-500 to-emerald-700 shrink-0" />
+                       <div className="flex-1 p-4">
+                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-2">
+                           <div className="flex-1 space-y-1.5">
+                             <div className="flex items-center gap-3 flex-wrap">
+                               <span className="text-white font-bold text-sm">
+                                 {oc.aluno?.nome || 'Aluno Desconhecido'}
+                               </span>
+                               <span className="text-[9px] font-black uppercase bg-ms-blue/15 text-ms-blue px-2 py-0.5 rounded-full">
+                                 {oc.turma?.nome || 'Sem Turma'}
+                               </span>
+                               {oc.tipo && (
+                                 <span className="text-[9px] font-bold uppercase text-gray-500">
+                                   {oc.tipo}
+                                 </span>
+                               )}
+                             </div>
+                             <p className="text-gray-400 text-xs leading-relaxed">
+                               {oc.descricao || oc.observacao || 'Sem descrição'}
+                             </p>
+                             <div className="flex items-center gap-4 text-[10px] text-gray-600 font-bold">
+                               <span>Prof. {oc.professor?.nome || 'Desconhecido'}</span>
+                               <span>Registrado: {oc.data_registro ? new Date(oc.data_registro).toLocaleDateString('pt-BR') : '—'}</span>
+                             </div>
+                           </div>
+                           <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-[9px] font-black uppercase rounded-full border border-emerald-500/20">
+                             <CheckCheck className="w-3 h-3" />
+                             Revisada em {oc.data_visualizacao_coordenador ? new Date(oc.data_visualizacao_coordenador).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                           </div>
+                         </div>
+                       </div>
+                     </div>
+                   </div>
+                 ))
+               )}
+             </div>
+           )}
+         </div>
+       ) : null}
 
       {/* Student Profile Modal */}
       {selectedStudent && (

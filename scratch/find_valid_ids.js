@@ -18,19 +18,18 @@ envContent.split('\n').forEach(line => {
 const supabaseUrl = env['VITE_SUPABASE_URL'];
 const supabaseAnonKey = env['VITE_SUPABASE_ANON_KEY'];
 
-console.log('Connecting to:', supabaseUrl);
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function run() {
-  const { data, error } = await supabase
-    .from('ocorrências')
-    .select('*')
-    .limit(1);
+  console.log('Fetching professors...');
+  const { data: professors, error: pErr } = await supabase
+    .from('professores')
+    .select('id, nome, email, cargo');
 
-  if (error) {
-    console.error('Error fetching ocorrencias:', error);
+  if (pErr) {
+    console.error('Professor fetch error:', pErr);
   } else {
-    console.log('Sample row from ocorrências:', data[0] || 'No rows found');
+    console.log('Professors in database:', professors);
   }
 }
 

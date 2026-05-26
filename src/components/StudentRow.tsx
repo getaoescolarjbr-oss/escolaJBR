@@ -3,6 +3,7 @@ import type { Professor, ListaParaVistos } from '../types';
 import { supabase } from '../lib/supabase';
 import { Check, X, AlertTriangle, LogOut, Loader2, Plus, Minus } from 'lucide-react';
 import { OcorrenciaModal } from './OcorrenciaModal';
+import { StudentProfileModal } from './StudentProfileModal';
 import type { StudentGradeBreakdown } from './StudentList';
 import { getBimestreFromDate, getConfigPorTurma } from '../utils/academicUtils';
 
@@ -58,6 +59,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
   const [showDestinoMenu, setShowDestinoMenu] = useState(false);
   const [saidaId, setSaidaId] = useState<string | null>(initialSaidaId || null);
   const [isOcorrenciaOpen, setIsOcorrenciaOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   // Ref para fechar o menu ao clicar fora
   const destinoMenuRef = useRef<HTMLDivElement>(null);
@@ -432,7 +434,9 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
             </div>
             <div className="truncate">
               <div className="flex items-center gap-1 md:gap-2 flex-wrap truncate">
-                <p className={`text-xs md:text-sm font-black tracking-tight uppercase max-w-[130px] sm:max-w-[160px] md:max-w-none truncate ${
+                <p 
+                  onClick={() => setIsProfileOpen(true)}
+                  className={`text-xs md:text-sm font-black tracking-tight uppercase max-w-[130px] sm:max-w-[160px] md:max-w-none truncate cursor-pointer hover:underline hover:text-blue-500 dark:hover:text-blue-400 transition-all ${
                   aluno.status === 'Transferido' || aluno.status === 'Remanejado'
                     ? 'line-through text-gray-500 opacity-60'
                     : theme === 'light' ? 'text-[#003366]' : 'text-ms-main'
@@ -847,6 +851,18 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
         disciplinaId={aluno.disciplina_id}
         onSuccess={() => {}}
       />
+
+      {isProfileOpen && (
+        <StudentProfileModal
+          isOpen={isProfileOpen}
+          onClose={() => setIsProfileOpen(false)}
+          studentId={aluno.aluno_id}
+          studentName={aluno.aluno_nome}
+          theme={theme}
+          bimestre={bimestreId}
+          isCoordinator={professor.cargo === 'Coordenador' || professor.cargo === 'Diretor' || professor.cargo === 'Vice-Diretor'}
+        />
+      )}
     </>
   );
 }

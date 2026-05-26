@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Calendar, ClipboardList, AlertTriangle, LogOut, FileText, Loader2, ChevronRight, BookOpen, Activity, Clock, FileBadge } from 'lucide-react';
+import { X, Calendar, ClipboardList, AlertTriangle, LogOut, FileText, Loader2, ChevronRight, BookOpen, Activity, Clock, FileBadge, CheckCheck } from 'lucide-react';
 import { AtaModal } from './AtaModal';
 
 interface StudentProfileModalProps {
@@ -10,9 +10,18 @@ interface StudentProfileModalProps {
   studentName: string;
   theme: 'dark' | 'light';
   bimestre?: number;
+  isCoordinator?: boolean;
 }
 
-export function StudentProfileModal({ isOpen, onClose, studentId, studentName, theme, bimestre }: StudentProfileModalProps) {
+export function StudentProfileModal({ 
+  isOpen, 
+  onClose, 
+  studentId, 
+  studentName, 
+  theme, 
+  bimestre,
+  isCoordinator = false
+}: StudentProfileModalProps) {
   const [loading, setLoading] = useState(true);
   const [vistos, setVistos] = useState<any[]>([]);
   const [ocorrencias, setOcorrencias] = useState<any[]>([]);
@@ -246,38 +255,40 @@ export function StudentProfileModal({ isOpen, onClose, studentId, studentName, t
             </div>
           </div>
           <div className="flex items-center gap-3 relative">
-            <div className="relative">
-              <button 
-                onClick={() => setShowAtaMenu(!showAtaMenu)}
-                className="px-4 py-2.5 bg-ms-blue text-white font-bold rounded-xl text-sm shadow-lg shadow-ms-blue/30 hover:bg-ms-blue/90 transition-colors flex items-center gap-2"
-              >
-                <FileBadge className="w-4 h-4" /> Criar Ata
-              </button>
-              
-              {showAtaMenu && (
-                <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-ms-card rounded-xl shadow-2xl border border-gray-100 dark:border-ms-border overflow-hidden z-50">
-                  <div className="p-2">
-                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2 pb-2 pt-1">Modelos Disponíveis</p>
-                    {templates.map(t => (
-                      <button
-                        key={t.id}
-                        onClick={() => {
-                           setSelectedTemplate(t);
-                           setSelectedAtaEmitida(null);
-                           setShowAtaMenu(false);
-                        }}
-                        className="w-full text-left px-3 py-2 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-ms-border rounded-lg transition-colors flex items-center gap-2"
-                      >
-                        <FileText className="w-3.5 h-3.5 text-blue-500" /> {t.titulo}
-                      </button>
-                    ))}
-                    {templates.length === 0 && (
-                      <p className="px-3 py-2 text-xs text-gray-500 font-medium">Nenhum modelo cadastrado.</p>
-                    )}
+            {isCoordinator && (
+              <div className="relative">
+                <button 
+                  onClick={() => setShowAtaMenu(!showAtaMenu)}
+                  className="px-4 py-2.5 bg-ms-blue text-white font-bold rounded-xl text-sm shadow-lg shadow-ms-blue/30 hover:bg-ms-blue/90 transition-colors flex items-center gap-2"
+                >
+                  <FileBadge className="w-4 h-4" /> Criar Ata
+                </button>
+                
+                {showAtaMenu && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-ms-card rounded-xl shadow-2xl border border-gray-100 dark:border-ms-border overflow-hidden z-50">
+                    <div className="p-2">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2 pb-2 pt-1">Modelos Disponíveis</p>
+                      {templates.map(t => (
+                        <button
+                          key={t.id}
+                          onClick={() => {
+                             setSelectedTemplate(t);
+                             setSelectedAtaEmitida(null);
+                             setShowAtaMenu(false);
+                          }}
+                          className="w-full text-left px-3 py-2 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-ms-border rounded-lg transition-colors flex items-center gap-2"
+                        >
+                          <FileText className="w-3.5 h-3.5 text-blue-500" /> {t.titulo}
+                        </button>
+                      ))}
+                      {templates.length === 0 && (
+                        <p className="px-3 py-2 text-xs text-gray-500 font-medium">Nenhum modelo cadastrado.</p>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
+            )}
 
             <button onClick={onClose} className="p-3 hover:bg-white/5 rounded-2xl transition-all group">
               <X className="w-6 h-6 text-gray-500 group-hover:text-white" />
@@ -445,12 +456,26 @@ export function StudentProfileModal({ isOpen, onClose, studentId, studentName, t
                             <span className="text-[10px] font-bold text-gray-500">{new Date(o.data).toLocaleDateString()}</span>
                           </div>
                           <p className="text-sm text-gray-300 leading-relaxed font-bold">{o.descricao}</p>
-                          <div className="mt-3 text-[9px] font-bold text-gray-500 uppercase flex items-center gap-2">
-                            <span>Registrado por:</span>
-                            <span className="text-gray-400">
-                              {o.professores?.nome || o.registrado_por || 'Sistema'}
-                              {o.professores?.cargo || o.registrado_por_cargo ? ` (${o.professores?.cargo || o.registrado_por_cargo})` : ''}
-                            </span>
+                          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 items-center text-[9px] font-bold uppercase">
+                            <div className="text-gray-500 flex items-center gap-1.5">
+                              <span>Registrado por:</span>
+                              <span className="text-gray-400">
+                                {o.professores?.nome || o.registrado_por || 'Sistema'}
+                                {o.professores?.cargo || o.registrado_por_cargo ? ` (${o.professores?.cargo || o.registrado_por_cargo})` : ''}
+                              </span>
+                            </div>
+                            
+                            {o.visto_coordenador ? (
+                              <div className="flex items-center gap-1 text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                <CheckCheck className="w-3 h-3" />
+                                <span>Visualizado pela Coordenação em {new Date(o.data_visualizacao_coordenador).toLocaleDateString('pt-BR')} às {new Date(o.data_visualizacao_coordenador).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1 text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                                <Clock className="w-3 h-3" />
+                                <span>Aguardando leitura da Coordenação</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>

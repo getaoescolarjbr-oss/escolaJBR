@@ -18,19 +18,19 @@ envContent.split('\n').forEach(line => {
 const supabaseUrl = env['VITE_SUPABASE_URL'];
 const supabaseAnonKey = env['VITE_SUPABASE_ANON_KEY'];
 
-console.log('Connecting to:', supabaseUrl);
 const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 async function run() {
+  console.log('Probing for id column...');
   const { data, error } = await supabase
     .from('ocorrências')
-    .select('*')
+    .select('id')
     .limit(1);
 
   if (error) {
-    console.error('Error fetching ocorrencias:', error);
+    console.log('Result for id:', error.message);
   } else {
-    console.log('Sample row from ocorrências:', data[0] || 'No rows found');
+    console.log('id exists! Result:', data);
   }
 }
 
