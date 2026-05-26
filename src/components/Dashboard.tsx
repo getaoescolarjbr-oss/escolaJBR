@@ -369,7 +369,8 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
           .select('*')
           .eq('professor_id', professor.id)
           .eq('dia_semana', diaSemana)
-          .eq('tempo', tempoAtual);
+          .gte('tempo', tempoAtual)
+          .order('tempo', { ascending: true });
 
         if (horarios && horarios.length > 0) {
           const aulaAtual = horarios[0];
