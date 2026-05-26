@@ -17,7 +17,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [showLogin, setShowLogin] = useState(false);
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
-    return (localStorage.getItem('portal-theme') as 'dark' | 'light') || 'dark';
+    return (localStorage.getItem('portal-theme') as 'dark' | 'light') || 'light';
   });
   const [isAdmin, setIsAdmin] = useState(false);
   const [view, setView] = useState<'dashboard' | 'admin'>('dashboard');

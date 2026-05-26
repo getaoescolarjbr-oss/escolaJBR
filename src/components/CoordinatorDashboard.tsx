@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import type { Professor, Turma, Student } from '../types';
 import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer } from 'lucide-react';
 import { printReport } from '../utils/printUtils';
+import { getCurrentBimestre } from '../utils/academicUtils';
 import { StudentProfileModal } from './StudentProfileModal';
 import { TeacherDiaryModal } from './TeacherDiaryModal';
 import { SiteManager } from './admin/SiteManager';
@@ -37,7 +38,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
     notas?: Record<string, Record<string, { total: number; detalhes: any[] }>>;
   }>({ atividades: {}, vistos: {} });
   const [loadingPainel, setLoadingPainel] = useState(false);
-  const [selectedBimestre, setSelectedBimestre] = useState<number>(0);
+  const [selectedBimestre, setSelectedBimestre] = useState<number>(getCurrentBimestre);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [showCalendarEditor, setShowCalendarEditor] = useState(false);
   const [selectedTeacherDiary, setSelectedTeacherDiary] = useState<{

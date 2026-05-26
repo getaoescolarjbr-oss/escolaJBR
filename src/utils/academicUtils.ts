@@ -169,3 +169,19 @@ export function getBimestreFromDate(dateStr?: string | null): number | null {
   }
 }
 
+/**
+ * Retorna as configurações de vistos efetivas para uma turma específica.
+ * Prioriza config_turmas (por turma) se existir, senão usa os valores globais do professor.
+ */
+export function getConfigPorTurma(
+  professor: { config_visto_metodo: string; config_visto_valor_total: number; config_turmas?: Record<string, { config_visto_metodo: string; config_visto_valor_total: number }> },
+  turmaId: string | undefined
+): { config_visto_metodo: string; config_visto_valor_total: number } {
+  if (turmaId && professor.config_turmas?.[turmaId]) {
+    return professor.config_turmas[turmaId];
+  }
+  return {
+    config_visto_metodo: professor.config_visto_metodo,
+    config_visto_valor_total: professor.config_visto_valor_total,
+  };
+}

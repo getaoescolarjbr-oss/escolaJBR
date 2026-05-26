@@ -17,6 +17,7 @@ export interface Professor {
   area_conhecimento?: string;
   config_visto_metodo: 'gradual' | 'simbolico' | 'aberto' | 'ponto';
   config_visto_valor_total: number;
+  config_turmas?: Record<string, { config_visto_metodo: 'gradual' | 'simbolico' | 'aberto' | 'ponto'; config_visto_valor_total: number }>;
   bimestre_atual: number;
 }
 

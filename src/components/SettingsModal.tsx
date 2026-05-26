@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, ToggleLeft, ToggleRight, Loader2, BookOpen, Calculator, CalendarDays } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Professor } from '../types';
@@ -14,12 +14,55 @@ interface SettingsModalProps {
 
 export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onToggleTheme }: SettingsModalProps) {
   const [loading, setLoading] = useState(false);
+  const [turmas, setTurmas] = useState<{ id: string; nome: string }[]>([]);
+  const [selectedTurmaId, setSelectedTurmaId] = useState<string>('global');
+
+  useEffect(() => {
+    if (isOpen && professor) {
+      supabase.from('lista_para_vistos')
+        .select('turma_id, turma_nome')
+        .eq('professor_id', professor.id)
+        .then(({ data }) => {
+          if (data) {
+             const uniqueTurmas = Array.from(new Map(data.map(item => [item.turma_id, item])).values());
+             setTurmas(uniqueTurmas.map(t => ({ id: t.turma_id, nome: t.turma_nome })).sort((a, b) => a.nome.localeCompare(b.nome)));
+          }
+        });
+    }
+  }, [isOpen, professor]);
 
   if (!isOpen || !professor) return null;
 
-  const handleUpdateConfig = async (updates: Partial<Professor>) => {
+  const handleUpdateConfig = async (rawUpdates: Partial<Professor>) => {
     setLoading(true);
     
+    let updates: Partial<Professor> = { ...rawUpdates };
+    
+    if (selectedTurmaId !== 'global') {
+      const hasMethod = 'config_visto_metodo' in rawUpdates;
+      const hasValor = 'config_visto_valor_total' in rawUpdates;
+      
+      if (hasMethod || hasValor) {
+        const currentTurmasConfig = professor.config_turmas || {};
+        const currentTurmaConfig = currentTurmasConfig[selectedTurmaId] || {
+          config_visto_metodo: professor.config_visto_metodo,
+          config_visto_valor_total: professor.config_visto_valor_total
+        };
+        
+        delete updates.config_visto_metodo;
+        delete updates.config_visto_valor_total;
+        
+        updates.config_turmas = {
+          ...currentTurmasConfig,
+          [selectedTurmaId]: {
+            ...currentTurmaConfig,
+            ...(hasMethod ? { config_visto_metodo: rawUpdates.config_visto_metodo as any } : {}),
+            ...(hasValor ? { config_visto_valor_total: rawUpdates.config_visto_valor_total as any } : {})
+          }
+        };
+      }
+    }
+
     // Atualiza localmente no localStorage primeiro para garantia total
     const configKey = `portal-config-${professor.user_id}`;
     const currentConfig = {
@@ -46,6 +89,14 @@ export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onT
     setLoading(false);
   };
 
+  const currentMetodo = selectedTurmaId === 'global'
+    ? professor.config_visto_metodo
+    : (professor.config_turmas?.[selectedTurmaId]?.config_visto_metodo || professor.config_visto_metodo);
+
+  const currentValor = selectedTurmaId === 'global'
+    ? professor.config_visto_valor_total
+    : (professor.config_turmas?.[selectedTurmaId]?.config_visto_valor_total || professor.config_visto_valor_total);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
       <div className={`${theme === 'light' ? 'bg-white' : 'bg-ms-card'} rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden border ${theme === 'light' ? 'border-blue-100' : 'border-ms-border'} animate-in fade-in zoom-in duration-200`}>
@@ -68,6 +119,25 @@ export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onT
         {/* Conteúdo */}
         <div className="p-6 space-y-6 max-height-[70vh] overflow-y-auto">
           
+          {/* Seletor de Turma Global/Individual */}
+          <div className={`p-4 rounded-xl border ${theme === 'light' ? 'bg-blue-50/50 border-blue-100' : 'bg-gray-900/40 border-gray-800'}`}>
+            <label className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest mb-3 ${theme === 'light' ? 'text-blue-800 font-extrabold' : 'text-blue-200'}`}>
+               Aplicar Configurações De Visto Em:
+            </label>
+            <select 
+              value={selectedTurmaId}
+              onChange={(e) => setSelectedTurmaId(e.target.value)}
+              className={`w-full border rounded-lg p-2 text-sm outline-none focus:border-blue-500 transition-all ${
+                theme === 'light' ? 'bg-white border-blue-200 text-blue-900' : 'bg-ms-dark border-gray-700 text-white'
+              }`}
+            >
+              <option value="global">Todas as Turmas (Padrão)</option>
+              {turmas.map(t => (
+                <option key={t.id} value={t.id}>{t.nome}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Seção 1: Bimestre e Notas */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className={`p-4 rounded-xl border ${theme === 'light' ? 'bg-blue-50/50 border-blue-100' : 'bg-gray-900/40 border-gray-800'}`}>
@@ -95,7 +165,7 @@ export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onT
               <input 
                 type="number"
                 step="0.5"
-                value={professor.config_visto_valor_total}
+                value={currentValor}
                 onChange={(e) => handleUpdateConfig({ config_visto_valor_total: parseFloat(e.target.value) })}
                 className={`w-full border rounded-lg p-2 text-sm outline-none focus:border-blue-500 transition-all ${
                   theme === 'light' ? 'bg-white border-blue-200 text-blue-900' : 'bg-ms-dark border-gray-700 text-white'
@@ -117,20 +187,20 @@ export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onT
                   key={metodo.id}
                   onClick={() => handleUpdateConfig({ config_visto_metodo: metodo.id as any })}
                   className={`p-4 rounded-xl border text-left transition-all group ${
-                    professor.config_visto_metodo === metodo.id 
+                    currentMetodo === metodo.id 
                       ? (theme === 'light' ? 'bg-blue-600 text-white border-blue-600 shadow-lg' : 'bg-blue-600/20 border-blue-500 shadow-lg')
                       : (theme === 'light' ? 'bg-white border-blue-100 hover:border-blue-300' : 'bg-gray-900/40 border-gray-800 hover:border-gray-700')
                   }`}
                 >
                   <span className={`text-xs font-bold block mb-1 ${
-                    professor.config_visto_metodo === metodo.id 
+                    currentMetodo === metodo.id 
                       ? (theme === 'light' ? 'text-white' : 'text-blue-400') 
                       : (theme === 'light' ? 'text-blue-900' : 'text-white')
                   }`}>
                     {metodo.label}
                   </span>
                   <span className={`text-[10px] leading-tight block ${
-                    professor.config_visto_metodo === metodo.id 
+                    currentMetodo === metodo.id 
                       ? (theme === 'light' ? 'text-blue-100' : 'text-blue-300/60') 
                       : (theme === 'light' ? 'text-blue-600 font-semibold' : 'text-blue-200')
                   }`}>

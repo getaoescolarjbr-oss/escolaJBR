@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Check, X, AlertTriangle, LogOut, Loader2, Plus, Minus } from 'lucide-react';
 import { OcorrenciaModal } from './OcorrenciaModal';
 import type { StudentGradeBreakdown } from './StudentList';
-import { getBimestreFromDate } from '../utils/academicUtils';
+import { getBimestreFromDate, getConfigPorTurma } from '../utils/academicUtils';
 
 interface StudentRowProps {
   aluno: ListaParaVistos;
@@ -28,6 +28,8 @@ interface StudentRowProps {
 }
 
 export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAtividade, atividadesRealizadas, totalAtividades, index, theme, onUpdateVisto, initialVisto, initialPresenca, atividadeIdHoje, onAtividadeCreated, bulkAtividades = [], bulkRefreshTrigger = 0, gradeBreakdown, isLocked = false }: StudentRowProps) {
+  // Configuração efetiva: per-turma se definida, senão usa padrão global
+  const configEfetivo = getConfigPorTurma(professor, aluno.turma_id);
   const [presenca, setPresenca] = useState<boolean | null>(initialPresenca ?? null);
   const [valorVisto, setValorVisto] = useState<string | null>(initialVisto ?? null);
   const [atividadeId, setAtividadeId] = useState<string | null>(atividadeIdHoje);
@@ -185,9 +187,9 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
     if (isPosterior || isLocked) return;
     
     setIsVistoLoading(true);
-    const defaultVal = professor.config_visto_metodo === 'ponto' ? '.' : 
-                       professor.config_visto_metodo === 'simbolico' ? '+' : 
-                       professor.config_visto_metodo === 'gradual' ? '1.0' : '10';
+    const defaultVal = configEfetivo.config_visto_metodo === 'ponto' ? '.' : 
+                       configEfetivo.config_visto_metodo === 'simbolico' ? '+' : 
+                       configEfetivo.config_visto_metodo === 'gradual' ? '1.0' : '10';
     
     const alunoId = String(aluno.aluno_id).trim();
     const newBulkVistos = { ...bulkVistos };
@@ -595,7 +597,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                       </div>
 
                       {/* Ponto */}
-                      {professor.config_visto_metodo === 'ponto' && (
+                      {configEfetivo.config_visto_metodo === 'ponto' && (
                         <button
                           onClick={() => handleBulkVistoAction(ativ.id, '.')}
                           disabled={isLdg || isLocked || isPosterior}
@@ -613,7 +615,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                       )}
 
                       {/* Aberto */}
-                      {professor.config_visto_metodo === 'aberto' && (
+                      {configEfetivo.config_visto_metodo === 'aberto' && (
                         <input
                           type="number" min="0" max="10" step="0.1"
                           value={val || ''}
@@ -627,7 +629,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                       )}
 
                       {/* Simbólico: + / - */}
-                      {professor.config_visto_metodo === 'simbolico' && (
+                      {configEfetivo.config_visto_metodo === 'simbolico' && (
                         <select
                           value={val || ''}
                           onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value)}
@@ -641,7 +643,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                       )}
 
                       {/* Gradual: 0 / 0.5 / 1.0 */}
-                      {professor.config_visto_metodo === 'gradual' && (
+                      {configEfetivo.config_visto_metodo === 'gradual' && (
                         <select
                           value={val || ''}
                           onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value)}
@@ -655,7 +657,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         </select>
                       )}
 
-                      {isLdg && professor.config_visto_metodo !== 'ponto' && (
+                      {isLdg && configEfetivo.config_visto_metodo !== 'ponto' && (
                         <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
                       )}
                     </div>
@@ -677,20 +679,20 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
             ) : (
               // ── MODO NORMAL: visto da atividade do dia ──────────────────
               <div className="flex items-center justify-center gap-1">
-                {professor.config_visto_metodo === 'gradual' && (
+                {configEfetivo.config_visto_metodo === 'gradual' && (
                     <div className="flex gap-1">
                         {['0', '0.5', '1.0'].map(v => (
                             <button key={v} onClick={() => handleVistoAction(v)} disabled={isLocked || isPosterior} className={`px-2 py-1.5 rounded-md text-[10px] font-black border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === v ? 'bg-blue-600 text-white border-blue-400' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}>{v}</button>
                         ))}
                     </div>
                 )}
-                {professor.config_visto_metodo === 'simbolico' && (
+                {configEfetivo.config_visto_metodo === 'simbolico' && (
                     <div className="flex gap-1">
                         <button onClick={() => handleVistoAction('+')} disabled={isLocked || isPosterior} className={`p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '+' ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-900/50' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Plus className="w-4 h-4" /></button>
                         <button onClick={() => handleVistoAction('-')} disabled={isLocked || isPosterior} className={`p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '-' ? 'bg-red-600 text-white border-red-400 shadow-lg shadow-red-900/50' : theme === 'light' ? 'bg-red-500/25 text-red-700 border-red-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Minus className="w-4 h-4" /></button>
                     </div>
                 )}
-                {professor.config_visto_metodo === 'ponto' && (
+                {configEfetivo.config_visto_metodo === 'ponto' && (
                     <button
                         onClick={() => handleVistoAction('.')}
                         disabled={isLocked || isPosterior}
@@ -705,7 +707,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         <div className={`w-2 h-2 rounded-full ${valorVisto === '.' ? 'bg-white' : theme === 'light' ? 'bg-blue-400' : 'bg-blue-300'}`}></div>
                     </button>
                 )}
-                {professor.config_visto_metodo === 'aberto' && (
+                {configEfetivo.config_visto_metodo === 'aberto' && (
                     <div className="relative w-20">
                         <input
                             type="number" min="0" max="10" step="0.1"

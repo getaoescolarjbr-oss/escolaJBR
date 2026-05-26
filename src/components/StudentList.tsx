@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import type { Professor, ListaParaVistos } from '../types';
 import { supabase } from '../lib/supabase';
 import { StudentRow } from './StudentRow';
-import { getBimestreFromDate } from '../utils/academicUtils';
+import { getBimestreFromDate, getConfigPorTurma } from '../utils/academicUtils';
 import { AlertTriangle, Info, Loader2, Save } from 'lucide-react';
 
 export interface StudentGradeBreakdown {
@@ -30,6 +30,8 @@ interface StudentListProps {
 }
 
 export function StudentList({ professor, turmaId, disciplinaId, dataAula = new Date().toISOString().split('T')[0], bimestreId, descricaoAtividade, theme, onAtividadeLoaded, bulkAtividades = [], isLocked = false }: StudentListProps) {
+  // Config efetiva para esta turma (per-turma ou global)
+  const configEfetivo = getConfigPorTurma(professor, turmaId);
   const [alunos, setAlunos] = useState<ListaParaVistos[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalAtividades, setTotalAtividades] = useState(0);
@@ -223,7 +225,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
               
               const totalAtivCalculado = totalComHoje;
               const pesosVistoAluno = currentStats[cleanId] || 0;
-              const maxVistosPoints = professor.config_visto_valor_total || 2.0;
+              const maxVistosPoints = configEfetivo.config_visto_valor_total || 2.0;
               const notaVistoFinal = totalAtivCalculado > 0 ? (pesosVistoAluno / totalAtivCalculado) * maxVistosPoints : 0;
 
               breakdownObj[cleanId] = {
@@ -275,7 +277,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
         const studentBreakdown = prev[alunoId];
         if (!studentBreakdown) return prev;
         
-        const maxVistosPoints = professor.config_visto_valor_total || 2.0;
+        const maxVistosPoints = configEfetivo.config_visto_valor_total || 2.0;
         const newNotaVisto = newTotal > 0 ? (newVistosCount / newTotal) * maxVistosPoints : 0;
         const somaNotas = studentBreakdown.avaliacoes.reduce((acc, curr) => acc + curr.nota, 0);
         
@@ -324,9 +326,9 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
     if (!confirm('Deseja marcar todas as atividades pendentes para todos os alunos (exceto transferidos)?\nIsso pode demorar alguns segundos.')) return;
     
     setIsMarkingAll(true);
-    const defaultVal = professor.config_visto_metodo === 'ponto' ? '.' : 
-                       professor.config_visto_metodo === 'simbolico' ? '+' : 
-                       professor.config_visto_metodo === 'gradual' ? '1.0' : '10';
+    const defaultVal = configEfetivo.config_visto_metodo === 'ponto' ? '.' : 
+                       configEfetivo.config_visto_metodo === 'simbolico' ? '+' : 
+                       configEfetivo.config_visto_metodo === 'gradual' ? '1.0' : '10';
     
     const inserts: any[] = [];
     const deletes: string[] = [];
@@ -476,7 +478,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                        )}
                     </div>
                   ) : (
-                    `Lançar Visto (${professor.config_visto_metodo})`
+                    `Lançar Visto (${configEfetivo.config_visto_metodo})`
                   )}
                 </th>
                 <th scope="col" className="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-widest w-40">
