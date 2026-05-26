@@ -116,7 +116,7 @@ export function OcorrenciaModal({
             <textarea
               value={descricao}
               onChange={(e) => setDescricao(e.target.value)}
-              className="w-full px-4 py-3 bg-gray-900 border border-gray-700 text-white rounded-lg focus:ring-2 focus:ring-ms-red focus:border-ms-red outline-none resize-none h-32 transition-all"
+              className="w-full px-4 py-3 bg-white border border-gray-300 text-[#003366] placeholder:text-gray-400 rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none resize-none h-32 transition-all font-medium"
               placeholder="Descreva o que ocorreu durante a aula..."
               required
             />
