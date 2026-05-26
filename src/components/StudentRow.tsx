@@ -789,14 +789,6 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
           {/* relative aqui para o dropdown se posicionar corretamente */}
           <div className="relative flex items-center justify-center gap-1 md:gap-2" ref={destinoMenuRef}>
             <button
-              onClick={() => setIsProfileOpen(true)}
-              className="p-1.5 md:p-2.5 rounded-lg border border-blue-500/30 text-blue-500 hover:bg-blue-500/20 shadow-lg transition-all"
-              title="Visualizar Perfil e Ocorrências"
-            >
-              <Eye className="w-3.5 h-3.5 md:w-4 md:h-4" />
-            </button>
-
-            <button
               onClick={() => setIsOcorrenciaOpen(true)}
               disabled={isLocked}
               className="p-1.5 md:p-2.5 rounded-lg border border-amber-500/30 text-amber-500 hover:bg-amber-500/20 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
@@ -859,6 +851,10 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
         turmaId={aluno.turma_id}
         disciplinaId={aluno.disciplina_id}
         onSuccess={() => {}}
+        onViewProfile={() => {
+          setIsOcorrenciaOpen(false);
+          setIsProfileOpen(true);
+        }}
       />
 
       {isProfileOpen && (

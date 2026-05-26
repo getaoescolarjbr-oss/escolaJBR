@@ -512,7 +512,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                  <span className={`text-[10px] font-black uppercase tracking-wider ${theme === 'light' ? 'text-red-700' : 'text-red-500'}`}>Crítico (&lt;39%)</span>
              </div>
              <div className={`hidden lg:flex items-center gap-1.5 pl-4 border-l ${theme === 'light' ? 'border-blue-100 text-blue-800' : 'border-gray-700 text-blue-300'} text-[10px] font-bold`}>
-                 <span>💡 Dica: Clique no nome do aluno ou no ícone de olho (👁️) na coluna Ações para ver a ficha completa e histórico de ocorrências.</span>
+                 <span>💡 Dica: Clique no nome do aluno ou abra o registro de ocorrência (⚠️) e clique em "Ver Ficha" para ver o histórico completo de ocorrências.</span>
              </div>
           </div>
 

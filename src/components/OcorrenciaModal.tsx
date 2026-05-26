@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { X, AlertTriangle, Zap } from 'lucide-react';
+import { X, AlertTriangle, Zap, Eye } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface OcorrenciaModalProps {
@@ -11,6 +11,7 @@ interface OcorrenciaModalProps {
   turmaId: string;
   disciplinaId: string;
   onSuccess: () => void;
+  onViewProfile?: () => void;
 }
 
 export function OcorrenciaModal({
@@ -21,7 +22,8 @@ export function OcorrenciaModal({
   professorId,
   turmaId,
   disciplinaId,
-  onSuccess
+  onSuccess,
+  onViewProfile
 }: OcorrenciaModalProps) {
   const [descricao, setDescricao] = useState('');
   const [loading, setLoading] = useState(false);
@@ -78,9 +80,22 @@ export function OcorrenciaModal({
         </div>
         
         <div className="p-6 space-y-6">
-          <div>
-            <p className="text-xs font-bold text-blue-900 uppercase tracking-widest mb-1">Aluno</p>
-            <p className="text-lg font-semibold text-blue-900">{alunoNome}</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-xs font-bold text-blue-900 uppercase tracking-widest mb-1">Aluno</p>
+              <p className="text-lg font-semibold text-blue-900">{alunoNome}</p>
+            </div>
+            {onViewProfile && (
+              <button
+                type="button"
+                onClick={onViewProfile}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-blue-500/30 text-blue-600 bg-blue-500/5 hover:bg-blue-500/10 text-xs font-bold transition-all active:scale-95 shadow-sm"
+                title="Ver Ficha / Ocorrências do Aluno"
+              >
+                <Eye size={14} />
+                Ver Ficha
+              </button>
+            )}
           </div>
           
           <div>
