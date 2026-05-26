@@ -102,6 +102,9 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
       if (studentsData) setStudents(studentsData);
 
       // 2. Fetch Professors/Disciplines allocated to this turma
+      const combinedMap = new Map();
+
+      // Fonte A: alocacoes_v2
       const { data: allocsData } = await supabase
         .from('alocacoes_v2')
         .select(`
@@ -111,7 +114,62 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
         `)
         .eq('turma_id', selectedTurma);
       
-      if (allocsData) setAllocations(allocsData);
+      if (allocsData) {
+        allocsData.forEach((a: any) => {
+          if (a.professores?.id && a.disciplinas?.id) {
+            combinedMap.set(`${a.professores.id}-${a.disciplinas.id}`, a);
+          }
+        });
+      }
+
+      // Fonte B: horarios
+      const { data: horariosData } = await supabase
+        .from('horarios')
+        .select(`
+          professor_id,
+          disciplina_id,
+          disciplina_nome,
+          professores!inner(id, nome, cargo, config_visto_valor_total)
+        `)
+        .eq('turma_id', selectedTurma);
+
+      if (horariosData) {
+        horariosData.forEach((h: any) => {
+          const key = `${h.professor_id}-${h.disciplina_id}`;
+          if (!combinedMap.has(key)) {
+            combinedMap.set(key, {
+              id: key,
+              professores: h.professores,
+              disciplinas: { id: h.disciplina_id, nome: h.disciplina_nome }
+            });
+          }
+        });
+      }
+
+      // Fonte C: lista_para_vistos (Legado)
+      const { data: legacyData } = await supabase
+        .from('lista_para_vistos')
+        .select(`
+          professor_id, professor_nome,
+          disciplina_id, disciplina_nome,
+          professores!inner(id, nome, cargo, config_visto_valor_total)
+        `)
+        .eq('turma_id', selectedTurma);
+
+      if (legacyData) {
+        legacyData.forEach((l: any) => {
+          const key = `${l.professor_id}-${l.disciplina_id}`;
+          if (!combinedMap.has(key)) {
+            combinedMap.set(key, {
+              id: key,
+              professores: l.professores,
+              disciplinas: { id: l.disciplina_id, nome: l.disciplina_nome }
+            });
+          }
+        });
+      }
+
+      setAllocations(Array.from(combinedMap.values()));
 
     } catch (err) {
       console.error('Error fetching coordinator dashboard data:', err);
