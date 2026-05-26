@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Check, X, AlertTriangle, LogOut, Loader2, Plus, Minus } from 'lucide-react';
 import { OcorrenciaModal } from './OcorrenciaModal';
 import type { StudentGradeBreakdown } from './StudentList';
+import { getBimestreFromDate } from '../utils/academicUtils';
 
 interface StudentRowProps {
   aluno: ListaParaVistos;
@@ -30,6 +31,14 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
   const [valorVisto, setValorVisto] = useState<string | null>(initialVisto ?? null);
   const [atividadeId, setAtividadeId] = useState<string | null>(atividadeIdHoje);
   
+  const isPosterior = useMemo(() => {
+    if (aluno.status !== 'Transferido' && aluno.status !== 'Remanejado' && aluno.status !== 'Cancelada') {
+      return false;
+    }
+    const exitBim = getBimestreFromDate(aluno.atestado_inicio);
+    return exitBim !== null && bimestreId > exitBim;
+  }, [aluno.status, aluno.atestado_inicio, bimestreId]);
+
   const [isChamadaLoading, setIsChamadaLoading] = useState(false);
   const [isVistoLoading, setIsVistoLoading] = useState(false);
 
@@ -370,14 +379,16 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 )}
               </div>
               <div className="flex items-center gap-2 mt-1">
-                {percentual < 40 ? (
-                  <span className="flex items-center gap-1 text-[8px] font-black bg-red-600 text-white px-2 py-0.5 rounded-full animate-pulse">CRÍTICO</span>
-                ) : percentual <= 59 ? (
-                  <span className="flex items-center gap-1 text-[8px] font-black bg-yellow-500 text-white px-2 py-0.5 rounded-full">ALERTA</span>
-                ) : percentual <= 79 ? (
-                  <span className="flex items-center gap-1 text-[8px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">BOM</span>
-                ) : (
-                  <span className="flex items-center gap-1 text-[8px] font-black bg-green-600 text-white px-2 py-0.5 rounded-full">ÓTIMO</span>
+                {!isPosterior && (
+                  percentual < 40 ? (
+                    <span className="flex items-center gap-1 text-[8px] font-black bg-red-600 text-white px-2 py-0.5 rounded-full animate-pulse">CRÍTICO</span>
+                  ) : percentual <= 59 ? (
+                    <span className="flex items-center gap-1 text-[8px] font-black bg-yellow-500 text-white px-2 py-0.5 rounded-full">ALERTA</span>
+                  ) : percentual <= 79 ? (
+                    <span className="flex items-center gap-1 text-[8px] font-black bg-blue-600 text-white px-2 py-0.5 rounded-full">BOM</span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-[8px] font-black bg-green-600 text-white px-2 py-0.5 rounded-full">ÓTIMO</span>
+                  )
                 )}
               </div>
             </div>
@@ -386,28 +397,35 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
 
         <td className="px-6 py-5 text-center">
             <div className="inline-flex flex-col items-center gap-1">
-                <span className={`text-[11px] font-black ${
-                  percentual >= 80 ? 'text-green-500' :
-                  percentual >= 60 ? 'text-blue-500' :
-                  percentual >= 40 ? 'text-yellow-500' :
-                  'text-red-500'
-                }`}>
-                    {percentual}%
-                </span>
-                <div className="w-12 h-1 bg-gray-800 rounded-full overflow-hidden">
-                    <div className={`h-full transition-all ${
-                      percentual >= 80 ? 'bg-green-500' :
-                      percentual >= 60 ? 'bg-blue-500' :
-                      percentual >= 40 ? 'bg-yellow-500' :
-                      'bg-red-500'
-                    }`} style={{ width: `${percentual}%` }}></div>
-                </div>
+                {isPosterior ? (
+                  <span className="text-[11px] font-black text-gray-500 italic">N/A</span>
+                ) : (
+                  <>
+                    <span className={`text-[11px] font-black ${
+                      percentual >= 80 ? 'text-green-500' :
+                      percentual >= 60 ? 'text-blue-500' :
+                      percentual >= 40 ? 'text-yellow-500' :
+                      'text-red-500'
+                    }`}>
+                        {percentual}%
+                    </span>
+                    <div className="w-12 h-1 bg-gray-800 rounded-full overflow-hidden">
+                        <div className={`h-full transition-all ${
+                          percentual >= 80 ? 'bg-green-500' :
+                          percentual >= 60 ? 'bg-blue-500' :
+                          percentual >= 40 ? 'bg-yellow-500' :
+                          'bg-red-500'
+                        }`} style={{ width: `${percentual}%` }}></div>
+                    </div>
+                  </>
+                )}
 
                 {/* Grade Breakdown Trigger */}
-                {gradeBreakdown && (
+                {gradeBreakdown && !isPosterior && (
                   <div className="relative mt-2" ref={gradeBreakdownRef}>
                     <button 
                       onClick={() => setShowGradeBreakdown(!showGradeBreakdown)}
+
                       className={`flex flex-col items-center justify-center px-3 py-1 rounded-lg border shadow-sm transition-all hover:scale-105 active:scale-95 ${
                         gradeBreakdown.mediaFinal >= 6.0 
                           ? 'border-blue-500/30 text-blue-600 bg-blue-500/5 hover:bg-blue-500/10' 
@@ -465,7 +483,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
              <div className="flex items-center justify-center gap-2">
                 <button 
                   onClick={() => handleChamada(true)} 
-                  disabled={isChamadaLoading || isLocked}
+                  disabled={isChamadaLoading || isLocked || isPosterior}
                   className={`p-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     presenca === true 
                       ? 'bg-green-500 text-white shadow-lg shadow-green-900/50 scale-110' 
@@ -478,7 +496,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 </button>
                 <button 
                   onClick={() => handleChamada(false)} 
-                  disabled={isChamadaLoading || isLocked}
+                  disabled={isChamadaLoading || isLocked || isPosterior}
                   className={`p-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     presenca === false 
                       ? 'bg-red-500 text-white shadow-lg shadow-red-900/50 scale-110' 
@@ -540,7 +558,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                       {professor.config_visto_metodo === 'ponto' && (
                         <button
                           onClick={() => handleBulkVistoAction(ativ.id, '.')}
-                          disabled={isLdg || isLocked}
+                          disabled={isLdg || isLocked || isPosterior}
                           className={`w-8 h-8 rounded-full border-2 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
                             val === '.'
                               ? 'bg-blue-600 border-blue-400 scale-110 shadow-lg shadow-blue-900/40'
@@ -560,7 +578,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                           type="number" min="0" max="10" step="0.1"
                           value={val || ''}
                           onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value)}
-                          disabled={isLdg || isLocked}
+                          disabled={isLdg || isLocked || isPosterior}
                           placeholder="0"
                           className={`w-12 text-center py-1 px-1 rounded border outline-none font-bold text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-blue-500 ${
                             theme === 'light' ? 'bg-blue-50 border-blue-200 text-blue-900' : 'bg-gray-900 border-gray-700 text-white'
@@ -573,7 +591,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         <select
                           value={val || ''}
                           onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value)}
-                          disabled={isLdg || isLocked}
+                          disabled={isLdg || isLocked || isPosterior}
                           className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed py-1 px-1 w-12`}
                         >
                           <option value="">—</option>
@@ -587,7 +605,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         <select
                           value={val || ''}
                           onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value)}
-                          disabled={isLdg || isLocked}
+                          disabled={isLdg || isLocked || isPosterior}
                           className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed py-1 px-1 w-14`}
                         >
                           <option value="">—</option>
@@ -610,20 +628,20 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 {professor.config_visto_metodo === 'gradual' && (
                     <div className="flex gap-1">
                         {['0', '0.5', '1.0'].map(v => (
-                            <button key={v} onClick={() => handleVistoAction(v)} disabled={isLocked} className={`px-2 py-1.5 rounded-md text-[10px] font-black border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === v ? 'bg-blue-600 text-white border-blue-400' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}>{v}</button>
+                            <button key={v} onClick={() => handleVistoAction(v)} disabled={isLocked || isPosterior} className={`px-2 py-1.5 rounded-md text-[10px] font-black border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === v ? 'bg-blue-600 text-white border-blue-400' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}>{v}</button>
                         ))}
                     </div>
                 )}
                 {professor.config_visto_metodo === 'simbolico' && (
                     <div className="flex gap-1">
-                        <button onClick={() => handleVistoAction('+')} disabled={isLocked} className={`p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '+' ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-900/50' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Plus className="w-4 h-4" /></button>
-                        <button onClick={() => handleVistoAction('-')} disabled={isLocked} className={`p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '-' ? 'bg-red-600 text-white border-red-400 shadow-lg shadow-red-900/50' : theme === 'light' ? 'bg-red-500/25 text-red-700 border-red-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Minus className="w-4 h-4" /></button>
+                        <button onClick={() => handleVistoAction('+')} disabled={isLocked || isPosterior} className={`p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '+' ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-900/50' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Plus className="w-4 h-4" /></button>
+                        <button onClick={() => handleVistoAction('-')} disabled={isLocked || isPosterior} className={`p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '-' ? 'bg-red-600 text-white border-red-400 shadow-lg shadow-red-900/50' : theme === 'light' ? 'bg-red-500/25 text-red-700 border-red-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Minus className="w-4 h-4" /></button>
                     </div>
                 )}
                 {professor.config_visto_metodo === 'ponto' && (
                     <button
                         onClick={() => handleVistoAction('.')}
-                        disabled={isLocked}
+                        disabled={isLocked || isPosterior}
                         className={`w-10 h-10 rounded-full border-2 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
                             valorVisto === '.'
                                 ? 'bg-blue-600 text-white border-blue-400 scale-110 shadow-lg'
@@ -641,7 +659,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                             type="number" min="0" max="10" step="0.1"
                             value={valorVisto || ''}
                             onChange={(e) => handleVistoAction(e.target.value)}
-                            disabled={isLocked}
+                            disabled={isLocked || isPosterior}
                             className={`w-full text-center p-2 rounded-lg border outline-none font-bold text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                                 theme === 'light'
                                     ? 'bg-blue-50 border-blue-100 text-blue-900 focus:ring-2 focus:ring-blue-500'
@@ -676,7 +694,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                   setShowDestinoMenu(prev => !prev);
                 }
               }}
-              disabled={isLocked && !isFora}
+              disabled={(isLocked && !isFora) || isPosterior}
               className={`p-2.5 rounded-lg border transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
                 isFora
                   ? 'bg-amber-500 text-white border-amber-400'

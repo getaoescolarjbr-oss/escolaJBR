@@ -31,6 +31,7 @@ export interface ListaParaVistos {
   aluno_nome: string;
   aluno_numero?: number;
   status?: MatriculaStatus;
+  atestado_inicio?: string;
 }
 
 export interface Chamada {

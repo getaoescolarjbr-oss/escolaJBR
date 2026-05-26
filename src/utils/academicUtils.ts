@@ -131,3 +131,41 @@ export function getCurrentBimestre(): number {
   }
 }
 
+/**
+ * Determina o bimestre letivo (1 a 4) com base em uma data informada (calendário de 2026).
+ */
+export function getBimestreFromDate(dateStr?: string | null): number | null {
+  if (!dateStr) return null;
+  try {
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return null;
+
+    const month = date.getMonth();
+    const day = date.getDate();
+
+    // Converter para data comparável em 2026
+    const currentDate = new Date(2026, month, day);
+
+    // Intervalos de 2026:
+    // 1º Bimestre: 03/02/2026 a 30/04/2026
+    // 2º Bimestre: 04/05/2026 a 16/07/2026
+    // 3º Bimestre: 03/08/2026 a 01/10/2026
+    // 4º Bimestre: 02/10/2026 a 31/12/2026
+    const b1End = new Date(2026, 3, 30);   // Apr 30
+    const b2End = new Date(2026, 6, 16);   // Jul 16
+    const b3End = new Date(2026, 9, 1);    // Oct 1
+
+    if (currentDate <= b1End) {
+      return 1;
+    } else if (currentDate <= b2End) {
+      return 2;
+    } else if (currentDate <= b3End) {
+      return 3;
+    } else {
+      return 4;
+    }
+  } catch (e) {
+    return null;
+  }
+}
+

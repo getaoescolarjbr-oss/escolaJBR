@@ -70,7 +70,8 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
           professor_nome: professor.nome,
           disciplina_nome: '', // Será preenchido se necessário, mas o ID é o que importa
           turma_nome: '',
-          status: a.status
+          status: a.status,
+          atestado_inicio: a.atestado_inicio
         }));
         setAlunos(mappedAlunos);
       }

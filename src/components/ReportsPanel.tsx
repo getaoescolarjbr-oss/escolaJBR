@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, ListaParaVistos } from '../types';
 import { AlertCircle, Printer, Settings2, Users } from 'lucide-react';
-import { arredondarNotaMS, getCorGradiente, estaAprovado } from '../utils/academicUtils';
+import { arredondarNotaMS, getCorGradiente, estaAprovado, getBimestreFromDate } from '../utils/academicUtils';
 import { MatriculaModal } from './MatriculaModal';
 import { printReport } from '../utils/printUtils';
 
@@ -28,8 +28,11 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
     b4: number;
     soma: number;
     mediaAnual: number;
+    mediaAnualOriginal?: number;
     aprovado: boolean;
     bimestreEntrada: number;
+    exitBim: number | null;
+    status?: string;
   }>>({});
   const [loadingAnual, setLoadingAnual] = useState(false);
   
@@ -58,7 +61,9 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
       aluno_numero: a.aluno_numero,
       turma_id: turmaId,
       disciplina_id: disciplinaId,
-      professor_id: professor.id
+      professor_id: professor.id,
+      status: a.status,
+      atestado_inicio: a.atestado_inicio
     }));
     setAlunos(mapped as any);
 
@@ -158,7 +163,9 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
         aluno_numero: a.aluno_numero,
         turma_id: turmaId,
         disciplina_id: disciplinaId,
-        professor_id: professor.id
+        professor_id: professor.id,
+        status: a.status,
+        atestado_inicio: a.atestado_inicio
       }));
       setAlunos(mapped as any);
 
@@ -226,10 +233,20 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
         const matricula = dataMatricula?.find(m => String(m.aluno_id).trim() === currentAlunoId);
         const bimestreEntrada = matricula?.bimestre_entrada || 1;
 
+        // Determinar o bimestre de saída (se houver)
+        let exitBim: number | null = null;
+        if (aluno.status === 'Transferido' || aluno.status === 'Remanejado' || aluno.status === 'Cancelada') {
+          exitBim = getBimestreFromDate(aluno.atestado_inicio);
+        }
+
         const mediasBimestrais: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0 };
 
         for (let b = 1; b <= 4; b++) {
           if (b < bimestreEntrada) {
+            mediasBimestrais[b] = 0;
+            continue;
+          }
+          if (exitBim !== null && b > exitBim) {
             mediasBimestrais[b] = 0;
             continue;
           }
@@ -254,19 +271,24 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
           const avalIdsBim = avaliacoesPorBimestre[b] || [];
           let somaNotasBim = 0;
           if (avalIdsBim.length > 0) {
-            const notasBim = notas.filter(n => 
+            const notasBim = vistos.filter(n => false); // placeholder, let's keep it correct
+            const notasBimReal = notas.filter(n => 
               String(n.aluno_id).trim() === currentAlunoId && 
               avalIdsBim.includes(n.avaliacao_id)
             );
-            somaNotasBim = notasBim.reduce((acc, curr) => acc + (curr.nota || 0), 0);
+            somaNotasBim = notasBimReal.reduce((acc, curr) => acc + (curr.nota || 0), 0);
           }
 
           mediasBimestrais[b] = arredondarNotaMS(somaNotasBim + notaVistoFinal);
         }
 
-        const bimestresCursados = 4 - bimestreEntrada + 1;
+        const bimestresCursados = exitBim !== null
+          ? Math.max(0, exitBim - bimestreEntrada + 1)
+          : (4 - bimestreEntrada + 1);
+
         let soma = 0;
-        for (let b = bimestreEntrada; b <= 4; b++) {
+        const fimBim = exitBim !== null ? exitBim : 4;
+        for (let b = bimestreEntrada; b <= fimBim; b++) {
           soma += mediasBimestrais[b];
         }
 
@@ -291,7 +313,9 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
           mediaAnual: mediaAnualArredondada,
           mediaAnualOriginal: mediaAnualOriginal,
           aprovado: aprovado,
-          bimestreEntrada: bimestreEntrada
+          bimestreEntrada: bimestreEntrada,
+          exitBim: exitBim,
+          status: aluno.status
         };
       });
 
@@ -410,56 +434,87 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                           </thead>
                           <tbody className="divide-y divide-ms-border/30">
                           {alunos.map((aluno, idx) => {
-                              const s = statsAnual[aluno.aluno_id] || { b1: 0, b2: 0, b3: 0, b4: 0, soma: 0, mediaAnual: 0, aprovado: false, bimestreEntrada: 1 };
-                              const bEntrada = s.bimestreEntrada || 1;
+                               const s = statsAnual[aluno.aluno_id] || { b1: 0, b2: 0, b3: 0, b4: 0, soma: 0, mediaAnual: 0, aprovado: false, bimestreEntrada: 1, exitBim: null };
+                               const bEntrada = s.bimestreEntrada || 1;
 
-                              return (
-                              <tr key={aluno.aluno_id} className={idx % 2 !== 0 ? 'bg-ms-dark/5' : ''}>
-                                  <td className="px-6 py-4 whitespace-nowrap sticky left-0 z-10 bg-inherit border-r border-ms-border/30">
-                                  <div className="flex items-center gap-3">
-                                      <span className="text-[10px] font-black text-ms-gold">{idx + 1}.</span>
-                                      <span className={`text-xs font-bold ${theme === 'light' ? 'text-blue-950' : 'text-white'}`}>{aluno.aluno_nome}</span>
-                                  </div>
-                                  </td>
-                                  
-                                  {/* Notas Bimestrais adaptadas à matrícula */}
-                                  <td className={`px-4 py-4 text-center text-xs font-black ${bEntrada > 1 ? 'text-gray-400 italic font-medium' : ''}`}>
-                                    {bEntrada > 1 ? 'N/A' : s.b1.toFixed(1)}
-                                  </td>
-                                  <td className={`px-4 py-4 text-center text-xs font-black ${bEntrada > 2 ? 'text-gray-400 italic font-medium' : ''}`}>
-                                    {bEntrada > 2 ? 'N/A' : s.b2.toFixed(1)}
-                                  </td>
-                                  <td className={`px-4 py-4 text-center text-xs font-black ${bEntrada > 3 ? 'text-gray-400 italic font-medium' : ''}`}>
-                                    {bEntrada > 3 ? 'N/A' : s.b3.toFixed(1)}
-                                  </td>
-                                  <td className="px-4 py-4 text-center text-xs font-black">
-                                    {s.b4.toFixed(1)}
-                                  </td>
+                               return (
+                               <tr key={aluno.aluno_id} className={idx % 2 !== 0 ? 'bg-ms-dark/5' : ''}>
+                                   <td className="px-6 py-4 whitespace-nowrap sticky left-0 z-10 bg-inherit border-r border-ms-border/30">
+                                   <div className="flex items-center gap-3">
+                                       <span className="text-[10px] font-black text-ms-gold">{idx + 1}.</span>
+                                       <span className={`text-xs font-bold ${
+                                         aluno.status === 'Transferido' || aluno.status === 'Remanejado'
+                                           ? 'line-through text-gray-500 opacity-60'
+                                           : theme === 'light' ? 'text-blue-950' : 'text-white'
+                                       }`}>
+                                         {aluno.aluno_nome}
+                                         {aluno.status && aluno.status !== 'Ativo' && (
+                                           <span className={`ml-2 text-[8px] px-2 py-0.5 rounded-full font-black uppercase border tracking-normal ${
+                                             aluno.status === 'Transferido' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                                             aluno.status === 'Remanejado' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                                             aluno.status === 'Atestado' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                                             'bg-red-500/20 text-red-400 border-red-500/30'
+                                           }`}>
+                                             {aluno.status}
+                                           </span>
+                                         )}
+                                       </span>
+                                   </div>
+                                   </td>
+                                   
+                                   {/* Notas Bimestrais adaptadas à matrícula e saída */}
+                                   <td className={`px-4 py-4 text-center text-xs font-black ${(bEntrada > 1 || (s.exitBim !== null && s.exitBim < 1)) ? 'text-gray-400 italic font-medium' : ''}`}>
+                                     {(bEntrada > 1 || (s.exitBim !== null && s.exitBim < 1)) ? 'N/A' : s.b1.toFixed(1)}
+                                   </td>
+                                   <td className={`px-4 py-4 text-center text-xs font-black ${(bEntrada > 2 || (s.exitBim !== null && s.exitBim < 2)) ? 'text-gray-400 italic font-medium' : ''}`}>
+                                     {(bEntrada > 2 || (s.exitBim !== null && s.exitBim < 2)) ? 'N/A' : s.b2.toFixed(1)}
+                                   </td>
+                                   <td className={`px-4 py-4 text-center text-xs font-black ${(bEntrada > 3 || (s.exitBim !== null && s.exitBim < 3)) ? 'text-gray-400 italic font-medium' : ''}`}>
+                                     {(bEntrada > 3 || (s.exitBim !== null && s.exitBim < 3)) ? 'N/A' : s.b3.toFixed(1)}
+                                   </td>
+                                   <td className={`px-4 py-4 text-center text-xs font-black ${(s.exitBim !== null && s.exitBim < 4) ? 'text-gray-400 italic font-medium' : ''}`}>
+                                     {(s.exitBim !== null && s.exitBim < 4) ? 'N/A' : s.b4.toFixed(1)}
+                                   </td>
 
-                                  {/* Somatório */}
-                                  <td className="px-4 py-4 text-center text-xs font-black bg-blue-500/5 text-blue-500">
-                                    {s.soma.toFixed(1)}
-                                  </td>
+                                   {/* Somatório */}
+                                   <td className="px-4 py-4 text-center text-xs font-black bg-blue-500/5 text-blue-500">
+                                     {s.soma.toFixed(1)}
+                                   </td>
 
-                                  {/* Média Anual */}
-                                  <td className="px-4 py-4 text-center text-xs font-black bg-blue-500/10" style={{ color: getCorGradiente(s.mediaAnual, theme) }}>
-                                    {s.mediaAnual.toFixed(1)}
-                                  </td>
+                                   {/* Média Anual */}
+                                   <td className="px-4 py-4 text-center text-xs font-black bg-blue-500/10" style={{ color: getCorGradiente(s.mediaAnual, theme) }}>
+                                     {s.mediaAnual.toFixed(1)}
+                                   </td>
 
-                                  {/* Status de Aprovação */}
-                                  <td className="px-6 py-4 text-center">
-                                      <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                          s.aprovado 
-                                            ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/20' 
-                                            : 'bg-red-500/15 text-red-500 border border-red-500/20'
-                                      }`}>
-                                          <span className={`w-1.5 h-1.5 rounded-full ${s.aprovado ? 'bg-emerald-500' : 'bg-red-500'}`} />
-                                          {s.aprovado ? 'Aprovado' : 'Exame'}
-                                      </div>
-                                  </td>
-                              </tr>
-                              );
-                          })}
+                                   {/* Status de Aprovação */}
+                                   <td className="px-6 py-4 text-center">
+                                       {aluno.status && aluno.status !== 'Ativo' && aluno.status !== 'Atestado' ? (
+                                         <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                             aluno.status === 'Transferido' ? 'bg-orange-500/15 text-orange-500 border border-orange-500/20' :
+                                             aluno.status === 'Remanejado' ? 'bg-purple-500/15 text-purple-500 border border-purple-500/20' :
+                                             'bg-red-500/15 text-red-500 border border-red-500/20'
+                                         }`}>
+                                             <span className={`w-1.5 h-1.5 rounded-full ${
+                                               aluno.status === 'Transferido' ? 'bg-orange-500' :
+                                               aluno.status === 'Remanejado' ? 'bg-purple-500' :
+                                               'bg-red-500'
+                                             }`} />
+                                             {aluno.status}
+                                         </div>
+                                       ) : (
+                                         <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                             s.aprovado 
+                                               ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/20' 
+                                               : 'bg-red-500/15 text-red-500 border border-red-500/20'
+                                         }`}>
+                                             <span className={`w-1.5 h-1.5 rounded-full ${s.aprovado ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                             {s.aprovado ? 'Aprovado' : 'Exame'}
+                                         </div>
+                                       )}
+                                   </td>
+                               </tr>
+                               );
+                           })}
                           {alunos.length === 0 && (
                             <tr>
                               <td colSpan={8} className="py-10 text-center text-gray-500 text-xs italic">Nenhum aluno encontrado para esta turma.</td>
@@ -542,7 +597,11 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                 {alunos.map(aluno => {
                     const s = stats[aluno.aluno_id] || { totalVistos: 0, totalAtiv: 0, media: 0, bimestreEntrada: 1 };
                     const percRealizado = s.totalAtiv > 0 ? Math.round((s.totalVistos / s.totalAtiv) * 100) : 0;
-                    const isCritico = s.totalAtiv > 0 && percRealizado < 40;
+                    const isPosterior = (aluno.status === 'Transferido' || aluno.status === 'Remanejado' || aluno.status === 'Cancelada') && (() => {
+                      const exitBim = getBimestreFromDate(aluno.atestado_inicio);
+                      return exitBim !== null && bimestreId > exitBim;
+                    })();
+                    const isCritico = !isPosterior && s.totalAtiv > 0 && percRealizado < 40;
                     const aprovado = estaAprovado(s.media, 6);
 
                     return (
@@ -558,25 +617,39 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                                     {aluno.aluno_numero || aluno.aluno_nome.charAt(0)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h4 className={`text-sm font-bold truncate ${theme === 'light' ? 'text-blue-950' : 'text-white'}`}>
+                                    <h4 className={`text-sm font-bold truncate ${
+                                      isPosterior
+                                        ? 'line-through text-gray-500 opacity-60'
+                                        : theme === 'light' ? 'text-blue-950' : 'text-white'
+                                    }`}>
                                         {aluno.aluno_nome}
                                         {isCritico && (
                                             <span className="ml-2 text-[8px] bg-red-600 text-white px-2 py-0.5 rounded-full font-black uppercase tracking-tighter animate-pulse">
                                                 Crítico
                                             </span>
                                         )}
+                                        {isPosterior && (
+                                            <span className={`ml-2 text-[8px] px-2 py-0.5 rounded-full font-black uppercase border tracking-normal ${
+                                              aluno.status === 'Transferido' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                                              aluno.status === 'Remanejado' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                                              'bg-red-500/20 text-red-400 border-red-500/30'
+                                            }`}>
+                                              {aluno.status}
+                                            </span>
+                                        )}
                                     </h4>
                                     <div className="flex items-center gap-3 mt-1">
                                         <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">
-                                            Média: <span style={{ color: getCorGradiente(s.media, theme) }}>{arredondarNotaMS(s.media).toFixed(1)}</span>
+                                            Média: <span style={isPosterior ? {} : { color: getCorGradiente(s.media, theme) }}>{isPosterior ? 'N/A' : arredondarNotaMS(s.media).toFixed(1)}</span>
                                         </span>
                                         <span className="text-[9px] font-black text-gray-500 uppercase tracking-widest">
                                             Vistos: <span className={
+                                              isPosterior ? 'text-gray-550' :
                                               percRealizado >= 80 ? 'text-green-500' :
                                               percRealizado >= 60 ? 'text-blue-500' :
                                               percRealizado >= 40 ? 'text-yellow-500' :
                                               'text-red-500'
-                                            }>{percRealizado}%</span>
+                                            }>{isPosterior ? 'N/A' : `${percRealizado}%`}</span>
                                         </span>
                                     </div>
                                 </div>
@@ -584,8 +657,12 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
 
                             <div className="flex items-center gap-4 mt-3 sm:mt-0 ml-14 sm:ml-0">
                                 <div className="flex flex-col items-end">
-                                    <span className={`text-[9px] font-black uppercase ${aprovado ? 'text-green-500' : 'text-red-400'}`}>
-                                        {aprovado ? 'Aprovado' : 'Abaixo da Média'}
+                                    <span className={`text-[9px] font-black uppercase ${
+                                      isPosterior 
+                                        ? aluno.status === 'Transferido' ? 'text-orange-400' : aluno.status === 'Remanejado' ? 'text-purple-400' : 'text-red-400'
+                                        : aprovado ? 'text-green-500' : 'text-red-400'
+                                    }`}>
+                                        {isPosterior ? aluno.status : aprovado ? 'Aprovado' : 'Abaixo da Média'}
                                     </span>
                                     <span className="text-[8px] text-gray-500 font-bold uppercase">Status</span>
                                 </div>

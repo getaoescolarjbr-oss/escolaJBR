@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, Avaliacao, NotaAvaliacao, ListaParaVistos } from '../types';
 import { Plus, Save, Trash2, Calculator, Info, TrendingUp, X, Sparkles } from 'lucide-react';
-import { arredondarNotaMS, getCorGradiente } from '../utils/academicUtils';
+import { arredondarNotaMS, getCorGradiente, getBimestreFromDate } from '../utils/academicUtils';
 import { RAVListModal } from './RAVListModal';
 
 interface GradesPanelProps {
@@ -51,7 +51,9 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
           aluno_numero: a.aluno_numero,
           turma_id: turmaId,
           disciplina_id: disciplinaId,
-          professor_id: professor.id
+          professor_id: professor.id,
+          status: a.status,
+          atestado_inicio: a.atestado_inicio
         }));
         setAlunos(mappedAlunos as any);
       }
@@ -441,10 +443,15 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                         </thead>
                         <tbody className="divide-y divide-ms-border/30">
                         {alunos.map((aluno, idx) => {
-                            const notaVisto = vistosCalculados[aluno.aluno_id] || 0;
+                            const isPosterior = (aluno.status === 'Transferido' || aluno.status === 'Remanejado' || aluno.status === 'Cancelada') && (() => {
+                              const exitBim = getBimestreFromDate(aluno.atestado_inicio);
+                              return exitBim !== null && bimestreId > exitBim;
+                            })();
+
+                            const notaVisto = isPosterior ? 0 : (vistosCalculados[aluno.aluno_id] || 0);
                             let somaNotas = notaVisto;
                             avaliacoes.forEach(av => {
-                                somaNotas += notas[aluno.aluno_id]?.[av.id] || 0;
+                                somaNotas += isPosterior ? 0 : (notas[aluno.aluno_id]?.[av.id] || 0);
                             });
                             const mediaBimestral = somaNotas;
 
@@ -453,33 +460,59 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                                 <td className="px-6 py-4 whitespace-nowrap sticky left-0 z-10 bg-inherit border-r border-ms-border/30">
                                 <div className="flex items-center gap-3">
                                     <span className="text-[10px] font-black text-ms-gold">{idx + 1}.</span>
-                                    <span className={`text-xs font-bold ${theme === 'light' ? 'text-blue-950' : 'text-ms-main'}`}>{aluno.aluno_nome}</span>
+                                    <span className={`text-xs font-bold ${
+                                      aluno.status === 'Transferido' || aluno.status === 'Remanejado'
+                                        ? 'line-through text-gray-500 opacity-60'
+                                        : theme === 'light' ? 'text-blue-950' : 'text-ms-main'
+                                    }`}>
+                                      {aluno.aluno_nome}
+                                      {aluno.status && aluno.status !== 'Ativo' && (
+                                        <span className={`ml-2 text-[8px] px-2 py-0.5 rounded-full font-black uppercase border tracking-normal ${
+                                          aluno.status === 'Transferido' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                                          aluno.status === 'Remanejado' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                                          aluno.status === 'Atestado' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                                          'bg-red-500/20 text-red-400 border-red-500/30'
+                                        }`}>
+                                          {aluno.status}
+                                        </span>
+                                      )}
+                                    </span>
                                 </div>
                                 </td>
-                                <td className="px-4 py-4 text-center font-black text-blue-500 bg-blue-500/5">{notaVisto.toFixed(1)}</td>
+                                <td className="px-4 py-4 text-center font-black text-blue-500 bg-blue-500/5">
+                                  {isPosterior ? 'N/A' : notaVisto.toFixed(1)}
+                                </td>
                                 {avaliacoes.map(av => (
                                 <td key={av.id} className="px-4 py-4 text-center">
-                                    <input 
-                                        type="number" 
-                                        step="0.1"
-                                        min="0"
-                                        max={av.valor_maximo}
-                                        value={notas[aluno.aluno_id]?.[av.id] ?? ''}
-                                        onChange={(e) => handleUpdateNota(aluno.aluno_id, av.id, parseFloat(e.target.value) || 0)}
-                                        disabled={isLocked}
-                                        className={`w-16 text-center p-1 rounded text-xs font-bold focus:border-blue-500 outline-none border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                                            theme === 'light' ? 'bg-blue-50/30 border-blue-100 text-blue-900' : 'bg-ms-dark/5 border-ms-border/50 text-ms-main'
-                                        }`}
-                                    />
+                                    {isPosterior ? (
+                                      <span className="text-xs text-gray-505 font-medium italic">N/A</span>
+                                    ) : (
+                                      <input 
+                                          type="number" 
+                                          step="0.1"
+                                          min="0"
+                                          max={av.valor_maximo}
+                                          value={notas[aluno.aluno_id]?.[av.id] ?? ''}
+                                          onChange={(e) => handleUpdateNota(aluno.aluno_id, av.id, parseFloat(e.target.value) || 0)}
+                                          disabled={isLocked}
+                                          className={`w-16 text-center p-1 rounded text-xs font-bold focus:border-blue-500 outline-none border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                                              theme === 'light' ? 'bg-blue-50/30 border-blue-100 text-blue-900' : 'bg-ms-dark/5 border-ms-border/50 text-ms-main'
+                                          }`}
+                                      />
+                                    )}
                                 </td>
                                 ))}
                                 <td className="px-6 py-4 text-center">
-                                    <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-ms-border shadow-inner" style={{ backgroundColor: `${getCorGradiente(mediaBimestral, theme)}20` }}>
-                                        <span className="text-sm font-black" style={{ color: getCorGradiente(mediaBimestral, theme) }}>
-                                            {arredondarNotaMS(mediaBimestral).toFixed(1)}
-                                        </span>
-                                        <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getCorGradiente(mediaBimestral, theme) }}></div>
-                                    </div>
+                                    {isPosterior ? (
+                                      <span className="text-xs text-gray-500 font-semibold italic">Inativo</span>
+                                    ) : (
+                                      <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-ms-border shadow-inner" style={{ backgroundColor: `${getCorGradiente(mediaBimestral, theme)}20` }}>
+                                          <span className="text-sm font-black" style={{ color: getCorGradiente(mediaBimestral, theme) }}>
+                                              {arredondarNotaMS(mediaBimestral).toFixed(1)}
+                                          </span>
+                                          <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getCorGradiente(mediaBimestral, theme) }}></div>
+                                      </div>
+                                    )}
                                 </td>
                             </tr>
                             );
