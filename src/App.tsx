@@ -79,6 +79,7 @@ function App() {
   }, []);
 
   const fetchProfessorProfile = async (userId: string) => {
+    // 1ª tentativa: buscar pelo user_id
     const { data, error } = await supabase
       .from('professores')
       .select('*')
@@ -86,7 +87,7 @@ function App() {
       .single();
     
     if (!error && data) {
-      // Recuperação prioritária pelo ID do Usuário
+      // Encontrou pelo user_id — fluxo normal
       const configKey = `portal-config-${userId}`;
       const backup = localStorage.getItem(configKey);
       const configBackup = backup ? JSON.parse(backup) : {};
@@ -104,36 +105,99 @@ function App() {
       if (savedTheme && savedTheme !== theme) {
         setTheme(savedTheme as 'dark' | 'light');
       }
-    } else {
-      console.error('Error fetching professor profile:', error);
-      if (session?.user?.email === 'gestaoescolarjbr@gmail.com') {
-        try {
-          const newProf = {
-            user_id: userId,
-            nome: 'Administrador Geral',
-            email: 'gestaoescolarjbr@gmail.com',
-            cargo: 'Diretor',
-            theme: theme,
-            bimestre_atual: 1,
-            config_visto_metodo: 'gradual',
-            config_visto_valor_total: 10
-          };
-          const { data: insertedData, error: insertError } = await supabase
-            .from('professores')
-            .insert([newProf])
-            .select()
-            .single();
+      setLoading(false);
+      return;
+    }
 
-          if (!insertError && insertedData) {
-            setProfessor(insertedData);
-          }
-        } catch (err) {
-          console.error('Error creating admin professor profile:', err);
+    // 2ª tentativa: fallback por email (resolve race condition do cadastro)
+    // Isso ocorre quando signUp() dispara onAuthStateChange antes do UPDATE user_id terminar
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const userEmail = authUser?.email;
+
+    if (userEmail) {
+      const { data: profByEmail, error: emailError } = await supabase
+        .from('professores')
+        .select('*')
+        .eq('email', userEmail)
+        .is('user_id', null)  // só vincula se ainda não tiver user_id
+        .maybeSingle();
+
+      if (!emailError && profByEmail) {
+        console.log('Perfil encontrado por email, vinculando user_id...');
+        // Vincula o user_id automaticamente (correção da race condition)
+        await supabase
+          .from('professores')
+          .update({ user_id: userId })
+          .eq('id', profByEmail.id);
+
+        const configKey = `portal-config-${userId}`;
+        const backup = localStorage.getItem(configKey);
+        const configBackup = backup ? JSON.parse(backup) : {};
+
+        const mergedProfessor = {
+          ...profByEmail,
+          user_id: userId,
+          config_visto_metodo: configBackup.config_visto_metodo || profByEmail.config_visto_metodo || 'gradual',
+          config_visto_valor_total: configBackup.config_visto_valor_total || profByEmail.config_visto_valor_total || 10,
+          bimestre_atual: configBackup.bimestre_atual || profByEmail.bimestre_atual || 1
+        };
+
+        setProfessor(mergedProfessor);
+        setLoading(false);
+        return;
+      }
+
+      // 3ª tentativa: email já tem user_id (outro usuário ou já foi vinculado mas com ID diferente)
+      // Tenta buscar sem o filtro .is('user_id', null) para diagnóstico
+      const { data: profAnyStatus } = await supabase
+        .from('professores')
+        .select('*')
+        .eq('email', userEmail)
+        .maybeSingle();
+
+      if (profAnyStatus && profAnyStatus.user_id && profAnyStatus.user_id !== userId) {
+        // user_id diferente: atualiza para o atual (pode ocorrer se a conta foi recriada)
+        console.warn('user_id divergente detectado, corrigindo...');
+        await supabase
+          .from('professores')
+          .update({ user_id: userId })
+          .eq('id', profAnyStatus.id);
+
+        setProfessor({ ...profAnyStatus, user_id: userId });
+        setLoading(false);
+        return;
+      }
+    }
+
+    console.error('Error fetching professor profile:', error);
+    if (session?.user?.email === 'gestaoescolarjbr@gmail.com') {
+      try {
+        const newProf = {
+          user_id: userId,
+          nome: 'Administrador Geral',
+          email: 'gestaoescolarjbr@gmail.com',
+          cargo: 'Diretor',
+          theme: theme,
+          bimestre_atual: 1,
+          config_visto_metodo: 'gradual',
+          config_visto_valor_total: 10
+        };
+        const { data: insertedData, error: insertError } = await supabase
+          .from('professores')
+          .insert([newProf])
+          .select()
+          .single();
+
+        if (!insertError && insertedData) {
+          setProfessor(insertedData);
         }
+      } catch (err) {
+        console.error('Error creating admin professor profile:', err);
       }
     }
     setLoading(false);
   };
+
 
   if (loading) {
     return (
