@@ -247,7 +247,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
             currentData.descricao !== 'Férias / Recesso Escolar' &&
             parsedCat !== 'normal'
           ) {
-            const eventDate = new Date(`${dateStr}T12:00:00Z`);
+            const eventDate = new Date(`${dateStr}T12:00:00`);
             if (eventDate >= today && eventDate <= next30Days) {
               const alreadyHasDbEvent = mergedEvents.some(
                 e => e?.data_evento?.toString?.()?.startsWith?.(dateStr)
@@ -270,7 +270,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
 
         // Ordenar por data e limitar a 4 eventos
         mergedEvents.sort((a, b) =>
-          new Date(a?.data_evento ?? 0).getTime() - new Date(b?.data_evento ?? 0).getTime()
+          new Date(`${a?.data_evento}T12:00:00`).getTime() - new Date(`${b?.data_evento}T12:00:00`).getTime()
         );
       } catch (calErr) {
         console.error('Erro ao mesclar eventos do calendário:', calErr);
@@ -651,7 +651,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
                   [1, 2, 3].map(i => <div key={i} className="cal-item animate-pulse h-20 bg-gray-100"></div>)
                 ) : events.length > 0 ? (
                   events.map(event => {
-                    const date = new Date(event.data_evento);
+                    const date = new Date(`${event.data_evento}T12:00:00`);
                     return (
                       <div key={event.id} className="cal-item" style={{ borderLeftColor: event.tipo === 'Prazo' ? 'var(--crimson)' : event.tipo === 'Aviso' ? 'var(--sed-blue-light)' : 'var(--gold)' }}>
                         <div className="cal-date">
