@@ -162,12 +162,21 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
       if (ativIds.length > 0) {
         const { data: dataVistosGerais } = await supabase
           .from('vistos_v2')
-          .select('aluno_id, valor')
+          .select('atividade_id, aluno_id, valor')
           .in('atividade_id', ativIds);
 
         if (dataVistosGerais) {
           const stats: Record<string, number> = {};
+          // Deduplica por (atividade_id, aluno_id): se houver duplicatas no banco,
+          // usa apenas o PRIMEIRO registro encontrado para cada par.
+          const seenPairs = new Set<string>();
           dataVistosGerais.forEach(v => {
+            const cleanAlunoId = String(v.aluno_id).trim();
+            const cleanAtivId  = String(v.atividade_id).trim();
+            const pairKey = `${cleanAtivId}__${cleanAlunoId}`;
+            if (seenPairs.has(pairKey)) return; // ignora duplicatas
+            seenPairs.add(pairKey);
+
             let peso = 0;
             const val = String(v.valor).trim();
             if (val === '1.0' || val === '+' || val === '.' || val === 'checked') peso = 1.0;
@@ -177,8 +186,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                 peso = num > 1 ? num / 10 : num;
             }
             if (peso > 0) {
-               const cleanId = String(v.aluno_id).trim();
-               stats[cleanId] = (stats[cleanId] || 0) + peso;
+               stats[cleanAlunoId] = (stats[cleanAlunoId] || 0) + peso;
             }
           });
           currentStats = stats;
@@ -234,7 +242,9 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
               
               const totalAtivCalculado = totalComHoje;
               const maxVistosPoints = configEfetivo.config_visto_valor_total || 2.0;
-              const notaVistoFinal = totalAtivCalculado > 0 ? (pesosVistoAluno / totalAtivCalculado) * maxVistosPoints : 0;
+              // Limita pesosVistoAluno ao máximo possível (totalAtivCalculado) para evitar notas acima do máximo
+              const pesosVistoAlunoCapped = Math.min(pesosVistoAluno, totalAtivCalculado);
+              const notaVistoFinal = totalAtivCalculado > 0 ? (pesosVistoAlunoCapped / totalAtivCalculado) * maxVistosPoints : 0;
 
               breakdownObj[cleanId] = {
                   mediaFinal: somaNotas + notaVistoFinal,
@@ -245,8 +255,6 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
           });
       }
       setEstatisticasVistos(currentStats);
-      setNotasDetalhes(breakdownObj);
-
       setNotasDetalhes(breakdownObj);
 
       // 8. Buscar Saídas de Sala (Sincronização)
@@ -310,24 +318,28 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
     const pesoNovo = getPeso(novoValor);
 
     if (pesoAntigo !== pesoNovo) {
-      const newVistosCount = Math.max(0, (estatisticasVistos[alunoId] || 0) - pesoAntigo + pesoNovo);
-      setEstatisticasVistos(prev => ({
-        ...prev,
-        [alunoId]: newVistosCount
-      }));
-      
       let newTotal = totalAtividades;
       if (totalAtividades === 0 && pesoNovo > 0) {
         setTotalAtividades(1);
         newTotal = 1;
       }
 
+      // Limita o contador ao máximo de atividades para evitar que duplicatas inflem o percentual
+      const rawCount = Math.max(0, (estatisticasVistos[alunoId] || 0) - pesoAntigo + pesoNovo);
+      const newVistosCount = Math.min(rawCount, newTotal);
+      setEstatisticasVistos(prev => ({
+        ...prev,
+        [alunoId]: newVistosCount
+      }));
+
       setNotasDetalhes(prev => {
         const studentBreakdown = prev[alunoId];
         if (!studentBreakdown) return prev;
         
         const maxVistosPoints = configEfetivo.config_visto_valor_total || 2.0;
-        const newNotaVisto = newTotal > 0 ? (newVistosCount / newTotal) * maxVistosPoints : 0;
+        // Capped: nunca pode ultrapassar o valor máximo configurado
+        const rawNota = newTotal > 0 ? (newVistosCount / newTotal) * maxVistosPoints : 0;
+        const newNotaVisto = Math.min(rawNota, maxVistosPoints);
         const somaNotas = studentBreakdown.avaliacoes.reduce((acc, curr) => acc + curr.nota, 0);
         
         return {
