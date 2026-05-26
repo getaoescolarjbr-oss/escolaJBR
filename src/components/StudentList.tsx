@@ -473,7 +473,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                            className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-[9px] border transition-all ${isMarkingAll ? 'opacity-50' : 'hover:scale-105 active:scale-95'} ${theme === 'light' ? 'bg-white text-blue-800 border-blue-200' : 'bg-ms-dark text-blue-200 border-blue-500/30'}`}
                            title="Marcar todas as atividades selecionadas para TODOS os alunos"
                          >
-                           {isMarkingAll ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Preencher Todos'}
+                           {isMarkingAll ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Marcar todas'}
                          </button>
                        )}
                     </div>
