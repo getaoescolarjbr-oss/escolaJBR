@@ -349,10 +349,26 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
               {aluno.aluno_numero || aluno.aluno_nome?.charAt(0)?.toUpperCase() || '?'}
             </div>
             <div>
-              <p className={`text-sm font-black tracking-tight uppercase ${theme === 'light' ? 'text-[#003366]' : 'text-ms-main'}`}>
-                {aluno.aluno_numero && <span className="text-ms-gold font-black mr-2">{aluno.aluno_numero}.</span>}
-                {aluno.aluno_nome}
-              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <p className={`text-sm font-black tracking-tight uppercase ${
+                  aluno.status === 'Transferido' || aluno.status === 'Remanejado'
+                    ? 'line-through text-gray-500 opacity-60'
+                    : theme === 'light' ? 'text-[#003366]' : 'text-ms-main'
+                }`}>
+                  {aluno.aluno_numero && <span className="text-ms-gold font-black mr-2">{aluno.aluno_numero}.</span>}
+                  {aluno.aluno_nome}
+                </p>
+                {aluno.status && aluno.status !== 'Ativo' && (
+                  <span className={`inline-flex px-2 py-0.5 rounded-full text-[8px] font-black uppercase border tracking-normal ${
+                    aluno.status === 'Transferido' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                    aluno.status === 'Remanejado' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                    aluno.status === 'Atestado' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                    'bg-red-500/20 text-red-400 border-red-500/30'
+                  }`}>
+                    {aluno.status}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2 mt-1">
                 {percentual < 40 ? (
                   <span className="flex items-center gap-1 text-[8px] font-black bg-red-600 text-white px-2 py-0.5 rounded-full animate-pulse">CRÍTICO</span>
