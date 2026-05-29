@@ -1493,6 +1493,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
           theme={theme}
           bimestre={selectedBimestre}
           isCoordinator={true}
+          professor={professor}
         />
       )}
 

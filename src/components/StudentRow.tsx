@@ -867,6 +867,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
           theme={theme}
           bimestre={bimestreId}
           isCoordinator={professor.cargo === 'Coordenador' || professor.cargo === 'Diretor' || professor.cargo === 'Vice-Diretor'}
+          professor={professor}
         />
       )}
     </>

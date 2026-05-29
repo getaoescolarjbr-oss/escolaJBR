@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Calendar, ClipboardList, AlertTriangle, LogOut, FileText, Loader2, ChevronRight, BookOpen, Activity, Clock, FileBadge, CheckCheck } from 'lucide-react';
 import { AtaModal } from './AtaModal';
+import { OcorrenciaModal } from './OcorrenciaModal';
 
 interface StudentProfileModalProps {
   isOpen: boolean;
@@ -11,6 +12,7 @@ interface StudentProfileModalProps {
   theme: 'dark' | 'light';
   bimestre?: number;
   isCoordinator?: boolean;
+  professor?: any;
 }
 
 export function StudentProfileModal({ 
@@ -20,7 +22,8 @@ export function StudentProfileModal({
   studentName, 
   theme, 
   bimestre,
-  isCoordinator = false
+  isCoordinator = false,
+  professor
 }: StudentProfileModalProps) {
   const [loading, setLoading] = useState(true);
   const [vistos, setVistos] = useState<any[]>([]);
@@ -30,12 +33,14 @@ export function StudentProfileModal({
   const [saidasAntecipadas, setSaidasAntecipadas] = useState<any[]>([]);
   const [atividadesPorDisciplina, setAtividadesPorDisciplina] = useState<Record<string, number>>({});
   
-  // Atas
+  // Atas e Ocorrências
   const [templates, setTemplates] = useState<any[]>([]);
   const [atasEmitidas, setAtasEmitidas] = useState<any[]>([]);
   const [showAtaMenu, setShowAtaMenu] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
   const [selectedAtaEmitida, setSelectedAtaEmitida] = useState<any | null>(null);
+  const [isOcorrenciaOpen, setIsOcorrenciaOpen] = useState(false);
+  const [studentTurmaId, setStudentTurmaId] = useState<string>('');
 
   useEffect(() => {
     if (isOpen && studentId) {
@@ -125,6 +130,7 @@ export function StudentProfileModal({
       // 4. Fetch Atividades Diárias da Turma para cálculo de desempenho
       const { data: alunoInfo } = await supabase.from('alunos').select('turma_id').eq('id', studentId).single();
       if (alunoInfo?.turma_id) {
+          setStudentTurmaId(alunoInfo.turma_id);
           let queryAtivs = supabase
               .from('atividades_diárias')
               .select('id, disciplinas(nome)')
@@ -256,38 +262,47 @@ export function StudentProfileModal({
           </div>
           <div className="flex items-center gap-3 relative">
             {isCoordinator && (
-              <div className="relative">
-                <button 
-                  onClick={() => setShowAtaMenu(!showAtaMenu)}
-                  className="px-4 py-2.5 bg-ms-blue text-white font-bold rounded-xl text-sm shadow-lg shadow-ms-blue/30 hover:bg-ms-blue/90 transition-colors flex items-center gap-2"
+              <>
+                <button
+                  onClick={() => setIsOcorrenciaOpen(true)}
+                  className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-rose-900/30 transition-colors flex items-center gap-2"
                 >
-                  <FileBadge className="w-4 h-4" /> Criar Ata
+                  <AlertTriangle className="w-4 h-4" /> Registrar Ocorrência
                 </button>
-                
-                {showAtaMenu && (
-                  <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-ms-card rounded-xl shadow-2xl border border-gray-100 dark:border-ms-border overflow-hidden z-50">
-                    <div className="p-2">
-                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2 pb-2 pt-1">Modelos Disponíveis</p>
-                      {templates.map(t => (
-                        <button
-                          key={t.id}
-                          onClick={() => {
-                             setSelectedTemplate(t);
-                             setSelectedAtaEmitida(null);
-                             setShowAtaMenu(false);
-                          }}
-                          className="w-full text-left px-3 py-2 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-ms-border rounded-lg transition-colors flex items-center gap-2"
-                        >
-                          <FileText className="w-3.5 h-3.5 text-blue-500" /> {t.titulo}
-                        </button>
-                      ))}
-                      {templates.length === 0 && (
-                        <p className="px-3 py-2 text-xs text-gray-500 font-medium">Nenhum modelo cadastrado.</p>
-                      )}
+
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowAtaMenu(!showAtaMenu)}
+                    className="px-4 py-2.5 bg-ms-blue text-white font-bold rounded-xl text-sm shadow-lg shadow-ms-blue/30 hover:bg-ms-blue/90 transition-colors flex items-center gap-2"
+                  >
+                    <FileBadge className="w-4 h-4" /> Criar Ata
+                  </button>
+                  
+                  {showAtaMenu && (
+                    <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-ms-card rounded-xl shadow-2xl border border-gray-100 dark:border-ms-border overflow-hidden z-50">
+                      <div className="p-2">
+                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest px-2 pb-2 pt-1">Modelos Disponíveis</p>
+                        {templates.map(t => (
+                          <button
+                            key={t.id}
+                            onClick={() => {
+                               setSelectedTemplate(t);
+                               setSelectedAtaEmitida(null);
+                               setShowAtaMenu(false);
+                            }}
+                            className="w-full text-left px-3 py-2 text-sm font-bold text-gray-700 dark:text-gray-300 hover:bg-blue-50 dark:hover:bg-ms-border rounded-lg transition-colors flex items-center gap-2"
+                          >
+                            <FileText className="w-3.5 h-3.5 text-blue-500" /> {t.titulo}
+                          </button>
+                        ))}
+                        {templates.length === 0 && (
+                          <p className="px-3 py-2 text-xs text-gray-500 font-medium">Nenhum modelo cadastrado.</p>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                )}
-              </div>
+                  )}
+                </div>
+              </>
             )}
 
             <button onClick={onClose} className="p-3 hover:bg-white/5 rounded-2xl transition-all group">
@@ -448,38 +463,65 @@ export function StudentProfileModal({
                       <p className="text-xs text-gray-500 font-bold uppercase">Nenhuma ocorrência registrada para este estudante.</p>
                     </div>
                   ) : (
-                    filterOcorrencias.map((o, i) => (
-                      <div key={i} className="p-5 bg-red-500/5 rounded-2xl border-2 border-red-500/20 flex gap-4 hover:border-red-500/40 transition-all">
-                        <div className="flex-1">
-                          <div className="flex justify-between items-center mb-2">
-                            <span className="text-[10px] font-black text-red-500 uppercase tracking-widest">{o.tipo || 'Ocorrência Disciplinar'}</span>
-                            <span className="text-[10px] font-bold text-gray-500">{new Date(o.data).toLocaleDateString()}</span>
-                          </div>
-                          <p className="text-sm text-gray-300 leading-relaxed font-bold">{o.descricao}</p>
-                          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 items-center text-[9px] font-bold uppercase">
-                            <div className="text-gray-500 flex items-center gap-1.5">
-                              <span>Registrado por:</span>
-                              <span className="text-gray-400">
-                                {o.professores?.nome || o.registrado_por || 'Sistema'}
-                                {o.professores?.cargo || o.registrado_por_cargo ? ` (${o.professores?.cargo || o.registrado_por_cargo})` : ''}
-                              </span>
+                    filterOcorrencias.map((o, i) => {
+                      const isCoord = o.professores?.cargo === 'Coordenador' || 
+                                      o.professores?.cargo === 'Diretor' || 
+                                      o.professores?.cargo === 'Vice-Diretor' || 
+                                      o.registrado_por_cargo === 'Coordenador' || 
+                                      o.registrado_por_cargo === 'Diretor' || 
+                                      o.registrado_por_cargo === 'Vice-Diretor';
+                      
+                      return (
+                        <div key={i} className={`p-5 rounded-2xl border-2 flex gap-4 transition-all ${
+                          isCoord 
+                            ? 'bg-purple-500/5 border-purple-500/20 hover:border-purple-500/40' 
+                            : 'bg-red-500/5 border-red-500/20 hover:border-red-500/40'
+                        }`}>
+                          <div className="flex-1">
+                            <div className="flex justify-between items-center mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-black uppercase tracking-widest ${isCoord ? 'text-purple-400' : 'text-red-500'}`}>
+                                  {o.tipo || 'Ocorrência Disciplinar'}
+                                </span>
+                                {isCoord && (
+                                  <span className="bg-purple-600 text-white text-[8px] font-black uppercase px-2 py-0.5 rounded-md animate-pulse">
+                                    COORDENAÇÃO
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] font-bold text-gray-500">{new Date(o.data || o.data_registro || o.created_at || new Date()).toLocaleDateString()}</span>
                             </div>
-                            
-                            {o.visto_coordenador ? (
-                              <div className="flex items-center gap-1 text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                                <CheckCheck className="w-3 h-3" />
-                                <span>Visualizado pela Coordenação em {new Date(o.data_visualizacao_coordenador).toLocaleDateString('pt-BR')} às {new Date(o.data_visualizacao_coordenador).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                            <p className="text-sm text-gray-300 leading-relaxed font-bold">{o.descricao}</p>
+                            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 items-center text-[9px] font-bold uppercase">
+                              <div className="text-gray-500 flex items-center gap-1.5">
+                                <span>Registrado por:</span>
+                                <span className="text-gray-400">
+                                  {o.professores?.nome || o.registrado_por || 'Sistema'}
+                                  {o.professores?.cargo || o.registrado_por_cargo ? ` (${o.professores?.cargo || o.registrado_por_cargo})` : ''}
+                                </span>
                               </div>
-                            ) : (
-                              <div className="flex items-center gap-1 text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
-                                <Clock className="w-3 h-3" />
-                                <span>Aguardando leitura da Coordenação</span>
-                              </div>
-                            )}
+                              
+                              {isCoord ? (
+                                <div className="flex items-center gap-1 text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                  <CheckCheck className="w-3 h-3" />
+                                  <span>Processado pela Coordenação</span>
+                                </div>
+                              ) : o.visto_coordenador ? (
+                                <div className="flex items-center gap-1 text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
+                                  <CheckCheck className="w-3 h-3" />
+                                  <span>Visualizado pela Coordenação em {new Date(o.data_visualizacao_coordenador).toLocaleDateString('pt-BR')} às {new Date(o.data_visualizacao_coordenador).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</span>
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-1 text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-md border border-amber-500/20">
+                                  <Clock className="w-3 h-3" />
+                                  <span>Aguardando leitura da Coordenação</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
@@ -631,6 +673,24 @@ export function StudentProfileModal({
           onUploadSuccess={() => {
             fetchStudentData(); // Recarrega para mostrar a ata no histórico
           }}
+        />
+      )}
+
+      {isOcorrenciaOpen && (
+        <OcorrenciaModal
+          isOpen={isOcorrenciaOpen}
+          onClose={() => setIsOcorrenciaOpen(false)}
+          alunoId={studentId}
+          alunoNome={studentName}
+          professorId={professor?.id || ''}
+          turmaId={studentTurmaId}
+          disciplinaId={null}
+          onSuccess={() => {
+            fetchStudentData(); // Recarrega para mostrar a ocorrência no histórico
+          }}
+          isCoordinator={true}
+          professorName={professor?.nome || ''}
+          professorCargo={professor?.cargo || ''}
         />
       )}
     </div>

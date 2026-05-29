@@ -9,9 +9,12 @@ interface OcorrenciaModalProps {
   alunoNome: string;
   professorId: string;
   turmaId: string;
-  disciplinaId: string;
+  disciplinaId: string | null;
   onSuccess: () => void;
   onViewProfile?: () => void;
+  isCoordinator?: boolean;
+  professorName?: string;
+  professorCargo?: string;
 }
 
 export function OcorrenciaModal({
@@ -23,7 +26,10 @@ export function OcorrenciaModal({
   turmaId,
   disciplinaId,
   onSuccess,
-  onViewProfile
+  onViewProfile,
+  isCoordinator = false,
+  professorName,
+  professorCargo
 }: OcorrenciaModalProps) {
   const [descricao, setDescricao] = useState('');
   const [loading, setLoading] = useState(false);
@@ -50,9 +56,13 @@ export function OcorrenciaModal({
       aluno_id: alunoId,
       id_do_professor: professorId,
       turma_id: turmaId,
-      disciplina_id: disciplinaId,
+      disciplina_id: disciplinaId || null,
       descricao: descricao.trim(),
-      data_registro: new Date().toISOString()
+      data_registro: new Date().toISOString(),
+      visto_coordenador: isCoordinator ? true : false,
+      data_visualizacao_coordenador: isCoordinator ? new Date().toISOString() : null,
+      registrado_por: professorName || null,
+      registrado_por_cargo: professorCargo || null
     });
 
     setLoading(false);
