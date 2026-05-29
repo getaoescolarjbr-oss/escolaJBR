@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import type { Professor, ListaParaVistos } from '../types';
 import { supabase } from '../lib/supabase';
 import { StudentRow } from './StudentRow';
+import { OcorrenciaLoteModal } from './OcorrenciaLoteModal';
 import { getBimestreFromDate, getConfigPorTurma } from '../utils/academicUtils';
-import { AlertTriangle, Info, Loader2, Save } from 'lucide-react';
+import { AlertTriangle, Info, Loader2, Save, ShieldAlert } from 'lucide-react';
 
 export interface StudentGradeBreakdown {
   mediaFinal: number;
@@ -47,6 +48,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
   const [isMarkingAll, setIsMarkingAll] = useState(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [saidasAtivas, setSaidasAtivas] = useState<Record<string, string>>({});
+  const [isOcorrenciaLoteOpen, setIsOcorrenciaLoteOpen] = useState(false);
 
   // Callback chamado quando um StudentRow cria uma nova atividade —
   // garante que todos os rows subsequentes usem o mesmo ID.
@@ -509,14 +511,14 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
              </div>
              <div className="flex items-center gap-2">
                  <div className="w-3 h-3 rounded-full bg-red-500 shadow-lg shadow-red-900/20"></div>
-                 <span className={`text-[10px] font-black uppercase tracking-wider ${theme === 'light' ? 'text-red-700' : 'text-red-500'}`}>Crítico (&lt;39%)</span>
+                 <span className={`text-[10px] font-black uppercase tracking-wider ${theme === 'light' ? 'text-red-700' : 'text-red-500'}`}>Crítico (≤35% ou nota &lt;3,5)</span>
              </div>
              <div className={`hidden lg:flex items-center gap-1.5 pl-4 border-l ${theme === 'light' ? 'border-blue-100 text-blue-800' : 'border-gray-700 text-blue-300'} text-[10px] font-bold`}>
                  <span>💡 Dica: Clique no nome do aluno ou abra o registro de ocorrência (⚠️) e clique em "Ver Ficha" para ver o histórico completo de ocorrências.</span>
              </div>
           </div>
 
-         <div className="flex items-center gap-4">
+         <div className="flex items-center gap-3">
             <div className="flex flex-col items-end">
                 <span className={`text-[10px] font-black uppercase ${theme === 'light' ? 'text-blue-900' : 'text-ms-main'}`}>
                     {totalAtividades} Atividades no {bimestreId}º BIM
@@ -525,6 +527,20 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                     <span className="text-[10px] font-bold text-green-500 animate-bounce">✓ Dados sincronizados com sucesso!</span>
                 )}
             </div>
+
+            <button
+                 onClick={() => setIsOcorrenciaLoteOpen(true)}
+                 title="Registrar ocorrência para múltiplos alunos ao mesmo tempo"
+                 className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                     theme === 'light'
+                       ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 hover:border-red-300'
+                       : 'bg-red-900/20 text-red-400 border-red-700/40 hover:bg-red-900/40'
+                 } active:scale-95`}
+             >
+                 <ShieldAlert className="w-4 h-4" />
+                 <span className="hidden md:inline">Ocorrência em Lote</span>
+                 <span className="md:hidden">Ocorr. Lote</span>
+             </button>
             
             <button
                  onClick={handleManualSave}
@@ -632,6 +648,16 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
           </table>
         </div>
       </div>
+
+      <OcorrenciaLoteModal
+        isOpen={isOcorrenciaLoteOpen}
+        onClose={() => setIsOcorrenciaLoteOpen(false)}
+        alunos={alunos}
+        professorId={professor.id}
+        turmaId={turmaId}
+        disciplinaId={disciplinaId}
+        onSuccess={() => {}}
+      />
     </div>
   );
 }

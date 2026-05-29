@@ -343,9 +343,11 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
 
   const alunosCriticos = alunos.filter(a => {
       const s = stats[a.aluno_id];
-      if (!s || s.totalAtiv === 0) return false;
-      const percRealizado = Math.round((s.totalVistos / s.totalAtiv) * 100);
-      return percRealizado < 40;
+      if (!s) return false;
+      const percRealizado = s.totalAtiv > 0 ? Math.round((s.totalVistos / s.totalAtiv) * 100) : 0;
+      const notaBaixa = arredondarNotaMS(s.media) < 3.5;
+      const atividadesBaixas = s.totalAtiv > 0 && percRealizado <= 35;
+      return atividadesBaixas || notaBaixa;
   });
 
   return (
@@ -535,19 +537,33 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                     <div className="p-2 bg-red-500 text-white rounded-lg shadow-lg shadow-red-900/40"><AlertCircle className="w-5 h-5" /></div>
                     <div>
                         <h3 className="text-sm font-bold text-red-500 uppercase tracking-widest">Alunos em Estado Crítico</h3>
-                        <p className="text-[10px] text-red-400/60 uppercase font-black">Risco de evasão ou reprovação por atividades (&lt;39% realizadas)</p>
+                    <p className="text-[10px] text-red-400/60 uppercase font-black">Risco de evasão ou reprovação — atividades ≤35% e/ou nota &lt;3,5</p>
                     </div>
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {alunosCriticos.map(a => (
-                  <div key={a.aluno_id} className="flex justify-between items-center bg-black/40 p-3 rounded-xl border border-red-500/20">
-                    <span className="text-xs font-bold text-white">{a.aluno_nome}</span>
-                    <span className="text-[10px] bg-red-600 text-white px-3 py-1 rounded-full font-black shadow-lg">
-                       {100 - Math.round((stats[a.aluno_id].totalVistos / stats[a.aluno_id].totalAtiv) * 100)}% AUSENTE
-                    </span>
-                  </div>
-                ))}
+                {alunosCriticos.map(a => {
+                  const s = stats[a.aluno_id];
+                  const perc = s && s.totalAtiv > 0 ? Math.round((s.totalVistos / s.totalAtiv) * 100) : null;
+                  const nota = s ? arredondarNotaMS(s.media) : null;
+                  return (
+                    <div key={a.aluno_id} className="flex justify-between items-center bg-black/40 p-3 rounded-xl border border-red-500/20">
+                      <span className="text-xs font-bold text-white">{a.aluno_nome}</span>
+                      <div className="flex items-center gap-1.5">
+                        {perc !== null && perc <= 35 && (
+                          <span className="text-[9px] bg-orange-600 text-white px-2 py-0.5 rounded-full font-black shadow-lg">
+                            {perc}% ativ.
+                          </span>
+                        )}
+                        {nota !== null && nota < 3.5 && (
+                          <span className="text-[9px] bg-red-700 text-white px-2 py-0.5 rounded-full font-black shadow-lg">
+                            Nota {nota.toFixed(1)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
                 {alunosCriticos.length === 0 && <p className="text-xs text-gray-500 italic py-4">Nenhum aluno em estado crítico nesta disciplina.</p>}
               </div>
           </div>
@@ -601,7 +617,7 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                       const exitBim = getBimestreFromDate(aluno.atestado_inicio);
                       return exitBim !== null && bimestreId > exitBim;
                     })();
-                    const isCritico = !isPosterior && s.totalAtiv > 0 && percRealizado < 40;
+                    const isCritico = !isPosterior && (percRealizado <= 35 || arredondarNotaMS(s.media) < 3.5);
                     const aprovado = estaAprovado(s.media, 6);
 
                     return (

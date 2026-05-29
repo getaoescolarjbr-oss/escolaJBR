@@ -60,6 +60,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
   const [saidaId, setSaidaId] = useState<string | null>(initialSaidaId || null);
   const [isOcorrenciaOpen, setIsOcorrenciaOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [reopenOcorrenciaOnCloseProfile, setReopenOcorrenciaOnCloseProfile] = useState(false);
 
   // Ref para fechar o menu ao clicar fora
   const destinoMenuRef = useRef<HTMLDivElement>(null);
@@ -468,7 +469,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
               </div>
               <div className="flex items-center gap-1.5 md:gap-2 mt-0.5 md:mt-1">
                 {!isPosterior && !isTransferido && (
-                  percentual < 40 ? (
+                  percentual <= 35 ? (
                     <span className="flex items-center gap-1 text-[7px] md:text-[8px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded-full animate-pulse">CRÍTICO</span>
                   ) : percentual <= 59 ? (
                     <span className="flex items-center gap-1 text-[7px] md:text-[8px] font-black bg-yellow-500 text-white px-1.5 py-0.5 rounded-full">ALERTA</span>
