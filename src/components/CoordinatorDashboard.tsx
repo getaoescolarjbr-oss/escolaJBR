@@ -709,40 +709,40 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   return (
     <div className="space-y-8">
       {/* Navigation Tabs */}
-      <div className="flex items-center gap-2 p-1 bg-ms-dark/50 border border-ms-border rounded-2xl w-fit">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:flex lg:items-center gap-2 p-1 bg-ms-dark/50 border border-ms-border rounded-2xl w-full lg:w-fit">
         <button 
           onClick={() => setActiveTab('overview')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'overview' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'overview' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
           <LayoutDashboard className="w-4 h-4" /> Visão Geral
         </button>
         <button 
           onClick={() => setActiveTab('painel_turma')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'painel_turma' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'painel_turma' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
           <Activity className="w-4 h-4" /> Painel da Turma
         </button>
         <button 
           onClick={() => setActiveTab('site')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'site' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'site' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
           <Globe className="w-4 h-4" /> Gestão do Site
         </button>
         <button 
           onClick={() => setActiveTab('atas')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'atas' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'atas' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
           <FileText className="w-4 h-4" /> Gestão de Atas
         </button>
         <button 
           onClick={() => setActiveTab('agenda_avaliacoes')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'agenda_avaliacoes' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'agenda_avaliacoes' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
           <Calendar className="w-4 h-4" /> Agenda de Avaliações
         </button>
         <button 
           onClick={() => setActiveTab('novas_ocorrencias')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all relative ${activeTab === 'novas_ocorrencias' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full relative ${activeTab === 'novas_ocorrencias' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
           <AlertTriangle className="w-4 h-4" /> Novas Ocorrências
           {ocorrenciasPendentes.length > 0 && (
@@ -753,12 +753,12 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
         </button>
         <button 
           onClick={() => setActiveTab('comunicados')}
-          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'comunicados' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'comunicados' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
           <Mail className="w-4 h-4" /> Comunicados
         </button>
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => setShowCalendarModal(true)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-ms-card border border-ms-border text-[#d4af37] hover:bg-ms-dark/50 shadow-md"

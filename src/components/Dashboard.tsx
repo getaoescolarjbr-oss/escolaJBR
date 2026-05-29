@@ -503,7 +503,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   return (
 <div className="space-y-6">
       {/* Navegação por Abas Superior */}
-      <div className={`flex items-center gap-2 p-1.5 rounded-2xl border shadow-xl w-fit mx-auto sm:mx-0 ${
+      <div className={`grid grid-cols-2 sm:flex sm:items-center gap-2 p-1.5 rounded-2xl border shadow-xl w-full sm:w-fit mx-auto sm:mx-0 ${
         theme === 'light' ? 'bg-white border-blue-100' : 'bg-ms-card border-ms-border'
       }`}>
         <button
@@ -513,7 +513,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
               setSelectedBimestre(4); // Reverte para o 4º bimestre ao acessar aulas
             }
           }}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+          className={`flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-6 py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all w-full sm:w-auto ${
             activeTab === 'aulas' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 
             theme === 'light' ? 'text-blue-900 hover:bg-blue-50' : 'text-blue-200 hover:text-white'
           }`}
@@ -522,7 +522,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
         </button>
         <button
           onClick={() => setActiveTab('notas')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+          className={`flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-6 py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all w-full sm:w-auto ${
             activeTab === 'notas' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 
             theme === 'light' ? 'text-blue-900 hover:bg-blue-50' : 'text-blue-200 hover:text-white'
           }`}
@@ -531,7 +531,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
         </button>
         <button
           onClick={() => setActiveTab('relatorios')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
+          className={`flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-6 py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all w-full sm:w-auto ${
             activeTab === 'relatorios' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 
             theme === 'light' ? 'text-blue-900 hover:bg-blue-50' : 'text-blue-200 hover:text-white'
           }`}
@@ -540,8 +540,9 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
         </button>
         <button
           onClick={() => setActiveTab('comunicados')}
-          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all relative ${
+          className={`flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-6 py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all w-full sm:w-auto relative ${
             activeTab === 'comunicados' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 
+            unreadCount > 0 ? 'animate-blink-red' :
             theme === 'light' ? 'text-blue-900 hover:bg-blue-50' : 'text-blue-200 hover:text-white'
           }`}
         >

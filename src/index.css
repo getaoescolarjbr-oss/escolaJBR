@@ -79,6 +79,16 @@
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
   }
+
+  /* Piscar em vermelho para botão de comunicados não lidos */
+  @keyframes blink-red {
+    0%, 100% { background-color: transparent; color: inherit; box-shadow: none; }
+    50% { background-color: rgba(220, 38, 38, 0.15); color: #ef4444; box-shadow: 0 0 12px rgba(220, 38, 38, 0.4); }
+  }
+
+  .animate-blink-red {
+    animation: blink-red 1.2s ease-in-out infinite;
+  }
 }
 
 /* Correção de Contraste para o Modo Claro */
