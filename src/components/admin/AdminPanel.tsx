@@ -33,8 +33,8 @@ export function AdminPanel({ onBack, theme }: AdminPanelProps) {
   return (
     <div className={`flex flex-col h-[calc(100vh-120px)] bg-ms-dark rounded-3xl overflow-hidden border border-gray-800 shadow-2xl animate-in fade-in zoom-in duration-300 w-full`}>
       {/* Header Admin */}
-      <div className="px-8 py-6 bg-ms-card border-b border-gray-800 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      <div className="px-4 py-4 md:px-8 md:py-6 bg-ms-card border-b border-gray-800 flex items-center justify-between">
+        <div className="flex items-center gap-3 md:gap-4">
           <button 
             onClick={onBack}
             className="p-2 hover:bg-gray-800 rounded-full transition-colors text-gray-400 hover:text-white"
@@ -42,26 +42,26 @@ export function AdminPanel({ onBack, theme }: AdminPanelProps) {
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <h1 className="text-2xl font-black text-white tracking-tight">Painel Administrativo</h1>
-            <p className="text-sm text-[#003366] font-bold">Gestão de acessos e alocações acadêmicas</p>
+            <h1 className="text-xl md:text-2xl font-black text-white tracking-tight">Painel Administrativo</h1>
+            <p className="text-xs md:text-sm text-[#003366] font-bold">Gestão de acessos e alocações acadêmicas</p>
           </div>
         </div>
       </div>
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
         {/* Sidebar */}
-        <div className="w-64 bg-ms-header border-r border-ms-border flex flex-col shadow-xl z-10 p-4 gap-2 overflow-y-auto">
+        <div className="w-full md:w-64 bg-ms-header border-b md:border-b-0 md:border-r border-ms-border flex flex-row md:flex-col shadow-xl z-10 p-3 md:p-4 gap-2 overflow-x-auto md:overflow-y-auto no-scrollbar">
           {menuItems.map(item => (
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id as any)}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+              className={`flex items-center gap-2 md:gap-3 px-3 py-2 md:px-4 md:py-3 rounded-xl font-bold transition-all shrink-0 whitespace-nowrap text-xs md:text-sm ${
                 activeTab === item.id 
                   ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' 
                   : 'text-gray-400 hover:bg-gray-800 hover:text-gray-200'
               }`}
             >
-              <item.icon className="w-5 h-5" />
+              <item.icon className="w-4 h-4 md:w-5 md:h-5" />
               {item.label}
             </button>
           ))}
