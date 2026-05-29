@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, Turma, Student } from '../types';
-import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer, AlertTriangle, CheckCheck, Clock } from 'lucide-react';
+import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer, AlertTriangle, CheckCheck, Clock, Mail } from 'lucide-react';
 import { printReport } from '../utils/printUtils';
 import { getCurrentBimestre } from '../utils/academicUtils';
 import { StudentProfileModal } from './StudentProfileModal';
@@ -12,6 +12,7 @@ import { CalendarioLetivoModal } from './CalendarioLetivoModal';
 import { CalendarioEditor } from './CalendarioEditor';
 import { GradeCellEditModal } from './GradeCellEditModal';
 import { BimestreLockModal } from './BimestreLockModal';
+import { GestaoMensagensPanel } from './GestaoMensagensPanel';
 
 interface CoordinatorDashboardProps {
   professor: Professor;
@@ -28,7 +29,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<{ id: string, nome: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'painel_turma' | 'site' | 'atas' | 'agenda_avaliacoes' | 'novas_ocorrencias'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'painel_turma' | 'site' | 'atas' | 'agenda_avaliacoes' | 'novas_ocorrencias' | 'comunicados'>('overview');
   const [ocorrenciasPendentes, setOcorrenciasPendentes] = useState<any[]>([]);
   const [loadingOcorrencias, setLoadingOcorrencias] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -749,6 +750,12 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
               {ocorrenciasPendentes.length}
             </span>
           )}
+        </button>
+        <button 
+          onClick={() => setActiveTab('comunicados')}
+          className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'comunicados' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+        >
+          <Mail className="w-4 h-4" /> Comunicados
         </button>
       </div>
       <div className="flex items-center gap-2">
@@ -1471,8 +1478,10 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                )}
              </div>
            )}
-         </div>
-       ) : null}
+          </div>
+        ) : activeTab === 'comunicados' ? (
+          <GestaoMensagensPanel currentCoordinator={professor} theme={theme} />
+        ) : null}
 
       {/* Student Profile Modal */}
       {selectedStudent && (
@@ -1483,6 +1492,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
           studentName={selectedStudent.nome}
           theme={theme}
           bimestre={selectedBimestre}
+          isCoordinator={true}
         />
       )}
 

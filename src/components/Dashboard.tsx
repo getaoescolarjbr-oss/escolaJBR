@@ -2,11 +2,12 @@ import { useState, useEffect, useRef } from 'react';
 import type { Professor } from '../types';
 import { supabase } from '../lib/supabase';
 import { StudentList } from './StudentList';
-import { Filter, Users, Calendar, ChevronDown, BookOpen, LayoutDashboard, FileSpreadsheet, ClipboardList, CheckCircle, PlusCircle, Layers, ShieldAlert, Trash2, Save } from 'lucide-react';
+import { Filter, Users, Calendar, ChevronDown, BookOpen, LayoutDashboard, FileSpreadsheet, ClipboardList, CheckCircle, PlusCircle, Layers, ShieldAlert, Trash2, Save, Mail } from 'lucide-react';
 import { EmptyState } from './EmptyState';
 import { GradesPanel } from './GradesPanel';
 import { ExameFinalPanel } from './ExameFinalPanel';
 import { ReportsPanel } from './ReportsPanel';
+import { ProfessorMensagensPanel } from './ProfessorMensagensPanel';
 import { CalendarioLetivoModal } from './CalendarioLetivoModal';
 import { getCurrentBimestre } from '../utils/academicUtils';
 
@@ -43,7 +44,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProps) {
-  const [activeTab, setActiveTab] = useState<'aulas' | 'notas' | 'relatorios'>(() => {
+  const [activeTab, setActiveTab] = useState<'aulas' | 'notas' | 'relatorios' | 'comunicados'>(() => {
     return (localStorage.getItem('last-tab') as any) || 'aulas';
   });
   
@@ -156,6 +157,27 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
       setSelectedBimestre(professor.bimestre_atual);
     }
   }, [professor.bimestre_atual]);
+
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  async function fetchUnreadCount() {
+    try {
+      const { count, error } = await supabase
+        .from('mensagens_coordenacao')
+        .select('*', { count: 'exact', head: true })
+        .eq('destinatario_id', professor.id)
+        .eq('lida', false);
+      if (!error && count !== null) {
+        setUnreadCount(count);
+      }
+    } catch (e) {
+      console.error('Erro ao buscar comunicados pendentes:', e);
+    }
+  }
+
+  useEffect(() => {
+    fetchUnreadCount();
+  }, [professor.id, activeTab]);
   useEffect(() => {
     setSelectedAtividadeId(null);
     setDescricaoAtividade('');
@@ -516,6 +538,20 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
         >
           <ClipboardList className="w-4 h-4" /> Relatórios
         </button>
+        <button
+          onClick={() => setActiveTab('comunicados')}
+          className={`flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all relative ${
+            activeTab === 'comunicados' ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/40' : 
+            theme === 'light' ? 'text-blue-900 hover:bg-blue-50' : 'text-blue-200 hover:text-white'
+          }`}
+        >
+          <Mail className="w-4 h-4" /> Comunicados
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-md">
+              {unreadCount}
+            </span>
+          )}
+        </button>
       </div>
 
       {/* Header Dinâmico */}
@@ -525,11 +561,13 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
             {activeTab === 'aulas' && 'Painel de Aulas'}
             {activeTab === 'notas' && 'Gestão de Notas Bimestrais'}
             {activeTab === 'relatorios' && 'Central de Relatórios'}
+            {activeTab === 'comunicados' && 'Mural de Comunicados'}
           </h2>
           <p className={`mt-1 font-medium ${theme === 'light' ? 'text-blue-800/70' : 'text-blue-300'}`}>
             {activeTab === 'aulas' && 'Gerencie chamadas e lançamentos acadêmicos diários'}
             {activeTab === 'notas' && 'Cadastre provas, trabalhos e visualize a média da turma'}
             {activeTab === 'relatorios' && 'Gere documentos individuais para pais e coordenação'}
+            {activeTab === 'comunicados' && 'Mensagens e solicitações da coordenação pedagógica'}
           </p>
         </div>
         
@@ -808,7 +846,13 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
           </div>
         </div>
 
-        {!selectedTurma || !selectedDisciplina ? (
+        {activeTab === 'comunicados' ? (
+          <ProfessorMensagensPanel 
+            currentTeacher={professor} 
+            theme={theme} 
+            onReadConfirmed={fetchUnreadCount} 
+          />
+        ) : !selectedTurma || !selectedDisciplina ? (
           <EmptyState />
         ) : (
           <>
