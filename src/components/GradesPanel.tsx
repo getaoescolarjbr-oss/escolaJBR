@@ -430,15 +430,15 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                     <table className="min-w-full divide-y divide-ms-border/30">
                         <thead className={theme === 'light' ? 'bg-ms-blue' : 'bg-ms-accent'}>
                         <tr>
-                            <th className="px-6 py-4 text-left text-[10px] font-black text-white uppercase tracking-widest sticky left-0 z-10 bg-inherit border-r border-white/10">Estudante</th>
-                            <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest bg-blue-600/20">Vistos ({professor.config_visto_valor_total})</th>
+                            <th className="px-2 sm:px-6 py-4 text-left text-[10px] font-black text-white uppercase tracking-widest sticky left-0 z-10 bg-inherit border-r border-white/10 min-w-[100px] max-w-[120px] sm:max-w-none">Estudante</th>
+                            <th className="px-2 sm:px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest bg-blue-600/20 whitespace-nowrap">Vistos ({professor.config_visto_valor_total})</th>
                             {avaliacoes.map(av => (
-                            <th key={av.id} className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest">
-                                <div className="truncate max-w-[100px] mx-auto">{av.nome}</div>
+                            <th key={av.id} className="px-2 sm:px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest">
+                                <div className="truncate max-w-[70px] sm:max-w-[100px] mx-auto">{av.nome}</div>
                                 <div className="text-[8px] text-white/50">{av.valor_maximo} pts</div>
                             </th>
                             ))}
-                            <th className="px-6 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest bg-black/40">Média Final</th>
+                            <th className="px-2 sm:px-6 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest bg-black/40 whitespace-nowrap">Média Final</th>
                         </tr>
                         </thead>
                         <tbody className="divide-y divide-ms-border/30">
@@ -457,17 +457,18 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
 
                             return (
                             <tr key={aluno.aluno_id} className={idx % 2 !== 0 ? 'bg-ms-dark/5' : ''}>
-                                <td className="px-6 py-4 whitespace-nowrap sticky left-0 z-10 bg-inherit border-r border-ms-border/30">
-                                <div className="flex items-center gap-3">
-                                    <span className="text-[10px] font-black text-ms-gold">{idx + 1}.</span>
-                                    <span className={`text-xs font-bold ${
+                                <td className="px-2 sm:px-6 py-3 sm:py-4 sticky left-0 z-10 bg-inherit border-r border-ms-border/30 min-w-[100px] max-w-[120px] sm:max-w-none">
+                                <div className="flex items-center gap-1.5 sm:gap-3">
+                                    <span className="text-[10px] font-black text-ms-gold shrink-0">{idx + 1}.</span>
+                                    <span className={`text-[10px] sm:text-xs font-bold leading-tight ${
                                       aluno.status === 'Transferido' || aluno.status === 'Remanejado'
                                         ? 'line-through text-gray-500 opacity-60'
                                         : theme === 'light' ? 'text-blue-950' : 'text-ms-main'
-                                    }`}>
-                                      {aluno.aluno_nome}
+                                    }`} title={aluno.aluno_nome}>
+                                      <span className="sm:hidden">{aluno.aluno_nome.split(' ').slice(0, 2).join(' ')}</span>
+                                      <span className="hidden sm:inline">{aluno.aluno_nome}</span>
                                       {aluno.status && aluno.status !== 'Ativo' && (
-                                        <span className={`ml-2 text-[8px] px-2 py-0.5 rounded-full font-black uppercase border tracking-normal ${
+                                        <span className={`block mt-0.5 text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase border tracking-normal w-fit ${
                                           aluno.status === 'Transferido' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
                                           aluno.status === 'Remanejado' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
                                           aluno.status === 'Atestado' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
@@ -479,11 +480,11 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                                     </span>
                                 </div>
                                 </td>
-                                <td className="px-4 py-4 text-center font-black text-blue-500 bg-blue-500/5">
+                                <td className="px-2 sm:px-4 py-3 sm:py-4 text-center font-black text-blue-500 bg-blue-500/5 whitespace-nowrap">
                                   {isPosterior ? 'N/A' : notaVisto.toFixed(1)}
                                 </td>
                                 {avaliacoes.map(av => (
-                                <td key={av.id} className="px-4 py-4 text-center">
+                                <td key={av.id} className="px-2 sm:px-4 py-3 sm:py-4 text-center">
                                     {isPosterior ? (
                                       <span className="text-xs text-gray-505 font-medium italic">N/A</span>
                                     ) : (
@@ -495,19 +496,19 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                                           value={notas[aluno.aluno_id]?.[av.id] ?? ''}
                                           onChange={(e) => handleUpdateNota(aluno.aluno_id, av.id, parseFloat(e.target.value) || 0)}
                                           disabled={isLocked}
-                                          className={`w-16 text-center p-1 rounded text-xs font-bold focus:border-blue-500 outline-none border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                                          className={`w-12 sm:w-16 text-center p-1 rounded text-xs font-bold focus:border-blue-500 outline-none border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                                               theme === 'light' ? 'bg-blue-50/30 border-blue-100 text-blue-900' : 'bg-ms-dark/5 border-ms-border/50 text-ms-main'
                                           }`}
                                       />
                                     )}
                                 </td>
                                 ))}
-                                <td className="px-6 py-4 text-center">
+                                <td className="px-2 sm:px-6 py-3 sm:py-4 text-center">
                                     {isPosterior ? (
                                       <span className="text-xs text-gray-500 font-semibold italic">Inativo</span>
                                     ) : (
-                                      <div className="inline-flex items-center gap-3 px-4 py-1.5 rounded-full border border-ms-border shadow-inner" style={{ backgroundColor: `${getCorGradiente(mediaBimestral, theme)}20` }}>
-                                          <span className="text-sm font-black" style={{ color: getCorGradiente(mediaBimestral, theme) }}>
+                                      <div className="inline-flex items-center gap-1.5 sm:gap-3 px-2 sm:px-4 py-1.5 rounded-full border border-ms-border shadow-inner" style={{ backgroundColor: `${getCorGradiente(mediaBimestral, theme)}20` }}>
+                                          <span className="text-xs sm:text-sm font-black" style={{ color: getCorGradiente(mediaBimestral, theme) }}>
                                               {arredondarNotaMS(mediaBimestral).toFixed(1)}
                                           </span>
                                           <div className="w-2 h-2 rounded-full" style={{ backgroundColor: getCorGradiente(mediaBimestral, theme) }}></div>
