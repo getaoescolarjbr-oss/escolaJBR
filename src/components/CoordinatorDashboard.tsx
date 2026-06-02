@@ -685,48 +685,38 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   const fetchAlunosReincidentes = async () => {
     setLoadingReincidentes(true);
     try {
+      // Busca todas as ocorrências com dados do aluno e turma em uma única query
       const { data, error } = await supabase
         .from('ocorrências')
-        .select('aluno_id');
+        .select('aluno_id, aluno:alunos(id, nome, aluno_numero, turma_id, turmas(nome))');
 
       if (error) throw error;
 
       if (data && data.length > 0) {
-        const countMap = new Map<string, number>();
+        // Agrupa por aluno_id e conta ocorrências
+        const countMap = new Map<string, { count: number; aluno: any }>();
         data.forEach((oc: any) => {
-          if (oc.aluno_id) {
-            countMap.set(oc.aluno_id, (countMap.get(oc.aluno_id) || 0) + 1);
+          if (!oc.aluno_id) return;
+          const id = String(oc.aluno_id);
+          if (!countMap.has(id)) {
+            countMap.set(id, { count: 0, aluno: oc.aluno });
           }
+          countMap.get(id)!.count += 1;
         });
 
-        const reincidenteEntries = Array.from(countMap.entries())
-          .filter(([, count]) => count >= 3)
-          .sort((a, b) => b[1] - a[1]);
+        const result = Array.from(countMap.entries())
+          .filter(([, { count }]) => count >= 3)
+          .sort((a, b) => b[1].count - a[1].count)
+          .map(([id, { count, aluno }]) => ({ id, count, aluno }))
+          .filter(r => r.aluno); // remove entradas sem aluno válido
 
-        if (reincidenteEntries.length > 0) {
-          const ids = reincidenteEntries.map(([id]) => id);
-          const { data: alunosData } = await supabase
-            .from('alunos')
-            .select('id, nome, aluno_numero, turma_id, turmas(nome)')
-            .in('id', ids);
-
-          const alunosMap = new Map((alunosData || []).map((a: any) => [a.id, a]));
-
-          const result = reincidenteEntries.map(([id, count]) => ({
-            id,
-            count,
-            aluno: alunosMap.get(id)
-          })).filter(r => r.aluno);
-
-          setAlunosReincidentes(result);
-        } else {
-          setAlunosReincidentes([]);
-        }
+        setAlunosReincidentes(result);
       } else {
         setAlunosReincidentes([]);
       }
     } catch (err) {
       console.error('Error fetching reincidentes:', err);
+      setAlunosReincidentes([]);
     } finally {
       setLoadingReincidentes(false);
     }
@@ -1411,7 +1401,13 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
              </div>
              <div className="flex items-center gap-2 flex-wrap">
                 <button
-                  onClick={() => setShowReincidentes(prev => !prev)}
+                  onClick={() => {
+                    const nextState = !showReincidentes;
+                    setShowReincidentes(nextState);
+                    if (nextState) {
+                      fetchAlunosReincidentes();
+                    }
+                  }}
                   className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all border shadow-lg ${
                     showReincidentes
                       ? 'bg-amber-600 text-white border-amber-600 shadow-amber-900/30'
