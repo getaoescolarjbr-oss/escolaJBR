@@ -5,6 +5,7 @@ import {
   Send, Mail, Eye, Search, Filter, Loader2, RefreshCw, 
   CheckCircle, Clock, Trash2, Users, AlertCircle, FileText
 } from 'lucide-react';
+import { sendPushToUsers } from '../services/pushService';
 
 interface GestaoMensagensPanelProps {
   currentCoordinator: Professor;
@@ -213,10 +214,38 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
 
       if (error) throw error;
 
-      setFormSuccess(true);
+      // ── Enviar push notifications ───────────────────────────────────────────
+      try {
+        // Mapeia professor.id → professor.user_id (auth UID) para os destinatários
+        const targetProfessores = destinatarioId === 'todos'
+          ? professores
+          : professores.filter(p => targets.includes(p.id));
+
+        const authUserIds = targetProfessores
+          .map(p => p.user_id)
+          .filter(Boolean) as string[];
+
+        if (authUserIds.length > 0) {
+          const preview = conteudo.trim().length > 80
+            ? conteudo.trim().slice(0, 77) + '...'
+            : conteudo.trim();
+          sendPushToUsers({
+            user_ids: authUserIds,
+            title: `📩 ${titulo.trim()}`,
+            message: `${currentCoordinator.nome}: ${preview}`,
+            url: '/',
+            tag: 'mensagem-coordenacao',
+          });
+        }
+      } catch (pushErr) {
+        console.warn('Push notification não enviado:', pushErr);
+      }
+      // ───────────────────────────────────────────────────────────────────────
+
       setTitulo('');
       setConteudo('');
       setDestinatarioId('todos');
+      setFormSuccess(true);
       
       // Recarrega lista
       fetchMensagensEnviadas();

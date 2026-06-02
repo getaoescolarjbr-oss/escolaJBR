@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { LogOut, Settings, GraduationCap } from 'lucide-react';
+import { LogOut, Settings } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Professor } from '../types';
 import { SettingsModal } from './SettingsModal';
+import NotificationBell from './NotificationBell';
 
 interface HeaderProps {
   professor: Professor | null;
@@ -74,6 +75,8 @@ export function Header({ professor, onLogout, onUpdateProfessor, theme, onToggle
               )}
               
               <div className="flex items-center gap-2">
+                <NotificationBell />
+
                 <button
                   onClick={() => setIsSettingsOpen(true)}
                   className="p-2 text-blue-200 hover:text-white hover:bg-gray-800 rounded-lg transition-colors"
