@@ -14,6 +14,23 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
   return outputArray;
 }
 
+function timeoutPromise<T>(promise: Promise<T>, ms: number, errorMsg: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => {
+      reject(new Error(errorMsg));
+    }, ms);
+    promise
+      .then((res) => {
+        clearTimeout(timer);
+        resolve(res);
+      })
+      .catch((err) => {
+        clearTimeout(timer);
+        reject(err);
+      });
+  });
+}
+
 export type NotificationPermission = 'default' | 'granted' | 'denied';
 
 interface UsePushNotificationsReturn {
@@ -76,7 +93,11 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     const subJson = subscription.toJSON();
     const keys = subJson.keys as { p256dh: string; auth: string };
 
-    await supabase.from('push_subscriptions').upsert(
+    if (!keys || !keys.p256dh || !keys.auth) {
+      throw new Error('Chaves da assinatura digital inválidas ou ausentes.');
+    }
+
+    const { error } = await supabase.from('push_subscriptions').upsert(
       {
         user_id: user.id,
         endpoint: subscription.endpoint,
@@ -86,29 +107,49 @@ export function usePushNotifications(): UsePushNotificationsReturn {
       },
       { onConflict: 'user_id,endpoint' }
     );
+
+    if (error) throw error;
   }, []);
 
   const subscribe = useCallback(async () => {
     if (!supported || !registration) return;
     setIsLoading(true);
     try {
-      const perm = await Notification.requestPermission();
+      // 1. Pedir permissão com timeout (evita travamento se o navegador bloquear ou ignorar)
+      const perm = await timeoutPromise(
+        Notification.requestPermission(),
+        10000,
+        'O navegador demorou muito para responder à permissão de notificações.'
+      );
+
       setPermission(perm as NotificationPermission);
       if (perm !== 'granted') {
         setIsLoading(false);
         return;
       }
 
+      // 2. Gerar assinatura digital com timeout
       const applicationServerKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer as ArrayBuffer;
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey,
-      });
+      const subscription = await timeoutPromise(
+        registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey,
+        }),
+        8000,
+        'Não foi possível gerar a assinatura digital. Em guias anônimas ou navegação privada, o navegador bloqueia o serviço de notificações push por segurança.'
+      );
 
-      await saveSubscription(subscription);
+      // 3. Salvar no banco com timeout
+      await timeoutPromise(
+        saveSubscription(subscription),
+        8000,
+        'Tempo limite esgotado ao salvar sua inscrição de notificações. Verifique sua conexão.'
+      );
+
       setIsSubscribed(true);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Push subscribe error:', err);
+      alert(`Falha ao ativar notificações:\n\n${err.message || err}`);
     } finally {
       setIsLoading(false);
     }
