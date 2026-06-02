@@ -44,9 +44,11 @@ export function TeacherDiaryModal({
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
   const [notas, setNotas] = useState<Record<string, Record<string, number>>>({}); // alunoId -> avalId -> nota
   const [vistosCalculados, setVistosCalculados] = useState<Record<string, number>>({}); // alunoId -> nota de vistos
+  const [selectedActivityDetail, setSelectedActivityDetail] = useState<AtividadeDiaria | null>(null);
 
   useEffect(() => {
     if (isOpen && professorId && turmaId && disciplinaId) {
+      setSelectedActivityDetail(null);
       fetchAllData();
     }
   }, [isOpen, professorId, turmaId, disciplinaId, selectedBimestre]);
@@ -186,73 +188,57 @@ export function TeacherDiaryModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-ms-card w-full max-w-6xl h-[90vh] rounded-[2.5rem] border border-ms-border shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-300">
+    <div className="fixed inset-0 z-[150] flex items-start sm:items-center justify-center sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-ms-card w-full max-w-6xl h-[100dvh] sm:h-[90vh] sm:rounded-[2.5rem] border-0 sm:border sm:border-ms-border shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-300">
 
         {/* Header */}
-        <div className="px-8 py-5 bg-gradient-to-r from-ms-blue/20 to-transparent border-b border-ms-border flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-ms-blue/20 flex items-center justify-center border border-ms-blue/30 shadow-inner">
-              <ClipboardList className="w-7 h-7 text-ms-blue" />
+        <div className="px-4 sm:px-8 py-4 sm:py-5 bg-gradient-to-r from-ms-blue/20 to-transparent border-b border-ms-border flex items-center justify-between flex-shrink-0 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-ms-blue/20 flex items-center justify-center border border-ms-blue/30 shadow-inner flex-shrink-0">
+              <ClipboardList className="w-5 h-5 sm:w-7 sm:h-7 text-ms-blue" />
             </div>
-            <div>
-              <h2 className="text-2xl font-black text-white tracking-tight">Diário de Atividades</h2>
-              <p className="text-xs text-blue-400 font-extrabold uppercase tracking-widest flex items-center gap-2">
-                <span className="text-white">{professorNome}</span>
+            <div className="min-w-0">
+              <h2 className="text-base sm:text-2xl font-black text-white tracking-tight leading-tight">Diário de Atividades</h2>
+              <p className="text-[10px] sm:text-xs text-blue-400 font-extrabold uppercase tracking-widest flex items-center gap-1 flex-wrap">
+                <span className="text-white truncate max-w-[120px] sm:max-w-none">{professorNome}</span>
                 <span className="opacity-40">•</span>
-                <span>{disciplinaNome}</span>
-                <span className="opacity-40">•</span>
-                <span className="text-ms-gold">{turmaNome}</span>
+                <span className="text-ms-gold">{disciplinaNome}</span>
+                <span className="opacity-40 hidden sm:inline">•</span>
+                <span className="text-ms-gold hidden sm:inline">{turmaNome}</span>
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="p-3 hover:bg-white/5 rounded-2xl transition-all group">
-            <X className="w-6 h-6 text-gray-500 group-hover:text-white" />
+          <button onClick={onClose} className="p-2 sm:p-3 hover:bg-white/5 rounded-xl sm:rounded-2xl transition-all group flex-shrink-0">
+            <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 group-hover:text-white" />
           </button>
         </div>
 
         {/* Controls Bar: Bimestre + Legend + Tabs */}
-        <div className="px-8 py-3 bg-ms-dark/40 border-b border-ms-border/50 flex flex-wrap items-center justify-between gap-4 flex-shrink-0">
-          {/* Bimestre selector */}
-          <div className="flex items-center gap-2 p-1 bg-black/35 rounded-xl border border-ms-border/40 w-fit">
-            {[1, 2, 3, 4].map((b) => (
-              <button
-                key={b}
-                onClick={() => setSelectedBimestre(b)}
-                className={`px-4 py-2 text-xs font-black rounded-lg transition-all ${
-                  selectedBimestre === b
-                    ? 'bg-blue-600 text-white shadow-md'
-                    : theme === 'light' ? 'text-blue-800 hover:text-blue-900 hover:bg-blue-50' : 'text-blue-200 hover:text-white'
-                }`}
-              >
-                {b}º Bimestre
-              </button>
-            ))}
-          </div>
-
-          {/* Right side: legend + tab switcher */}
-          <div className="flex items-center gap-6">
-            {/* Legend */}
-            <div className="flex items-center gap-4 text-xs font-bold" style={{ color: '#002677' }}>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded shadow-sm inline-block" style={{ backgroundColor: '#10b981', borderColor: '#059669', borderWidth: '1px' }}></span>
-                <span>Concluído (1.0)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded shadow-sm inline-block" style={{ backgroundColor: '#f59e0b', borderColor: '#d97706', borderWidth: '1px' }}></span>
-                <span>Meio Visto (0.5)</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded shadow-sm inline-block" style={{ backgroundColor: '#ef4444', borderColor: '#dc2626', borderWidth: '1px' }}></span>
-                <span>Não Fez</span>
-              </div>
+        <div className="px-3 sm:px-8 py-2 sm:py-3 bg-ms-dark/40 border-b border-ms-border/50 flex flex-col gap-2 flex-shrink-0">
+          {/* Row 1: Bimestre selector + Tab switcher */}
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <div className="flex items-center gap-1 p-0.5 sm:p-1 bg-black/35 rounded-xl border border-ms-border/40">
+              {[1, 2, 3, 4].map((b) => (
+                <button
+                  key={b}
+                  onClick={() => setSelectedBimestre(b)}
+                  className={`px-2 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-black rounded-lg transition-all ${
+                    selectedBimestre === b
+                      ? 'bg-blue-600 text-white shadow-md'
+                      : theme === 'light' ? 'text-blue-800 hover:text-blue-900 hover:bg-blue-50' : 'text-blue-200 hover:text-white'
+                  }`}
+                >
+                  <span className="hidden sm:inline">{b}º Bimestre</span>
+                  <span className="sm:hidden">{b}º Bim</span>
+                </button>
+              ))}
             </div>
 
             {/* Tab switcher */}
-            <div className="flex p-1 bg-black/30 rounded-xl border border-ms-border/40">
+            <div className="flex p-0.5 sm:p-1 bg-black/30 rounded-xl border border-ms-border/40">
               <button
                 onClick={() => setActiveTab('vistos')}
-                className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-1.5 ${
+                className={`px-2 sm:px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-1 ${
                   activeTab === 'vistos' ? 'bg-blue-600 text-white shadow' : 'text-blue-200 hover:text-white'
                 }`}
               >
@@ -260,18 +246,34 @@ export function TeacherDiaryModal({
               </button>
               <button
                 onClick={() => setActiveTab('boletim')}
-                className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-1.5 ${
+                className={`px-2 sm:px-4 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all flex items-center gap-1 ${
                   activeTab === 'boletim' ? 'bg-blue-600 text-white shadow' : 'text-blue-200 hover:text-white'
                 }`}
               >
-                <BarChart2 className="w-3 h-3" /> Notas & Média
+                <BarChart2 className="w-3 h-3" /> Notas
               </button>
+            </div>
+          </div>
+
+          {/* Row 2: Legend (compact on mobile) */}
+          <div className="flex items-center gap-3 sm:gap-4 text-[10px] font-bold overflow-x-auto" style={{ color: '#002677' }}>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: '#10b981', display: 'inline-block' }}></span>
+              <span className="whitespace-nowrap">Concluído (1.0)</span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: '#f59e0b', display: 'inline-block' }}></span>
+              <span className="whitespace-nowrap">Meio Visto (0.5)</span>
+            </div>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="w-2.5 h-2.5 rounded" style={{ backgroundColor: '#ef4444', display: 'inline-block' }}></span>
+              <span className="whitespace-nowrap">Não Fez</span>
             </div>
           </div>
         </div>
 
         {/* Main Content */}
-        <div className="flex-1 overflow-auto p-8 space-y-8 custom-scrollbar">
+        <div className="flex-1 overflow-auto p-3 sm:p-8 space-y-6 sm:space-y-8 custom-scrollbar">
           {loading ? (
             <div className="h-full py-40 flex flex-col items-center justify-center">
               <Loader2 className="w-12 h-12 animate-spin text-ms-blue mb-4" />
@@ -293,27 +295,56 @@ export function TeacherDiaryModal({
                 </p>
               </div>
             ) : (
-              <div className="space-y-8 animate-in fade-in duration-300">
+              <div className="space-y-6 animate-in fade-in duration-300">
+                {/* Detalhes da Atividade Selecionada (principalmente para Mobile) */}
+                {selectedActivityDetail && (
+                  <div className="p-4 bg-ms-blue/15 border border-ms-blue/30 rounded-2xl animate-in slide-in-from-top duration-250 flex items-start justify-between gap-3 shadow-lg">
+                    <div className="space-y-1">
+                      <p className="text-[10px] font-black text-[#93c5fd] uppercase tracking-widest flex items-center gap-1.5">
+                        <BookOpen className="w-3.5 h-3.5 text-blue-400" />
+                        Atividade de {new Date(selectedActivityDetail.data + 'T00:00:00').toLocaleDateString('pt-BR')}
+                      </p>
+                      <p className="text-xs text-white font-semibold leading-relaxed">
+                        {selectedActivityDetail.descricao || 'Sem descrição cadastrada.'}
+                      </p>
+                    </div>
+                    <button
+                      onClick={() => setSelectedActivityDetail(null)}
+                      className="text-gray-400 hover:text-white transition-colors p-1 flex-shrink-0"
+                      title="Fechar Detalhes"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+
                 {/* Tabela de Vistos */}
                 <div className="border border-ms-border rounded-3xl overflow-hidden shadow-2xl bg-ms-card">
                   <div className="overflow-x-auto custom-scrollbar">
                     <table className="w-full border-collapse">
                       <thead>
                         <tr className="bg-[#0a1a3a] border-b border-ms-border text-[10px] font-black text-white uppercase tracking-widest">
-                          <th className="px-6 py-4 text-left sticky left-0 z-20 bg-[#0a1a3a] border-r border-[#002677]/30 min-w-[220px] shadow-[2px_0_5px_rgba(0,0,0,0.15)]">
+                          <th className="px-3 sm:px-6 py-4 text-left sticky left-0 z-20 bg-[#0a1a3a] border-r border-[#002677]/30 min-w-[140px] sm:min-w-[220px] shadow-[2px_0_5px_rgba(0,0,0,0.15)]">
                             Estudante
                           </th>
                           {activities.map((act) => (
-                            <th key={act.id} className="px-3 py-4 text-center min-w-[70px] relative group/th border-r border-ms-border/30 hover:bg-[#002677]/20 transition-colors">
-                              <span className="cursor-help font-extrabold text-[#93c5fd] decoration-dotted underline decoration-[#93c5fd]/50">
+                            <th 
+                              key={act.id} 
+                              onClick={() => setSelectedActivityDetail(selectedActivityDetail?.id === act.id ? null : act)}
+                              className={`px-3 py-4 text-center min-w-[70px] relative group/th border-r border-ms-border/30 hover:bg-[#002677]/20 transition-all cursor-pointer select-none ${
+                                selectedActivityDetail?.id === act.id ? 'bg-[#002677]/50 ring-2 ring-ms-blue/30' : ''
+                              }`}
+                            >
+                              <span className="cursor-pointer font-extrabold text-[#93c5fd] decoration-dotted underline decoration-[#93c5fd]/50 group-hover/th:text-white transition-colors">
                                 {formatDate(act.data)}
                               </span>
-                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 p-3 bg-white dark:bg-[#0d162d] text-gray-800 dark:text-gray-100 rounded-xl shadow-2xl border border-blue-200 dark:border-blue-900 opacity-0 invisible group-hover/th:opacity-100 group-hover/th:visible transition-all duration-200 text-left normal-case text-xs z-50">
-                                <p className="font-black text-blue-600 dark:text-blue-400 mb-1">Atividade em {formatDate(act.data)}</p>
-                                <p className="font-semibold text-gray-600 dark:text-gray-300 leading-relaxed max-h-24 overflow-y-auto pr-1">
+                              {/* Tooltip para Desktop */}
+                              <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-56 p-3 bg-[#0d162d] text-gray-100 rounded-xl shadow-2xl border border-blue-900 opacity-0 invisible group-hover/th:opacity-100 group-hover/th:visible transition-all duration-205 text-left normal-case text-xs z-50 pointer-events-none hidden md:block">
+                                <p className="font-black text-blue-400 mb-1">Atividade em {formatDate(act.data)}</p>
+                                <p className="font-semibold text-gray-300 leading-relaxed max-h-24 overflow-y-auto pr-1">
                                   {act.descricao || 'Sem descrição cadastrada.'}
                                 </p>
-                                <div className="absolute left-1/2 -translate-x-1/2 top-full w-3 h-3 rotate-45 bg-white dark:bg-[#0d162d] border-b border-r border-blue-200 dark:border-blue-900" />
+                                <div className="absolute left-1/2 -translate-x-1/2 top-full w-3 h-3 rotate-45 bg-[#0d162d] border-b border-r border-blue-900" />
                               </div>
                             </th>
                           ))}
@@ -334,14 +365,14 @@ export function TeacherDiaryModal({
                           else if (percentual >= 40) scoreColor = 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20';
                           return (
                             <tr key={student.id} className={`${sIdx % 2 !== 0 ? 'bg-ms-dark/15 hover:bg-ms-blue/5' : 'bg-transparent hover:bg-ms-blue/5'} transition-colors group`}>
-                              <td className={`px-6 py-3 whitespace-nowrap sticky left-0 z-10 border-r border-ms-border/30 font-bold transition-colors ${
+                              <td className={`px-3 sm:px-6 py-3 whitespace-nowrap sticky left-0 z-10 border-r border-ms-border/30 font-bold transition-colors ${
                                 sIdx % 2 !== 0
                                   ? theme === 'light' ? 'bg-[#fcfdfe]' : 'bg-[#0d131f]'
                                   : theme === 'light' ? 'bg-white' : 'bg-[#0d1117]'
                               }`}>
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 sm:gap-3">
                                   <span className="text-[10px] font-black text-ms-gold">{student.aluno_numero || '-'}</span>
-                                  <span className="text-xs text-white truncate max-w-[200px]" title={student.nome}>{student.nome}</span>
+                                  <span className="text-xs text-white truncate max-w-[90px] sm:max-w-[200px] block" title={student.nome}>{student.nome}</span>
                                 </div>
                               </td>
                               {activities.map((act) => (
@@ -429,7 +460,7 @@ export function TeacherDiaryModal({
               )}
 
               <div className={`${theme === 'light' ? 'bg-white' : 'bg-ms-card'} rounded-2xl shadow-xl border border-ms-border overflow-hidden`}>
-                <div className={`px-6 py-4 border-b ${theme === 'light' ? 'bg-[#e6f0ff] border-[#002677]/20' : 'bg-[#0a1a3a] border-[#002677]/30'}`}>
+<div className={`px-6 py-4 border-b ${theme === 'light' ? 'bg-[#e6f0ff] border-[#002677]/20' : 'bg-[#0a1a3a] border-[#002677]/30'}`}>
                   <h3 className={`text-sm font-black uppercase tracking-widest ${theme === 'light' ? 'text-[#002677]' : 'text-[#93c5fd]'}`}>
                     Boletim de Notas — {selectedBimestre}º Bimestre
                   </h3>
@@ -441,7 +472,9 @@ export function TeacherDiaryModal({
                   <table className="min-w-full divide-y divide-ms-border/30">
                     <thead className={theme === 'light' ? 'bg-ms-blue' : 'bg-[#0a1a3a]'}>
                       <tr>
-                        <th className="px-6 py-4 text-left text-[10px] font-black text-white uppercase tracking-widest sticky left-0 z-10 bg-inherit border-r border-white/10 min-w-[220px]">
+                        <th className={`px-3 sm:px-6 py-4 text-left text-[10px] font-black text-white uppercase tracking-widest sticky left-0 z-20 border-r border-white/10 min-w-[140px] sm:min-w-[220px] shadow-[2px_0_5px_rgba(0,0,0,0.15)] ${
+                          theme === 'light' ? 'bg-[#002677]' : 'bg-[#0a1a3a]'
+                        }`}>
                           Estudante
                         </th>
                         <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest bg-blue-600/20 min-w-[90px]">
@@ -482,10 +515,14 @@ export function TeacherDiaryModal({
                         const corMedia = getCorGradiente(mediaBimestral, theme);
                         return (
                           <tr key={aluno.id} className={idx % 2 !== 0 ? (theme === 'light' ? 'bg-blue-50/30' : 'bg-ms-dark/5') : ''}>
-                            <td className="px-6 py-4 whitespace-nowrap sticky left-0 z-10 bg-inherit border-r border-ms-border/30">
-                              <div className="flex items-center gap-3">
+                            <td className={`px-3 sm:px-6 py-4 whitespace-nowrap sticky left-0 z-10 border-r border-ms-border/30 ${
+                              idx % 2 !== 0
+                                ? theme === 'light' ? 'bg-[#fcfdfe]' : 'bg-[#0d131f]'
+                                : theme === 'light' ? 'bg-white' : 'bg-[#0d1117]'
+                            }`}>
+                              <div className="flex items-center gap-2 sm:gap-3">
                                 <span className="text-[10px] font-black text-ms-gold">{idx + 1}.</span>
-                                <span className={`text-xs font-bold ${theme === 'light' ? 'text-blue-950' : 'text-ms-main'}`}>{aluno.nome}</span>
+                                <span className={`text-xs font-bold ${theme === 'light' ? 'text-blue-950' : 'text-ms-main'} truncate max-w-[90px] sm:max-w-[200px] block`} title={aluno.nome}>{aluno.nome}</span>
                               </div>
                             </td>
                             <td className="px-4 py-4 text-center font-black text-blue-500 bg-blue-500/5 text-sm">
@@ -536,7 +573,7 @@ export function TeacherDiaryModal({
         </div>
 
         {/* Footer */}
-        <div className="px-8 py-4 bg-ms-dark/30 border-t border-ms-border flex justify-between items-center text-[10px] text-gray-500 font-bold uppercase tracking-widest flex-shrink-0">
+        <div className="px-4 sm:px-8 py-3 sm:py-4 bg-ms-dark/30 border-t border-ms-border flex flex-col sm:flex-row justify-between items-center gap-1 text-[10px] text-gray-500 font-bold uppercase tracking-widest flex-shrink-0">
           <span>{students.length} Estudantes Cadastrados</span>
           <span>Diário de Vistos da Coordenação</span>
         </div>

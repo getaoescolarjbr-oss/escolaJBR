@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, Turma, Student } from '../types';
-import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer, AlertTriangle, CheckCheck, Clock, Mail } from 'lucide-react';
+import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer, AlertTriangle, CheckCheck, Clock, Mail, MessageSquare, BarChart2, Send, X } from 'lucide-react';
 import { printReport } from '../utils/printUtils';
 import { getCurrentBimestre } from '../utils/academicUtils';
 import { StudentProfileModal } from './StudentProfileModal';
@@ -35,6 +35,12 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   const [showHistory, setShowHistory] = useState(false);
   const [ocorrenciasRevisadas, setOcorrenciasRevisadas] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [devolutivaModalOc, setDevolutivaModalOc] = useState<any | null>(null);
+  const [devolutivaText, setDevolutivaText] = useState('');
+  const [submittingDevolutiva, setSubmittingDevolutiva] = useState(false);
+  const [alunosReincidentes, setAlunosReincidentes] = useState<any[]>([]);
+  const [loadingReincidentes, setLoadingReincidentes] = useState(false);
+  const [showReincidentes, setShowReincidentes] = useState(false);
   const [avaliacoesAgenda, setAvaliacoesAgenda] = useState<any[]>([]);
   const [loadingAgenda, setLoadingAgenda] = useState(false);
   const agendaTableRef = useRef<HTMLTableElement>(null);
@@ -676,29 +682,100 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
     }
   };
 
-  const handleConfirmLeitura = async (ocorrenciaId: string) => {
+  const fetchAlunosReincidentes = async () => {
+    setLoadingReincidentes(true);
+    try {
+      const { data, error } = await supabase
+        .from('ocorrências')
+        .select('aluno_id');
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        const countMap = new Map<string, number>();
+        data.forEach((oc: any) => {
+          if (oc.aluno_id) {
+            countMap.set(oc.aluno_id, (countMap.get(oc.aluno_id) || 0) + 1);
+          }
+        });
+
+        const reincidenteEntries = Array.from(countMap.entries())
+          .filter(([, count]) => count >= 3)
+          .sort((a, b) => b[1] - a[1]);
+
+        if (reincidenteEntries.length > 0) {
+          const ids = reincidenteEntries.map(([id]) => id);
+          const { data: alunosData } = await supabase
+            .from('alunos')
+            .select('id, nome, aluno_numero, turma_id, turmas(nome)')
+            .in('id', ids);
+
+          const alunosMap = new Map((alunosData || []).map((a: any) => [a.id, a]));
+
+          const result = reincidenteEntries.map(([id, count]) => ({
+            id,
+            count,
+            aluno: alunosMap.get(id)
+          })).filter(r => r.aluno);
+
+          setAlunosReincidentes(result);
+        } else {
+          setAlunosReincidentes([]);
+        }
+      } else {
+        setAlunosReincidentes([]);
+      }
+    } catch (err) {
+      console.error('Error fetching reincidentes:', err);
+    } finally {
+      setLoadingReincidentes(false);
+    }
+  };
+
+  const handleConfirmLeitura = (oc: any) => {
+    setDevolutivaModalOc(oc);
+    setDevolutivaText('');
+  };
+
+  const handleSaveDevolutiva = async () => {
+    if (!devolutivaModalOc) return;
+    setSubmittingDevolutiva(true);
+    // Capture values before clearing state (closure safety)
+    const ocId = devolutivaModalOc.id;
+    const devolutiva = devolutivaText.trim() || null;
+    // Optimistic: remove immediately from list
+    setOcorrenciasPendentes(prev => prev.filter(o => o.id !== ocId));
+    setDevolutivaModalOc(null);
+    setDevolutivaText('');
     try {
       const now = new Date().toISOString();
       const { error } = await supabase
         .from('ocorrências')
         .update({
           visto_coordenador: true,
-          data_visualizacao_coordenador: now
+          data_visualizacao_coordenador: now,
+          devolutiva_coordenador: devolutiva
         })
-        .eq('id', ocorrenciaId);
+        .eq('id', ocId);
 
       if (error) throw error;
 
-      setOcorrenciasPendentes(prev => prev.filter(o => o.id !== ocorrenciaId));
+      // Refresh reincidentes list after confirming
+      fetchAlunosReincidentes();
     } catch (err: any) {
-      console.error('Error confirming occurrence read:', err);
-      alert('Erro ao confirmar leitura da ocorrência: ' + err.message);
+      console.error('Error saving devolutiva:', err);
+      // Revert optimistic update on failure
+      fetchOcorrenciasPendentes();
+      alert('Erro ao confirmar leitura: ' + err.message);
+    } finally {
+      setSubmittingDevolutiva(false);
     }
   };
 
   useEffect(() => {
     if (activeTab === 'novas_ocorrencias') {
       fetchOcorrenciasPendentes();
+      fetchAlunosReincidentes();
     }
   }, [activeTab]);
 
@@ -919,19 +996,19 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                 <table ref={overviewTableRef} className="w-full">
                   <thead className="sticky top-0 bg-ms-card z-20">
                     <tr className="bg-ms-dark/50 border-b border-ms-border">
-                      <th className="px-6 py-4 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">Nº</th>
-                      <th className="px-6 py-4 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">Aluno</th>
-                      <th className="px-6 py-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Status</th>
-                      <th className="px-6 py-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest no-print">Ações</th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">Nº</th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-left text-[10px] font-black text-gray-500 uppercase tracking-widest">Aluno</th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest">Status</th>
+                      <th className="px-3 sm:px-6 py-3 sm:py-4 text-center text-[10px] font-black text-gray-500 uppercase tracking-widest no-print">Ações</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ms-border/50">
                     {filteredStudents.map((s, idx) => (
                       <tr key={s.id} className={`${idx % 2 === 0 ? 'bg-ms-dark/20' : 'bg-transparent'} hover:bg-ms-blue/5 transition-colors group`}>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <span className="text-sm font-black text-ms-gold">{s.aluno_numero || '-'}</span>
                         </td>
-                        <td className="px-6 py-4">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <div className="flex items-center gap-3">
                             <div className="w-8 h-8 rounded-lg bg-ms-blue/10 flex items-center justify-center text-[10px] font-black text-ms-blue border border-ms-blue/20">
                               {s.nome.charAt(0)}
@@ -939,7 +1016,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                             <p className="text-sm font-bold text-white">{s.nome}</p>
                           </div>
                         </td>
-                        <td className="px-6 py-4 text-center">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 text-center">
                           <div className="relative inline-flex items-center group">
                             <select
                               value={s.status || 'Ativo'}
@@ -947,7 +1024,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                               className={`pl-3 pr-7 py-1.5 rounded-full text-[10px] font-black uppercase border appearance-none cursor-pointer outline-none transition-all ${
                                 s.status === 'Ativo' ? 'bg-green-500/10 text-green-500 border-green-500/20 focus:ring-2 focus:ring-green-500/20' :
                                 s.status === 'Atestado' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20 focus:ring-2 focus:ring-blue-500/20' :
-                                'bg-gray-500/10 text-gray-500 border-gray-500/20 focus:ring-2 focus:ring-gray-500/20'
+                                'bg-gray-550/10 text-gray-500 border-gray-550/20 focus:ring-2 focus:ring-gray-500/20'
                               }`}
                             >
                               <option value="Ativo" className="bg-ms-card text-green-500 font-bold">Ativo</option>
@@ -963,7 +1040,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                             }`} />
                           </div>
                         </td>
-                        <td className="px-6 py-4 no-print">
+                        <td className="px-3 sm:px-6 py-3 sm:py-4 no-print">
                           <div className="flex items-center justify-center">
                             <button
                               onClick={() => setSelectedStudent({ id: s.id, nome: s.nome })}
@@ -1332,22 +1409,40 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                </h2>
                <p className="text-sm text-[#003366] font-bold">Ocorrências registradas pelos professores aguardando confirmação de leitura</p>
              </div>
-             <button
-               onClick={() => {
-                 setShowHistory(!showHistory);
-                 if (!showHistory && ocorrenciasRevisadas.length === 0) {
-                   fetchOcorrenciasRevisadas();
-                 }
-               }}
-               className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all border shadow-lg ${
-                 showHistory
-                   ? 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-900/30'
-                   : 'bg-ms-card text-gray-400 border-ms-border hover:text-white hover:border-gray-500'
-               }`}
-             >
-               <Clock className="w-4 h-4" />
-               {showHistory ? 'Ocultar Histórico' : 'Ver Histórico Revisado'}
-             </button>
+             <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={() => setShowReincidentes(prev => !prev)}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all border shadow-lg ${
+                    showReincidentes
+                      ? 'bg-amber-600 text-white border-amber-600 shadow-amber-900/30'
+                      : 'bg-ms-card text-gray-400 border-ms-border hover:text-white hover:border-amber-500/50'
+                  }`}
+                >
+                  <BarChart2 className="w-4 h-4" />
+                  Alunos Reincidentes
+                  {alunosReincidentes.length > 0 && (
+                    <span className="ml-1 bg-amber-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                      {alunosReincidentes.length}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowHistory(!showHistory);
+                    if (!showHistory && ocorrenciasRevisadas.length === 0) {
+                      fetchOcorrenciasRevisadas();
+                    }
+                  }}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all border shadow-lg ${
+                    showHistory
+                      ? 'bg-emerald-600 text-white border-emerald-500 shadow-emerald-900/30'
+                      : 'bg-ms-card text-gray-400 border-ms-border hover:text-white hover:border-gray-500'
+                  }`}
+                >
+                  <Clock className="w-4 h-4" />
+                  {showHistory ? 'Ocultar Histórico' : 'Ver Histórico Revisado'}
+                </button>
+              </div>
            </div>
 
            {/* Pending Occurrences */}
@@ -1407,11 +1502,11 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                            </div>
                          </div>
                          <button
-                           onClick={() => handleConfirmLeitura(oc.id)}
+                           onClick={() => setDevolutivaModalOc(oc)}
                            className="shrink-0 flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-900/30 transition-all hover:scale-105"
                          >
-                           <CheckCheck className="w-4 h-4" />
-                           Confirmar Leitura
+                           <MessageSquare className="w-4 h-4" />
+                           Confirmar & Devolutiva
                          </button>
                        </div>
                      </div>
@@ -1420,6 +1515,66 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                ))}
              </div>
            )}
+
+            {/* Alunos Reincidentes Panel */}
+            {showReincidentes && (
+              <div className="space-y-4 mt-6">
+                <div className="flex items-center gap-3">
+                  <div className="h-px flex-1 bg-ms-border" />
+                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-2">
+                    <BarChart2 className="w-3.5 h-3.5" /> Alunos com 3 ou mais ocorrências
+                  </span>
+                  <div className="h-px flex-1 bg-ms-border" />
+                </div>
+                {loadingReincidentes ? (
+                  <div className="py-8 flex items-center justify-center gap-3">
+                    <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+                    <span className="text-gray-500 text-xs font-bold uppercase tracking-widest">Carregando...</span>
+                  </div>
+                ) : alunosReincidentes.length === 0 ? (
+                  <div className="bg-ms-card rounded-2xl border border-ms-border p-8 text-center">
+                    <CheckCheck className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
+                    <p className="text-gray-400 text-sm font-semibold">Nenhum aluno com 3 ou mais ocorrências.</p>
+                  </div>
+                ) : (
+                  <div className="bg-ms-card rounded-2xl border border-amber-500/30 shadow-xl overflow-hidden">
+                    <div className="px-5 py-3 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2">
+                      <BarChart2 className="w-4 h-4 text-amber-400" />
+                      <span className="text-xs font-black text-amber-400 uppercase tracking-widest">
+                        {alunosReincidentes.length} aluno{alunosReincidentes.length > 1 ? 's' : ''} com múltiplas ocorrências
+                      </span>
+                    </div>
+                    <div className="divide-y divide-ms-border/30">
+                      {alunosReincidentes.map((item, idx) => (
+                        <div key={item.id} className="flex items-center justify-between px-5 py-3 hover:bg-amber-500/5 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-black text-gray-500 w-5 text-right">{idx + 1}.</span>
+                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-xs font-black text-amber-400 border border-amber-500/20 shrink-0">
+                              {(item.aluno?.nome || '?').charAt(0)}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white leading-tight">{item.aluno?.nome}</p>
+                              <p className="text-[10px] font-black text-ms-blue uppercase">
+                                {item.aluno?.aluno_numero ? `Nº ${item.aluno.aluno_numero} · ` : ''}{item.aluno?.turmas?.nome || '—'}
+                              </p>
+                            </div>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-black border ${
+                            item.count >= 5
+                              ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                              : item.count >= 4
+                              ? 'bg-orange-500/15 text-orange-400 border-orange-500/30'
+                              : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                          }`}>
+                            {item.count} ocorrência{item.count > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
 
            {/* Reviewed History */}
            {showHistory && (
@@ -1462,9 +1617,18 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                                {oc.descricao || oc.observacao || 'Sem descrição'}
                              </p>
                              <div className="flex items-center gap-4 text-[10px] text-gray-600 font-bold">
-                               <span>Prof. {oc.professor?.nome || 'Desconhecido'}</span>
-                               <span>Registrado: {oc.data_registro ? new Date(oc.data_registro).toLocaleDateString('pt-BR') : '—'}</span>
-                             </div>
+                                <span>Prof. {oc.professor?.nome || 'Desconhecido'}</span>
+                                <span>Registrado: {oc.data_registro ? new Date(oc.data_registro).toLocaleDateString('pt-BR') : '—'}</span>
+                              </div>
+                              {oc.devolutiva_coordenador && (
+                                <div className="mt-2 flex items-start gap-2 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-3 py-2">
+                                  <MessageSquare className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                                  <div>
+                                    <p className="text-[9px] font-black text-emerald-500 uppercase tracking-wider mb-0.5">Devolutiva da Coordenação</p>
+                                    <p className="text-xs text-emerald-300 leading-relaxed">{oc.devolutiva_coordenador}</p>
+                                  </div>
+                                </div>
+                              )}
                            </div>
                            <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-[9px] font-black uppercase rounded-full border border-emerald-500/20">
                              <CheckCheck className="w-3 h-3" />
@@ -1482,6 +1646,115 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
         ) : activeTab === 'comunicados' ? (
           <GestaoMensagensPanel currentCoordinator={professor} theme={theme} />
         ) : null}
+
+      {/* Devolutiva Modal */}
+      {devolutivaModalOc && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-ms-card rounded-3xl border border-ms-border w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in duration-300">
+            {/* Header */}
+            <div className="bg-gradient-to-r from-ms-blue to-blue-800 px-6 py-5 flex items-center justify-between border-b border-ms-border">
+              <div className="flex items-center gap-3">
+                <MessageSquare className="w-5 h-5 text-white" />
+                <h3 className="text-sm font-black text-white uppercase tracking-widest">Confirmar Leitura & Devolutiva</h3>
+              </div>
+              <button
+                onClick={() => { setDevolutivaModalOc(null); setDevolutivaText(''); }}
+                className="text-white/60 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Occurrence summary */}
+              <div className="bg-ms-dark/30 rounded-2xl border border-ms-border/50 p-4 space-y-2">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="text-white font-black text-sm">{devolutivaModalOc.aluno?.nome || 'Aluno'}</span>
+                  <span className="text-[9px] font-black uppercase bg-ms-blue/20 text-ms-blue px-2 py-0.5 rounded-full border border-ms-blue/30">
+                    {devolutivaModalOc.turma?.nome || '—'}
+                  </span>
+                  {devolutivaModalOc.tipo && (
+                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                      devolutivaModalOc.tipo === 'Disciplinar' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
+                      devolutivaModalOc.tipo === 'Pedagógica' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                      'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                    }`}>{devolutivaModalOc.tipo}</span>
+                  )}
+                </div>
+                <p className="text-gray-300 text-xs leading-relaxed">
+                  {devolutivaModalOc.descricao || devolutivaModalOc.observacao || 'Sem descrição'}
+                </p>
+                <p className="text-[10px] text-gray-600 font-bold">
+                  Prof. {devolutivaModalOc.professor?.nome || '—'}
+                </p>
+              </div>
+
+              {/* Devolutiva field */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                  <MessageSquare className="w-3.5 h-3.5 text-ms-blue" />
+                  Devolutiva para o Professor (opcional)
+                </label>
+
+                {/* Quick-pick suggestions */}
+                <div className="flex flex-wrap gap-2">
+                  {[
+                    'O aluno foi convocado',
+                    'Responsáveis foram contactados',
+                    'Encaminhado para a direção',
+                    'Advertência registrada',
+                    'Situação resolvida'
+                  ].map(sugestao => (
+                    <button
+                      key={sugestao}
+                      onClick={() => setDevolutivaText(sugestao)}
+                      className={`text-[10px] px-3 py-1.5 rounded-full border font-bold transition-all ${
+                        devolutivaText === sugestao
+                          ? 'bg-ms-blue text-white border-ms-blue shadow-md shadow-blue-900/30'
+                          : 'bg-ms-dark/40 text-gray-400 border-ms-border hover:border-ms-blue/40 hover:text-gray-200'
+                      }`}
+                    >
+                      {sugestao}
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  value={devolutivaText}
+                  onChange={(e) => setDevolutivaText(e.target.value)}
+                  placeholder="Digite uma mensagem de retorno ao professor... (ex: O aluno foi convocado e os responsáveis foram notificados)"
+                  rows={3}
+                  className="w-full px-4 py-3 bg-ms-dark border border-ms-border rounded-xl text-white text-xs outline-none focus:ring-2 focus:ring-ms-blue transition-all resize-none placeholder-gray-600"
+                />
+              </div>
+            </div>
+
+            <div className="p-6 bg-gray-900/50 border-t border-ms-border flex gap-3">
+              <button
+                onClick={() => { setDevolutivaModalOc(null); setDevolutivaText(''); }}
+                disabled={submittingDevolutiva}
+                className="flex-1 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors disabled:opacity-40"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveDevolutiva}
+                disabled={submittingDevolutiva}
+                className="flex-1 py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-900/40 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {submittingDevolutiva ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <>
+                    <Send className="w-4 h-4" />
+                    Confirmar Leitura
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Student Profile Modal */}
       {selectedStudent && (

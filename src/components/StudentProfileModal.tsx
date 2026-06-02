@@ -244,38 +244,40 @@ export function StudentProfileModal({
   const filterAtrasos = ocorrencias.filter(o => o.tipo?.toLowerCase().includes('atraso'));
 
   return (
-    <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
-      <div className="bg-ms-card w-full max-w-5xl h-[90vh] rounded-[2.5rem] border border-ms-border shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-300">
+    <div className="fixed inset-0 z-[150] flex items-start sm:items-center justify-center sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-300">
+      <div className="bg-ms-card w-full max-w-5xl h-[100dvh] sm:h-[90vh] sm:rounded-[2.5rem] border-0 sm:border sm:border-ms-border shadow-2xl flex flex-col overflow-hidden animate-in zoom-in duration-300">
         
         {/* Header */}
-        <div className="px-8 py-5 bg-gradient-to-r from-ms-blue/20 to-transparent border-b border-ms-border flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-ms-blue/20 flex items-center justify-center text-xl font-black text-ms-blue border border-ms-blue/30 shadow-inner">
+        <div className="px-4 sm:px-8 py-3 sm:py-5 bg-gradient-to-r from-ms-blue/20 to-transparent border-b border-ms-border flex items-center justify-between gap-3 flex-shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-ms-blue/20 flex items-center justify-center text-lg sm:text-xl font-black text-ms-blue border border-ms-blue/30 shadow-inner flex-shrink-0">
               {studentName.charAt(0)}
             </div>
-            <div>
-              <h2 className="text-2xl font-black text-white tracking-tight">{studentName}</h2>
-              <p className="text-xs text-[#004b93] dark:text-blue-400 font-extrabold uppercase tracking-widest flex items-center gap-2">
-                <FileText className="w-3.5 h-3.5 text-ms-blue" /> Panorama Geral e Ficha do Estudante
+            <div className="min-w-0">
+              <h2 className="text-sm sm:text-2xl font-black text-white tracking-tight leading-tight truncate">{studentName}</h2>
+              <p className="text-[10px] text-[#004b93] dark:text-blue-400 font-extrabold uppercase tracking-widest flex items-center gap-1">
+                <FileText className="w-3 h-3 text-ms-blue" /> Ficha do Estudante
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-3 relative">
+          <div className="flex items-center gap-2 flex-shrink-0 relative">
             {isCoordinator && (
               <>
                 <button
                   onClick={() => setIsOcorrenciaOpen(true)}
-                  className="px-4 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-rose-900/30 transition-colors flex items-center gap-2"
+                  className="p-2 sm:px-4 sm:py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-rose-900/30 transition-colors flex items-center gap-2"
                 >
-                  <AlertTriangle className="w-4 h-4" /> Registrar Ocorrência
+                  <AlertTriangle className="w-4 h-4" />
+                  <span className="hidden sm:inline">Registrar Ocorrência</span>
                 </button>
 
                 <div className="relative">
                   <button 
                     onClick={() => setShowAtaMenu(!showAtaMenu)}
-                    className="px-4 py-2.5 bg-ms-blue text-white font-bold rounded-xl text-sm shadow-lg shadow-ms-blue/30 hover:bg-ms-blue/90 transition-colors flex items-center gap-2"
+                    className="p-2 sm:px-4 sm:py-2.5 bg-ms-blue text-white font-bold rounded-xl text-sm shadow-lg shadow-ms-blue/30 hover:bg-ms-blue/90 transition-colors flex items-center gap-2"
                   >
-                    <FileBadge className="w-4 h-4" /> Criar Ata
+                    <FileBadge className="w-4 h-4" />
+                    <span className="hidden sm:inline">Criar Ata</span>
                   </button>
                   
                   {showAtaMenu && (
@@ -305,14 +307,14 @@ export function StudentProfileModal({
               </>
             )}
 
-            <button onClick={onClose} className="p-3 hover:bg-white/5 rounded-2xl transition-all group">
-              <X className="w-6 h-6 text-gray-500 group-hover:text-white" />
+            <button onClick={onClose} className="p-2 sm:p-3 hover:bg-white/5 rounded-xl sm:rounded-2xl transition-all group">
+              <X className="w-5 h-5 sm:w-6 sm:h-6 text-gray-500 group-hover:text-white" />
             </button>
           </div>
         </div>
 
-        {/* Content Area (Scroll único com tudo consolidado) */}
-        <div className="flex-1 overflow-auto p-8 space-y-10 custom-scrollbar">
+        {/* Content Area */}
+        <div className="flex-1 overflow-auto p-4 sm:p-8 space-y-8 sm:space-y-10 custom-scrollbar">
           {loading ? (
             <div className="h-full py-40 flex flex-col items-center justify-center">
               <Loader2 className="w-12 h-12 animate-spin text-ms-blue mb-4" />
@@ -655,7 +657,7 @@ export function StudentProfileModal({
         </div>
 
         {/* Footer */}
-        <div className="px-8 py-4 bg-ms-dark/30 border-t border-ms-border flex justify-end">
+        <div className="px-4 sm:px-8 py-3 sm:py-4 bg-ms-dark/30 border-t border-ms-border flex justify-end flex-shrink-0">
           <p className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">Relatório Consolidado • Sistema de Gestão Escolar</p>
         </div>
       </div>
