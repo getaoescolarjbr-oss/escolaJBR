@@ -42,11 +42,9 @@ WITH CHECK (
   destinatario_id IN (SELECT id FROM professores WHERE email = auth.jwt()->>'email')
 );
 
--- 6. Deleção: Permite que o remetente delete a mensagem que enviou (DELETE)
+-- 6. Deleção: Permite que usuários autenticados possam deletar mensagens (DELETE)
 CREATE POLICY "Permitir deleção para remetente"
 ON mensagens_coordenacao
 FOR DELETE
 TO authenticated
-USING (
-  remetente_id IN (SELECT id FROM professores WHERE email = auth.jwt()->>'email')
-);
+USING (true);

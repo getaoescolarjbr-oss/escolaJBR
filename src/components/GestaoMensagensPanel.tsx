@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor } from '../types';
 import { 
@@ -34,9 +34,36 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
   const [groupDetails, setGroupDetails] = useState<any[]>([]);
   const [loadingDetails, setLoadingDetails] = useState(false);
 
+  const confirmationsModalRef = useRef(showConfirmationsModal);
+  const selectedMsgRef = useRef(selectedGroupMsg);
+
+  useEffect(() => {
+    confirmationsModalRef.current = showConfirmationsModal;
+    selectedMsgRef.current = selectedGroupMsg;
+  }, [showConfirmationsModal, selectedGroupMsg]);
+
   useEffect(() => {
     fetchProfessores();
     fetchMensagensEnviadas();
+
+    // Sincroniza em tempo real mensagens enviadas e confirmações de leitura
+    const channel = supabase
+      .channel('realtime_mensagens_coordenacao_coord')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'mensagens_coordenacao' },
+        () => {
+          fetchMensagensEnviadas(true); // Atualiza de forma silenciosa no background
+          if (confirmationsModalRef.current && selectedMsgRef.current) {
+            handleViewConfirmations(selectedMsgRef.current);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   async function fetchProfessores() {
@@ -58,8 +85,8 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
     }
   }
 
-  async function fetchMensagensEnviadas() {
-    setLoading(true);
+  async function fetchMensagensEnviadas(silent = false) {
+    if (!silent) setLoading(true);
     try {
       // Busca todas as mensagens enviadas por este coordenador
       const { data: rawMessages, error } = await supabase
@@ -135,7 +162,7 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
     } catch (err) {
       console.error('Erro ao buscar mensagens enviadas:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }
 
@@ -388,7 +415,7 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
             </div>
           </div>
           <button
-            onClick={fetchMensagensEnviadas}
+            onClick={() => fetchMensagensEnviadas()}
             className="p-2 hover:bg-white/5 rounded-xl transition-all text-gray-400 hover:text-white"
             title="Recarregar Comunicados"
           >
@@ -466,7 +493,7 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
                     
                     <button
                       onClick={() => handleExcluirMensagem(msg)}
-                      className="p-2 bg-red-500/10 hover:bg-red-500 hover:text-white rounded-lg border border-red-500/20 text-red-400 transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 shrink-0"
+                      className="p-2 bg-red-500/10 hover:bg-red-500 hover:text-white rounded-lg border border-red-500/20 text-red-400 transition-all shrink-0 hover:scale-105 active:scale-95"
                       title="Excluir comunicado"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
