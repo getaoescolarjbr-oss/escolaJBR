@@ -1544,7 +1544,15 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                                 </p>
                                 <div className="flex items-center gap-4 text-[10px] text-gray-600 font-bold">
                                   <span>Prof. {oc.professor?.nome || 'Desconhecido'}</span>
-                                  <span>Registrado: {oc.data_registro ? new Date(oc.data_registro).toLocaleDateString('pt-BR') : '—'}</span>
+                                  <span>Data do Ocorrido: {(() => {
+                                     const dateStr = oc.data || oc.data_registro;
+                                     if (!dateStr) return '—';
+                                     if (dateStr.includes('-') && !dateStr.includes('T')) {
+                                       const [y, m, d] = dateStr.split('-');
+                                       return `${d}/${m}/${y}`;
+                                     }
+                                     return new Date(dateStr).toLocaleDateString('pt-BR');
+                                   })()}</span>
                                 </div>
                                 {oc.devolutiva_coordenador && (
                                   <div className="mt-2 flex items-start gap-2 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-3 py-2">
@@ -1622,7 +1630,15 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                              </span>
                              <span className="flex items-center gap-1">
                                <Clock className="w-3 h-3" />
-                               {oc.data_registro ? new Date(oc.data_registro).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Data desconhecida'}
+                               {(() => {
+                                  const dateStr = oc.data || oc.data_registro;
+                                  if (!dateStr) return 'Data desconhecida';
+                                  if (dateStr.includes('-') && !dateStr.includes('T')) {
+                                    const [y, m, d] = dateStr.split('-');
+                                    return `${d}/${m}/${y}`;
+                                  }
+                                  return new Date(dateStr).toLocaleDateString('pt-BR');
+                                })()}
                              </span>
                            </div>
                          </div>
