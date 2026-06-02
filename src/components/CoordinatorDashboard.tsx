@@ -1441,6 +1441,135 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
               </div>
            </div>
 
+            {/* Alunos Reincidentes Panel */}
+            {showReincidentes && (
+              <div className="space-y-4 bg-ms-dark/10 p-1.5 rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="h-px flex-1 bg-ms-border" />
+                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-2">
+                    <BarChart2 className="w-3.5 h-3.5" /> Alunos com 3 ou mais ocorrências
+                  </span>
+                  <div className="h-px flex-1 bg-ms-border" />
+                </div>
+                {loadingReincidentes ? (
+                  <div className="py-8 flex items-center justify-center gap-3">
+                    <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+                    <span className="text-gray-500 text-xs font-bold uppercase tracking-widest">Carregando...</span>
+                  </div>
+                ) : alunosReincidentes.length === 0 ? (
+                  <div className="bg-ms-card rounded-2xl border border-ms-border p-8 text-center">
+                    <CheckCheck className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
+                    <p className="text-gray-400 text-sm font-semibold">Nenhum aluno com 3 ou mais ocorrências.</p>
+                  </div>
+                ) : (
+                  <div className="bg-ms-card rounded-2xl border border-amber-500/30 shadow-xl overflow-hidden animate-in slide-in-from-top duration-200">
+                    <div className="px-5 py-3 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2">
+                      <BarChart2 className="w-4 h-4 text-amber-400" />
+                      <span className="text-xs font-black text-amber-400 uppercase tracking-widest">
+                        {alunosReincidentes.length} aluno{alunosReincidentes.length > 1 ? 's' : ''} com múltiplas ocorrências
+                      </span>
+                    </div>
+                    <div className="divide-y divide-ms-border/30">
+                      {alunosReincidentes.map((item, idx) => (
+                        <div key={item.id} className="flex items-center justify-between px-5 py-3 hover:bg-amber-500/5 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-black text-gray-500 w-5 text-right">{idx + 1}.</span>
+                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-xs font-black text-amber-400 border border-amber-500/20 shrink-0">
+                              {(item.aluno?.nome || '?').charAt(0)}
+                            </div>
+                            <div>
+                              <p className="text-sm font-bold text-white leading-tight">{item.aluno?.nome}</p>
+                              <p className="text-[10px] font-black text-ms-blue uppercase">
+                                {item.aluno?.aluno_numero ? `Nº ${item.aluno.aluno_numero} · ` : ''}{item.aluno?.turmas?.nome || '—'}
+                              </p>
+                            </div>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-xs font-black border ${
+                            item.count >= 5
+                              ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                              : item.count >= 4
+                              ? 'bg-orange-500/15 text-orange-400 border-orange-500/30'
+                              : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                          }`}>
+                            {item.count} ocorrência{item.count > 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Reviewed History */}
+            {showHistory && (
+              <div className="space-y-4 bg-ms-dark/10 p-1.5 rounded-2xl">
+                <div className="flex items-center gap-3">
+                  <div className="h-px flex-1 bg-ms-border" />
+                  <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Histórico Revisado</span>
+                  <div className="h-px flex-1 bg-ms-border" />
+                </div>
+
+                {loadingHistory ? (
+                  <div className="py-12 flex flex-col items-center justify-center">
+                    <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mb-3" />
+                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Carregando histórico...</p>
+                  </div>
+                ) : ocorrenciasRevisadas.length === 0 ? (
+                  <div className="py-8 text-center text-gray-500 italic text-sm">Nenhuma ocorrência revisada encontrada.</div>
+                ) : (
+                  <div className="space-y-4 animate-in slide-in-from-top duration-200">
+                    {ocorrenciasRevisadas.map((oc) => (
+                      <div key={oc.id} className="bg-ms-card/60 rounded-2xl border border-emerald-500/20 shadow-md overflow-hidden opacity-85 hover:opacity-100 transition-all">
+                        <div className="flex items-stretch">
+                          <div className="w-1.5 bg-gradient-to-b from-emerald-500 to-emerald-700 shrink-0" />
+                          <div className="flex-1 p-4">
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-2">
+                              <div className="flex-1 space-y-1.5">
+                                <div className="flex items-center gap-3 flex-wrap">
+                                  <span className="text-white font-bold text-sm">
+                                    {oc.aluno?.nome || 'Aluno Desconhecido'}
+                                  </span>
+                                  <span className="text-[9px] font-black uppercase bg-ms-blue/15 text-ms-blue px-2 py-0.5 rounded-full">
+                                    {oc.turma?.nome || 'Sem Turma'}
+                                  </span>
+                                  {oc.tipo && (
+                                    <span className="text-[9px] font-bold uppercase text-gray-500">
+                                      {oc.tipo}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-gray-400 text-xs leading-relaxed">
+                                  {oc.descricao || oc.observacao || 'Sem descrição'}
+                                </p>
+                                <div className="flex items-center gap-4 text-[10px] text-gray-600 font-bold">
+                                  <span>Prof. {oc.professor?.nome || 'Desconhecido'}</span>
+                                  <span>Registrado: {oc.data_registro ? new Date(oc.data_registro).toLocaleDateString('pt-BR') : '—'}</span>
+                                </div>
+                                {oc.devolutiva_coordenador && (
+                                  <div className="mt-2 flex items-start gap-2 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-3 py-2">
+                                    <MessageSquare className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                                    <div>
+                                      <p className="text-[9px] font-black text-emerald-500 uppercase tracking-wider mb-0.5">Devolutiva da Coordenação</p>
+                                      <p className="text-xs text-emerald-300 leading-relaxed">{oc.devolutiva_coordenador}</p>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                              <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-[9px] font-black uppercase rounded-full border border-emerald-500/20">
+                                <CheckCheck className="w-3 h-3" />
+                                Revisada em {oc.data_visualizacao_coordenador ? new Date(oc.data_visualizacao_coordenador).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
            {/* Pending Occurrences */}
            {loadingOcorrencias ? (
              <div className="py-20 flex flex-col items-center justify-center">
@@ -1509,135 +1638,8 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                    </div>
                  </div>
                ))}
-             </div>
-           )}
-
-            {/* Alunos Reincidentes Panel */}
-            {showReincidentes && (
-              <div className="space-y-4 mt-6">
-                <div className="flex items-center gap-3">
-                  <div className="h-px flex-1 bg-ms-border" />
-                  <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-2">
-                    <BarChart2 className="w-3.5 h-3.5" /> Alunos com 3 ou mais ocorrências
-                  </span>
-                  <div className="h-px flex-1 bg-ms-border" />
-                </div>
-                {loadingReincidentes ? (
-                  <div className="py-8 flex items-center justify-center gap-3">
-                    <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
-                    <span className="text-gray-500 text-xs font-bold uppercase tracking-widest">Carregando...</span>
-                  </div>
-                ) : alunosReincidentes.length === 0 ? (
-                  <div className="bg-ms-card rounded-2xl border border-ms-border p-8 text-center">
-                    <CheckCheck className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-                    <p className="text-gray-400 text-sm font-semibold">Nenhum aluno com 3 ou mais ocorrências.</p>
-                  </div>
-                ) : (
-                  <div className="bg-ms-card rounded-2xl border border-amber-500/30 shadow-xl overflow-hidden">
-                    <div className="px-5 py-3 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2">
-                      <BarChart2 className="w-4 h-4 text-amber-400" />
-                      <span className="text-xs font-black text-amber-400 uppercase tracking-widest">
-                        {alunosReincidentes.length} aluno{alunosReincidentes.length > 1 ? 's' : ''} com múltiplas ocorrências
-                      </span>
-                    </div>
-                    <div className="divide-y divide-ms-border/30">
-                      {alunosReincidentes.map((item, idx) => (
-                        <div key={item.id} className="flex items-center justify-between px-5 py-3 hover:bg-amber-500/5 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs font-black text-gray-500 w-5 text-right">{idx + 1}.</span>
-                            <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-xs font-black text-amber-400 border border-amber-500/20 shrink-0">
-                              {(item.aluno?.nome || '?').charAt(0)}
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-white leading-tight">{item.aluno?.nome}</p>
-                              <p className="text-[10px] font-black text-ms-blue uppercase">
-                                {item.aluno?.aluno_numero ? `Nº ${item.aluno.aluno_numero} · ` : ''}{item.aluno?.turmas?.nome || '—'}
-                              </p>
-                            </div>
-                          </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-black border ${
-                            item.count >= 5
-                              ? 'bg-red-500/15 text-red-400 border-red-500/30'
-                              : item.count >= 4
-                              ? 'bg-orange-500/15 text-orange-400 border-orange-500/30'
-                              : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                          }`}>
-                            {item.count} ocorrência{item.count > 1 ? 's' : ''}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
-
-           {/* Reviewed History */}
-           {showHistory && (
-             <div className="space-y-4 mt-6">
-               <div className="flex items-center gap-3">
-                 <div className="h-px flex-1 bg-ms-border" />
-                 <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Histórico Revisado</span>
-                 <div className="h-px flex-1 bg-ms-border" />
-               </div>
-
-               {loadingHistory ? (
-                 <div className="py-12 flex flex-col items-center justify-center">
-                   <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mb-3" />
-                   <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Carregando histórico...</p>
-                 </div>
-               ) : ocorrenciasRevisadas.length === 0 ? (
-                 <div className="py-8 text-center text-gray-500 italic text-sm">Nenhuma ocorrência revisada encontrada.</div>
-               ) : (
-                 ocorrenciasRevisadas.map((oc) => (
-                   <div key={oc.id} className="bg-ms-card/60 rounded-2xl border border-emerald-500/20 shadow-md overflow-hidden opacity-80 hover:opacity-100 transition-all">
-                     <div className="flex items-stretch">
-                       <div className="w-1.5 bg-gradient-to-b from-emerald-500 to-emerald-700 shrink-0" />
-                       <div className="flex-1 p-4">
-                         <div className="flex flex-col md:flex-row md:items-start justify-between gap-2">
-                           <div className="flex-1 space-y-1.5">
-                             <div className="flex items-center gap-3 flex-wrap">
-                               <span className="text-white font-bold text-sm">
-                                 {oc.aluno?.nome || 'Aluno Desconhecido'}
-                               </span>
-                               <span className="text-[9px] font-black uppercase bg-ms-blue/15 text-ms-blue px-2 py-0.5 rounded-full">
-                                 {oc.turma?.nome || 'Sem Turma'}
-                               </span>
-                               {oc.tipo && (
-                                 <span className="text-[9px] font-bold uppercase text-gray-500">
-                                   {oc.tipo}
-                                 </span>
-                               )}
-                             </div>
-                             <p className="text-gray-400 text-xs leading-relaxed">
-                               {oc.descricao || oc.observacao || 'Sem descrição'}
-                             </p>
-                             <div className="flex items-center gap-4 text-[10px] text-gray-600 font-bold">
-                                <span>Prof. {oc.professor?.nome || 'Desconhecido'}</span>
-                                <span>Registrado: {oc.data_registro ? new Date(oc.data_registro).toLocaleDateString('pt-BR') : '—'}</span>
-                              </div>
-                              {oc.devolutiva_coordenador && (
-                                <div className="mt-2 flex items-start gap-2 bg-emerald-500/8 border border-emerald-500/20 rounded-xl px-3 py-2">
-                                  <MessageSquare className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                                  <div>
-                                    <p className="text-[9px] font-black text-emerald-500 uppercase tracking-wider mb-0.5">Devolutiva da Coordenação</p>
-                                    <p className="text-xs text-emerald-300 leading-relaxed">{oc.devolutiva_coordenador}</p>
-                                  </div>
-                                </div>
-                              )}
-                           </div>
-                           <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 bg-emerald-500/10 text-emerald-400 text-[9px] font-black uppercase rounded-full border border-emerald-500/20">
-                             <CheckCheck className="w-3 h-3" />
-                             Revisada em {oc.data_visualizacao_coordenador ? new Date(oc.data_visualizacao_coordenador).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—'}
-                           </div>
-                         </div>
-                       </div>
-                     </div>
-                   </div>
-                 ))
-               )}
-             </div>
-           )}
           </div>
         ) : activeTab === 'comunicados' ? (
           <GestaoMensagensPanel currentCoordinator={professor} theme={theme} />

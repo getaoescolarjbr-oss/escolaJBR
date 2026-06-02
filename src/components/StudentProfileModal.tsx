@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Calendar, ClipboardList, AlertTriangle, LogOut, FileText, Loader2, ChevronRight, BookOpen, Activity, Clock, FileBadge, CheckCheck } from 'lucide-react';
+import { X, Calendar, ClipboardList, AlertTriangle, LogOut, FileText, Loader2, ChevronRight, BookOpen, Activity, Clock, FileBadge, CheckCheck, Trash2 } from 'lucide-react';
 import { AtaModal } from './AtaModal';
 import { OcorrenciaModal } from './OcorrenciaModal';
 
@@ -41,6 +41,27 @@ export function StudentProfileModal({
   const [selectedAtaEmitida, setSelectedAtaEmitida] = useState<any | null>(null);
   const [isOcorrenciaOpen, setIsOcorrenciaOpen] = useState(false);
   const [studentTurmaId, setStudentTurmaId] = useState<string>('');
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDeleteOcorrencia = async (ocorrenciaId: string) => {
+    if (!window.confirm('Tem certeza que deseja apagar este registro de ocorrência?')) return;
+    setDeletingId(ocorrenciaId);
+    try {
+      const { error } = await supabase
+        .from('ocorrências')
+        .delete()
+        .eq('id', ocorrenciaId);
+
+      if (error) throw error;
+
+      setOcorrencias(prev => prev.filter(o => o.id !== ocorrenciaId));
+    } catch (err: any) {
+      console.error('Erro ao deletar ocorrência:', err);
+      alert('Erro ao apagar ocorrência: ' + err.message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   useEffect(() => {
     if (isOpen && studentId) {
@@ -480,8 +501,8 @@ export function StudentProfileModal({
                             : 'bg-red-500/5 border-red-500/20 hover:border-red-500/40'
                         }`}>
                           <div className="flex-1">
-                            <div className="flex justify-between items-center mb-2">
-                              <div className="flex items-center gap-2">
+                            <div className="flex justify-between items-start mb-2 gap-4">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <span className={`text-[10px] font-black uppercase tracking-widest ${isCoord ? 'text-purple-400' : 'text-red-500'}`}>
                                   {o.tipo || 'Ocorrência Disciplinar'}
                                 </span>
@@ -491,7 +512,23 @@ export function StudentProfileModal({
                                   </span>
                                 )}
                               </div>
-                              <span className="text-[10px] font-bold text-gray-500">{new Date(o.data || o.data_registro || o.created_at || new Date()).toLocaleDateString()}</span>
+                              <div className="flex items-center gap-3 shrink-0">
+                                <span className="text-[10px] font-bold text-gray-500">{new Date(o.data || o.data_registro || o.created_at || new Date()).toLocaleDateString()}</span>
+                                {o.id_do_professor === professor?.id && (
+                                  <button
+                                    onClick={() => handleDeleteOcorrencia(o.id)}
+                                    disabled={deletingId === o.id}
+                                    className="text-gray-500 hover:text-red-500 hover:bg-red-500/10 p-1.5 rounded-lg transition-all"
+                                    title="Apagar Ocorrência"
+                                  >
+                                    {deletingId === o.id ? (
+                                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                    ) : (
+                                      <Trash2 className="w-3.5 h-3.5" />
+                                    )}
+                                  </button>
+                                )}
+                              </div>
                             </div>
                             <p className="text-sm text-gray-300 leading-relaxed font-bold">{o.descricao}</p>
                             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 items-center text-[9px] font-bold uppercase">
