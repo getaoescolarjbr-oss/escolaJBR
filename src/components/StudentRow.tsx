@@ -856,6 +856,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
           setIsOcorrenciaOpen(false);
           setIsProfileOpen(true);
         }}
+        defaultDate={dataAula}
       />
 
       {isProfileOpen && (

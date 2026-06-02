@@ -15,6 +15,7 @@ interface OcorrenciaModalProps {
   isCoordinator?: boolean;
   professorName?: string;
   professorCargo?: string;
+  defaultDate?: string;
 }
 
 export function OcorrenciaModal({
@@ -29,11 +30,20 @@ export function OcorrenciaModal({
   onViewProfile,
   isCoordinator = false,
   professorName,
-  professorCargo
+  professorCargo,
+  defaultDate
 }: OcorrenciaModalProps) {
   const [descricao, setDescricao] = useState('');
   const [loading, setLoading] = useState(false);
   const [tipos, setTipos] = useState<{ id: string; descricao: string }[]>([]);
+  const [dataOcorrencia, setDataOcorrencia] = useState(defaultDate || new Date().toISOString().split('T')[0]);
+
+  // Sincroniza a data inicial quando o modal abre
+  useEffect(() => {
+    if (isOpen) {
+      setDataOcorrencia(defaultDate || new Date().toISOString().split('T')[0]);
+    }
+  }, [isOpen, defaultDate]);
 
   // Carrega os tipos de ocorrência ativos
   useEffect(() => {
@@ -58,6 +68,7 @@ export function OcorrenciaModal({
       turma_id: turmaId,
       disciplina_id: disciplinaId || null,
       descricao: descricao.trim(),
+      data: dataOcorrencia, // Salva a data selecionada/aula no campo data
       data_registro: new Date().toISOString(),
       visto_coordenador: isCoordinator ? true : false,
       data_visualizacao_coordenador: isCoordinator ? new Date().toISOString() : null,
@@ -106,6 +117,18 @@ export function OcorrenciaModal({
                 Ver Ficha
               </button>
             )}
+          </div>
+          
+          <div>
+            <label className="block text-xs font-bold text-blue-900 uppercase tracking-widest mb-2">
+              Data do Ocorrido
+            </label>
+            <input
+              type="date"
+              value={dataOcorrencia}
+              onChange={(e) => setDataOcorrencia(e.target.value)}
+              className="w-full px-4 py-2.5 bg-white border border-gray-300 text-[#003366] rounded-lg focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none transition-all font-semibold"
+            />
           </div>
           
           <div>
