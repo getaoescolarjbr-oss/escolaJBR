@@ -1,7 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
-const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY || '';
+const VAPID_PUBLIC_KEY =
+  import.meta.env.VITE_VAPID_PUBLIC_KEY ||
+  'BB4-9sYrYV8BD4tI9WM4C_kPRigG96MH0wBRoF32EVOdkyjsQTEobWRQz1tWfZgbDG9mIUutK4xbPwC0AearWEM';
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
@@ -115,6 +117,10 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     if (!supported || !registration) return;
     setIsLoading(true);
     try {
+      if (!VAPID_PUBLIC_KEY) {
+        throw new Error('A chave pública VAPID (VITE_VAPID_PUBLIC_KEY) não está configurada.');
+      }
+
       // 1. Pedir permissão com timeout (evita travamento se o navegador bloquear ou ignorar)
       const perm = await timeoutPromise(
         Notification.requestPermission(),
