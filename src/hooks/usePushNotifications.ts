@@ -23,6 +23,7 @@ interface UsePushNotificationsReturn {
   subscribe: () => Promise<void>;
   unsubscribe: () => Promise<void>;
   supported: boolean;
+  registration: ServiceWorkerRegistration | null;
 }
 
 export function usePushNotifications(): UsePushNotificationsReturn {
@@ -137,5 +138,5 @@ export function usePushNotifications(): UsePushNotificationsReturn {
     }
   }, [supported, registration]);
 
-  return { permission, isSubscribed, isLoading, subscribe, unsubscribe, supported };
+  return { permission, isSubscribed, isLoading, subscribe, unsubscribe, supported, registration };
 }

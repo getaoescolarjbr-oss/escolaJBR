@@ -6,13 +6,28 @@ interface NotificationBellProps {
 }
 
 const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) => {
-  const { permission, isSubscribed, isLoading, subscribe, unsubscribe, supported } =
+  const { permission, isSubscribed, isLoading, subscribe, unsubscribe, supported, registration } =
     usePushNotifications();
   const [showTooltip, setShowTooltip] = useState(false);
 
   if (!supported) return null;
 
   const handleClick = async () => {
+    if (permission === 'denied') {
+      alert(
+        'As notificações estão bloqueadas nas configurações do seu navegador.\n\nPara ativar:\n1. Clique no ícone de cadeado 🔒 (ou informações do site) ao lado do endereço na barra de navegação.\n2. Altere a permissão de "Notificações" para "Permitir".\n3. Recarregue a página.'
+      );
+      return;
+    }
+    if (!supported) {
+      alert('Notificações Push não são suportadas neste navegador/dispositivo.');
+      return;
+    }
+    if (!registration) {
+      alert('O sistema de notificações ainda está inicializando. Por favor, aguarde alguns segundos e tente novamente.');
+      return;
+    }
+
     if (isSubscribed) {
       await unsubscribe();
     } else {
@@ -71,7 +86,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
 
   const getTooltipText = () => {
     if (permission === 'denied')
-      return 'Notificações bloqueadas no navegador. Habilite nas configurações.';
+      return 'Notificações bloqueadas no navegador. Clique para saber como ativar.';
     if (isSubscribed) return 'Notificações ativas — clique para desativar';
     return 'Ativar notificações push';
   };
@@ -82,7 +97,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
         onClick={handleClick}
         onMouseEnter={() => setShowTooltip(true)}
         onMouseLeave={() => setShowTooltip(false)}
-        disabled={isLoading || permission === 'denied'}
+        disabled={isLoading}
         title={getTooltipText()}
         style={{
           background: isSubscribed
@@ -91,7 +106,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
           border: isSubscribed ? '1px solid rgba(34,197,94,0.4)' : '1px solid rgba(255,255,255,0.15)',
           borderRadius: '12px',
           padding: '8px 10px',
-          cursor: permission === 'denied' ? 'not-allowed' : 'pointer',
+          cursor: 'pointer',
           color: isSubscribed ? '#86efac' : 'rgba(255,255,255,0.7)',
           display: 'flex',
           alignItems: 'center',
