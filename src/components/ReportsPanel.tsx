@@ -457,7 +457,9 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                       <table ref={tableAnualRef} className="min-w-full divide-y divide-ms-border/30">
                           <thead className={theme === 'light' ? 'bg-ms-blue' : 'bg-ms-accent'}>
                           <tr>
-                              <th className="px-6 py-4 text-left text-[10px] font-black text-white uppercase tracking-widest sticky left-0 z-10 bg-inherit border-r border-white/10">Estudante</th>
+                               <th className={`px-6 py-4 text-left text-[10px] font-black text-white uppercase tracking-widest sticky left-0 z-10 border-r border-white/10 ${
+                                 theme === 'light' ? 'bg-ms-blue' : 'bg-ms-accent'
+                               }`}>Estudante</th>
                               <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest">1º BIM</th>
                               <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest">2º BIM</th>
                               <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest">3º BIM</th>
@@ -474,7 +476,11 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
 
                                return (
                                <tr key={aluno.aluno_id} className={idx % 2 !== 0 ? 'bg-ms-dark/5' : ''}>
-                                   <td className="px-6 py-4 whitespace-nowrap sticky left-0 z-10 bg-inherit border-r border-ms-border/30">
+                                   <td className={`px-6 py-4 whitespace-nowrap sticky left-0 z-10 border-r border-ms-border/30 ${
+                                     idx % 2 !== 0
+                                       ? theme === 'light' ? 'bg-[#fcfdfe]' : 'bg-[#0d131f]'
+                                       : theme === 'light' ? 'bg-white' : 'bg-[#0d1117]'
+                                   }`}>
                                    <div className="flex items-center gap-3">
                                        <span className="text-[10px] font-black text-ms-gold">{idx + 1}.</span>
                                        <span className={`text-xs font-bold ${

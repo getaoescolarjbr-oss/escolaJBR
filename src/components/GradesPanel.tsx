@@ -447,7 +447,9 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                     <table className="min-w-full divide-y divide-ms-border/30">
                         <thead className={theme === 'light' ? 'bg-ms-blue' : 'bg-ms-accent'}>
                         <tr>
-                            <th className="px-2 sm:px-6 py-4 text-left text-[10px] font-black text-white uppercase tracking-widest sticky left-0 z-10 bg-inherit border-r border-white/10 min-w-[100px] max-w-[120px] sm:max-w-none">Estudante</th>
+                            <th className={`px-2 sm:px-6 py-4 text-left text-[10px] font-black text-white uppercase tracking-widest sticky left-0 z-10 border-r border-white/10 min-w-[100px] max-w-[120px] sm:max-w-none ${
+                              theme === 'light' ? 'bg-ms-blue' : 'bg-ms-accent'
+                            }`}>Estudante</th>
                             <th className="px-2 sm:px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest bg-blue-600/20 whitespace-nowrap">Vistos ({professor.config_visto_valor_total})</th>
                             {avaliacoes.map(av => (
                             <th key={av.id} className="px-2 sm:px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest">
@@ -480,7 +482,11 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
 
                             return (
                             <tr key={aluno.aluno_id} className={idx % 2 !== 0 ? 'bg-ms-dark/5' : ''}>
-                                <td className="px-2 sm:px-6 py-3 sm:py-4 sticky left-0 z-10 bg-inherit border-r border-ms-border/30 min-w-[100px] max-w-[120px] sm:max-w-none">
+                                <td className={`px-2 sm:px-6 py-3 sm:py-4 sticky left-0 z-10 border-r border-ms-border/30 min-w-[100px] max-w-[120px] sm:max-w-none ${
+                                  idx % 2 !== 0
+                                    ? theme === 'light' ? 'bg-[#fcfdfe]' : 'bg-[#0d131f]'
+                                    : theme === 'light' ? 'bg-white' : 'bg-[#0d1117]'
+                                }`}>
                                 <div className="flex items-center gap-1.5 sm:gap-3">
                                     <span className="text-[10px] font-black text-ms-gold shrink-0">{idx + 1}.</span>
                                     <span className={`text-[10px] sm:text-xs font-bold leading-tight ${
