@@ -1664,9 +1664,9 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
       {/* Devolutiva Modal */}
       {devolutivaModalOc && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-ms-card rounded-3xl border border-ms-border w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in duration-300">
+          <div className="bg-ms-card rounded-3xl border border-ms-border w-full max-w-lg overflow-hidden shadow-2xl animate-in zoom-in duration-300 flex flex-col max-h-[calc(100vh-2rem)]">
             {/* Header */}
-            <div className="bg-gradient-to-r from-ms-blue to-blue-800 px-6 py-5 flex items-center justify-between border-b border-ms-border">
+            <div className="bg-gradient-to-r from-ms-blue to-blue-800 px-6 py-5 flex items-center justify-between border-b border-ms-border shrink-0">
               <div className="flex items-center gap-3">
                 <MessageSquare className="w-5 h-5 text-white" />
                 <h3 className="text-sm font-black text-white uppercase tracking-widest">Confirmar Leitura & Devolutiva</h3>
@@ -1679,7 +1679,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
               </button>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="p-6 space-y-5 overflow-y-auto flex-1">
               {/* Occurrence summary */}
               <div className="bg-ms-dark/30 rounded-2xl border border-ms-border/50 p-4 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -1743,7 +1743,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
               </div>
             </div>
 
-            <div className="p-6 bg-gray-900/50 border-t border-ms-border flex gap-3">
+            <div className="p-6 bg-gray-900/50 border-t border-ms-border flex gap-3 shrink-0">
               <button
                 onClick={() => { setDevolutivaModalOc(null); setDevolutivaText(''); }}
                 disabled={submittingDevolutiva}
@@ -1817,13 +1817,13 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
       {/* Confirmation Modal for Atestado, Transferido, Remanejado */}
       {statusModalOpen && statusModalStudent && statusModalNewStatus && (
         <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-ms-card rounded-3xl border border-ms-border w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in duration-300">
-            <div className="bg-ms-blue px-6 py-5 flex items-center gap-3 border-b border-ms-border">
+          <div className="bg-ms-card rounded-3xl border border-ms-border w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in duration-300 flex flex-col max-h-[calc(100vh-2rem)]">
+            <div className="bg-ms-blue px-6 py-5 flex items-center gap-3 border-b border-ms-border shrink-0">
               <ShieldCheck className="w-5 h-5 text-white" />
               <h3 className="text-sm font-black text-white uppercase tracking-widest">Confirmar Alteração de Status</h3>
             </div>
             
-            <div className="p-6 space-y-6">
+            <div className="p-6 space-y-6 overflow-y-auto flex-1">
               <div>
                 <p className="text-[10px] font-black text-gray-500 uppercase tracking-widest mb-1">Estudante</p>
                 <p className="text-white font-bold text-base">{statusModalStudent.nome}</p>
@@ -1917,7 +1917,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
               </div>
             </div>
 
-            <div className="p-6 bg-gray-900/50 border-t border-ms-border flex gap-3">
+            <div className="p-6 bg-gray-900/50 border-t border-ms-border flex gap-3 shrink-0">
               <button 
                 onClick={() => {
                   setStatusModalOpen(false);
