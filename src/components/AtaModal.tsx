@@ -47,18 +47,29 @@ export function AtaModal({ aluno, template, ataExistente, onClose, onUploadSucce
       // Obter próximo número sequencial sugerido do banco
       const fetchProximoNumero = async () => {
         try {
-          const { data, error } = await supabase
+          // 1. Busca o último número sequencial usado
+          const { data: lastAta } = await supabase
             .from('atas_alunos')
             .select('numero_sequencial')
             .order('numero_sequencial', { ascending: false })
             .limit(1)
             .maybeSingle();
           
-          if (!error) {
-            setNumeroSequencial((data?.numero_sequencial || 0) + 1);
-          } else {
-            setNumeroSequencial(1);
-          }
+          const proximoAposUltimo = (lastAta?.numero_sequencial || 0) + 1;
+
+          // 2. Busca número inicial configurado pelo coordenador
+          let numeroInicial = 1;
+          try {
+            const { data: config } = await supabase
+              .from('configuracoes_escola')
+              .select('valor')
+              .eq('chave', 'ata_numero_inicial')
+              .maybeSingle();
+            if (config?.valor) numeroInicial = parseInt(config.valor, 10) || 1;
+          } catch { /* ignora erro se tabela não existir */ }
+
+          // Usa o maior entre o configurado e o próximo após o último
+          setNumeroSequencial(Math.max(proximoAposUltimo, numeroInicial));
         } catch (e) {
           setNumeroSequencial(1);
         }

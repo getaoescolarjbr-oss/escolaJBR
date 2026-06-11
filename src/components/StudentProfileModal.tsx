@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Calendar, ClipboardList, AlertTriangle, LogOut, FileText, Loader2, ChevronRight, BookOpen, Activity, Clock, FileBadge, CheckCheck, Trash2 } from 'lucide-react';
+import { X, Calendar, ClipboardList, AlertTriangle, LogOut, FileText, Loader2, ChevronRight, BookOpen, Activity, Clock, FileBadge, CheckCheck, Trash2, Users, UserCheck } from 'lucide-react';
 import { AtaModal } from './AtaModal';
 import { OcorrenciaModal } from './OcorrenciaModal';
 
@@ -42,6 +42,12 @@ export function StudentProfileModal({
   const [isOcorrenciaOpen, setIsOcorrenciaOpen] = useState(false);
   const [studentTurmaId, setStudentTurmaId] = useState<string>('');
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Visitas do Responsável
+  const [visitasResponsavel, setVisitasResponsavel] = useState<any[]>([]);
+  const [showVisitaModal, setShowVisitaModal] = useState(false);
+  const [visitaForm, setVisitaForm] = useState({ nome_responsavel: '', parentesco: '', assunto: '', observacoes: '', data_visita: new Date().toISOString().split('T')[0], hora_visita: '' });
+  const [savingVisita, setSavingVisita] = useState(false);
 
   const handleDeleteOcorrencia = async (ocorrenciaId: string) => {
     if (!window.confirm('Tem certeza que deseja apagar este registro de ocorrência?')) return;
@@ -182,10 +188,49 @@ export function StudentProfileModal({
       const { data: atasData } = await supabase.from('atas_alunos').select('*').eq('aluno_id', String(studentId).trim());
       if (atasData) setAtasEmitidas(atasData);
 
+      // 6. Fetch Visitas do Responsável
+      const { data: visitasData } = await supabase
+        .from('visitas_responsavel')
+        .select('*')
+        .eq('aluno_id', studentId)
+        .order('data_visita', { ascending: false });
+      if (visitasData) setVisitasResponsavel(visitasData);
+
     } catch (err) {
       console.error('Error fetching student profile data:', err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleSaveVisita() {
+    if (!visitaForm.nome_responsavel.trim() || !visitaForm.assunto.trim() || !visitaForm.data_visita) {
+      alert('Preencha os campos obrigatórios: Nome do Responsável, Assunto e Data.');
+      return;
+    }
+    setSavingVisita(true);
+    try {
+      const { error } = await supabase
+        .from('visitas_responsavel')
+        .insert({
+          aluno_id: studentId,
+          data_visita: visitaForm.data_visita,
+          hora_visita: visitaForm.hora_visita || null,
+          nome_responsavel: visitaForm.nome_responsavel,
+          parentesco: visitaForm.parentesco || null,
+          assunto: visitaForm.assunto,
+          observacoes: visitaForm.observacoes || null,
+          registrado_por: professor?.nome || 'Coordenação',
+          registrado_por_cargo: professor?.cargo || 'Coordenador'
+        });
+      if (error) throw error;
+      setShowVisitaModal(false);
+      setVisitaForm({ nome_responsavel: '', parentesco: '', assunto: '', observacoes: '', data_visita: new Date().toISOString().split('T')[0], hora_visita: '' });
+      fetchStudentData();
+    } catch (err: any) {
+      alert('Erro ao salvar visita: ' + err.message);
+    } finally {
+      setSavingVisita(false);
     }
   }
 
@@ -290,6 +335,14 @@ export function StudentProfileModal({
                 >
                   <AlertTriangle className="w-4 h-4" />
                   <span className="hidden sm:inline">Registrar Ocorrência</span>
+                </button>
+
+                <button
+                  onClick={() => setShowVisitaModal(true)}
+                  className="p-2 sm:px-4 sm:py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-sm shadow-lg shadow-emerald-900/30 transition-colors flex items-center gap-2"
+                >
+                  <Users className="w-4 h-4" />
+                  <span className="hidden sm:inline">Visita de Responsável</span>
                 </button>
 
                 <div className="relative">
@@ -643,6 +696,57 @@ export function StudentProfileModal({
                 </div>
               </div>
 
+              {/* SEÇÃO: VISITAS DE RESPONSÁVEL */}
+              {isCoordinator && (
+                <div className="border-t border-ms-border/40 pt-8">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center border-2 border-emerald-500/30">
+                        <Users className="w-4 h-4 text-emerald-500" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-black text-white uppercase tracking-wider">Visitas do Responsável</h3>
+                        <p className="text-[10px] text-gray-500 font-bold mt-0.5">Comparecimentos à escola para tratar do desempenho do aluno</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => setShowVisitaModal(true)}
+                      className="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-600/30 text-emerald-400 font-bold rounded-xl text-xs transition-colors flex items-center gap-2"
+                    >
+                      <span>+ Registrar Visita</span>
+                    </button>
+                  </div>
+                  <div className="space-y-3">
+                    {visitasResponsavel.length === 0 ? (
+                      <div className="p-8 text-center bg-ms-dark/10 rounded-2xl border-2 border-dashed border-gray-800">
+                        <p className="text-xs text-gray-500 font-bold uppercase">Nenhuma visita de responsável registrada.</p>
+                      </div>
+                    ) : (
+                      visitasResponsavel.map((v, i) => (
+                        <div key={i} className="p-5 bg-emerald-500/5 rounded-2xl border-2 border-emerald-500/20 hover:border-emerald-500/40 transition-all">
+                          <div className="flex justify-between items-start mb-2">
+                            <div>
+                              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Visita do Responsável</span>
+                              {v.parentesco && <span className="ml-2 text-[9px] text-gray-500 font-bold">({v.parentesco})</span>}
+                            </div>
+                            <span className="text-[10px] font-bold text-gray-500">
+                              {new Date(v.data_visita + 'T12:00:00').toLocaleDateString('pt-BR')}
+                              {v.hora_visita ? ` às ${v.hora_visita.substring(0, 5)}` : ''}
+                            </span>
+                          </div>
+                          <p className="text-sm font-black text-white mb-1">{v.nome_responsavel}</p>
+                          <p className="text-xs font-bold text-emerald-300 mb-2">Assunto: {v.assunto}</p>
+                          {v.observacoes && <p className="text-xs text-gray-400">{v.observacoes}</p>}
+                          <div className="mt-2 text-[9px] text-gray-600 uppercase font-black">
+                            Registrado por: {v.registrado_por || 'Coordenação'}{v.registrado_por_cargo ? ` (${v.registrado_por_cargo})` : ''}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
               {/* SEÇÃO 4: HISTÓRICO DE SAÍDAS DE SALA */}
               <div className="border-t border-ms-border/40 pt-8">
                 <div className="flex items-center gap-3 mb-6">
@@ -731,6 +835,106 @@ export function StudentProfileModal({
           professorName={professor?.nome || ''}
           professorCargo={professor?.cargo || ''}
         />
+      )}
+
+      {/* Modal de Visita do Responsável */}
+      {showVisitaModal && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+          <div className="bg-ms-card rounded-3xl border border-ms-border w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
+            <div className="px-6 py-5 border-b border-ms-border flex items-center justify-between flex-shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/20">
+                  <Users className="w-5 h-5 text-emerald-500" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-white">Registrar Visita</h3>
+                  <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Comparecimento do responsável</p>
+                </div>
+              </div>
+              <button onClick={() => setShowVisitaModal(false)} className="p-2 hover:bg-white/5 rounded-xl transition-all">
+                <X className="w-5 h-5 text-gray-500" />
+              </button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Nome do Responsável *</label>
+                  <input
+                    type="text"
+                    value={visitaForm.nome_responsavel}
+                    onChange={e => setVisitaForm(f => ({ ...f, nome_responsavel: e.target.value }))}
+                    className="w-full bg-ms-dark/60 border border-ms-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-emerald-500 transition-colors"
+                    placeholder="Nome completo do responsável"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Parentesco</label>
+                  <input
+                    type="text"
+                    value={visitaForm.parentesco}
+                    onChange={e => setVisitaForm(f => ({ ...f, parentesco: e.target.value }))}
+                    className="w-full bg-ms-dark/60 border border-ms-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-emerald-500 transition-colors"
+                    placeholder="Ex: Mãe, Pai, Avó..."
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Data da Visita *</label>
+                  <input
+                    type="date"
+                    value={visitaForm.data_visita}
+                    onChange={e => setVisitaForm(f => ({ ...f, data_visita: e.target.value }))}
+                    className="w-full bg-ms-dark/60 border border-ms-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Hora (opcional)</label>
+                  <input
+                    type="time"
+                    value={visitaForm.hora_visita}
+                    onChange={e => setVisitaForm(f => ({ ...f, hora_visita: e.target.value }))}
+                    className="w-full bg-ms-dark/60 border border-ms-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-emerald-500 transition-colors"
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Assunto da Visita *</label>
+                  <input
+                    type="text"
+                    value={visitaForm.assunto}
+                    onChange={e => setVisitaForm(f => ({ ...f, assunto: e.target.value }))}
+                    className="w-full bg-ms-dark/60 border border-ms-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-emerald-500 transition-colors"
+                    placeholder="Ex: Discussão de desempenho, Entrega de documentos..."
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Observações</label>
+                  <textarea
+                    value={visitaForm.observacoes}
+                    onChange={e => setVisitaForm(f => ({ ...f, observacoes: e.target.value }))}
+                    rows={3}
+                    className="w-full bg-ms-dark/60 border border-ms-border rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-emerald-500 transition-colors resize-none"
+                    placeholder="Detalhes adicionais sobre a visita..."
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 border-t border-ms-border flex justify-end gap-3 flex-shrink-0">
+              <button
+                onClick={() => setShowVisitaModal(false)}
+                className="px-5 py-2.5 text-sm font-bold text-gray-400 hover:text-white bg-ms-dark/40 hover:bg-ms-dark/60 rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleSaveVisita}
+                disabled={savingVisita}
+                className="px-5 py-2.5 text-sm font-black text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 rounded-xl transition-colors flex items-center gap-2"
+              >
+                {savingVisita ? <Loader2 className="w-4 h-4 animate-spin" /> : <UserCheck className="w-4 h-4" />}
+                Salvar Visita
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

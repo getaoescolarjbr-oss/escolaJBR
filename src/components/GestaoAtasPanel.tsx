@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-import { FileText, Printer, Eye, Search, Filter, Loader2, Calendar, FileBadge, Settings, RefreshCw, CheckCircle, Clock } from 'lucide-react';
+import { FileText, Printer, Eye, Search, Filter, Loader2, Calendar, FileBadge, Settings, RefreshCw, CheckCircle, Clock, Ban, Trash2, Hash } from 'lucide-react';
 import { AtaTemplateManager } from './admin/AtaTemplateManager';
 import { AtaModal } from './AtaModal';
 
@@ -10,6 +10,10 @@ export function GestaoAtasPanel() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedBimestre, setSelectedBimestre] = useState<number | 'todos'>('todos');
   const [activeTab, setActiveTab] = useState<'lista' | 'templates'>('lista');
+  const [numeroInicial, setNumeroInicial] = useState<string>('');
+  const [savingNumero, setSavingNumero] = useState(false);
+  const [anulando, setAnulando] = useState<string | null>(null);
+  const [excluindo, setExcluindo] = useState<string | null>(null);
 
   // Estados para visualização/edição individual de ata
   const [selectedAta, setSelectedAta] = useState<any | null>(null);
@@ -17,12 +21,45 @@ export function GestaoAtasPanel() {
 
   useEffect(() => {
     fetchAtas();
+    fetchNumeroInicial();
   }, []);
+
+  async function fetchNumeroInicial() {
+    try {
+      const { data } = await supabase
+        .from('configuracoes_escola')
+        .select('valor')
+        .eq('chave', 'ata_numero_inicial')
+        .maybeSingle();
+      if (data?.valor) setNumeroInicial(data.valor);
+    } catch {
+      // Tabela pode não existir ainda, ignora silenciosamente
+    }
+  }
+
+  async function handleSaveNumeroInicial() {
+    if (!numeroInicial || isNaN(Number(numeroInicial)) || Number(numeroInicial) < 1) {
+      alert('Digite um número válido (maior que 0).');
+      return;
+    }
+    setSavingNumero(true);
+    try {
+      const { error } = await supabase
+        .from('configuracoes_escola')
+        .upsert({ chave: 'ata_numero_inicial', valor: String(numeroInicial) }, { onConflict: 'chave' });
+      if (error) throw error;
+      alert(`Número inicial definido como ${numeroInicial}. As próximas atas usarão numeração a partir deste valor.`);
+    } catch (err: any) {
+      alert('Erro ao salvar configuração: ' + err.message);
+    } finally {
+      setSavingNumero(false);
+    }
+  }
 
   async function fetchAtas() {
     setLoading(true);
     try {
-      // 1. Buscar todas as atas (sem join, pois aluno_id é text sem FK explícita)
+      // 1. Buscar todas as atas
       const { data: atasData, error: atasError } = await supabase
         .from('atas_alunos')
         .select('*')
@@ -31,26 +68,22 @@ export function GestaoAtasPanel() {
       if (atasError) throw atasError;
       if (!atasData || atasData.length === 0) { setAtas([]); return; }
 
-      // 2. Coletar IDs únicos de alunos presentes nas atas
+      // 2. Coletar IDs únicos de alunos
       const alunoIds = [...new Set(atasData.map((a: any) => a.aluno_id).filter(Boolean))];
 
-      // 3. Buscar dados dos alunos (incluindo turma) separadamente
+      // 3. Buscar dados dos alunos
       const { data: alunosData } = await supabase
         .from('alunos')
         .select('id, nome, turma_id, turmas(nome)')
         .in('id', alunoIds);
 
-      // 4. Montar mapa de alunos para join em memória
+      // 4. Montar mapa de alunos
       const alunoMap: Record<string, any> = {};
       (alunosData || []).forEach((al: any) => {
-        alunoMap[al.id] = {
-          id: al.id,
-          nome: al.nome,
-          turmas: al.turmas || null,
-        };
+        alunoMap[al.id] = { id: al.id, nome: al.nome, turmas: al.turmas || null };
       });
 
-      // 5. Fazer join manual: injetar dados do aluno em cada ata
+      // 5. Join em memória
       const atasComAlunos = atasData.map((ata: any) => ({
         ...ata,
         alunos: alunoMap[ata.aluno_id] || null,
@@ -64,14 +97,49 @@ export function GestaoAtasPanel() {
     }
   }
 
+  async function handleAnularAta(ataId: string, isAnulada: boolean) {
+    const confirmMsg = isAnulada
+      ? 'Deseja REATIVAR esta ata? O status "Anulada" será removido.'
+      : 'Tem certeza que deseja ANULAR esta ata? Ela ficará registrada como anulada (título riscado).';
+    if (!window.confirm(confirmMsg)) return;
+    setAnulando(ataId);
+    try {
+      const { error } = await supabase
+        .from('atas_alunos')
+        .update({ anulada: !isAnulada })
+        .eq('id', ataId);
+      if (error) throw error;
+      setAtas(prev => prev.map(a => a.id === ataId ? { ...a, anulada: !isAnulada } : a));
+    } catch (err: any) {
+      alert('Erro ao anular ata: ' + err.message);
+    } finally {
+      setAnulando(null);
+    }
+  }
+
+  async function handleExcluirAta(ataId: string, ataNumero: string, ataTitulo: string) {
+    if (!window.confirm(`Tem certeza que deseja EXCLUIR PERMANENTEMENTE a Ata Nº ${ataNumero} — "${ataTitulo}"?\n\nEsta ação é irreversível.`)) return;
+    setExcluindo(ataId);
+    try {
+      const { error } = await supabase
+        .from('atas_alunos')
+        .delete()
+        .eq('id', ataId);
+      if (error) throw error;
+      setAtas(prev => prev.filter(a => a.id !== ataId));
+    } catch (err: any) {
+      alert('Erro ao excluir ata: ' + err.message);
+    } finally {
+      setExcluindo(null);
+    }
+  }
+
   // Filtrar as atas de acordo com busca e bimestre
   const filteredAtas = atas.filter(ata => {
     const nomeAluno = ata.alunos?.nome?.toLowerCase() || '';
     const numAta = String(ata.numero_sequencial || '').padStart(3, '0');
     const matchesSearch = nomeAluno.includes(searchTerm.toLowerCase()) || numAta.includes(searchTerm);
-    
     const matchesBimestre = selectedBimestre === 'todos' || ata.bimestre_id === Number(selectedBimestre);
-    
     return matchesSearch && matchesBimestre;
   });
 
@@ -80,14 +148,14 @@ export function GestaoAtasPanel() {
     if (!printWindow) return;
 
     const reportRows = filteredAtas.map(ata => `
-      <tr style="border-bottom: 1px solid #e2e8f0; font-size: 13px;">
-        <td style="padding: 12px; font-weight: bold; color: #1e293b;">${String(ata.numero_sequencial || '').padStart(3, '0')}</td>
+      <tr style="border-bottom: 1px solid #e2e8f0; font-size: 13px; ${ata.anulada ? 'opacity: 0.4;' : ''}">
+        <td style="padding: 12px; font-weight: bold; color: #1e293b; ${ata.anulada ? 'text-decoration: line-through;' : ''}">${String(ata.numero_sequencial || '').padStart(3, '0')}</td>
         <td style="padding: 12px; color: #334155;">${ata.data_ata ? new Date(ata.data_ata + 'T12:00:00').toLocaleDateString('pt-BR') : new Date(ata.created_at).toLocaleDateString()}</td>
         <td style="padding: 12px; font-weight: bold; color: #0f172a;">${ata.alunos?.nome || 'Não identificado'}</td>
         <td style="padding: 12px; color: #475569;">${ata.alunos?.turmas?.nome || 'N/A'}</td>
-        <td style="padding: 12px; color: #475569;">${ata.titulo}</td>
-        <td style="padding: 12px; font-weight: bold; color: ${ata.imagem_assinatura_url ? '#10b981' : '#f59e0b'};">
-          ${ata.imagem_assinatura_url ? 'Assinada' : 'Pendente'}
+        <td style="padding: 12px; color: #475569; ${ata.anulada ? 'text-decoration: line-through;' : ''}">${ata.titulo}</td>
+        <td style="padding: 12px; font-weight: bold; color: ${ata.anulada ? '#ef4444' : ata.imagem_assinatura_url ? '#10b981' : '#f59e0b'};">
+          ${ata.anulada ? 'ANULADA' : ata.imagem_assinatura_url ? 'Assinada' : 'Pendente'}
         </td>
       </tr>
     `).join('');
@@ -186,6 +254,39 @@ export function GestaoAtasPanel() {
         </div>
       </div>
 
+      {/* PAINEL DE NUMERAÇÃO INICIAL DE ATAS */}
+      {activeTab === 'lista' && (
+        <div className="bg-ms-card rounded-3xl border border-ms-border px-6 py-5 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-amber-500/10 rounded-2xl border border-amber-500/20">
+              <Hash className="w-5 h-5 text-amber-400" />
+            </div>
+            <div>
+              <h3 className="text-sm font-black text-white">Numeração de Atas</h3>
+              <p className="text-xs text-gray-500 font-bold">Defina o número inicial para geração sequencial das atas</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 sm:ml-auto">
+            <input
+              type="number"
+              min="1"
+              value={numeroInicial}
+              onChange={e => setNumeroInicial(e.target.value)}
+              placeholder="Ex: 101"
+              className="w-32 bg-ms-dark/60 border border-ms-border rounded-xl px-4 py-2.5 text-sm font-black text-white outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 transition-all placeholder-gray-600 text-center"
+            />
+            <button
+              onClick={handleSaveNumeroInicial}
+              disabled={savingNumero || !numeroInicial}
+              className="px-5 py-2.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-50 text-black text-xs font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-amber-500/20"
+            >
+              {savingNumero ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+              Definir Número Inicial
+            </button>
+          </div>
+        </div>
+      )}
+
       {activeTab === 'lista' ? (
         <div className="bg-ms-card rounded-3xl border border-ms-border shadow-xl overflow-hidden">
           
@@ -261,7 +362,7 @@ export function GestaoAtasPanel() {
                     <th className="px-6 py-4 w-28">Turma</th>
                     <th className="px-6 py-4">Assunto / Título</th>
                     <th className="px-6 py-4 w-32">Status</th>
-                    <th className="px-6 py-4 w-32 text-right">Ações</th>
+                    <th className="px-6 py-4 w-44 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-ms-border/30">
@@ -270,47 +371,85 @@ export function GestaoAtasPanel() {
                     const dataFormatada = ata.data_ata 
                       ? new Date(ata.data_ata + 'T12:00:00').toLocaleDateString('pt-BR')
                       : new Date(ata.created_at).toLocaleDateString();
+                    const isAnulada = !!ata.anulada;
 
                     return (
-                      <tr key={ata.id} className="hover:bg-white/[0.02] transition-colors">
-                        <td className="px-6 py-4.5 font-black text-white">{numeroFormatado}</td>
-                        <td className="px-6 py-4.5 text-xs text-gray-400 font-bold">
+                      <tr key={ata.id} className={`transition-colors ${isAnulada ? 'opacity-40' : 'hover:bg-white/[0.02]'}`}>
+                        <td className="px-6 py-4 font-black text-white">
+                          <span className={isAnulada ? 'line-through text-red-400' : ''}>{numeroFormatado}</span>
+                        </td>
+                        <td className="px-6 py-4 text-xs text-gray-400 font-bold">
                           <span className="flex items-center gap-1.5">
                             <Calendar className="w-3.5 h-3.5 text-gray-500" />
                             {dataFormatada}
                           </span>
                         </td>
-                        <td className="px-6 py-4.5 font-bold text-white text-sm">{ata.alunos?.nome || 'Sem identificação'}</td>
-                        <td className="px-6 py-4.5">
+                        <td className="px-6 py-4 font-bold text-white text-sm">{ata.alunos?.nome || 'Sem identificação'}</td>
+                        <td className="px-6 py-4">
                           <span className="px-2.5 py-1 bg-ms-dark/65 border border-ms-border text-gray-300 font-black rounded-lg text-[10px] uppercase">
                             {ata.alunos?.turmas?.nome || 'N/A'}
                           </span>
                         </td>
-                        <td className="px-6 py-4.5 text-sm text-gray-300 font-bold truncate max-w-[200px]" title={ata.titulo}>
-                          {ata.titulo}
+                        <td className="px-6 py-4 text-sm text-gray-300 font-bold truncate max-w-[200px]" title={ata.titulo}>
+                          <span className={isAnulada ? 'line-through' : ''}>{ata.titulo}</span>
                         </td>
-                        <td className="px-6 py-4.5">
-                          {ata.imagem_assinatura_url ? (
+                        <td className="px-6 py-4">
+                          {isAnulada ? (
+                            <span className="flex items-center gap-1.5 text-red-400 text-xs font-black uppercase">
+                              <Ban className="w-4 h-4" /> Anulada
+                            </span>
+                          ) : ata.imagem_assinatura_url ? (
                             <span className="flex items-center gap-1.5 text-green-400 text-xs font-black uppercase">
-                              <CheckCircle className="w-4 h-4 text-green-400" /> Assinada
+                              <CheckCircle className="w-4 h-4" /> Assinada
                             </span>
                           ) : (
                             <span className="flex items-center gap-1.5 text-amber-500 text-xs font-black uppercase">
-                              <Clock className="w-4 h-4 text-amber-500" /> Pendente
+                              <Clock className="w-4 h-4" /> Pendente
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4.5 text-right">
+                        <td className="px-6 py-4 text-right">
                           <div className="flex justify-end gap-2">
+                            {/* Visualizar — oculto se anulada */}
+                            {!isAnulada && (
+                              <button
+                                onClick={() => {
+                                  setSelectedAta(ata);
+                                  setSelectedAtaStudent(ata.alunos);
+                                }}
+                                className="p-2.5 bg-blue-500/10 border border-blue-500/20 text-ms-blue hover:bg-ms-blue hover:text-white rounded-xl transition-all"
+                                title="Visualizar e Gerenciar"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                            )}
+                            {/* Anular / Reativar */}
                             <button
-                              onClick={() => {
-                                setSelectedAta(ata);
-                                setSelectedAtaStudent(ata.alunos);
-                              }}
-                              className="p-2.5 bg-blue-500/10 border border-blue-500/20 text-ms-blue hover:bg-ms-blue hover:text-white rounded-xl transition-all"
-                              title="Visualizar e Gerenciar"
+                              onClick={() => handleAnularAta(ata.id, isAnulada)}
+                              disabled={anulando === ata.id}
+                              className={`p-2.5 border rounded-xl transition-all ${
+                                isAnulada
+                                  ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 hover:bg-emerald-500 hover:text-white'
+                                  : 'bg-red-500/10 border-red-500/20 text-red-400 hover:bg-red-500 hover:text-white'
+                              }`}
+                              title={isAnulada ? 'Reativar Ata' : 'Anular Ata'}
                             >
-                              <Eye className="w-4 h-4" />
+                              {anulando === ata.id
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <Ban className="w-4 h-4" />
+                              }
+                            </button>
+                            {/* Excluir */}
+                            <button
+                              onClick={() => handleExcluirAta(ata.id, numeroFormatado, ata.titulo)}
+                              disabled={excluindo === ata.id}
+                              className="p-2.5 bg-gray-500/10 border border-gray-500/20 text-gray-400 hover:bg-red-600 hover:text-white hover:border-red-600 rounded-xl transition-all"
+                              title="Excluir Ata Permanentemente"
+                            >
+                              {excluindo === ata.id
+                                ? <Loader2 className="w-4 h-4 animate-spin" />
+                                : <Trash2 className="w-4 h-4" />
+                              }
                             </button>
                           </div>
                         </td>
@@ -338,7 +477,7 @@ export function GestaoAtasPanel() {
             setSelectedAtaStudent(null);
           }}
           onUploadSuccess={() => {
-            fetchAtas(); // Recarrega a tabela de atas após alterar a ata
+            fetchAtas();
           }}
         />
       )}
