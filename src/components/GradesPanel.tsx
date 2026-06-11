@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, Avaliacao, NotaAvaliacao, ListaParaVistos } from '../types';
 import { Plus, Save, Trash2, Calculator, Info, TrendingUp, X, Sparkles } from 'lucide-react';
+import { autoUpdateExpiredAbsences, isStudentAbsentOnDate } from '../utils/studentUtils';
 import { arredondarNotaMS, getCorGradiente, getBimestreFromDate } from '../utils/academicUtils';
 import { RAVListModal } from './RAVListModal';
 
@@ -53,9 +54,25 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
           disciplina_id: disciplinaId,
           professor_id: professor.id,
           status: a.status,
-          atestado_inicio: a.atestado_inicio
+          atestado_inicio: a.atestado_inicio,
+          atestado_fim: a.atestado_fim
         }));
         setAlunos(mappedAlunos as any);
+
+        autoUpdateExpiredAbsences(dataAlunos, (updatedAlunos) => {
+          const remapped = updatedAlunos.map(a => ({
+            aluno_id: a.id,
+            aluno_nome: a.nome,
+            aluno_numero: a.aluno_numero,
+            turma_id: turmaId,
+            disciplina_id: disciplinaId,
+            professor_id: professor.id,
+            status: a.status,
+            atestado_inicio: a.atestado_inicio,
+            atestado_fim: a.atestado_fim
+          }));
+          setAlunos(remapped as any);
+        });
       }
 
       // 2. Buscar Avaliações do Bimestre
@@ -454,6 +471,12 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                                 somaNotas += isPosterior ? 0 : (notas[aluno.aluno_id]?.[av.id] || 0);
                             });
                             const mediaBimestral = somaNotas;
+                            const d = new Date();
+                            const year = d.getFullYear();
+                            const month = String(d.getMonth() + 1).padStart(2, '0');
+                            const day = String(d.getDate()).padStart(2, '0');
+                            const todayStr = `${year}-${month}-${day}`;
+                            const isAbsentToday = isStudentAbsentOnDate(aluno, todayStr);
 
                             return (
                             <tr key={aluno.aluno_id} className={idx % 2 !== 0 ? 'bg-ms-dark/5' : ''}>
@@ -461,9 +484,11 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                                 <div className="flex items-center gap-1.5 sm:gap-3">
                                     <span className="text-[10px] font-black text-ms-gold shrink-0">{idx + 1}.</span>
                                     <span className={`text-[10px] sm:text-xs font-bold leading-tight ${
-                                      aluno.status === 'Transferido' || aluno.status === 'Remanejado'
-                                        ? 'line-through text-gray-500 opacity-60'
-                                        : theme === 'light' ? 'text-blue-950' : 'text-ms-main'
+                                      isAbsentToday
+                                        ? 'animate-pulse text-red-650 dark:text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-lg'
+                                        : aluno.status === 'Transferido' || aluno.status === 'Remanejado'
+                                          ? 'line-through text-gray-500 opacity-60'
+                                          : theme === 'light' ? 'text-blue-950' : 'text-ms-main'
                                     }`} title={aluno.aluno_nome}>
                                       <span className="sm:hidden">{aluno.aluno_nome.split(' ').slice(0, 2).join(' ')}</span>
                                       <span className="hidden sm:inline">{aluno.aluno_nome}</span>
@@ -472,6 +497,8 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                                           aluno.status === 'Transferido' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
                                           aluno.status === 'Remanejado' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
                                           aluno.status === 'Atestado' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                                          aluno.status === 'Suspenso' || aluno.status === 'Aluno Suspenso' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                          aluno.status === 'Licença Maternidade' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
                                           'bg-red-500/20 text-red-400 border-red-500/30'
                                         }`}>
                                           {aluno.status}

@@ -4,6 +4,7 @@ import type { Professor, Turma, Student } from '../types';
 import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer, AlertTriangle, CheckCheck, Clock, Mail, MessageSquare, BarChart2, Send, X } from 'lucide-react';
 import { printReport } from '../utils/printUtils';
 import { getCurrentBimestre } from '../utils/academicUtils';
+import { autoUpdateExpiredAbsences } from '../utils/studentUtils';
 import { StudentProfileModal } from './StudentProfileModal';
 import { TeacherDiaryModal } from './TeacherDiaryModal';
 import { SiteManager } from './admin/SiteManager';
@@ -112,7 +113,12 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
         .eq('turma_id', selectedTurma)
         .order('aluno_numero');
       
-      if (studentsData) setStudents(studentsData);
+      if (studentsData) {
+        setStudents(studentsData);
+        autoUpdateExpiredAbsences(studentsData, (updated) => {
+          setStudents(updated);
+        });
+      }
 
       // 2. Fetch Professors/Disciplines allocated to this turma
       const combinedMap = new Map();
@@ -428,7 +434,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   };
 
   async function handleUpdateStudentStatus(studentId: string, newStatus: string) {
-    if (newStatus === 'Atestado' || newStatus === 'Transferido' || newStatus === 'Remanejado') {
+    if (newStatus === 'Atestado' || newStatus === 'Suspenso' || newStatus === 'Aluno Suspenso' || newStatus === 'Licença Maternidade' || newStatus === 'Transferido' || newStatus === 'Remanejado') {
       const student = students.find(s => s.id === studentId);
       if (student) {
         setStatusModalStudent(student);
@@ -473,16 +479,16 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
     try {
       const studentId = statusModalStudent.id;
       
-      if (statusModalNewStatus === 'Atestado') {
+      if (statusModalNewStatus === 'Atestado' || statusModalNewStatus === 'Suspenso' || statusModalNewStatus === 'Aluno Suspenso' || statusModalNewStatus === 'Licença Maternidade') {
         if (!statusModalDateInicio) {
-          alert('Por favor, preencha a data de início do atestado.');
+          alert('Por favor, preencha a data de início.');
           setStatusModalSubmitting(false);
           return;
         }
         const { error } = await supabase
           .from('alunos')
           .update({
-            status: 'Atestado',
+            status: statusModalNewStatus,
             atestado_inicio: statusModalDateInicio,
             atestado_fim: statusModalDateFim || null
           })
@@ -492,7 +498,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
         
         setStudents(prev => prev.map(s => s.id === studentId ? {
           ...s,
-          status: 'Atestado',
+          status: statusModalNewStatus as Student['status'],
           atestado_inicio: statusModalDateInicio,
           atestado_fim: statusModalDateFim || undefined
         } : s));
@@ -1014,11 +1020,15 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                               className={`pl-3 pr-7 py-1.5 rounded-full text-[10px] font-black uppercase border appearance-none cursor-pointer outline-none transition-all ${
                                 s.status === 'Ativo' ? 'bg-green-500/10 text-green-500 border-green-500/20 focus:ring-2 focus:ring-green-500/20' :
                                 s.status === 'Atestado' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20 focus:ring-2 focus:ring-blue-500/20' :
+                                s.status === 'Suspenso' || s.status === 'Aluno Suspenso' ? 'bg-red-500/10 text-red-500 border-red-500/20 focus:ring-2 focus:ring-red-500/20' :
+                                s.status === 'Licença Maternidade' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20 focus:ring-2 focus:ring-purple-500/20' :
                                 'bg-gray-550/10 text-gray-500 border-gray-550/20 focus:ring-2 focus:ring-gray-500/20'
                               }`}
                             >
                               <option value="Ativo" className="bg-ms-card text-green-500 font-bold">Ativo</option>
                               <option value="Atestado" className="bg-ms-card text-blue-500 font-bold">Atestado</option>
+                              <option value="Suspenso" className="bg-ms-card text-red-500 font-bold">Aluno Suspenso</option>
+                              <option value="Licença Maternidade" className="bg-ms-card text-purple-500 font-bold">Licença Maternidade</option>
                               <option value="Transferido" className="bg-ms-card text-gray-500 font-bold">Transferido</option>
                               <option value="Remanejado" className="bg-ms-card text-gray-500 font-bold">Remanejado</option>
                               <option value="Cancelada" className="bg-ms-card text-red-500 font-bold">Cancelada</option>
@@ -1026,6 +1036,8 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                             <ChevronDown className={`absolute right-2 w-3 h-3 pointer-events-none ${
                               s.status === 'Ativo' ? 'text-green-500' :
                               s.status === 'Atestado' ? 'text-blue-500' :
+                              s.status === 'Suspenso' || s.status === 'Aluno Suspenso' ? 'text-red-500' :
+                              s.status === 'Licença Maternidade' ? 'text-purple-500' :
                               'text-gray-500'
                             }`} />
                           </div>
@@ -1835,6 +1847,8 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                   <span className={`inline-flex px-3 py-1 rounded-full text-[10px] font-black uppercase border ${
                     statusModalNewStatus === 'Atestado' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
                     statusModalNewStatus === 'Transferido' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
+                    statusModalNewStatus === 'Suspenso' || statusModalNewStatus === 'Aluno Suspenso' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                    statusModalNewStatus === 'Licença Maternidade' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
                     'bg-purple-500/10 text-purple-500 border-purple-500/20'
                   }`}>
                     {statusModalNewStatus}
@@ -1843,7 +1857,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
               </div>
 
               <div className="p-5 bg-ms-dark/20 rounded-2xl border border-ms-border/50 space-y-4">
-                {statusModalNewStatus === 'Atestado' && (
+                {(statusModalNewStatus === 'Atestado' || statusModalNewStatus === 'Suspenso' || statusModalNewStatus === 'Aluno Suspenso' || statusModalNewStatus === 'Licença Maternidade') && (
                   <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
                     <div className="space-y-1">
                       <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">

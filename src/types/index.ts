@@ -33,6 +33,7 @@ export interface ListaParaVistos {
   aluno_numero?: number;
   status?: MatriculaStatus;
   atestado_inicio?: string;
+  atestado_fim?: string;
 }
 
 export interface Chamada {
@@ -88,7 +89,7 @@ export interface NotaAvaliacao {
   nota: number;
 }
 
-export type MatriculaStatus = 'Ativo' | 'Transferido' | 'Remanejado' | 'Atestado' | 'Cancelada';
+export type MatriculaStatus = 'Ativo' | 'Transferido' | 'Remanejado' | 'Atestado' | 'Cancelada' | 'Suspenso' | 'Aluno Suspenso' | 'Licença Maternidade';
 
 export interface Student {
   id: string;

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, ListaParaVistos } from '../types';
 import { AlertCircle, Printer, Settings2, Users } from 'lucide-react';
+import { autoUpdateExpiredAbsences } from '../utils/studentUtils';
 import { arredondarNotaMS, getCorGradiente, estaAprovado, getBimestreFromDate } from '../utils/academicUtils';
 import { MatriculaModal } from './MatriculaModal';
 import { printReport } from '../utils/printUtils';
@@ -63,9 +64,25 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
       disciplina_id: disciplinaId,
       professor_id: professor.id,
       status: a.status,
-      atestado_inicio: a.atestado_inicio
+      atestado_inicio: a.atestado_inicio,
+      atestado_fim: a.atestado_fim
     }));
     setAlunos(mapped as any);
+
+    autoUpdateExpiredAbsences(dataAlunos, (updatedAlunos) => {
+      const remapped = updatedAlunos.map(a => ({
+        aluno_id: a.id,
+        aluno_nome: a.nome,
+        aluno_numero: a.aluno_numero,
+        turma_id: turmaId,
+        disciplina_id: disciplinaId,
+        professor_id: professor.id,
+        status: a.status,
+        atestado_inicio: a.atestado_inicio,
+        atestado_fim: a.atestado_fim
+      }));
+      setAlunos(remapped as any);
+    });
 
     const alunoIds = dataAlunos.map(a => a.id);
 
@@ -165,9 +182,25 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
         disciplina_id: disciplinaId,
         professor_id: professor.id,
         status: a.status,
-        atestado_inicio: a.atestado_inicio
+        atestado_inicio: a.atestado_inicio,
+        atestado_fim: a.atestado_fim
       }));
       setAlunos(mapped as any);
+
+      autoUpdateExpiredAbsences(dataAlunos, (updatedAlunos) => {
+        const remapped = updatedAlunos.map(a => ({
+          aluno_id: a.id,
+          aluno_nome: a.nome,
+          aluno_numero: a.aluno_numero,
+          turma_id: turmaId,
+          disciplina_id: disciplinaId,
+          professor_id: professor.id,
+          status: a.status,
+          atestado_inicio: a.atestado_inicio,
+          atestado_fim: a.atestado_fim
+        }));
+        setAlunos(remapped as any);
+      });
 
       const alunoIds = dataAlunos.map(a => a.id);
 
@@ -455,6 +488,8 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                                              aluno.status === 'Transferido' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
                                              aluno.status === 'Remanejado' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
                                              aluno.status === 'Atestado' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                                             aluno.status === 'Suspenso' || aluno.status === 'Aluno Suspenso' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                             aluno.status === 'Licença Maternidade' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
                                              'bg-red-500/20 text-red-400 border-red-500/30'
                                            }`}>
                                              {aluno.status}
@@ -648,6 +683,9 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                                             <span className={`ml-2 text-[8px] px-2 py-0.5 rounded-full font-black uppercase border tracking-normal ${
                                               aluno.status === 'Transferido' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
                                               aluno.status === 'Remanejado' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                                              aluno.status === 'Atestado' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                                              aluno.status === 'Suspenso' || aluno.status === 'Aluno Suspenso' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                              aluno.status === 'Licença Maternidade' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
                                               'bg-red-500/20 text-red-400 border-red-500/30'
                                             }`}>
                                               {aluno.status}

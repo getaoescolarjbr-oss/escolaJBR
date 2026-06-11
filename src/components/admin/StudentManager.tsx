@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Student, Turma, MatriculaStatus } from '../../types';
 import { Search, Plus, Edit2, Trash2, Loader2, Save, X, UserPlus, Filter, Calendar, AlertCircle } from 'lucide-react';
+import { autoUpdateExpiredAbsences } from '../../utils/studentUtils';
 
 export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
   const [students, setStudents] = useState<Student[]>([]);
@@ -52,7 +53,12 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
       .eq('turma_id', selectedTurma)
       .order('aluno_numero');
     
-    if (data) setStudents(data);
+    if (data) {
+      setStudents(data);
+      autoUpdateExpiredAbsences(data, (updated) => {
+        setStudents(updated);
+      });
+    }
     setLoading(false);
   }
 
@@ -67,9 +73,9 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
       let error;
 
       if (editingStudent) {
-        if (formData.status === 'Atestado') {
+        if (formData.status === 'Atestado' || formData.status === 'Suspenso' || formData.status === 'Aluno Suspenso' || formData.status === 'Licença Maternidade') {
           if (!formData.atestado_inicio) {
-            alert('Por favor, preencha a data de início do atestado.');
+            alert('Por favor, preencha a data de início.');
             setActionLoading(false);
             return;
           }
@@ -77,7 +83,7 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
             .from('alunos')
             .update({
               nome: formData.nome,
-              status: 'Atestado',
+              status: formData.status,
               atestado_inicio: formData.atestado_inicio,
               atestado_fim: formData.atestado_fim || null
             })
@@ -315,13 +321,15 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
                       s.status === 'Transferido' ? 'bg-orange-500/10 text-orange-500 border-orange-500/20' :
                       s.status === 'Remanejado' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
                       s.status === 'Atestado' ? 'bg-blue-500/10 text-blue-500 border-blue-500/20' :
+                      s.status === 'Suspenso' || s.status === 'Aluno Suspenso' ? 'bg-red-500/10 text-red-500 border-red-500/20' :
+                      s.status === 'Licença Maternidade' ? 'bg-purple-500/10 text-purple-500 border-purple-500/20' :
                       'bg-red-500/10 text-red-500 border-red-500/20'
                     }`}>
                       {s.status}
                     </span>
-                    {s.status === 'Atestado' && s.atestado_inicio && (
-                      <span className="text-[9px] text-gray-500 italic">
-                        {new Date(s.atestado_inicio).toLocaleDateString()} até {s.atestado_fim ? new Date(s.atestado_fim).toLocaleDateString() : 'indeterminado'}
+                    {(s.status === 'Atestado' || s.status === 'Suspenso' || s.status === 'Aluno Suspenso' || s.status === 'Licença Maternidade') && s.atestado_inicio && (
+                      <span className="text-[9px] text-gray-505 italic font-bold mt-1">
+                        {new Date(s.atestado_inicio + 'T12:00:00').toLocaleDateString()} até {s.atestado_fim ? new Date(s.atestado_fim + 'T12:00:00').toLocaleDateString() : 'indeterminado'}
                       </span>
                     )}
                   </div>
@@ -389,11 +397,13 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
                       <option value="Transferido">Transferido</option>
                       <option value="Remanejado">Remanejado</option>
                       <option value="Atestado">Atestado Médico</option>
+                      <option value="Suspenso">Aluno Suspenso</option>
+                      <option value="Licença Maternidade">Licença Maternidade</option>
                       <option value="Cancelada">Matrícula Cancelada</option>
                     </select>
                   </div>
 
-                  {formData.status === 'Atestado' && (
+                  {(formData.status === 'Atestado' || formData.status === 'Suspenso' || formData.status === 'Aluno Suspenso' || formData.status === 'Licença Maternidade') && (
                     <div className="grid grid-cols-2 gap-4 animate-in slide-in-from-top-2 duration-300">
                       <div className="space-y-2">
                         <label className="text-[10px] font-black text-gray-500 uppercase tracking-wider ml-1">Início</label>

@@ -30,7 +30,7 @@ export function OcorrenciaLoteModal({
 
   // Filtra apenas alunos ativos (não transferidos, remanejados, cancelados)
   const alunosAtivos = alunos.filter(
-    a => !a.status || a.status === 'Ativo' || a.status === 'Atestado'
+    a => !a.status || a.status === 'Ativo' || a.status === 'Atestado' || a.status === 'Suspenso' || a.status === 'Aluno Suspenso' || a.status === 'Licença Maternidade'
   );
 
   // Carrega os tipos de ocorrência ativos

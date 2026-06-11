@@ -5,6 +5,7 @@ import { StudentRow } from './StudentRow';
 import { OcorrenciaLoteModal } from './OcorrenciaLoteModal';
 import { getBimestreFromDate, getConfigPorTurma } from '../utils/academicUtils';
 import { AlertTriangle, Info, Loader2, Save, ShieldAlert } from 'lucide-react';
+import { autoUpdateExpiredAbsences } from '../utils/studentUtils';
 
 export interface StudentGradeBreakdown {
   mediaFinal: number;
@@ -80,9 +81,29 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
           disciplina_nome: '', // Será preenchido se necessário, mas o ID é o que importa
           turma_nome: '',
           status: a.status,
-          atestado_inicio: a.atestado_inicio
+          atestado_inicio: a.atestado_inicio,
+          atestado_fim: a.atestado_fim
         }));
         setAlunos(mappedAlunos);
+
+        // Auto-update expired absences and update state
+        autoUpdateExpiredAbsences(dataAlunos, (updatedAlunos) => {
+          const remapped = updatedAlunos.map(a => ({
+            aluno_id: a.id,
+            aluno_nome: a.nome,
+            aluno_numero: a.aluno_numero,
+            turma_id: turmaId,
+            disciplina_id: disciplinaId,
+            professor_id: professor.id,
+            professor_nome: professor.nome,
+            disciplina_nome: '',
+            turma_nome: '',
+            status: a.status,
+            atestado_inicio: a.atestado_inicio,
+            atestado_fim: a.atestado_fim
+          }));
+          setAlunos(remapped);
+        });
       }
 
       // 2. Buscar Atividade Diária do Dia Selecionado

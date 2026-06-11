@@ -6,6 +6,7 @@ import { OcorrenciaModal } from './OcorrenciaModal';
 import { StudentProfileModal } from './StudentProfileModal';
 import type { StudentGradeBreakdown } from './StudentList';
 import { getBimestreFromDate, getConfigPorTurma } from '../utils/academicUtils';
+import { isStudentAbsentOnDate } from '../utils/studentUtils';
 
 interface StudentRowProps {
   aluno: ListaParaVistos;
@@ -438,10 +439,13 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 <p 
                   onClick={() => setIsProfileOpen(true)}
                   className={`text-xs md:text-sm font-black tracking-tight uppercase max-w-[130px] sm:max-w-[160px] md:max-w-none truncate cursor-pointer hover:underline hover:text-blue-500 dark:hover:text-blue-400 transition-all ${
-                  aluno.status === 'Transferido' || aluno.status === 'Remanejado'
-                    ? 'line-through text-gray-500 opacity-60'
-                    : theme === 'light' ? 'text-[#003366]' : 'text-ms-main'
-                }`}>
+                    isStudentAbsentOnDate(aluno, dataAula)
+                      ? 'animate-pulse text-red-650 dark:text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-lg'
+                      : aluno.status === 'Transferido' || aluno.status === 'Remanejado'
+                        ? 'line-through text-gray-500 opacity-60'
+                        : theme === 'light' ? 'text-[#003366]' : 'text-ms-main'
+                  }`}
+                >
                   {aluno.aluno_numero && <span className="text-ms-gold font-black mr-1">{aluno.aluno_numero}.</span>}
                   <span className="hidden md:inline">{aluno.aluno_nome}</span>
                   <span className="md:hidden inline">{(() => {
@@ -461,6 +465,8 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                     aluno.status === 'Transferido' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
                     aluno.status === 'Remanejado' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
                     aluno.status === 'Atestado' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                    aluno.status === 'Suspenso' || aluno.status === 'Aluno Suspenso' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                    aluno.status === 'Licença Maternidade' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
                     'bg-red-500/20 text-red-400 border-red-500/30'
                   }`}>
                     {aluno.status}
