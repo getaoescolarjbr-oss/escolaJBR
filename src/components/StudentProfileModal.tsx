@@ -521,6 +521,57 @@ export function StudentProfileModal({
 
               </div>
 
+              {/* SEÇÃO: VISITAS DE RESPONSÁVEL */}
+              <div className="border-t border-ms-border/40 pt-8">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center border-2 border-emerald-500/30">
+                      <Users className="w-4 h-4 text-emerald-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-white uppercase tracking-wider">Visitas do Responsável</h3>
+                      <p className="text-[10px] text-gray-500 font-bold mt-0.5">Comparecimentos à escola para tratar do desempenho do aluno</p>
+                    </div>
+                  </div>
+                  {isCoordinator && (
+                    <button
+                      onClick={() => setShowVisitaModal(true)}
+                      className="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-600/30 text-emerald-400 font-bold rounded-xl text-xs transition-colors flex items-center gap-2"
+                    >
+                      <span>+ Registrar Visita</span>
+                    </button>
+                  )}
+                </div>
+                <div className="space-y-3">
+                  {visitasResponsavel.length === 0 ? (
+                    <div className="p-8 text-center bg-ms-dark/10 rounded-2xl border-2 border-dashed border-gray-800">
+                      <p className="text-xs text-gray-500 font-bold uppercase">Nenhuma visita de responsável registrada.</p>
+                    </div>
+                  ) : (
+                    visitasResponsavel.map((v, i) => (
+                      <div key={i} className="p-5 bg-emerald-500/5 rounded-2xl border-2 border-emerald-500/20 hover:border-emerald-500/40 transition-all">
+                        <div className="flex justify-between items-start mb-2">
+                          <div>
+                            <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Visita do Responsável</span>
+                            {v.parentesco && <span className="ml-2 text-[9px] text-gray-500 font-bold">({v.parentesco})</span>}
+                          </div>
+                          <span className="text-[10px] font-bold text-gray-500">
+                            {new Date(v.data_visita + 'T12:00:00').toLocaleDateString('pt-BR')}
+                            {v.hora_visita ? ` às ${v.hora_visita.substring(0, 5)}` : ''}
+                          </span>
+                        </div>
+                        <p className="text-sm font-black text-white mb-1">{v.nome_responsavel}</p>
+                        <p className="text-xs font-bold text-emerald-300 mb-2">Assunto: {v.assunto}</p>
+                        {v.observacoes && <p className="text-xs text-gray-400">{v.observacoes}</p>}
+                        <div className="mt-2 text-[9px] text-gray-600 uppercase font-black">
+                          Registrado por: {v.registrado_por || 'Coordenação'}{v.registrado_por_cargo ? ` (${v.registrado_por_cargo})` : ''}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
               {/* SEÇÃO 2: HISTÓRICO DE OCORRÊNCIAS DISCIPLINARES */}
               <div className="border-t border-ms-border/40 pt-8">
                 <div className="flex items-center gap-3 mb-6">
@@ -696,56 +747,6 @@ export function StudentProfileModal({
                 </div>
               </div>
 
-              {/* SEÇÃO: VISITAS DE RESPONSÁVEL */}
-              {isCoordinator && (
-                <div className="border-t border-ms-border/40 pt-8">
-                  <div className="flex items-center justify-between mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-emerald-500/10 flex items-center justify-center border-2 border-emerald-500/30">
-                        <Users className="w-4 h-4 text-emerald-500" />
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-black text-white uppercase tracking-wider">Visitas do Responsável</h3>
-                        <p className="text-[10px] text-gray-500 font-bold mt-0.5">Comparecimentos à escola para tratar do desempenho do aluno</p>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => setShowVisitaModal(true)}
-                      className="px-4 py-2 bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-600/30 text-emerald-400 font-bold rounded-xl text-xs transition-colors flex items-center gap-2"
-                    >
-                      <span>+ Registrar Visita</span>
-                    </button>
-                  </div>
-                  <div className="space-y-3">
-                    {visitasResponsavel.length === 0 ? (
-                      <div className="p-8 text-center bg-ms-dark/10 rounded-2xl border-2 border-dashed border-gray-800">
-                        <p className="text-xs text-gray-500 font-bold uppercase">Nenhuma visita de responsável registrada.</p>
-                      </div>
-                    ) : (
-                      visitasResponsavel.map((v, i) => (
-                        <div key={i} className="p-5 bg-emerald-500/5 rounded-2xl border-2 border-emerald-500/20 hover:border-emerald-500/40 transition-all">
-                          <div className="flex justify-between items-start mb-2">
-                            <div>
-                              <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Visita do Responsável</span>
-                              {v.parentesco && <span className="ml-2 text-[9px] text-gray-500 font-bold">({v.parentesco})</span>}
-                            </div>
-                            <span className="text-[10px] font-bold text-gray-500">
-                              {new Date(v.data_visita + 'T12:00:00').toLocaleDateString('pt-BR')}
-                              {v.hora_visita ? ` às ${v.hora_visita.substring(0, 5)}` : ''}
-                            </span>
-                          </div>
-                          <p className="text-sm font-black text-white mb-1">{v.nome_responsavel}</p>
-                          <p className="text-xs font-bold text-emerald-300 mb-2">Assunto: {v.assunto}</p>
-                          {v.observacoes && <p className="text-xs text-gray-400">{v.observacoes}</p>}
-                          <div className="mt-2 text-[9px] text-gray-600 uppercase font-black">
-                            Registrado por: {v.registrado_por || 'Coordenação'}{v.registrado_por_cargo ? ` (${v.registrado_por_cargo})` : ''}
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-                </div>
-              )}
 
               {/* SEÇÃO 4: HISTÓRICO DE SAÍDAS DE SALA */}
               <div className="border-t border-ms-border/40 pt-8">
