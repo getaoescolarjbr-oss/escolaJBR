@@ -133,3 +133,34 @@ export interface SaidaSala {
   hora_retorno?: string;
   status: 'Fora' | 'Retornou';
 }
+
+export interface AtestadoServidor {
+  id: string;
+  professor_id: string;
+  substituto_id?: string | null;
+  data_inicio: string;
+  data_fim: string;
+  observacoes?: string | null;
+  ativo: boolean;
+  created_at: string;
+  updated_at?: string;
+  // joins opcionais
+  professor_nome?: string;
+  substituto_nome?: string;
+}
+
+export interface AlocacaoEspelho {
+  id: string;
+  professor_id: string;
+  turma_id: string;
+  disciplina_id: string;
+  is_espelho: boolean;
+  atestado_id?: string | null;
+  professor_original_id?: string | null;
+  professor_nome?: string;
+  turma_nome?: string;
+  disciplina_nome?: string;
+  professor_original_nome?: string;
+  // dados do atestado
+  atestado_data_fim?: string;
+}

@@ -13,7 +13,9 @@ import {
     X,
     CheckCircle2,
     AlertCircle,
-    Calendar
+    Calendar,
+    Stethoscope,
+    ArrowRightLeft
 } from 'lucide-react';
 
 interface Allocation {
@@ -24,6 +26,11 @@ interface Allocation {
     professor_nome?: string;
     turma_nome?: string;
     disciplina_nome?: string;
+    is_espelho?: boolean;
+    atestado_id?: string | null;
+    professor_original_id?: string | null;
+    professor_original_nome?: string;
+    atestado_data_fim?: string;
 }
 
 interface Entity {
@@ -48,6 +55,7 @@ export function AllocationManager() {
     const [isAllocating, setIsAllocating] = useState(false);
     const [selectedProfessorId, setSelectedProfessorId] = useState<string>('all');
     const [filterSearch, setFilterSearch] = useState<string>('');
+    const [cleaningUp, setCleaningUp] = useState(false);
 
     function normalizeStr(str: string) {
         if (!str) return '';
@@ -145,7 +153,43 @@ export function AllocationManager() {
 
     useEffect(() => {
         fetchData();
+        expireAtestadosVencidos();
     }, []);
+
+    async function expireAtestadosVencidos() {
+        setCleaningUp(true);
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            // Buscar atestados que passaram da data de fim mas ainda estão ativos
+            const { data: vencidos } = await supabase
+                .from('atestados_servidores')
+                .select('id')
+                .eq('ativo', true)
+                .lt('data_fim', today);
+
+            if (vencidos && vencidos.length > 0) {
+                for (const atestado of vencidos) {
+                    // Remover espelhos deste atestado
+                    await supabase
+                        .from('alocacoes_v2')
+                        .delete()
+                        .eq('atestado_id', atestado.id)
+                        .eq('is_espelho', true);
+
+                    // Marcar atestado como inativo
+                    await supabase
+                        .from('atestados_servidores')
+                        .update({ ativo: false })
+                        .eq('id', atestado.id);
+                }
+                console.log(`${vencidos.length} atestado(s) expirado(s) processado(s).`);
+            }
+        } catch (err) {
+            console.warn('Aviso: falha ao expirar atestados:', err);
+        } finally {
+            setCleaningUp(false);
+        }
+    }
 
     async function fetchData() {
         setLoading(true);
@@ -176,16 +220,24 @@ export function AllocationManager() {
         setTurmas(allTurmas.sort((a, b) => a.nome.localeCompare(b.nome)));
         setDisciplinas(allDiscs.sort((a, b) => a.nome.localeCompare(b.nome)));
 
-        // 3. Buscar Alocações com tratamento de erro
+        // 3. Buscar Alocações com tratamento de erro + dados de espelho
         const { data: allocs, error } = await supabase.from('alocacoes_v2').select(`
             id,
             professor_id,
             turma_id,
             disciplina_id,
+            is_espelho,
+            atestado_id,
+            professor_original_id,
             professores!inner(nome),
             turmas!inner(nome),
             disciplinas!inner(nome)
         `);
+
+        // Buscar atestados para enriquecer dados de espelho
+        const { data: atestados } = await supabase
+            .from('atestados_servidores')
+            .select('id, data_fim, professor_id');
 
         if (error) {
             console.error('Erro ao buscar alocações:', error);
@@ -199,15 +251,24 @@ export function AllocationManager() {
                 })));
             }
         } else if (allocs) {
-            setAllocations(allocs.map((a: any) => ({
-                id: a.id,
-                professor_id: a.professor_id,
-                turma_id: a.turma_id,
-                disciplina_id: a.disciplina_id,
-                professor_nome: a.professores?.nome || 'Professor',
-                turma_nome: a.turmas?.nome || 'Turma',
-                disciplina_nome: a.disciplinas?.nome || 'Disciplina'
-            })));
+            setAllocations(allocs.map((a: any) => {
+                const atestado = atestados?.find(at => at.id === a.atestado_id);
+                const professorOriginal = profs?.find(p => p.id === a.professor_original_id);
+                return {
+                    id: a.id,
+                    professor_id: a.professor_id,
+                    turma_id: a.turma_id,
+                    disciplina_id: a.disciplina_id,
+                    is_espelho: a.is_espelho || false,
+                    atestado_id: a.atestado_id,
+                    professor_original_id: a.professor_original_id,
+                    professor_nome: a.professores?.nome || 'Professor',
+                    turma_nome: a.turmas?.nome || 'Turma',
+                    disciplina_nome: a.disciplinas?.nome || 'Disciplina',
+                    professor_original_nome: professorOriginal?.nome,
+                    atestado_data_fim: atestado?.data_fim
+                };
+            }));
         }
         
         setLoading(false);
@@ -389,27 +450,48 @@ export function AllocationManager() {
                                     </thead>
                                     <tbody className="divide-y divide-gray-800/50">
                                         {profAllocs.map(alloc => (
-                                            <tr key={alloc.id} className="hover:bg-ms-blue/5 transition-colors group/row">
+                                            <tr key={alloc.id} className={`transition-colors group/row ${alloc.is_espelho ? 'bg-amber-400/5 hover:bg-amber-400/10 border-l-2 border-l-amber-400/50' : 'hover:bg-ms-blue/5'}`}>
                                                 <td className="px-10 py-2.5">
                                                     <div className="flex items-center gap-4">
-                                                        <div className="w-1.5 h-1.5 rounded-full bg-ms-blue shadow-[0_0_10px_rgba(0,102,255,0.5)]"></div>
-                                                        <span className="text-sm font-black text-ms-blue uppercase tracking-tight">{alloc.turma_nome}</span>
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${alloc.is_espelho ? 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]' : 'bg-ms-blue shadow-[0_0_10px_rgba(0,102,255,0.5)]'}`}></div>
+                                                        <span className={`text-sm font-black uppercase tracking-tight ${alloc.is_espelho ? 'text-amber-400' : 'text-ms-blue'}`}>{alloc.turma_nome}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-10 py-2.5">
-                                                    <div className="flex items-center gap-3">
-                                                        <BookOpen className="w-4 h-4 text-ms-blue" />
-                                                        <span className="text-sm font-bold text-ms-blue">{alloc.disciplina_nome}</span>
+                                                    <div className="flex flex-col gap-1">
+                                                        <div className="flex items-center gap-3">
+                                                            <BookOpen className={`w-4 h-4 ${alloc.is_espelho ? 'text-amber-400' : 'text-ms-blue'}`} />
+                                                            <span className={`text-sm font-bold ${alloc.is_espelho ? 'text-amber-400' : 'text-ms-blue'}`}>{alloc.disciplina_nome}</span>
+                                                        </div>
+                                                        {alloc.is_espelho && alloc.professor_original_nome && (
+                                                            <div className="flex items-center gap-1.5 ml-7">
+                                                                <ArrowRightLeft className="w-3 h-3 text-amber-500/60" />
+                                                                <span className="text-[10px] font-bold text-amber-500/80">
+                                                                    Substituindo: {alloc.professor_original_nome}
+                                                                    {alloc.atestado_data_fim && ` · até ${new Date(alloc.atestado_data_fim + 'T12:00:00').toLocaleDateString('pt-BR')}`}
+                                                                </span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </td>
                                                 <td className="px-10 py-2.5 text-right">
-                                                    <button 
-                                                        onClick={() => handleDelete(alloc.id)}
-                                                        className="p-2 text-ms-blue hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
-                                                        title="Excluir alocação"
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </button>
+                                                    <div className="flex items-center justify-end gap-2">
+                                                        {alloc.is_espelho && (
+                                                            <span className="flex items-center gap-1 px-2 py-1 bg-amber-400/10 text-amber-400 border border-amber-400/20 rounded-lg text-[9px] font-black">
+                                                                <Stethoscope className="w-2.5 h-2.5" />
+                                                                ESPELHO
+                                                            </span>
+                                                        )}
+                                                        {!alloc.is_espelho && (
+                                                            <button 
+                                                                onClick={() => handleDelete(alloc.id)}
+                                                                className="p-2 text-ms-blue hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                                                                title="Excluir alocação"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}

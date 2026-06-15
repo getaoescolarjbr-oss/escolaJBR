@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Professor } from '../types';
+import type { Professor, AtestadoServidor } from '../types';
 import { supabase } from '../lib/supabase';
 import { StudentList } from './StudentList';
-import { Filter, Users, Calendar, ChevronDown, BookOpen, LayoutDashboard, FileSpreadsheet, ClipboardList, CheckCircle, PlusCircle, Layers, ShieldAlert, Trash2, Save, Mail } from 'lucide-react';
+import { Filter, Users, Calendar, ChevronDown, BookOpen, LayoutDashboard, FileSpreadsheet, ClipboardList, CheckCircle, PlusCircle, Layers, ShieldAlert, Trash2, Save, Mail, Stethoscope, ArrowRightLeft, Eye } from 'lucide-react';
 import { EmptyState } from './EmptyState';
 import { GradesPanel } from './GradesPanel';
 import { ExameFinalPanel } from './ExameFinalPanel';
@@ -79,6 +79,9 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   const hasAutoSelected = useRef(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [lockedBimestres, setLockedBimestres] = useState<number[]>([]);
+  // --- Estado de Atestado ---
+  const [atestadoAtivo, setAtestadoAtivo] = useState<AtestadoServidor | null>(null); // se o titular está de atestado
+  const [substituicaoAtiva, setSubstituicaoAtiva] = useState<{ atestado: AtestadoServidor; titularNome: string } | null>(null); // se é substituto
 
   useEffect(() => {
     async function loadLockedBimestres() {
@@ -103,7 +106,73 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
     loadLockedBimestres();
   }, [selectedBimestre]);
 
+  // --- Verificar atestado / substituição ativa ---
+  useEffect(() => {
+    async function checkAtestadoStatus() {
+      const today = new Date().toISOString().split('T')[0];
+
+      // 1. Verificar se o professor ATUAL está de atestado (titular)
+      const { data: atestados } = await supabase
+        .from('atestados_servidores')
+        .select('*')
+        .eq('professor_id', professor.id)
+        .eq('ativo', true)
+        .lte('data_inicio', today)
+        .gte('data_fim', today)
+        .maybeSingle();
+
+      if (atestados) {
+        setAtestadoAtivo(atestados);
+      } else {
+        setAtestadoAtivo(null);
+      }
+
+      // 2. Verificar se o professor ATUAL é substituto de alguém
+      const { data: espelhos } = await supabase
+        .from('alocacoes_v2')
+        .select('atestado_id, professor_original_id')
+        .eq('professor_id', professor.id)
+        .eq('is_espelho', true)
+        .limit(1)
+        .maybeSingle();
+
+      if (espelhos?.atestado_id) {
+        // Buscar o atestado para pegar as datas
+        const { data: atestadoEspelho } = await supabase
+          .from('atestados_servidores')
+          .select('*')
+          .eq('id', espelhos.atestado_id)
+          .eq('ativo', true)
+          .lte('data_inicio', today)
+          .gte('data_fim', today)
+          .maybeSingle();
+
+        if (atestadoEspelho && espelhos.professor_original_id) {
+          const { data: titular } = await supabase
+            .from('professores')
+            .select('nome')
+            .eq('id', espelhos.professor_original_id)
+            .maybeSingle();
+
+          setSubstituicaoAtiva({
+            atestado: atestadoEspelho,
+            titularNome: titular?.nome || 'Professor Titular'
+          });
+        } else {
+          setSubstituicaoAtiva(null);
+        }
+      } else {
+        setSubstituicaoAtiva(null);
+      }
+    }
+    checkAtestadoStatus();
+  }, [professor.id]);
+
   const isBimestreLocked = lockedBimestres.includes(selectedBimestre);
+  // Titular de atestado: somente leitura em tudo
+  const isTitularEmAtestado = !!atestadoAtivo;
+  // Read-only efetivo: bimestre bloqueado OU titular em atestado
+  const isEffectivelyLocked = isBimestreLocked || isTitularEmAtestado;
 
   // Auto-Retorno de Alunos nos Intervalos (09:10, 11:55, 15:40)
   useEffect(() => {
@@ -435,7 +504,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   };
 
   const handleRegistrarAtividade = async () => {
-    if (!descricaoAtividade.trim() || !selectedTurma || !selectedDisciplina) return;
+    if (!descricaoAtividade.trim() || !selectedTurma || !selectedDisciplina || isEffectivelyLocked) return;
     setIsRegistrando(true);
 
     if (selectedAtividadeId) {
@@ -467,7 +536,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   };
 
   const handleExcluirAtividade = async () => {
-    if (!selectedAtividadeId || !selectedTurma || !selectedDisciplina || isBimestreLocked) return;
+    if (!selectedAtividadeId || !selectedTurma || !selectedDisciplina || isEffectivelyLocked) return;
     
     const confirmDelete = window.confirm("Tem certeza que deseja excluir esta atividade? Isso apagará permanentemente todos os vistos associados a ela.");
     if (!confirmDelete) return;
@@ -703,11 +772,11 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                     </div>
                     <input
                       type="text"
-                      disabled={isBimestreLocked}
-                      placeholder={isBimestreLocked ? "Lançamentos encerrados para este bimestre." : "O que foi ensinado hoje?"}
+                      disabled={isEffectivelyLocked}
+                      placeholder={isEffectivelyLocked ? "Lançamentos encerrados para este bimestre." : "O que foi ensinado hoje?"}
                       value={descricaoAtividade}
                       onChange={(e) => setDescricaoAtividade(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && !isBimestreLocked && handleRegistrarAtividade()}
+                      onKeyDown={(e) => e.key === 'Enter' && !isEffectivelyLocked && handleRegistrarAtividade()}
                       className={`w-full border text-sm rounded-xl p-3 pl-10 outline-none focus:ring-2 focus:ring-blue-500 font-medium transition-all ${
                           theme === 'light' ? 'bg-blue-50/30 border-blue-100 text-blue-900 placeholder:text-blue-900/40' : 'bg-[#001a4d]/50 border-blue-900/50 text-blue-100 placeholder:text-blue-400/50 shadow-inner'
                       }`}
@@ -715,8 +784,8 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                   </div>
                   <button
                     onClick={handleRegistrarAtividade}
-                    disabled={isRegistrando || !descricaoAtividade.trim() || !selectedDisciplina || isBimestreLocked}
-                    title={isBimestreLocked ? "Bimestre bloqueado para lançamentos" : selectedAtividadeId ? "Salvar alterações da atividade" : "Registrar atividade para a data selecionada"}
+                    disabled={isRegistrando || !descricaoAtividade.trim() || !selectedDisciplina || isEffectivelyLocked}
+                    title={isEffectivelyLocked ? "Bimestre bloqueado para lançamentos" : selectedAtividadeId ? "Salvar alterações da atividade" : "Registrar atividade para a data selecionada"}
                     className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider border transition-all whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed ${
                       registroSucesso
                         ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-900/30'
@@ -735,8 +804,8 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                   {selectedAtividadeId && (
                     <button
                       onClick={handleExcluirAtividade}
-                      disabled={isRegistrando || isBimestreLocked}
-                      title={isBimestreLocked ? "Bimestre bloqueado" : "Excluir esta atividade permanentemente"}
+                      disabled={isRegistrando || isEffectivelyLocked}
+                      title={isEffectivelyLocked ? "Bimestre bloqueado" : "Excluir esta atividade permanentemente"}
                       className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider border border-red-500/30 text-red-500 hover:bg-red-500/10 shadow-md transition-all whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
                     >
                       <Trash2 className="w-4 h-4" /> Excluir
@@ -857,7 +926,37 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
           <EmptyState />
         ) : (
           <>
-            {isBimestreLocked && (
+            {/* Banner: Professor é SUBSTITUTO */}
+            {substituicaoAtiva && (
+              <div className="bg-amber-400/10 border-2 border-amber-400/30 p-5 rounded-2xl flex items-start gap-3 shadow-md animate-in slide-in-from-top-2 duration-300">
+                <ArrowRightLeft className="w-5 h-5 shrink-0 mt-0.5 text-amber-400" />
+                <div>
+                  <h4 className="font-black text-sm uppercase tracking-wider text-amber-400">Modo Substituto Ativo</h4>
+                  <p className="text-xs text-amber-300/80 font-bold mt-1">
+                    Você está substituindo <span className="text-amber-300">{substituicaoAtiva.titularNome}</span> até <span className="text-amber-300">{new Date(substituicaoAtiva.atestado.data_fim + 'T12:00:00').toLocaleDateString('pt-BR')}</span>.
+                    Todos os lançamentos realizados neste período serão de sua responsabilidade.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Banner: Professor TITULAR em atestado (somente leitura) */}
+            {isTitularEmAtestado && (
+              <div className="bg-amber-500/10 border-2 border-amber-500/30 p-5 rounded-2xl flex items-start gap-3 shadow-md animate-in slide-in-from-top-2 duration-300">
+                <Stethoscope className="w-5 h-5 shrink-0 mt-0.5 text-amber-500" />
+                <div>
+                  <h4 className="font-black text-sm uppercase tracking-wider text-amber-500">Você está de Atestado Médico</h4>
+                  <p className="text-xs text-amber-400/80 font-bold mt-1 flex items-center gap-1.5">
+                    <Eye className="w-3.5 h-3.5" />
+                    Período: {new Date(atestadoAtivo!.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR')} a {new Date(atestadoAtivo!.data_fim + 'T12:00:00').toLocaleDateString('pt-BR')}.
+                    Seus lançamentos estão em modo somente leitura durante este período.
+                    {atestadoAtivo?.substituto_id && ' Um professor substituto está gerenciando suas turmas.'}
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {isBimestreLocked && !isTitularEmAtestado && (
               <div className="bg-red-500/10 border-2 border-red-500/30 text-red-500 p-5 rounded-2xl flex items-start gap-3 shadow-md animate-in slide-in-from-top-2 duration-300">
                 <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5 text-red-500" />
                 <div>
@@ -887,7 +986,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                     ? recentAtividades.filter(a => bulkSelectedIds.includes(a.id))
                     : []
                 }
-                isLocked={isBimestreLocked}
+                isLocked={isEffectivelyLocked}
               />
             )}
             
@@ -899,7 +998,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                 bimestreId={selectedBimestre}
                 theme={theme}
                 refreshKey={atividadesRefreshKey}
-                isLocked={isBimestreLocked}
+                isLocked={isEffectivelyLocked}
               />
             )}
 
@@ -909,7 +1008,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                 turmaId={selectedTurma}
                 disciplinaId={selectedDisciplina}
                 theme={theme}
-                isLocked={isBimestreLocked}
+                isLocked={isEffectivelyLocked}
               />
             )}
 

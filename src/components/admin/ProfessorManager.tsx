@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import type { Professor } from '../../types';
-import { Search, Plus, Edit2, Trash2, Loader2, Save, X } from 'lucide-react';
+import type { Professor, AtestadoServidor } from '../../types';
+import { Search, Plus, Edit2, Trash2, Loader2, Save, X, Stethoscope, AlertCircle } from 'lucide-react';
+import { AtestadoModal } from './AtestadoModal';
 
 export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
   const [professors, setProfessors] = useState<Professor[]>([]);
@@ -11,6 +12,8 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
   const [customCargos, setCustomCargos] = useState<string[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProfessor, setEditingProfessor] = useState<Professor | null>(null);
+  const [atestadoTarget, setAtestadoTarget] = useState<Professor | null>(null);
+  const [atestadosAtivos, setAtestadosAtivos] = useState<Map<string, AtestadoServidor>>(new Map());
   const [formData, setFormData] = useState<Partial<Professor>>({
     nome: '',
     email: '',
@@ -31,7 +34,26 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
       .order('nome');
     
     if (data) setProfessors(data);
+
+    // Buscar atestados ativos
+    await fetchAtestadosAtivos();
     setLoading(false);
+  }
+
+  async function fetchAtestadosAtivos() {
+    const today = new Date().toISOString().split('T')[0];
+    const { data } = await supabase
+      .from('atestados_servidores')
+      .select('*')
+      .eq('ativo', true)
+      .lte('data_inicio', today)
+      .gte('data_fim', today);
+
+    if (data) {
+      const map = new Map<string, AtestadoServidor>();
+      data.forEach((a: AtestadoServidor) => map.set(a.professor_id, a));
+      setAtestadosAtivos(map);
+    }
   }
 
   const handleAddCategory = () => {
@@ -190,6 +212,16 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
         </div>
       </div>
 
+      {/* Legenda de atestado ativo */}
+      {atestadosAtivos.size > 0 && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-amber-400/10 border border-amber-400/30 rounded-xl">
+          <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+          <p className="text-xs font-bold text-amber-300">
+            {atestadosAtivos.size} servidor(es) com atestado ativo hoje. Identificados com o badge laranja na tabela.
+          </p>
+        </div>
+      )}
+
       <div className="bg-ms-card border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
         <table className="w-full">
           <thead>
@@ -216,72 +248,95 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
                 </td>
               </tr>
             ) : (
-              filteredProfessors.map((p, idx) => (
-                <tr key={p.id} className={idx % 2 === 0 ? 'bg-ms-dark/20' : 'bg-transparent'}>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-ms-blue/10 flex items-center justify-center text-ms-blue font-black border border-ms-blue/20">
-                        {p.nome.charAt(0)}
+              filteredProfessors.map((p, idx) => {
+                const atestadoAtivo = atestadosAtivos.get(p.id);
+                return (
+                  <tr
+                    key={p.id}
+                    className={`${idx % 2 === 0 ? 'bg-ms-dark/20' : 'bg-transparent'} ${atestadoAtivo ? 'border-l-4 border-l-amber-400' : ''}`}
+                  >
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black border ${atestadoAtivo ? 'bg-amber-400/10 text-amber-400 border-amber-400/30' : 'bg-ms-blue/10 text-ms-blue border-ms-blue/20'}`}>
+                          {p.nome.charAt(0)}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <p className="text-sm font-bold text-[#003366] uppercase">{p.nome}</p>
+                            {atestadoAtivo && (
+                              <span className="flex items-center gap-1 px-2 py-0.5 bg-amber-400/15 text-amber-400 border border-amber-400/30 rounded-full text-[9px] font-black uppercase tracking-wider">
+                                <Stethoscope className="w-2.5 h-2.5" />
+                                Atestado até {new Date(atestadoAtivo.data_fim + 'T12:00:00').toLocaleDateString('pt-BR')}
+                              </span>
+                            )}
+                          </div>
+                          {p.user_id ? (
+                            <p className={`text-[10px] font-mono font-bold ${theme === 'light' ? 'text-blue-500' : 'text-blue-400'}`}>
+                              {p.user_id}
+                            </p>
+                          ) : (
+                            <p className={`text-[10px] font-mono font-bold ${theme === 'light' ? 'text-red-600' : 'text-red-500'}`}>
+                              Não vinculado
+                            </p>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-bold text-[#003366] uppercase">{p.nome}</p>
-                        {p.user_id ? (
-                          <p className={`text-[10px] font-mono font-bold ${theme === 'light' ? 'text-blue-500' : 'text-blue-400'}`}>
-                            {p.user_id}
-                          </p>
-                        ) : (
-                          <p className={`text-[10px] font-mono font-bold ${theme === 'light' ? 'text-red-600' : 'text-red-500'}`}>
-                            Não vinculado
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="px-3 py-1 bg-blue-500/10 text-ms-blue rounded-full text-[10px] font-black uppercase border border-ms-blue/20">
-                      {p.cargo}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    {p.area_conhecimento ? (
-                      <span className="text-xs font-bold text-ms-main">
-                        {p.area_conhecimento}
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1 bg-blue-500/10 text-ms-blue rounded-full text-[10px] font-black uppercase border border-ms-blue/20">
+                        {p.cargo}
                       </span>
-                    ) : (
-                      <span className={`text-xs italic ${theme === 'light' ? 'text-blue-600/60' : 'text-gray-500'}`}>Não definida</span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4">
-                    <p className={`text-sm font-medium ${theme === 'light' ? 'text-blue-800' : 'text-gray-400'}`}>{p.email || '-'}</p>
-                    <p className="text-xs text-[#003366] font-bold">{p.telefone || '-'}</p>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center justify-center gap-2">
-                      <button 
-                        onClick={() => {
-                          setEditingProfessor(p);
-                          setFormData(p);
-                          setIsModalOpen(true);
-                        }}
-                        className="p-2 hover:bg-ms-blue/20 text-ms-blue rounded-lg transition-all"
-                      >
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(p)}
-                        className="p-2 hover:bg-red-500/20 text-red-500 rounded-lg transition-all"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td className="px-6 py-4">
+                      {p.area_conhecimento ? (
+                        <span className="text-xs font-bold text-ms-main">
+                          {p.area_conhecimento}
+                        </span>
+                      ) : (
+                        <span className={`text-xs italic ${theme === 'light' ? 'text-blue-600/60' : 'text-gray-500'}`}>Não definida</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className={`text-sm font-medium ${theme === 'light' ? 'text-blue-800' : 'text-gray-400'}`}>{p.email || '-'}</p>
+                      <p className="text-xs text-[#003366] font-bold">{p.telefone || '-'}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex items-center justify-center gap-2">
+                        {/* Botão Atestado */}
+                        <button
+                          onClick={() => setAtestadoTarget(p)}
+                          className={`p-2 rounded-lg transition-all ${atestadoAtivo ? 'bg-amber-400/20 text-amber-400 hover:bg-amber-400/30' : 'hover:bg-amber-400/10 text-amber-500'}`}
+                          title="Gerenciar atestado médico"
+                        >
+                          <Stethoscope className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => {
+                            setEditingProfessor(p);
+                            setFormData(p);
+                            setIsModalOpen(true);
+                          }}
+                          className="p-2 hover:bg-ms-blue/20 text-ms-blue rounded-lg transition-all"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button 
+                          onClick={() => handleDelete(p)}
+                          className="p-2 hover:bg-red-500/20 text-red-500 rounded-lg transition-all"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
       </div>
 
+      {/* Modal Editar/Criar Servidor */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div className="bg-ms-card w-full max-w-lg rounded-3xl border border-gray-800 shadow-2xl overflow-hidden scale-in animate-in duration-300">
@@ -386,6 +441,16 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de Atestado */}
+      {atestadoTarget && (
+        <AtestadoModal
+          professor={atestadoTarget}
+          allProfessors={professors}
+          onClose={() => setAtestadoTarget(null)}
+          onUpdate={() => fetchAtestadosAtivos()}
+        />
       )}
     </div>
   );
