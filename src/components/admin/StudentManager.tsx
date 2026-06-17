@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Student, Turma, MatriculaStatus } from '../../types';
-import { Search, Plus, Edit2, Trash2, Loader2, Save, X, UserPlus, Filter, Calendar, AlertCircle } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Loader2, Save, X, UserPlus, Filter, Calendar, AlertCircle, Camera } from 'lucide-react';
 import { autoUpdateExpiredAbsences } from '../../utils/studentUtils';
 
 export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
@@ -14,12 +14,17 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<Student | null>(null);
   const [targetTurma, setTargetTurma] = useState<string>('');
+  const [fotoPreview, setFotoPreview] = useState<string | null>(null);
+  const [isUploadingFoto, setIsUploadingFoto] = useState(false);
+  const fotoInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState<Partial<Student>>({
     nome: '',
     status: 'Ativo',
     atestado_inicio: '',
-    atestado_fim: ''
+    atestado_fim: '',
+    cid_codigo: '',
+    cid_descricao: ''
   });
 
   useEffect(() => {
@@ -62,6 +67,53 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
     setLoading(false);
   }
 
+  // Comprime a imagem via Canvas antes do upload (max 400x400, JPEG 80%)
+  function compressImage(file: File): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 400;
+        let { width, height } = img;
+        if (width > height) {
+          if (width > MAX) { height = Math.round(height * MAX / width); width = MAX; }
+        } else {
+          if (height > MAX) { width = Math.round(width * MAX / height); height = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(url);
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Falha ao comprimir imagem'));
+        }, 'image/jpeg', 0.8);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Imagem inválida')); };
+      img.src = url;
+    });
+  }
+
+  async function uploadFoto(file: File, studentId: string): Promise<string | null> {
+    const compressed = await compressImage(file);
+    const path = `alunos/${studentId}.jpg`;
+    const { error: uploadError } = await supabase.storage
+      .from('fotos-alunos')
+      .upload(path, compressed, { upsert: true, contentType: 'image/jpeg' });
+    if (uploadError) throw uploadError;
+    const { data: urlData } = supabase.storage.from('fotos-alunos').getPublicUrl(path);
+    return urlData.publicUrl;
+  }
+
+  function handleFotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const preview = URL.createObjectURL(file);
+    setFotoPreview(preview);
+  }
+
   async function handleSave() {
     if (!formData.nome || !selectedTurma) {
       alert('Por favor, preencha o nome do aluno e selecione uma turma.');
@@ -85,7 +137,9 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
               nome: formData.nome,
               status: formData.status,
               atestado_inicio: formData.atestado_inicio,
-              atestado_fim: formData.atestado_fim || null
+              atestado_fim: formData.atestado_fim || null,
+              cid_codigo: formData.cid_codigo || null,
+              cid_descricao: formData.cid_descricao || null
             })
             .eq('id', editingStudent.id);
           error = updateError;
@@ -101,7 +155,9 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
               nome: formData.nome,
               status: 'Transferido',
               atestado_inicio: formData.atestado_inicio,
-              atestado_fim: null
+              atestado_fim: null,
+              cid_codigo: formData.cid_codigo || null,
+              cid_descricao: formData.cid_descricao || null
             })
             .eq('id', editingStudent.id);
           error = updateError;
@@ -124,7 +180,9 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
               nome: formData.nome,
               status: 'Remanejado',
               atestado_inicio: formData.atestado_inicio,
-              atestado_fim: null
+              atestado_fim: null,
+              cid_codigo: formData.cid_codigo || null,
+              cid_descricao: formData.cid_descricao || null
             })
             .eq('id', editingStudent.id);
           
@@ -149,7 +207,9 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
               nome: formData.nome,
               turma_id: targetTurma,
               aluno_numero: nextNumber,
-              status: 'Ativo'
+              status: 'Ativo',
+              cid_codigo: formData.cid_codigo || null,
+              cid_descricao: formData.cid_descricao || null
             }]);
           
           if (insertError) throw insertError;
@@ -161,7 +221,9 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
               nome: formData.nome,
               status: formData.status,
               atestado_inicio: null,
-              atestado_fim: null
+              atestado_fim: null,
+              cid_codigo: formData.cid_codigo || null,
+              cid_descricao: formData.cid_descricao || null
             })
             .eq('id', editingStudent.id);
           error = updateError;
@@ -178,17 +240,53 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
             nome: formData.nome,
             turma_id: selectedTurma,
             aluno_numero: nextNumber,
-            status: 'Ativo'
+            status: 'Ativo',
+            cid_codigo: formData.cid_codigo || null,
+            cid_descricao: formData.cid_descricao || null
           }]);
         error = insertError;
       }
 
       if (error) throw error;
 
+      // Upload de foto se selecionada
+      if (fotoInputRef.current?.files?.[0]) {
+        setIsUploadingFoto(true);
+        try {
+          // Para novo aluno, precisamos buscar o ID recém-criado
+          if (!editingStudent) {
+            const { data: newStudent } = await supabase
+              .from('alunos')
+              .select('id')
+              .eq('turma_id', selectedTurma)
+              .eq('nome', formData.nome)
+              .order('created_at', { ascending: false })
+              .limit(1)
+              .single();
+            if (newStudent) {
+              const fotoUrl = await uploadFoto(fotoInputRef.current.files[0], newStudent.id);
+              if (fotoUrl) {
+                await supabase.from('alunos').update({ foto_url: fotoUrl }).eq('id', newStudent.id);
+              }
+            }
+          } else {
+            const fotoUrl = await uploadFoto(fotoInputRef.current.files[0], editingStudent.id);
+            if (fotoUrl) {
+              await supabase.from('alunos').update({ foto_url: fotoUrl }).eq('id', editingStudent.id);
+            }
+          }
+        } catch (fotoErr: any) {
+          console.warn('Foto não enviada:', fotoErr.message);
+        } finally {
+          setIsUploadingFoto(false);
+        }
+      }
+
       setIsModalOpen(false);
       setEditingStudent(null);
-      setFormData({ nome: '', status: 'Ativo', atestado_inicio: '', atestado_fim: '' });
+      setFormData({ nome: '', status: 'Ativo', atestado_inicio: '', atestado_fim: '', cid_codigo: '', cid_descricao: '' });
       setTargetTurma('');
+      setFotoPreview(null);
       await fetchStudents();
     } catch (err: any) {
       alert('Erro ao salvar aluno: ' + err.message);
@@ -255,8 +353,9 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
         <button 
           onClick={() => {
             setEditingStudent(null);
-            setFormData({ nome: '', status: 'Ativo', atestado_inicio: '', atestado_fim: '' });
+            setFormData({ nome: '', status: 'Ativo', atestado_inicio: '', atestado_fim: '', cid_codigo: '', cid_descricao: '' });
             setTargetTurma('');
+            setFotoPreview(null);
             setIsModalOpen(true);
           }}
           disabled={!selectedTurma}
@@ -341,6 +440,7 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
                         setEditingStudent(s);
                         setFormData({ ...s });
                         setTargetTurma('');
+                        setFotoPreview(s.foto_url || null);
                         setIsModalOpen(true);
                       }}
                       className="p-2 hover:bg-ms-blue/20 text-ms-blue rounded-lg transition-all"
@@ -373,6 +473,51 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
             </div>
             
             <div className="p-8 space-y-6">
+              {/* Foto do Aluno */}
+              <div className="flex items-center gap-5">
+                <div className="relative flex-shrink-0">
+                  {fotoPreview ? (
+                    <img
+                      src={fotoPreview}
+                      alt="Foto do aluno"
+                      className="w-20 h-20 rounded-2xl object-cover border-2 border-ms-blue/40 shadow-lg"
+                    />
+                  ) : (
+                    <div className="w-20 h-20 rounded-2xl bg-ms-blue/10 border-2 border-dashed border-ms-blue/30 flex items-center justify-center">
+                      <Camera className="w-7 h-7 text-ms-blue/40" />
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => fotoInputRef.current?.click()}
+                    className="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-ms-blue hover:bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-ms-card transition-all"
+                    title="Selecionar foto"
+                  >
+                    {isUploadingFoto ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Camera className="w-3.5 h-3.5" />}
+                  </button>
+                  <input
+                    ref={fotoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleFotoChange}
+                  />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-ms-main uppercase tracking-wider">Foto do Aluno</p>
+                  <p className="text-[10px] text-gray-500 mt-1">JPG, PNG ou WEBP. Será comprimida automaticamente.</p>
+                  {fotoPreview && (
+                    <button
+                      type="button"
+                      onClick={() => { setFotoPreview(null); if (fotoInputRef.current) fotoInputRef.current.value = ''; }}
+                      className="mt-2 text-[10px] text-red-400 hover:text-red-300 font-bold uppercase"
+                    >
+                      Remover foto
+                    </button>
+                  )}
+                </div>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-xs font-black text-[#003366] uppercase tracking-wider ml-1">Nome Completo</label>
                 <input
@@ -382,6 +527,29 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
                   className="w-full px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue transition-all"
                   placeholder="Nome do aluno"
                 />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-[#003366] uppercase tracking-wider ml-1">Código CID (Opcional)</label>
+                  <input
+                    type="text"
+                    value={formData.cid_codigo || ''}
+                    onChange={(e) => setFormData({ ...formData, cid_codigo: e.target.value })}
+                    className="w-full px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue transition-all uppercase font-bold"
+                    placeholder="Ex: F84.0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-[#003366] uppercase tracking-wider ml-1">Descrição do CID</label>
+                  <input
+                    type="text"
+                    value={formData.cid_descricao || ''}
+                    onChange={(e) => setFormData({ ...formData, cid_descricao: e.target.value })}
+                    className="w-full px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue transition-all"
+                    placeholder="Ex: Autismo"
+                  />
+                </div>
               </div>
 
               {editingStudent && (

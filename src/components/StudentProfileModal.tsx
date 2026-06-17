@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Calendar, ClipboardList, AlertTriangle, LogOut, FileText, Loader2, ChevronRight, BookOpen, Activity, Clock, FileBadge, CheckCheck, Trash2, Users, UserCheck } from 'lucide-react';
+import { X, Calendar, ClipboardList, AlertTriangle, LogOut, FileText, Loader2, ChevronRight, BookOpen, Activity, Clock, FileBadge, CheckCheck, Trash2, Users, UserCheck, Camera } from 'lucide-react';
 import { AtaModal } from './AtaModal';
 import { OcorrenciaModal } from './OcorrenciaModal';
 
@@ -48,6 +48,16 @@ export function StudentProfileModal({
   const [showVisitaModal, setShowVisitaModal] = useState(false);
   const [visitaForm, setVisitaForm] = useState({ nome_responsavel: '', parentesco: '', assunto: '', observacoes: '', data_visita: new Date().toISOString().split('T')[0], hora_visita: '' });
   const [savingVisita, setSavingVisita] = useState(false);
+
+  // Laudo / CID
+  const [cidCodigo, setCidCodigo] = useState('');
+  const [cidDescricao, setCidDescricao] = useState('');
+  const [isSavingCid, setIsSavingCid] = useState(false);
+
+  // Foto do aluno
+  const [fotoUrl, setFotoUrl] = useState<string | null>(null);
+  const [isUploadingFoto, setIsUploadingFoto] = useState(false);
+  const fotoInputRef = useRef<HTMLInputElement>(null);
 
   const handleDeleteOcorrencia = async (ocorrenciaId: string) => {
     if (!window.confirm('Tem certeza que deseja apagar este registro de ocorrência?')) return;
@@ -154,9 +164,12 @@ export function StudentProfileModal({
         .order('created_at', { ascending: false });
       if (saidasAntData) setSaidasAntecipadas(saidasAntData);
 
-      // 4. Fetch Atividades Diárias da Turma para cálculo de desempenho
-      const { data: alunoInfo } = await supabase.from('alunos').select('turma_id').eq('id', studentId).single();
-      if (alunoInfo?.turma_id) {
+      // 4. Fetch Atividades Diárias da Turma para cálculo de desempenho e laudos (CID)
+      const { data: alunoInfo } = await supabase.from('alunos').select('turma_id, cid_codigo, cid_descricao, foto_url').eq('id', studentId).single();
+      if (alunoInfo) {
+          setCidCodigo(alunoInfo.cid_codigo || '');
+          setCidDescricao(alunoInfo.cid_descricao || '');
+          setFotoUrl(alunoInfo.foto_url || null);
           setStudentTurmaId(alunoInfo.turma_id);
           let queryAtivs = supabase
               .from('atividades_diárias')
@@ -231,6 +244,101 @@ export function StudentProfileModal({
       alert('Erro ao salvar visita: ' + err.message);
     } finally {
       setSavingVisita(false);
+    }
+  }
+
+  async function handleSaveCid() {
+    if (!studentId) return;
+    setIsSavingCid(true);
+    try {
+      const { error } = await supabase
+        .from('alunos')
+        .update({
+          cid_codigo: cidCodigo.trim() || null,
+          cid_descricao: cidDescricao.trim() || null
+        })
+        .eq('id', studentId);
+
+      if (error) throw error;
+      alert('CID atualizado com sucesso!');
+    } catch (err: any) {
+      console.error('Erro ao salvar CID:', err);
+      alert('Erro ao salvar CID: ' + err.message);
+    } finally {
+      setIsSavingCid(false);
+    }
+  }
+
+  // Comprime a imagem via Canvas antes do upload (max 400x400, JPEG 80%)
+  function compressImage(file: File): Promise<Blob> {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 400;
+        let { width, height } = img;
+        if (width > height) {
+          if (width > MAX) { height = Math.round(height * MAX / width); width = MAX; }
+        } else {
+          if (height > MAX) { width = Math.round(width * MAX / height); height = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d')!;
+        ctx.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(url);
+        canvas.toBlob((blob) => {
+          if (blob) resolve(blob);
+          else reject(new Error('Falha ao comprimir imagem'));
+        }, 'image/jpeg', 0.8);
+      };
+      img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Imagem inválida')); };
+      img.src = url;
+    });
+  }
+
+  async function handleFotoUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file || !studentId) return;
+
+    const allowed = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowed.includes(file.type)) {
+      alert('Formato não suportado. Use JPG, PNG ou WEBP.');
+      return;
+    }
+
+    setIsUploadingFoto(true);
+    try {
+      const compressed = await compressImage(file);
+      const path = `alunos/${studentId}.jpg`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('fotos-alunos')
+        .upload(path, compressed, { upsert: true, contentType: 'image/jpeg' });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage
+        .from('fotos-alunos')
+        .getPublicUrl(path);
+
+      const publicUrl = urlData.publicUrl + `?t=${Date.now()}`;
+
+      const { error: dbError } = await supabase
+        .from('alunos')
+        .update({ foto_url: urlData.publicUrl })
+        .eq('id', studentId);
+
+      if (dbError) throw dbError;
+
+      setFotoUrl(publicUrl);
+    } catch (err: any) {
+      console.error('Erro ao enviar foto:', err);
+      alert('Erro ao enviar foto: ' + err.message);
+    } finally {
+      setIsUploadingFoto(false);
+      if (fotoInputRef.current) fotoInputRef.current.value = '';
     }
   }
 
@@ -315,12 +423,54 @@ export function StudentProfileModal({
         
         {/* Header */}
         <div className="px-4 sm:px-8 py-3 sm:py-5 bg-gradient-to-r from-ms-blue/20 to-transparent border-b border-ms-border flex items-center justify-between gap-3 flex-shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-ms-blue/20 flex items-center justify-center text-lg sm:text-xl font-black text-ms-blue border border-ms-blue/30 shadow-inner flex-shrink-0">
-              {studentName.charAt(0)}
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+            {/* Avatar / Foto do Aluno */}
+            <div className="relative flex-shrink-0">
+              {fotoUrl ? (
+                <img
+                  src={fotoUrl}
+                  alt={studentName}
+                  className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl object-cover border-2 border-ms-blue/40 shadow-lg shadow-ms-blue/20"
+                />
+              ) : (
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-ms-blue/20 flex items-center justify-center text-2xl sm:text-3xl font-black text-ms-blue border-2 border-ms-blue/30 shadow-inner flex-shrink-0">
+                  {studentName.charAt(0)}
+                </div>
+              )}
+              {/* Botão de câmera para coordenadores */}
+              {isCoordinator && (
+                <>
+                  <button
+                    onClick={() => fotoInputRef.current?.click()}
+                    disabled={isUploadingFoto}
+                    title="Alterar foto do aluno"
+                    className="absolute -bottom-1.5 -right-1.5 w-7 h-7 bg-ms-blue hover:bg-blue-500 text-white rounded-full flex items-center justify-center shadow-lg border-2 border-ms-card transition-all disabled:opacity-60"
+                  >
+                    {isUploadingFoto ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Camera className="w-3.5 h-3.5" />
+                    )}
+                  </button>
+                  <input
+                    ref={fotoInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    className="hidden"
+                    onChange={handleFotoUpload}
+                  />
+                </>
+              )}
             </div>
             <div className="min-w-0">
-              <h2 className="text-sm sm:text-2xl font-black text-white tracking-tight leading-tight truncate">{studentName}</h2>
+              <h2 className="text-sm sm:text-2xl font-black text-white tracking-tight leading-tight truncate flex items-center gap-2">
+                {studentName}
+                {cidCodigo && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30 animate-pulse">
+                    <AlertTriangle className="w-3 h-3 text-rose-500" /> Laudo
+                  </span>
+                )}
+              </h2>
               <p className="text-[10px] text-[#004b93] dark:text-blue-400 font-extrabold uppercase tracking-widest flex items-center gap-1">
                 <FileText className="w-3 h-3 text-ms-blue" /> Ficha do Estudante
               </p>
@@ -396,6 +546,66 @@ export function StudentProfileModal({
             </div>
           ) : (
             <>
+              {/* SEÇÃO: INFORMAÇÕES DE LAUDO (CID) */}
+              <div className="bg-rose-550/5 dark:bg-rose-950/5 border-2 border-rose-500/30 rounded-[2rem] p-6 shadow-lg shadow-rose-950/10">
+                <div className="flex items-center gap-3 mb-4">
+                  <FileBadge className="w-5 h-5 text-rose-500" />
+                  <h3 className="text-sm font-black text-white uppercase tracking-wider">
+                    Informações de Laudo Médico (CID)
+                  </h3>
+                </div>
+
+                {isCoordinator ? (
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
+                    <div className="md:col-span-3 space-y-1.5">
+                      <label className="text-[10px] font-black text-rose-500 dark:text-rose-300 uppercase tracking-wider ml-1">Código CID</label>
+                      <input
+                        type="text"
+                        value={cidCodigo}
+                        onChange={(e) => setCidCodigo(e.target.value)}
+                        placeholder="Ex: F84.0"
+                        className="w-full px-4 py-2.5 bg-ms-dark border border-rose-500/20 rounded-xl text-white outline-none focus:ring-2 focus:ring-rose-500 transition-all text-sm uppercase font-bold"
+                      />
+                    </div>
+                    <div className="md:col-span-7 space-y-1.5">
+                      <label className="text-[10px] font-black text-rose-500 dark:text-rose-300 uppercase tracking-wider ml-1">Descrição do CID / Diagnóstico</label>
+                      <input
+                        type="text"
+                        value={cidDescricao}
+                        onChange={(e) => setCidDescricao(e.target.value)}
+                        placeholder="Ex: Transtorno do Espectro Autista"
+                        className="w-full px-4 py-2.5 bg-ms-dark border border-rose-500/20 rounded-xl text-white outline-none focus:ring-2 focus:ring-rose-500 transition-all text-sm"
+                      />
+                    </div>
+                    <div className="md:col-span-2">
+                      <button
+                        onClick={handleSaveCid}
+                        disabled={isSavingCid}
+                        className="w-full px-6 py-2.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-sm transition-all flex items-center justify-center gap-2 shadow-lg shadow-rose-900/30 disabled:opacity-50"
+                      >
+                        {isSavingCid ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar CID'}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    {cidCodigo ? (
+                      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 bg-black/20 p-4 rounded-xl border border-rose-500/20">
+                        <div className="md:col-span-3">
+                          <p className="text-[9px] text-rose-550 dark:text-rose-300 uppercase font-black tracking-widest">Código CID</p>
+                          <p className="text-sm font-black text-white uppercase mt-0.5">{cidCodigo}</p>
+                        </div>
+                        <div className="md:col-span-9">
+                          <p className="text-[9px] text-rose-550 dark:text-rose-300 uppercase font-black tracking-widest">Descrição do CID</p>
+                          <p className="text-sm font-bold text-gray-300 mt-0.5">{cidDescricao || 'Sem descrição cadastrada'}</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-500 font-bold uppercase italic">Nenhum laudo/CID cadastrado para este aluno.</p>
+                    )}
+                  </div>
+                )}
+              </div>
               {/* SEÇÃO 1: PAINEL SUPERIOR CONSOLIDADO (Desempenho + Métricas de Rotina) */}
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 

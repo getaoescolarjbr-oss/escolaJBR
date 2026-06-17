@@ -14,6 +14,7 @@ import { CalendarioEditor } from './CalendarioEditor';
 import { GradeCellEditModal } from './GradeCellEditModal';
 import { BimestreLockModal } from './BimestreLockModal';
 import { GestaoMensagensPanel } from './GestaoMensagensPanel';
+import { StudentManager } from './admin/StudentManager';
 
 interface CoordinatorDashboardProps {
   professor: Professor;
@@ -30,7 +31,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<{ id: string, nome: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'painel_turma' | 'site' | 'atas' | 'agenda_avaliacoes' | 'novas_ocorrencias' | 'comunicados'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'painel_turma' | 'alunos' | 'site' | 'atas' | 'agenda_avaliacoes' | 'novas_ocorrencias' | 'comunicados'>('overview');
   const [ocorrenciasPendentes, setOcorrenciasPendentes] = useState<any[]>([]);
   const [loadingOcorrencias, setLoadingOcorrencias] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -796,6 +797,12 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
           <Activity className="w-4 h-4" /> Painel da Turma
         </button>
         <button 
+          onClick={() => setActiveTab('alunos')}
+          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'alunos' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+        >
+          <GraduationCap className="w-4 h-4" /> Alunos
+        </button>
+        <button 
           onClick={() => setActiveTab('site')}
           className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'site' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
@@ -1274,6 +1281,8 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
               )}
            </div>
          </div>
+        ) : activeTab === 'alunos' ? (
+          <StudentManager theme={theme} />
        ) : activeTab === 'site' ? (
          <SiteManager theme={theme} />
        ) : activeTab === 'atas' ? (

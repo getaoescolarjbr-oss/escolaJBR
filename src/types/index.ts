@@ -4,6 +4,9 @@ export interface Aluno {
   id: string;
   aluno_id?: string;
   nome: string;
+  cid_codigo?: string;
+  cid_descricao?: string;
+  foto_url?: string;
 }
 
 export interface Professor {
@@ -100,6 +103,9 @@ export interface Student {
   atestado_inicio?: string;
   atestado_fim?: string;
   created_at: string;
+  cid_codigo?: string;
+  cid_descricao?: string;
+  foto_url?: string;
 }
 
 export interface Turma {
