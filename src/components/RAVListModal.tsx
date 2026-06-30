@@ -234,7 +234,7 @@ export function RAVListModal({
 
               const realizacao = somaPesos / ativIdsBim.length;
               const vistoValorMax = professor.config_visto_valor_total || 2.0;
-              notaVisto = arredondarNotaMS(realizacao * vistoValorMax);
+              notaVisto = Number((realizacao * vistoValorMax).toFixed(2));
             }
 
             return arredondarNotaMS(somaAval + notaVisto);

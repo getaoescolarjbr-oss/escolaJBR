@@ -122,7 +122,7 @@ export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLoc
             notaVistos = (somaPesosVistos / totalAtivBim) * (professor.config_visto_valor_total || 2.0);
           }
           
-          somaNotas += arredondarNotaMS(notaVistos);
+          somaNotas += Number(notaVistos.toFixed(2));
           studentGradesPerBimestre[aluno.id][bimestre] = arredondarNotaMS(somaNotas);
         });
       });

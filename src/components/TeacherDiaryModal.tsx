@@ -106,7 +106,7 @@ export function TeacherDiaryModal({
         alunosList.forEach(aluno => {
           const soma = pesosAluno[String(aluno.id).trim()] || 0;
           const realizacao = acts.length > 0 ? soma / acts.length : 0;
-          notasVistos[aluno.id] = arredondarNotaMS(realizacao * configVistoValorTotal);
+          notasVistos[aluno.id] = Number((realizacao * configVistoValorTotal).toFixed(2));
         });
         setVistosCalculados(notasVistos);
       } else {

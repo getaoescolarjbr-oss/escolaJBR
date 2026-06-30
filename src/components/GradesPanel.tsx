@@ -150,7 +150,7 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                 const somaPesos = pesosAluno[aId] || 0;
                 const realizacao = somaPesos / totalAtiv;
                 const notaFinalVisto = realizacao * (professor.config_visto_valor_total || 2.0);
-                notasVistos[aluno.aluno_id] = arredondarNotaMS(notaFinalVisto);
+                notasVistos[aluno.aluno_id] = Number(notaFinalVisto.toFixed(2));
             });
             setVistosCalculados(notasVistos);
         }
