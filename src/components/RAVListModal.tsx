@@ -85,11 +85,12 @@ export function RAVListModal({
           .maybeSingle();
         if (discData) setDisciplinaNome(discData.nome);
 
-        // 3. Buscar Alunos
+        // 3. Buscar Alunos — excluir inativos (Transferido, Remanejado, Cancelada)
         const { data: dataAlunos } = await supabase
           .from('alunos')
           .select('*')
           .eq('turma_id', turmaId)
+          .not('status', 'in', '("Transferido","Remanejado","Cancelada")')
           .order('aluno_numero');
 
         if (!dataAlunos) {
