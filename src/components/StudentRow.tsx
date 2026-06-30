@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase';
 import { Check, X, AlertTriangle, LogOut, Loader2, Plus, Minus, Eye } from 'lucide-react';
 import { OcorrenciaModal } from './OcorrenciaModal';
 import { StudentProfileModal } from './StudentProfileModal';
+import { DecimalInput } from './DecimalInput';
 import type { StudentGradeBreakdown } from './StudentList';
 import { getBimestreFromDate, getConfigPorTurma } from '../utils/academicUtils';
 import { isStudentAbsentOnDate } from '../utils/studentUtils';
@@ -669,15 +670,15 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
 
                       {/* Aberto */}
                       {configEfetivo.config_visto_metodo === 'aberto' && (
-                        <input
-                          type="number" min="0" max="10" step="0.1"
+                        <DecimalInput
                           value={val || ''}
-                          onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value)}
+                          onChange={(num) => handleBulkVistoAction(ativ.id, String(num))}
+                          max={10}
                           disabled={isLdg || isLocked || isPosterior || isTransferido}
-                          placeholder="0"
                           className={`w-10 md:w-12 text-center py-0.5 md:py-1 px-0.5 md:px-1 rounded border outline-none font-bold text-[10px] md:text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-blue-500 ${
                             theme === 'light' ? 'bg-blue-50 border-blue-200 text-blue-900' : 'bg-gray-900 border-gray-700 text-white'
                           }`}
+                          placeholder="0"
                         />
                       )}
 
@@ -772,10 +773,10 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 )}
                 {configEfetivo.config_visto_metodo === 'aberto' && (
                     <div className="relative w-14 md:w-20">
-                        <input
-                            type="number" min="0" max="10" step="0.1"
+                        <DecimalInput
                             value={valorVisto || ''}
-                            onChange={(e) => handleVistoAction(e.target.value)}
+                            onChange={(num) => handleVistoAction(String(num))}
+                            max={10}
                             disabled={isLocked || isPosterior || isTransferido}
                             className={`w-full text-center p-1 md:p-2 rounded-lg border outline-none font-bold text-xs md:text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                                 theme === 'light'

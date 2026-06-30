@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { X, Plus, Trash2, Save, BookOpen, User, Loader2, Sparkles, AlertCircle, Calendar } from 'lucide-react';
 import { getCorGradiente } from '../utils/academicUtils';
+import { DecimalInput } from './DecimalInput';
 
 interface GradeCellEditModalProps {
   isOpen: boolean;
@@ -446,18 +447,15 @@ export function GradeCellEditModal({
                             <div className="flex flex-col items-center">
                               <label className="text-[9px] font-bold text-gray-500 uppercase mb-1">Nota</label>
                               <div className="flex items-center gap-1">
-                                <input
-                                  type="number"
-                                  step="0.1"
-                                  min="0"
-                                  max={av.valor_maximo}
-                                  value={grade}
-                                  onChange={e => handleGradeChange(av.id, e.target.value, av.valor_maximo)}
-                                  className={`w-20 text-center p-2 rounded-xl text-xs font-black focus:border-blue-500 outline-none border transition-all ${
-                                    theme === 'light' ? 'bg-white border-blue-200 text-blue-900' : 'bg-gray-800 border-gray-700 text-white'
-                                  }`}
-                                  placeholder="0.0"
-                                />
+                                  <DecimalInput
+                                    value={grade}
+                                    onChange={val => handleGradeChange(av.id, String(val), av.valor_maximo)}
+                                    max={av.valor_maximo}
+                                    className={`w-20 text-center p-2 rounded-xl text-xs font-black focus:border-blue-500 outline-none border transition-all ${
+                                      theme === 'light' ? 'bg-white border-blue-200 text-blue-900' : 'bg-gray-800 border-gray-700 text-white'
+                                    }`}
+                                    placeholder="0.0"
+                                  />
                                 <span className="text-[10px] font-bold text-gray-500">/ {av.valor_maximo}</span>
                               </div>
                             </div>

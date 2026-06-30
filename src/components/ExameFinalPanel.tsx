@@ -4,6 +4,7 @@ import type { Professor, Avaliacao, Student } from '../types';
 import { Calculator, Save, AlertCircle, TrendingUp, Printer } from 'lucide-react';
 import { arredondarNotaMS, getCorGradiente, calcularMediaAnual, calcularNotaNecessariaExame, calcularFrequenciaAnual, calcularMediaFinalPosExame } from '../utils/academicUtils';
 import { printReport } from '../utils/printUtils';
+import { DecimalInput } from './DecimalInput';
 
 interface ExameFinalPanelProps {
   professor: Professor;
@@ -352,17 +353,15 @@ export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLoc
                     </td>
                     <td className="px-4 py-4 text-center bg-blue-500/10">
                       {isExame && !impossivel && exameAvaliacao ? (
-                        <input 
-                          type="number" 
-                          step="0.1"
-                          min="0"
-                          max="10"
+                        <DecimalInput 
                           value={notasExame[aluno.id] ?? ''}
-                          onChange={(e) => handleUpdateNotaExame(aluno.id, parseFloat(e.target.value) || 0)}
+                          onChange={(val) => handleUpdateNotaExame(aluno.id, val)}
+                          max={10}
                           disabled={isLocked}
                           className={`w-16 text-center p-1 rounded text-xs font-bold focus:border-blue-500 outline-none border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                             theme === 'light' ? 'bg-white border-blue-200 text-blue-900' : 'bg-ms-dark/20 border-ms-border text-white'
                           }`}
+                          placeholder="0.0"
                         />
                       ) : (
                         <span className="text-gray-500">—</span>

@@ -4,6 +4,7 @@ import type { Professor, ListaParaVistos } from '../types';
 import { X, Printer, Sparkles, AlertCircle, FileText, CheckCircle2, AlertTriangle, HelpCircle, Save, Loader2, CheckCheck } from 'lucide-react';
 import { arredondarNotaMS, getCorGradiente } from '../utils/academicUtils';
 import { printReport } from '../utils/printUtils';
+import { DecimalInput } from './DecimalInput';
 
 interface RAVListModalProps {
   isOpen: boolean;
@@ -569,18 +570,14 @@ export function RAVListModal({
                           <td className="px-4 py-3 bg-emerald-500/5">
                             <div className="flex items-center gap-2 justify-center">
                               <div className="relative">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="10"
-                                  step="0.1"
-                                  placeholder="0.0"
+                                <DecimalInput
                                   value={notasInput[aluno.aluno_id] ?? ''}
-                                  onChange={e => {
-                                    setNotasInput(prev => ({ ...prev, [aluno.aluno_id]: e.target.value }));
+                                  onChange={val => {
+                                    setNotasInput(prev => ({ ...prev, [aluno.aluno_id]: String(val) }));
                                     setSavedAlunos(prev => { const s = new Set(prev); s.delete(aluno.aluno_id); return s; });
                                   }}
-                                  onKeyDown={e => { if (e.key === 'Enter') handleSaveNotaRAV(aluno.aluno_id); }}
+                                  max={10}
+                                  disabled={savingAluno === aluno.aluno_id}
                                   className={`w-20 px-2 py-1.5 text-center text-sm font-black rounded-lg border outline-none transition-all ${
                                     savedAlunos.has(aluno.aluno_id)
                                       ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400'
@@ -588,6 +585,7 @@ export function RAVListModal({
                                         ? 'border-blue-200 bg-blue-50 text-blue-900 focus:ring-2 focus:ring-ms-blue'
                                         : 'border-ms-border bg-ms-dark text-white focus:ring-2 focus:ring-ms-blue'
                                   }`}
+                                  placeholder="0.0"
                                 />
                               </div>
                               <button

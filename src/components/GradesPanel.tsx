@@ -5,6 +5,7 @@ import { Plus, Save, Trash2, Calculator, Info, TrendingUp, X, Sparkles } from 'l
 import { autoUpdateExpiredAbsences, isStudentAbsentOnDate } from '../utils/studentUtils';
 import { arredondarNotaMS, getCorGradiente, getBimestreFromDate } from '../utils/academicUtils';
 import { RAVListModal } from './RAVListModal';
+import { DecimalInput } from './DecimalInput';
 
 interface GradesPanelProps {
   professor: Professor;
@@ -521,13 +522,10 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                                     {isPosterior ? (
                                       <span className="text-xs text-gray-505 font-medium italic">N/A</span>
                                     ) : (
-                                      <input 
-                                          type="number" 
-                                          step="0.1"
-                                          min="0"
-                                          max={av.valor_maximo}
+                                      <DecimalInput 
                                           value={notas[aluno.aluno_id]?.[av.id] ?? ''}
-                                          onChange={(e) => handleUpdateNota(aluno.aluno_id, av.id, parseFloat(e.target.value) || 0)}
+                                          onChange={(val) => handleUpdateNota(aluno.aluno_id, av.id, val)}
+                                          max={av.valor_maximo}
                                           disabled={isLocked}
                                           className={`w-12 sm:w-16 text-center p-1 rounded text-xs font-bold focus:border-blue-500 outline-none border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                                               theme === 'light' ? 'bg-blue-50/30 border-blue-100 text-blue-900' : 'bg-ms-dark/5 border-ms-border/50 text-ms-main'
