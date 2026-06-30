@@ -196,8 +196,9 @@ export function RAVListModal({
         const processedRows: RAVStudentRow[] = dataAlunos.map(aluno => {
           const aId = String(aluno.id).trim();
           
-          // Calcular a média de cada bimester
-          const calcularBimestre = (bNum: number) => {
+          // Calcular a média de cada bimestre — retorna soma BRUTA (sem arredondamento)
+          // O arredondamento ocorre apenas no display final, igual ao boletim.
+          const calcularBimestre = (bNum: number): number => {
             // Filtrar avaliações deste bimestre
             const avalBimestre = dataAval?.filter(a => a.bimestre_id === bNum) || [];
             let somaAval = 0;
@@ -237,24 +238,28 @@ export function RAVListModal({
               notaVisto = Number((realizacao * vistoValorMax).toFixed(2));
             }
 
-            return arredondarNotaMS(somaAval + notaVisto);
+            // Retorna a soma bruta — arredondamento feito apenas no display
+            return somaAval + notaVisto;
           };
 
-          const b1 = calcularBimestre(1);
-          const b2 = calcularBimestre(2);
-          const b3 = calcularBimestre(3);
-          const b4 = calcularBimestre(4);
+          const b1Raw = calcularBimestre(1);
+          const b2Raw = calcularBimestre(2);
+          const b3Raw = calcularBimestre(3);
+          const b4Raw = calcularBimestre(4);
+
+          // Arredondar apenas para exibição e comparações de elegibilidade
+          const b1 = arredondarNotaMS(b1Raw);
+          const b2 = arredondarNotaMS(b2Raw);
+          const b3 = arredondarNotaMS(b3Raw);
+          const b4 = arredondarNotaMS(b4Raw);
 
           // Determinar semestre correspondente ao bimestre ativo
           const isPrimeiroSemestre = bimestreId <= 2;
           const mediaSemestral = isPrimeiroSemestre ? (b1 + b2) / 2 : (b3 + b4) / 2;
 
-          // ELEGIBILIDADE E PROJEÇÕES
-          // Modo Bimestral
+          // ELEGIBILIDADE: usar valores arredondados (mesma visualização do professor no boletim)
           const activeBimGrade = bimestreId === 1 ? b1 : bimestreId === 2 ? b2 : bimestreId === 3 ? b3 : b4;
           const elegivelBimestral = activeBimGrade < 6.0;
-
-          // Modo Semestral
           const elegivelSemestral = mediaSemestral < 6.0;
           
           // Fórmulas de Recuperação
