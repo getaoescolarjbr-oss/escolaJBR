@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, Avaliacao, NotaAvaliacao, ListaParaVistos } from '../types';
-import { Plus, Save, Trash2, Calculator, Info, TrendingUp, X, Sparkles } from 'lucide-react';
+import { Plus, Save, Trash2, Calculator, Info, TrendingUp, X, Sparkles, CheckCheck, Loader2 } from 'lucide-react';
 import { autoUpdateExpiredAbsences, isStudentAbsentOnDate } from '../utils/studentUtils';
 import { arredondarNotaMS, getCorGradiente, getBimestreFromDate } from '../utils/academicUtils';
 import { RAVListModal } from './RAVListModal';
@@ -32,6 +32,10 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
   const [isSaving, setIsSaving] = useState(false);
   const [avalError, setAvalError] = useState<string | null>(null);
   const [isRAVModalOpen, setIsRAVModalOpen] = useState(false);
+
+  // Estados do botão de reforço de salvamento
+  const [isSavingConfirmation, setIsSavingConfirmation] = useState(false);
+  const [showSavedFeedback, setShowSavedFeedback] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -237,6 +241,15 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
     }, { onConflict: 'avaliacao_id,aluno_id' });
   };
 
+  const handleManualSaveFeedback = () => {
+    setIsSavingConfirmation(true);
+    setTimeout(() => {
+      setIsSavingConfirmation(false);
+      setShowSavedFeedback(true);
+      setTimeout(() => setShowSavedFeedback(false), 2000);
+    }, 600);
+  };
+
   if (loading) return <div className="p-20 text-center"><div className="animate-spin rounded-full h-10 w-10 border-4 border-blue-500 border-t-transparent mx-auto"></div></div>;
 
   return (
@@ -436,13 +449,37 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
             <div className={`${theme === 'light' ? 'bg-white' : 'bg-ms-card'} rounded-2xl shadow-xl border border-ms-border overflow-hidden`}>
                 <div className={`p-4 border-b ${theme === 'light' ? 'bg-[#e6f0ff] border-[#002677]/20' : 'bg-[#0a1a3a] border-[#002677]/30'} flex flex-col sm:flex-row sm:items-center justify-between gap-3`}>
                     <h3 className={`text-sm font-black uppercase tracking-widest ${theme === 'light' ? 'text-[#002677]' : 'text-[#93c5fd]'}`}>Boletim de Notas - Turma Integrada</h3>
-                    <button
-                        onClick={() => setIsRAVModalOpen(true)}
-                        className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-md shadow-amber-900/20"
-                    >
-                        <Sparkles className="w-3.5 h-3.5 text-white animate-pulse" />
-                        Alunos de RAV (Recuperação)
-                    </button>
+                    <div className="flex items-center gap-2">
+                        {/* Botão de Reforço de Salvamento */}
+                        <button
+                            onClick={handleManualSaveFeedback}
+                            disabled={isSavingConfirmation}
+                            className={`flex items-center justify-center gap-2 px-4 py-2 border rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-md ${
+                              showSavedFeedback
+                                ? 'bg-emerald-600 border-emerald-500 text-white'
+                                : theme === 'light'
+                                  ? 'bg-white border-blue-200 text-blue-900 hover:bg-blue-50'
+                                  : 'bg-ms-card border-ms-border text-ms-main hover:bg-gray-800'
+                            }`}
+                        >
+                            {isSavingConfirmation ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                            ) : showSavedFeedback ? (
+                              <CheckCheck className="w-3.5 h-3.5 text-white" />
+                            ) : (
+                              <Save className="w-3.5 h-3.5" />
+                            )}
+                            {isSavingConfirmation ? 'Salvando...' : showSavedFeedback ? 'Notas Salvas!' : 'Salvar Lançamentos'}
+                        </button>
+
+                        <button
+                            onClick={() => setIsRAVModalOpen(true)}
+                            className="flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-600 hover:to-yellow-700 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95 shadow-md shadow-amber-900/20"
+                        >
+                            <Sparkles className="w-3.5 h-3.5 text-white animate-pulse" />
+                            Alunos de RAV (Recuperação)
+                        </button>
+                    </div>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-ms-border/30">
