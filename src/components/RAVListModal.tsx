@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, ListaParaVistos } from '../types';
-import { X, Printer, Sparkles, AlertCircle, FileText, CheckCircle2, AlertTriangle, HelpCircle } from 'lucide-react';
+import { X, Printer, Sparkles, AlertCircle, FileText, CheckCircle2, AlertTriangle, HelpCircle, Save, Loader2, CheckCheck } from 'lucide-react';
 import { arredondarNotaMS, getCorGradiente } from '../utils/academicUtils';
 import { printReport } from '../utils/printUtils';
 
@@ -28,6 +28,7 @@ interface RAVStudentRow {
   notaNecessariaAnual: number;
   elegivelSemestral: boolean;
   elegivelBimestral: boolean;
+  notaRAV: number | null; // nota já lançada no RAV
 }
 
 export function RAVListModal({
@@ -44,7 +45,13 @@ export function RAVListModal({
   const [ravMode, setRavMode] = useState<'bimestral' | 'semestral'>('bimestral');
   const [turmaNome, setTurmaNome] = useState('');
   const [disciplinaNome, setDisciplinaNome] = useState('');
-  
+
+  // Lançamento de notas RAV
+  const [ravAvalId, setRavAvalId] = useState<string | null>(null);
+  const [notasInput, setNotasInput] = useState<Record<string, string>>({});
+  const [savingAluno, setSavingAluno] = useState<string | null>(null);
+  const [savedAlunos, setSavedAlunos] = useState<Set<string>>(new Set());
+
   const printTableRef = useRef<HTMLTableElement>(null);
 
   useEffect(() => {
@@ -137,6 +144,53 @@ export function RAVListModal({
           if (fetchedVistos) vistosList = fetchedVistos;
         }
 
+        // 8. Buscar ou criar avaliação de RAV para este bimestre
+        let ravAvaliacaoId: string | null = null;
+        const { data: existingRAV } = await supabase
+          .from('avaliacoes')
+          .select('id')
+          .eq('professor_id', professor.id)
+          .eq('turma_id', turmaId)
+          .eq('disciplina_id', disciplinaId)
+          .eq('bimestre_id', bimestreId)
+          .eq('nome', 'RAV')
+          .maybeSingle();
+
+        if (existingRAV) {
+          ravAvaliacaoId = existingRAV.id;
+        } else {
+          // Criar avaliação RAV com valor máximo = 10 (a nota do RAV substitui a média do bimestre)
+          const { data: newRAV } = await supabase
+            .from('avaliacoes')
+            .insert({
+              professor_id: professor.id,
+              turma_id: turmaId,
+              disciplina_id: disciplinaId,
+              bimestre_id: bimestreId,
+              nome: 'RAV',
+              valor_maximo: 10,
+              publicada: false
+            })
+            .select('id')
+            .single();
+          if (newRAV) ravAvaliacaoId = newRAV.id;
+        }
+        setRavAvalId(ravAvaliacaoId);
+
+        // 9. Buscar notas de RAV já lançadas
+        const notasRAVMap: Record<string, number> = {};
+        if (ravAvaliacaoId) {
+          const { data: notasRAVData } = await supabase
+            .from('notas_avaliacoes')
+            .select('aluno_id, nota')
+            .eq('avaliacao_id', ravAvaliacaoId);
+          if (notasRAVData) {
+            notasRAVData.forEach(n => {
+              notasRAVMap[String(n.aluno_id)] = n.nota;
+            });
+          }
+        }
+
         // Mapear dados organizando por bimestre
         const processedRows: RAVStudentRow[] = dataAlunos.map(aluno => {
           const aId = String(aluno.id).trim();
@@ -205,10 +259,8 @@ export function RAVListModal({
           // Fórmulas de Recuperação
           let notaNecessariaSemestral = 0;
           if (isPrimeiroSemestre) {
-            // Meta semestral é 12 pontos totais. Nota necessária em B2 = 12.0 - B1
             notaNecessariaSemestral = Math.max(0, 12.0 - b1);
           } else {
-            // Meta semestral é 12 pontos totais. Nota necessária em B4 = 12.0 - B3
             notaNecessariaSemestral = Math.max(0, 12.0 - b3);
           }
 
@@ -218,19 +270,19 @@ export function RAVListModal({
             notaNecessariaAnual = Math.max(0, 24.0 - b1 - b2 - b3);
           }
 
+          const notaRAV = notasRAVMap[aId] ?? null;
+
           return {
             aluno_id: aluno.id,
             aluno_nome: aluno.nome,
             aluno_numero: aluno.aluno_numero,
-            b1,
-            b2,
-            b3,
-            b4,
+            b1, b2, b3, b4,
             mediaSemestral,
             notaNecessariaSemestral,
             notaNecessariaAnual,
             elegivelSemestral,
-            elegivelBimestral
+            elegivelBimestral,
+            notaRAV
           };
         });
 
@@ -239,10 +291,8 @@ export function RAVListModal({
         if (activeMode === 'bimestral') {
           filteredAlunos = processedRows.filter(a => a.elegivelBimestral);
         } else {
-          // No modo semestral, mostramos alunos elegíveis do semestre, ou se no B4, alunos que precisam de nota alta para aprovação anual
           filteredAlunos = processedRows.filter(a => {
             if (bimestreId === 4) {
-              // No B4, mostramos se elegível semestral OR se precisa de mais nota anual do que já tem para passar direto
               const totalJaAdquirido = a.b1 + a.b2 + a.b3;
               const precisaParaPassarDireto = 24.0 - totalJaAdquirido;
               return a.elegivelSemestral || precisaParaPassarDireto > a.b4;
@@ -252,6 +302,14 @@ export function RAVListModal({
         }
 
         setAlunos(filteredAlunos);
+
+        // Inicializar inputs com notas já lançadas
+        const inputsInit: Record<string, string> = {};
+        filteredAlunos.forEach(a => {
+          if (a.notaRAV !== null) inputsInit[a.aluno_id] = String(a.notaRAV);
+        });
+        setNotasInput(inputsInit);
+        setSavedAlunos(new Set(filteredAlunos.filter(a => a.notaRAV !== null).map(a => a.aluno_id)));
       } catch (err) {
         console.error('Erro ao montar relatório de RAV:', err);
       } finally {
@@ -263,6 +321,31 @@ export function RAVListModal({
   }, [isOpen, professor.id, turmaId, disciplinaId, bimestreId, professor.config_visto_valor_total]);
 
   if (!isOpen) return null;
+
+  // Salvar nota RAV de um aluno
+  async function handleSaveNotaRAV(alunoId: string) {
+    if (!ravAvalId) return;
+    const rawVal = notasInput[alunoId];
+    const nota = parseFloat(String(rawVal).replace(',', '.'));
+    if (isNaN(nota) || nota < 0 || nota > 10) {
+      alert('Digite uma nota válida entre 0 e 10.');
+      return;
+    }
+    setSavingAluno(alunoId);
+    try {
+      const { error } = await supabase
+        .from('notas_avaliacoes')
+        .upsert({ avaliacao_id: ravAvalId, aluno_id: alunoId, nota }, { onConflict: 'avaliacao_id,aluno_id' });
+      if (error) throw error;
+      setSavedAlunos(prev => new Set(prev).add(alunoId));
+      // Atualiza o notaRAV localmente
+      setAlunos(prev => prev.map(a => a.aluno_id === alunoId ? { ...a, notaRAV: nota } : a));
+    } catch (err: any) {
+      alert('Erro ao salvar nota RAV: ' + err.message);
+    } finally {
+      setSavingAluno(null);
+    }
+  }
 
   const handlePrint = () => {
     const isPrimeiroSemestre = bimestreId <= 2;
@@ -408,6 +491,7 @@ export function RAVListModal({
                           <th className="px-5 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest bg-amber-600/30">Nota Necessária RAV</th>
                         </>
                       )}
+                      <th className="px-5 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest bg-emerald-700/50">🎯 Nota RAV</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-ms-border/30">
@@ -480,6 +564,60 @@ export function RAVListModal({
                               </td>
                             </>
                           )}
+
+                          {/* Coluna de lançamento de nota RAV */}
+                          <td className="px-4 py-3 bg-emerald-500/5">
+                            <div className="flex items-center gap-2 justify-center">
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="10"
+                                  step="0.1"
+                                  placeholder="0.0"
+                                  value={notasInput[aluno.aluno_id] ?? ''}
+                                  onChange={e => {
+                                    setNotasInput(prev => ({ ...prev, [aluno.aluno_id]: e.target.value }));
+                                    setSavedAlunos(prev => { const s = new Set(prev); s.delete(aluno.aluno_id); return s; });
+                                  }}
+                                  onKeyDown={e => { if (e.key === 'Enter') handleSaveNotaRAV(aluno.aluno_id); }}
+                                  className={`w-20 px-2 py-1.5 text-center text-sm font-black rounded-lg border outline-none transition-all ${
+                                    savedAlunos.has(aluno.aluno_id)
+                                      ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400'
+                                      : theme === 'light'
+                                        ? 'border-blue-200 bg-blue-50 text-blue-900 focus:ring-2 focus:ring-ms-blue'
+                                        : 'border-ms-border bg-ms-dark text-white focus:ring-2 focus:ring-ms-blue'
+                                  }`}
+                                />
+                              </div>
+                              <button
+                                onClick={() => handleSaveNotaRAV(aluno.aluno_id)}
+                                disabled={savingAluno === aluno.aluno_id || !notasInput[aluno.aluno_id]}
+                                title="Salvar nota RAV"
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all shadow disabled:opacity-40 ${
+                                  savedAlunos.has(aluno.aluno_id)
+                                    ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
+                                    : 'bg-ms-blue hover:bg-blue-500 text-white'
+                                }`}
+                              >
+                                {savingAluno === aluno.aluno_id ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                ) : savedAlunos.has(aluno.aluno_id) ? (
+                                  <CheckCheck className="w-3.5 h-3.5" />
+                                ) : (
+                                  <Save className="w-3.5 h-3.5" />
+                                )}
+                              </button>
+                            </div>
+                            {/* Indicador se nota RAV aprova o aluno */}
+                            {aluno.notaRAV !== null && (
+                              <div className={`mt-1 text-center text-[8px] font-black uppercase tracking-wider ${
+                                aluno.notaRAV >= 6.0 ? 'text-emerald-400' : 'text-red-400'
+                              }`}>
+                                {aluno.notaRAV >= 6.0 ? '✓ Aprovado no RAV' : '✗ Abaixo da média'}
+                              </div>
+                            )}
+                          </td>
                         </tr>
                       );
                     })}
