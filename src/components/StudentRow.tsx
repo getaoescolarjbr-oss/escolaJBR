@@ -433,7 +433,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
         <td className="md:px-6 px-1.5 md:py-5 py-2.5 whitespace-nowrap">
           <div className="flex items-center gap-1.5 md:gap-4">
             <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 font-black text-xs md:text-base flex-shrink-0 border border-blue-500/20 shadow-sm">
-              {aluno.aluno_numero || aluno.aluno_nome?.charAt(0)?.toUpperCase() || '?'}
+              {index + 1}
             </div>
             <div className="truncate">
               <div className="flex items-center gap-1 md:gap-2 flex-wrap truncate">
@@ -447,7 +447,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         : theme === 'light' ? 'text-[#003366]' : 'text-ms-main'
                   }`}
                 >
-                  {aluno.aluno_numero && <span className="text-ms-gold font-black mr-1">{aluno.aluno_numero}.</span>}
+                  <span className="text-ms-gold font-black mr-1">{index + 1}.</span>
                   <span className="hidden md:inline">{aluno.aluno_nome}</span>
                   <span className="md:hidden inline">{(() => {
                     if (!aluno.aluno_nome) return '';

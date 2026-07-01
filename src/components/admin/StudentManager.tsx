@@ -402,7 +402,7 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
               <tr key={s.id} className={idx % 2 === 0 ? 'bg-ms-dark/20' : 'bg-transparent'}>
                 <td className="px-6 py-4">
                   <span className="text-sm font-black text-ms-gold">
-                    {s.aluno_numero || '-'}
+                    {idx + 1}
                   </span>
                 </td>
                 <td className="px-6 py-4">

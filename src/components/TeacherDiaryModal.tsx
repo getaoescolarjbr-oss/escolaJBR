@@ -371,7 +371,7 @@ export function TeacherDiaryModal({
                                   : theme === 'light' ? 'bg-white' : 'bg-[#0d1117]'
                               }`}>
                                 <div className="flex items-center gap-2 sm:gap-3">
-                                  <span className="text-[10px] font-black text-ms-gold">{student.aluno_numero || '-'}</span>
+                                  <span className="text-[10px] font-black text-ms-gold">{sIdx + 1}</span>
                                   <span className="text-xs text-white truncate max-w-[90px] sm:max-w-[200px] block" title={student.nome}>{student.nome}</span>
                                 </div>
                               </td>
