@@ -123,72 +123,83 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
       }
 
       // 2. Fetch Professors/Disciplines allocated to this turma
+      // Sem joins embutidos do PostgREST (que falham quando nao ha FK detectavel):
+      // buscamos colunas simples e resolvemos nomes com consultas em lote.
       const combinedMap = new Map();
+      const profIds = new Set<string>();
+      const discIds = new Set<string>();
 
       // Fonte A: alocacoes_v2
-      const { data: allocsData } = await supabase
+      const { data: allocsData, error: allocsErr } = await supabase
         .from('alocacoes_v2')
-        .select(`
-          id,
-          professores (id, nome, cargo, config_visto_valor_total),
-          disciplinas (id, nome)
-        `)
+        .select('id, professor_id, disciplina_id')
         .eq('turma_id', selectedTurma);
-      
-      if (allocsData) {
-        allocsData.forEach((a: any) => {
-          if (a.professores?.id && a.disciplinas?.id) {
-            combinedMap.set(`${a.professores.id}-${a.disciplinas.id}`, a);
-          }
-        });
-      }
+      if (allocsErr) console.error('alocacoes_v2:', allocsErr);
+      (allocsData || []).forEach((a: any) => {
+        if (a.professor_id) profIds.add(a.professor_id);
+        if (a.disciplina_id) discIds.add(a.disciplina_id);
+      });
 
-      // Fonte B: horarios
-      const { data: horariosData } = await supabase
+      // Fonte B: horarios (traz disciplina_nome desnormalizado)
+      const { data: horariosData, error: horErr } = await supabase
         .from('horarios')
-        .select(`
-          professor_id,
-          disciplina_id,
-          disciplina_nome,
-          professores!inner(id, nome, cargo, config_visto_valor_total)
-        `)
+        .select('professor_id, disciplina_id, disciplina_nome')
         .eq('turma_id', selectedTurma);
-
-      if (horariosData) {
-        horariosData.forEach((h: any) => {
-          const key = `${h.professor_id}-${h.disciplina_id}`;
-          if (!combinedMap.has(key)) {
-            combinedMap.set(key, {
-              id: key,
-              professores: h.professores,
-              disciplinas: { id: h.disciplina_id, nome: h.disciplina_nome }
-            });
-          }
-        });
-      }
+      if (horErr) console.error('horarios:', horErr);
+      (horariosData || []).forEach((h: any) => {
+        if (h.professor_id) profIds.add(h.professor_id);
+      });
 
       // Fonte C: lista_para_vistos (Legado)
-      const { data: legacyData } = await supabase
+      const { data: legacyData, error: legErr } = await supabase
         .from('lista_para_vistos')
-        .select(`
-          professor_id, professor_nome,
-          disciplina_id, disciplina_nome,
-          professores!inner(id, nome, cargo, config_visto_valor_total)
-        `)
+        .select('professor_id, professor_nome, disciplina_id, disciplina_nome')
         .eq('turma_id', selectedTurma);
+      if (legErr) console.error('lista_para_vistos:', legErr);
+      (legacyData || []).forEach((l: any) => {
+        if (l.professor_id) profIds.add(l.professor_id);
+      });
 
-      if (legacyData) {
-        legacyData.forEach((l: any) => {
-          const key = `${l.professor_id}-${l.disciplina_id}`;
-          if (!combinedMap.has(key)) {
-            combinedMap.set(key, {
-              id: key,
-              professores: l.professores,
-              disciplinas: { id: l.disciplina_id, nome: l.disciplina_nome }
-            });
-          }
-        });
+      // Resolver docentes e disciplinas em lote
+      const profMap = new Map<string, any>();
+      if (profIds.size > 0) {
+        const { data: profs } = await supabase
+          .from('professores')
+          .select('id, nome, cargo, config_visto_valor_total')
+          .in('id', Array.from(profIds));
+        (profs || []).forEach((p: any) => profMap.set(p.id, p));
       }
+      const discNomeMap = new Map<string, any>();
+      if (discIds.size > 0) {
+        const { data: discs } = await supabase
+          .from('disciplinas')
+          .select('id, nome')
+          .in('id', Array.from(discIds));
+        (discs || []).forEach((d: any) => discNomeMap.set(d.id, d));
+      }
+
+      // Montar mapa combinado (chave professor-disciplina)
+      (allocsData || []).forEach((a: any) => {
+        const prof = profMap.get(a.professor_id);
+        const disc = discNomeMap.get(a.disciplina_id);
+        if (prof && disc) {
+          combinedMap.set(`${a.professor_id}-${a.disciplina_id}`, { id: a.id, professores: prof, disciplinas: disc });
+        }
+      });
+      (horariosData || []).forEach((h: any) => {
+        const key = `${h.professor_id}-${h.disciplina_id}`;
+        const prof = profMap.get(h.professor_id);
+        if (prof && !combinedMap.has(key)) {
+          combinedMap.set(key, { id: key, professores: prof, disciplinas: { id: h.disciplina_id, nome: h.disciplina_nome } });
+        }
+      });
+      (legacyData || []).forEach((l: any) => {
+        const key = `${l.professor_id}-${l.disciplina_id}`;
+        const prof = profMap.get(l.professor_id) || { id: l.professor_id, nome: l.professor_nome, config_visto_valor_total: 2.0 };
+        if (!combinedMap.has(key)) {
+          combinedMap.set(key, { id: key, professores: prof, disciplinas: { id: l.disciplina_id, nome: l.disciplina_nome } });
+        }
+      });
 
       setAllocations(Array.from(combinedMap.values()));
 
@@ -784,48 +795,48 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   return (
     <div className="space-y-8">
       {/* Navigation Tabs */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:flex lg:items-center gap-2 p-1 bg-ms-dark/50 border border-ms-border rounded-2xl w-full lg:w-fit">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:flex lg:flex-wrap lg:items-center gap-2 p-1 bg-ms-dark/50 border border-ms-border rounded-2xl w-full">
         <button 
           onClick={() => setActiveTab('overview')}
-          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'overview' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full whitespace-nowrap ${activeTab === 'overview' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
-          <LayoutDashboard className="w-4 h-4" /> Visão Geral
+          <LayoutDashboard className="w-5 h-5" /> Visão Geral
         </button>
         <button 
           onClick={() => setActiveTab('painel_turma')}
-          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'painel_turma' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full whitespace-nowrap ${activeTab === 'painel_turma' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
-          <Activity className="w-4 h-4" /> Painel da Turma
+          <Activity className="w-5 h-5" /> Painel da Turma
         </button>
         <button 
           onClick={() => setActiveTab('alunos')}
-          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'alunos' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full whitespace-nowrap ${activeTab === 'alunos' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
-          <GraduationCap className="w-4 h-4" /> Alunos
+          <GraduationCap className="w-5 h-5" /> Alunos
         </button>
         <button 
           onClick={() => setActiveTab('site')}
-          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'site' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full whitespace-nowrap ${activeTab === 'site' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
-          <Globe className="w-4 h-4" /> Gestão do Site
+          <Globe className="w-5 h-5" /> Gestão do Site
         </button>
         <button 
           onClick={() => setActiveTab('atas')}
-          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'atas' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full whitespace-nowrap ${activeTab === 'atas' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
-          <FileText className="w-4 h-4" /> Gestão de Atas
+          <FileText className="w-5 h-5" /> Gestão de Atas
         </button>
         <button 
           onClick={() => setActiveTab('agenda_avaliacoes')}
-          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'agenda_avaliacoes' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full whitespace-nowrap ${activeTab === 'agenda_avaliacoes' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
-          <Calendar className="w-4 h-4" /> Agenda de Avaliações
+          <Calendar className="w-5 h-5" /> Agenda de Avaliações
         </button>
         <button 
           onClick={() => setActiveTab('novas_ocorrencias')}
-          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full relative ${activeTab === 'novas_ocorrencias' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full whitespace-nowrap relative ${activeTab === 'novas_ocorrencias' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
-          <AlertTriangle className="w-4 h-4" /> Novas Ocorrências
+          <AlertTriangle className="w-5 h-5" /> Novas Ocorrências
           {ocorrenciasPendentes.length > 0 && (
             <span className="ml-1 bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full animate-pulse shadow-md">
               {ocorrenciasPendentes.length}
@@ -834,15 +845,15 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
         </button>
         <button 
           onClick={() => setActiveTab('comunicados')}
-          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'comunicados' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full whitespace-nowrap ${activeTab === 'comunicados' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
-          <Mail className="w-4 h-4" /> Comunicados
+          <Mail className="w-5 h-5" /> Comunicados
         </button>
         <button
           onClick={() => setActiveTab('aniversariantes')}
-          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'aniversariantes' ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40' : 'text-gray-500 hover:text-white'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full whitespace-nowrap ${activeTab === 'aniversariantes' ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40' : 'text-gray-500 hover:text-white'}`}
         >
-          <Cake className="w-4 h-4" /> Aniversários
+          <Cake className="w-5 h-5" /> Aniversários
         </button>
       </div>
       <div className="flex flex-wrap items-center gap-2">
