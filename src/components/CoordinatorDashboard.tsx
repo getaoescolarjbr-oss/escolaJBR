@@ -1174,12 +1174,47 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                          </thead>
                          <tbody className="divide-y divide-ms-border/30">
                          {students.map((aluno, idx) => {
+                             const isInactive = aluno.status && aluno.status !== 'Ativo';
+                             const statusLabel = aluno.status === 'Transferido' ? 'Transferido'
+                               : aluno.status === 'Remanejado' ? 'Remanejado'
+                               : aluno.status === 'Atestado' ? 'Atestado'
+                               : aluno.status === 'Suspenso' || aluno.status === 'Aluno Suspenso' ? 'Suspenso'
+                               : aluno.status === 'Licença Maternidade' ? 'Lic. Mat.'
+                               : aluno.status === 'Cancelada' ? 'Cancelada'
+                               : aluno.status;
+                             const statusColor = aluno.status === 'Transferido' ? 'text-orange-400 bg-orange-500/10 border-orange-500/30'
+                               : aluno.status === 'Remanejado' ? 'text-purple-400 bg-purple-500/10 border-purple-500/30'
+                               : aluno.status === 'Atestado' ? 'text-blue-400 bg-blue-500/10 border-blue-500/30'
+                               : aluno.status === 'Suspenso' || aluno.status === 'Aluno Suspenso' ? 'text-red-400 bg-red-500/10 border-red-500/30'
+                               : aluno.status === 'Licença Maternidade' ? 'text-pink-400 bg-pink-500/10 border-pink-500/30'
+                               : 'text-gray-400 bg-gray-500/10 border-gray-500/30';
+                             const statusBorderColor = aluno.status === 'Transferido' ? 'border-orange-500/30'
+                               : aluno.status === 'Remanejado' ? 'border-purple-500/30'
+                               : aluno.status === 'Atestado' ? 'border-blue-500/30'
+                               : aluno.status === 'Suspenso' || aluno.status === 'Aluno Suspenso' ? 'border-red-500/30'
+                               : aluno.status === 'Licença Maternidade' ? 'border-pink-500/30'
+                               : 'border-gray-500/30';
                              return (
-                             <tr key={aluno.id} className={idx % 2 !== 0 ? 'bg-ms-dark/10 hover:bg-ms-dark/30' : 'bg-transparent hover:bg-ms-dark/20'}>
-                                 <td className={`px-4 py-2 whitespace-nowrap sticky left-0 z-10 border-r border-ms-border/30 transition-colors ${idx % 2 !== 0 ? 'bg-ms-dark' : 'bg-ms-card'}`}>
+                             <tr key={aluno.id} className={`${
+                               isInactive
+                                 ? 'opacity-60 bg-gray-800/40 hover:opacity-80 hover:bg-gray-700/30'
+                                 : idx % 2 !== 0 ? 'bg-ms-dark/10 hover:bg-ms-dark/30' : 'bg-transparent hover:bg-ms-dark/20'
+                             }`}>
+                                 <td className={`px-4 py-2 whitespace-nowrap sticky left-0 z-10 border-r border-ms-border/30 transition-colors ${
+                                    isInactive
+                                      ? (idx % 2 !== 0 ? 'bg-gray-800/80' : 'bg-gray-800/60')
+                                      : (idx % 2 !== 0 ? 'bg-ms-dark' : 'bg-ms-card')
+                                 }`}>
                                    <div className="flex items-center gap-3">
                                        <span className="text-[10px] font-black text-ms-gold">{aluno.aluno_numero || '-'}</span>
-                                       <span className="text-xs font-bold text-ms-main truncate max-w-[200px]" title={aluno.nome}>{aluno.nome}</span>
+                                       <div className="flex flex-col min-w-0">
+                                         <span className={`text-xs font-bold truncate max-w-[200px] ${isInactive ? 'text-gray-400' : 'text-ms-main'}`} title={aluno.nome}>{aluno.nome}</span>
+                                         {isInactive && (
+                                           <span className={`mt-0.5 inline-flex items-center px-1.5 py-0 rounded text-[8px] font-black uppercase tracking-wider border ${statusColor}`}>
+                                             {statusLabel}
+                                           </span>
+                                         )}
+                                       </div>
                                    </div>
                                  </td>
                                  {Object.keys(painelData.atividades).sort().map(disc => {
@@ -1196,9 +1231,13 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                                      const hasAnyData = totalAtiv > 0 || notasInfo.detalhes.length > 0;
 
                                      return (
-                                     <td key={disc} className="px-1 py-2 text-center group/cell border-r border-ms-border/10">
+                                     <td key={disc} className={`px-1 py-2 text-center group/cell border-r border-ms-border/10 ${
+                                       isInactive ? 'bg-gray-900/20' : ''
+                                     }`}>
                                          <div className="flex flex-col items-center justify-center">
-                                            {isEditingGrades ? (
+                                            {isInactive ? (
+                                               <div className={`w-full h-6 rounded border border-dashed bg-gray-800/50 ${statusBorderColor}`} />
+                                            ) : isEditingGrades ? (
                                               hasAnyData ? (
                                                 <button
                                                   onClick={() => setSelectedGradeCell({
