@@ -29,6 +29,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   const [selectedTurma, setSelectedTurma] = useState<string>('');
   const [students, setStudents] = useState<Student[]>([]);
   const [allocations, setAllocations] = useState<any[]>([]);
+  const [docentesOpen, setDocentesOpen] = useState(false); // recolhido por padrao no mobile
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<{ id: string, nome: string } | null>(null);
@@ -922,11 +923,19 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
         {/* Professors Column */}
         <div className="lg:col-span-1 space-y-6">
           <div className="bg-ms-card rounded-3xl border border-ms-border overflow-hidden shadow-xl">
-            <div className="px-6 py-4 bg-ms-blue/10 border-b border-ms-border flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setDocentesOpen(o => !o)}
+              className="w-full px-6 py-4 bg-ms-blue/10 border-b border-ms-border flex items-center gap-3 lg:cursor-default"
+            >
               <Users className="w-5 h-5 text-ms-blue" />
-              <h3 className="text-xs font-black text-white uppercase tracking-widest">Docentes Alocados</h3>
-            </div>
-            <div className="p-4 space-y-3">
+              <h3 className="text-xs font-black text-white uppercase tracking-widest flex-1 text-left">Docentes Alocados</h3>
+              {!loading && allocations.length > 0 && (
+                <span className="lg:hidden text-[10px] font-black text-ms-blue bg-ms-blue/10 rounded-full px-2 py-0.5">{allocations.length}</span>
+              )}
+              <ChevronDown className={`lg:hidden w-4 h-4 text-ms-blue transition-transform ${docentesOpen ? 'rotate-180' : ''}`} />
+            </button>
+            <div className={`p-4 space-y-3 ${docentesOpen ? 'block' : 'hidden'} lg:block`}>
               {loading ? (
                 <div className="py-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-ms-blue" /></div>
               ) : allocations.length === 0 ? (
