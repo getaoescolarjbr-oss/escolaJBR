@@ -8,6 +8,7 @@ import { GradesPanel } from './GradesPanel';
 import { ExameFinalPanel } from './ExameFinalPanel';
 import { ReportsPanel } from './ReportsPanel';
 import { ProfessorMensagensPanel } from './ProfessorMensagensPanel';
+import { AniversariantesPanel } from './AniversariantesPanel';
 import { CalendarioLetivoModal } from './CalendarioLetivoModal';
 import { getCurrentBimestre } from '../utils/academicUtils';
 
@@ -44,7 +45,7 @@ interface DashboardProps {
 }
 
 export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProps) {
-  const [activeTab, setActiveTab] = useState<'aulas' | 'notas' | 'relatorios' | 'comunicados'>(() => {
+  const [activeTab, setActiveTab] = useState<'aulas' | 'notas' | 'relatorios' | 'comunicados' | 'aniversariantes'>(() => {
     return (localStorage.getItem('last-tab') as any) || 'aulas';
   });
   
@@ -622,6 +623,15 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
             </span>
           )}
         </button>
+        <button
+          onClick={() => setActiveTab('aniversariantes')}
+          className={`flex items-center justify-center sm:justify-start gap-2 px-3 sm:px-6 py-3 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider sm:tracking-widest transition-all w-full sm:w-auto ${
+            activeTab === 'aniversariantes' ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40' :
+            theme === 'light' ? 'text-blue-900 hover:bg-blue-50' : 'text-blue-200 hover:text-white'
+          }`}
+        >
+          🎂 Aniversários
+        </button>
       </div>
 
       {/* Header Dinâmico */}
@@ -922,6 +932,8 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
             theme={theme} 
             onReadConfirmed={fetchUnreadCount} 
           />
+        ) : activeTab === 'aniversariantes' ? (
+          <AniversariantesPanel />
         ) : !selectedTurma || !selectedDisciplina ? (
           <EmptyState />
         ) : (

@@ -4,16 +4,18 @@ import type { Professor, Turma, Student } from '../types';
 import { Clock, LogOut, Eye, AlertTriangle, CheckCircle, Loader2, ChevronDown, Users, Zap, Printer } from 'lucide-react';
 import { SignaturePad } from './SignaturePad';
 import { printReport } from '../utils/printUtils';
+import { AniversariantesPanel } from './AniversariantesPanel';
 
 interface Props { professor: Professor; theme: 'dark' | 'light'; }
 
-type Tab = 'atrasos' | 'saida' | 'monitor' | 'ocorrencia';
+type Tab = 'atrasos' | 'saida' | 'monitor' | 'ocorrencia' | 'aniversariantes';
 
-const TABS: { id: Tab; label: string; icon: React.ElementType; color: string }[] = [
-  { id: 'atrasos',    label: 'Controle de Entrada',    icon: Clock,          color: 'orange' },
-  { id: 'saida',      label: 'Saída Antecipada',       icon: LogOut,         color: 'red'    },
-  { id: 'monitor',    label: 'Monitor de Corredor',    icon: Eye,            color: 'blue'   },
-  { id: 'ocorrencia', label: 'Registrar Ocorrência',   icon: AlertTriangle,  color: 'rose'   },
+const TABS: { id: Tab; label: string; icon: React.ElementType | null; color: string; emoji?: string }[] = [
+  { id: 'atrasos',        label: 'Controle de Entrada',  icon: Clock,          color: 'orange' },
+  { id: 'saida',          label: 'Saída Antecipada',      icon: LogOut,         color: 'red'    },
+  { id: 'monitor',        label: 'Monitor de Corredor',  icon: Eye,            color: 'blue'   },
+  { id: 'ocorrencia',     label: 'Registrar Ocorrência', icon: AlertTriangle,  color: 'rose'   },
+  { id: 'aniversariantes',label: 'Aniversários',         icon: null,           color: 'pink', emoji: '🎂' },
 ];
 
 export function InspetorDashboard({ professor, theme }: Props) {
@@ -278,9 +280,11 @@ export function InspetorDashboard({ professor, theme }: Props) {
           return (
             <button key={t.id} onClick={() => setTab(t.id)}
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
-                active ? 'bg-ms-blue text-white shadow-lg' : `${theme === 'light' ? 'text-[#003366]' : 'text-gray-500'} hover:text-white`
+                active
+                  ? t.color === 'pink' ? 'bg-pink-600 text-white shadow-lg' : 'bg-ms-blue text-white shadow-lg'
+                  : `${theme === 'light' ? 'text-[#003366]' : 'text-gray-500'} hover:text-white`
               }`}>
-              <Icon className="w-4 h-4" /> {t.label}
+              {Icon ? <Icon className="w-4 h-4" /> : <span>{t.emoji}</span>} {t.label}
             </button>
           );
         })}
@@ -641,6 +645,12 @@ export function InspetorDashboard({ professor, theme }: Props) {
               <p className="text-xs font-bold uppercase tracking-widest">Ocorrências ficam registradas na ficha do aluno no Portal do Coordenador</p>
             </div>
           </div>
+        </div>
+      )}
+
+      {tab === 'aniversariantes' && (
+        <div className="mt-4">
+          <AniversariantesPanel />
         </div>
       )}
 

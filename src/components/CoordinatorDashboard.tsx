@@ -14,6 +14,7 @@ import { CalendarioEditor } from './CalendarioEditor';
 import { GradeCellEditModal } from './GradeCellEditModal';
 import { BimestreLockModal } from './BimestreLockModal';
 import { GestaoMensagensPanel } from './GestaoMensagensPanel';
+import { AniversariantesPanel } from './AniversariantesPanel';
 import { StudentManager } from './admin/StudentManager';
 
 interface CoordinatorDashboardProps {
@@ -31,7 +32,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<{ id: string, nome: string } | null>(null);
-  const [activeTab, setActiveTab] = useState<'overview' | 'painel_turma' | 'alunos' | 'site' | 'atas' | 'agenda_avaliacoes' | 'novas_ocorrencias' | 'comunicados'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'painel_turma' | 'alunos' | 'site' | 'atas' | 'agenda_avaliacoes' | 'novas_ocorrencias' | 'comunicados' | 'aniversariantes'>('overview');
   const [ocorrenciasPendentes, setOcorrenciasPendentes] = useState<any[]>([]);
   const [loadingOcorrencias, setLoadingOcorrencias] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -836,6 +837,12 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
           className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'comunicados' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:text-white'}`}
         >
           <Mail className="w-4 h-4" /> Comunicados
+        </button>
+        <button
+          onClick={() => setActiveTab('aniversariantes')}
+          className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'aniversariantes' ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40' : 'text-gray-500 hover:text-white'}`}
+        >
+          🎂 Aniversários
         </button>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -1719,6 +1726,8 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
           </div>
         ) : activeTab === 'comunicados' ? (
           <GestaoMensagensPanel currentCoordinator={professor} theme={theme} />
+        ) : activeTab === 'aniversariantes' ? (
+          <AniversariantesPanel />
         ) : null}
 
       {/* Devolutiva Modal */}

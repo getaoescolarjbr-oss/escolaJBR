@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Professor, AtestadoServidor } from '../../types';
-import { Search, Plus, Edit2, Trash2, Loader2, Save, X, Stethoscope, AlertCircle } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Loader2, Save, X, Stethoscope, AlertCircle, Cake, BadgeCheck } from 'lucide-react';
 import { AtestadoModal } from './AtestadoModal';
 
 export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
@@ -14,12 +14,16 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
   const [editingProfessor, setEditingProfessor] = useState<Professor | null>(null);
   const [atestadoTarget, setAtestadoTarget] = useState<Professor | null>(null);
   const [atestadosAtivos, setAtestadosAtivos] = useState<Map<string, AtestadoServidor>>(new Map());
+  const [customStatus, setCustomStatus] = useState<string[]>([]);
   const [formData, setFormData] = useState<Partial<Professor>>({
     nome: '',
     email: '',
     cargo: 'Professor',
     area_conhecimento: '',
-    habilitar_chamada_interna: true
+    habilitar_chamada_interna: true,
+    data_nascimento: '',
+    publicar_aniversario: true,
+    status_servidor: 'Efetivo(a)'
   });
 
   useEffect(() => {
@@ -66,6 +70,27 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
       }
       setFormData(prev => ({ ...prev, cargo: formatted }));
     }
+  };
+
+  const defaultStatus = ['Efetivo(a)', 'Convocado(a)', 'Contratado(a)'];
+  const availableStatus = Array.from(new Set([...defaultStatus, ...customStatus, ...professors.map(p => p.status_servidor).filter(Boolean) as string[]]));
+
+  const handleAddStatus = () => {
+    const newSt = prompt('Digite o novo status do servidor (ex: Cedido(a), Designado(a)):');
+    if (newSt && newSt.trim()) {
+      const formatted = newSt.trim().charAt(0).toUpperCase() + newSt.trim().slice(1);
+      if (!customStatus.includes(formatted)) {
+        setCustomStatus(prev => [...prev, formatted]);
+      }
+      setFormData(prev => ({ ...prev, status_servidor: formatted }));
+    }
+  };
+
+  const getStatusColor = (status?: string) => {
+    if (status === 'Efetivo(a)') return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30';
+    if (status === 'Convocado(a)') return 'bg-amber-500/10 text-amber-400 border-amber-500/30';
+    if (status === 'Contratado(a)') return 'bg-blue-500/10 text-blue-400 border-blue-500/30';
+    return 'bg-gray-500/10 text-gray-400 border-gray-500/30';
   };
 
   const defaultCargos = [
@@ -117,7 +142,7 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
       alert('Servidor salvo com sucesso!');
       setIsModalOpen(false);
       setEditingProfessor(null);
-      setFormData({ nome: '', email: '', cargo: 'Professor', area_conhecimento: '', habilitar_chamada_interna: true });
+      setFormData({ nome: '', email: '', cargo: 'Professor', area_conhecimento: '', habilitar_chamada_interna: true, data_nascimento: '', publicar_aniversario: true, status_servidor: 'Efetivo(a)' });
       setSearchTerm('');
       await fetchProfessors();
     } catch (err: any) {
@@ -227,7 +252,7 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
           <thead>
             <tr className="bg-[#003366] border-b border-blue-900 shadow-lg">
               <th className="px-6 py-4 text-left text-xs font-black text-white uppercase tracking-wider">Servidor (a)</th>
-              <th className="px-6 py-4 text-left text-xs font-black text-white uppercase tracking-wider">Cargo / Categoria</th>
+              <th className="px-6 py-4 text-left text-xs font-black text-white uppercase tracking-wider">Cargo / Vínculo</th>
               <th className="px-6 py-4 text-left text-xs font-black text-white uppercase tracking-wider">Área de Conhecimento</th>
               <th className="px-6 py-4 text-left text-xs font-black text-white uppercase tracking-wider">Contato</th>
               <th className="px-6 py-4 text-center text-xs font-black text-white uppercase tracking-wider">Ações</th>
@@ -283,9 +308,23 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
                       </div>
                     </td>
                     <td className="px-6 py-4">
-                      <span className="px-3 py-1 bg-blue-500/10 text-ms-blue rounded-full text-[10px] font-black uppercase border border-ms-blue/20">
-                        {p.cargo}
-                      </span>
+                      <div className="flex flex-col gap-1.5">
+                        <span className="px-3 py-1 bg-blue-500/10 text-ms-blue rounded-full text-[10px] font-black uppercase border border-ms-blue/20 w-fit">
+                          {p.cargo}
+                        </span>
+                        {p.status_servidor && (
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border w-fit flex items-center gap-1 ${getStatusColor(p.status_servidor)}`}>
+                            <BadgeCheck className="w-2.5 h-2.5" />
+                            {p.status_servidor}
+                          </span>
+                        )}
+                        {p.data_nascimento && (
+                          <span className="text-[9px] text-gray-500 font-bold flex items-center gap-1">
+                            <Cake className="w-2.5 h-2.5 text-pink-400" />
+                            {new Date(p.data_nascimento + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long' })}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-6 py-4">
                       {p.area_conhecimento ? (
@@ -410,6 +449,55 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
                 </div>
               </div>
 
+              {/* Status do Servidor */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between ml-1">
+                  <label className="text-xs font-black text-[#003366] uppercase tracking-wider">Status / Vínculo</label>
+                  <button
+                    type="button"
+                    onClick={handleAddStatus}
+                    className="text-[10px] font-black text-ms-blue hover:underline uppercase tracking-wider"
+                  >
+                    + Novo Status
+                  </button>
+                </div>
+                <select
+                  value={formData.status_servidor || 'Efetivo(a)'}
+                  onChange={(e) => setFormData({ ...formData, status_servidor: e.target.value })}
+                  className="w-full px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue transition-all"
+                >
+                  {availableStatus.map((st) => (
+                    <option key={st} value={st}>{st}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Data de Nascimento */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-[#003366] uppercase tracking-wider ml-1">Data de Nascimento</label>
+                  <input
+                    type="date"
+                    value={formData.data_nascimento || ''}
+                    onChange={(e) => setFormData({ ...formData, data_nascimento: e.target.value })}
+                    className="w-full px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue transition-all"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-xs font-black text-gray-400 uppercase tracking-wider ml-1">Publicar Aniversário</label>
+                  <div className="flex items-center h-[50px]">
+                    <button
+                      onClick={() => setFormData({ ...formData, publicar_aniversario: !formData.publicar_aniversario })}
+                      className={`relative w-12 h-6 rounded-full transition-colors ${formData.publicar_aniversario !== false ? 'bg-pink-500' : 'bg-gray-700'}`}
+                    >
+                      <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formData.publicar_aniversario !== false ? 'translate-x-6' : ''}`}></div>
+                    </button>
+                    <span className="ml-3 text-xs text-gray-500 font-bold">{formData.publicar_aniversario !== false ? '🎂 Publicar' : 'Não publicar'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chamada Interna */}
               <div className="space-y-2">
                 <label className="text-xs font-black text-gray-400 uppercase tracking-wider ml-1">Chamada Interna</label>
                 <div className="flex items-center h-[50px]">

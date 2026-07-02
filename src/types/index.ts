@@ -22,6 +22,9 @@ export interface Professor {
   config_visto_valor_total: number;
   config_turmas?: Record<string, { config_visto_metodo: 'gradual' | 'simbolico' | 'aberto' | 'ponto'; config_visto_valor_total: number }>;
   bimestre_atual: number;
+  data_nascimento?: string;
+  publicar_aniversario?: boolean;
+  status_servidor?: string;
 }
 
 export interface ListaParaVistos {
