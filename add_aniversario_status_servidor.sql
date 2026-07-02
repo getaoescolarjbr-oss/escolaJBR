@@ -24,14 +24,20 @@ CREATE TABLE IF NOT EXISTS birthday_notifications_log (
   id          UUID        DEFAULT gen_random_uuid() PRIMARY KEY,
   professor_id UUID       NOT NULL REFERENCES professores(id) ON DELETE CASCADE,
   sent_at     TIMESTAMPTZ DEFAULT now() NOT NULL,
-  period      TEXT        NOT NULL CHECK (period IN ('morning', 'afternoon')),
-  -- Garante no máximo 1 envio por servidor por período por dia
-  UNIQUE (professor_id, period, (sent_at::date))
+  period      TEXT        NOT NULL CHECK (period IN ('morning', 'afternoon'))
 );
+
+-- Garante no máximo 1 envio por servidor por período por dia.
+-- Precisa ser um índice único (constraints UNIQUE de tabela não aceitam expressões).
+-- Usamos AT TIME ZONE 'UTC' para tornar a expressão IMUTÁVEL (sent_at::date direto
+-- depende do fuso da sessão e o Postgres recusa no índice — erro 42P17).
+CREATE UNIQUE INDEX IF NOT EXISTS birthday_notif_unique_per_day
+  ON birthday_notifications_log (professor_id, period, ((sent_at AT TIME ZONE 'UTC')::date));
 
 -- RLS: apenas service_role pode ler/inserir
 ALTER TABLE birthday_notifications_log ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Service role full access" ON birthday_notifications_log;
 CREATE POLICY "Service role full access" ON birthday_notifications_log
   USING (true)
   WITH CHECK (true);
