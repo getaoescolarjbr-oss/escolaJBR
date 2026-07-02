@@ -378,7 +378,7 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
       {/* Modal Editar/Criar Servidor */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-ms-card w-full max-w-lg rounded-3xl border border-gray-800 shadow-2xl overflow-hidden scale-in animate-in duration-300">
+          <div className="bg-ms-card w-full max-w-lg rounded-3xl border border-gray-800 shadow-2xl overflow-hidden scale-in animate-in duration-300 max-h-[90vh] flex flex-col">
             <div className="px-8 py-6 border-b border-gray-800 flex items-center justify-between bg-gradient-to-r from-ms-blue/10 to-transparent">
               <h3 className="text-xl font-black text-ms-main">{editingProfessor ? 'Editar Servidor' : 'Novo Servidor'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-800 rounded-full transition-colors">
@@ -386,7 +386,7 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
               </button>
             </div>
             
-            <div className="p-8 space-y-6">
+            <div className="p-8 space-y-6 overflow-y-auto flex-1">
               <div className="space-y-2">
                 <label className="text-xs font-black text-[#003366] uppercase tracking-wider ml-1">Nome Completo</label>
                 <input
