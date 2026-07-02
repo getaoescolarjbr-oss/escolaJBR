@@ -30,6 +30,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   const [students, setStudents] = useState<Student[]>([]);
   const [allocations, setAllocations] = useState<any[]>([]);
   const [docentesOpen, setDocentesOpen] = useState(false); // recolhido por padrao no mobile
+  const [painelScrolled, setPainelScrolled] = useState(false); // true quando a lista do painel esta rolada (cabecalho travado)
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStudent, setSelectedStudent] = useState<{ id: string, nome: string } | null>(null);
@@ -1172,18 +1173,21 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
              ) : students.length === 0 ? (
                  <p className="text-center py-20 text-gray-500 italic">Nenhum aluno encontrado nesta turma.</p>
              ) : (
-                  <div className="overflow-auto max-h-[70vh]">
+                  <div
+                    className="overflow-auto max-h-[calc(100vh-4rem)] sticky top-0 z-30"
+                    onScroll={(e) => setPainelScrolled((e.target as HTMLElement).scrollTop > 4)}
+                  >
                       <table ref={painelTableRef} className="min-w-full divide-y divide-ms-border/30">
                          <thead className="sticky top-0 z-20 bg-[#0a1a3a]">
                          <tr>
                              <th className="px-4 py-3 text-left text-[10px] font-black text-white uppercase tracking-widest sticky left-0 top-0 z-30 bg-[#0a1a3a] border-r border-[#002677]/30 shadow-[2px_0_5px_rgba(0,0,0,0.1)] align-bottom pb-3">Estudante</th>
                              {Object.keys(painelData.atividades).sort().map(disc => (
                                  <th key={disc} className="px-0.5 py-2 text-center text-[10px] font-semibold text-white uppercase tracking-widest min-w-[46px] max-w-[50px] align-bottom border-b border-ms-border/30 bg-[#0a1a3a]">
-                                     <div className="flex flex-col items-center justify-end h-[110px] pb-2">
-                                         <span 
-                                             className="text-[#93c5fd] font-semibold uppercase text-[10px] tracking-wider block text-center" 
-                                             style={{ 
-                                                 writingMode: 'vertical-rl', 
+                                     <div className={`flex flex-col items-center justify-end pb-2 transition-all duration-200 ${painelScrolled ? 'h-[72px]' : 'h-[110px]'}`}>
+                                         <span
+                                             className={`text-[#93c5fd] font-semibold uppercase tracking-wider block text-center transition-all duration-200 ${painelScrolled ? 'text-[8px]' : 'text-[10px]'}`}
+                                             style={{
+                                                 writingMode: 'vertical-rl',
                                                  transform: 'rotate(180deg)',
                                                  whiteSpace: 'normal',
                                                  lineHeight: '1.2'
