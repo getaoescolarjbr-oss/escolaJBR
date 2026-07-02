@@ -9,6 +9,7 @@ import { CoordinatorDashboard } from './components/CoordinatorDashboard';
 import { InspetorDashboard } from './components/InspetorDashboard';
 import { LandingPage } from './components/LandingPage';
 import { getCurrentBimestre } from './utils/academicUtils';
+import { Settings } from 'lucide-react';
 
 
 function App() {
@@ -247,11 +248,11 @@ function App() {
             <div className="flex flex-col gap-6">
               {isAdmin && (
                 <div className="flex justify-end">
-                   <button 
+                   <button
                     onClick={() => setView('admin')}
-                    className="flex items-center gap-2 px-4 py-2 bg-ms-gold/20 text-ms-gold border border-ms-gold/30 rounded-lg font-bold hover:bg-ms-gold/30 transition-all shadow-[0_0_15px_rgba(255,183,0,0.1)]"
+                    className="flex items-center gap-2 px-4 py-2 bg-ms-blue text-white rounded-lg font-bold hover:bg-blue-600 transition-all shadow-lg shadow-blue-900/20"
                    >
-                     ⚙️ Painel Admin
+                     <Settings className="w-4 h-4" /> Painel Admin
                    </button>
                 </div>
               )}
