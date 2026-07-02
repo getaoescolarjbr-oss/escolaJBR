@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, Turma, Student } from '../types';
-import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer, AlertTriangle, CheckCheck, Clock, Mail, MessageSquare, BarChart2, Send, X } from 'lucide-react';
+import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer, AlertTriangle, CheckCheck, Clock, Mail, MessageSquare, BarChart2, Send, X, Cake, Pencil, Lock } from 'lucide-react';
 import { printReport } from '../utils/printUtils';
 import { getCurrentBimestre } from '../utils/academicUtils';
 import { autoUpdateExpiredAbsences } from '../utils/studentUtils';
@@ -842,7 +842,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
           onClick={() => setActiveTab('aniversariantes')}
           className={`flex items-center justify-center lg:justify-start gap-2 px-3 lg:px-6 py-2.5 rounded-xl text-[10px] lg:text-xs font-black uppercase tracking-wider lg:tracking-widest transition-all w-full ${activeTab === 'aniversariantes' ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40' : 'text-gray-500 hover:text-white'}`}
         >
-          🎂 Aniversários
+          <Cake className="w-4 h-4" /> Aniversários
         </button>
       </div>
       <div className="flex flex-wrap items-center gap-2">
@@ -856,13 +856,13 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
           onClick={() => setShowCalendarEditor(true)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-amber-500/10 border border-amber-500/30 text-amber-400 hover:bg-amber-500/20 shadow-md"
         >
-          ✏️ Editar Calendário
+          <Pencil className="w-4 h-4" /> Editar Calendário
         </button>
         <button
           onClick={() => setShowLockModal(true)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-red-500/10 border border-red-500/30 text-red-400 hover:bg-red-500/20 shadow-md shadow-red-950/10"
         >
-          🔒 Bloquear Bimestres
+          <Lock className="w-4 h-4" /> Bloquear Bimestres
         </button>
       </div>
 
@@ -1113,7 +1113,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                     : 'bg-amber-500/10 border-amber-500/30 text-amber-400 hover:bg-amber-500/20'
                 }`}
               >
-                ✏️ {isEditingGrades ? 'Edição Ativa' : 'Editar Notas'}
+                <Pencil className="w-4 h-4" /> {isEditingGrades ? 'Edição Ativa' : 'Editar Notas'}
               </button>
               <div className="relative w-full md:w-56 group">
                 <select

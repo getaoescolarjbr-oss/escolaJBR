@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import type { Professor, AtestadoServidor } from '../types';
 import { supabase } from '../lib/supabase';
 import { StudentList } from './StudentList';
-import { Filter, Users, Calendar, ChevronDown, BookOpen, LayoutDashboard, FileSpreadsheet, ClipboardList, CheckCircle, PlusCircle, Layers, ShieldAlert, Trash2, Save, Mail, Stethoscope, ArrowRightLeft, Eye } from 'lucide-react';
+import { Filter, Users, Calendar, ChevronDown, BookOpen, LayoutDashboard, FileSpreadsheet, ClipboardList, CheckCircle, PlusCircle, Layers, ShieldAlert, Trash2, Save, Mail, Stethoscope, ArrowRightLeft, Eye, Cake } from 'lucide-react';
 import { EmptyState } from './EmptyState';
 import { GradesPanel } from './GradesPanel';
 import { ExameFinalPanel } from './ExameFinalPanel';
@@ -630,7 +630,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
             theme === 'light' ? 'text-blue-900 hover:bg-blue-50' : 'text-blue-200 hover:text-white'
           }`}
         >
-          🎂 Aniversários
+          <Cake className="w-4 h-4" /> Aniversários
         </button>
       </div>
 
