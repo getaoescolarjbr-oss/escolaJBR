@@ -659,10 +659,10 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                 {alunos.map(aluno => {
                     const s = stats[aluno.aluno_id] || { totalVistos: 0, totalAtiv: 0, media: 0, bimestreEntrada: 1 };
                     const percRealizado = s.totalAtiv > 0 ? Math.round((s.totalVistos / s.totalAtiv) * 100) : 0;
-                    const isPosterior = (aluno.status === 'Transferido' || aluno.status === 'Remanejado' || aluno.status === 'Cancelada') && (() => {
-                      const exitBim = getBimestreFromDate(aluno.atestado_inicio);
-                      return exitBim !== null && bimestreId > exitBim;
-                    })();
+                    // Transferido/Remanejado/Cancelada não conta mais como aluno ativo desta
+                    // turma — risca o nome e mostra o status, independente de quando saiu, em
+                    // vez de cair como "crítico" só porque não tem atividades/nota.
+                    const isPosterior = aluno.status === 'Transferido' || aluno.status === 'Remanejado' || aluno.status === 'Cancelada';
                     const isCritico = !isPosterior && (percRealizado <= 35 || arredondarNotaMS(s.media) < 3.5);
                     const aprovado = estaAprovado(s.media, 6);
 
