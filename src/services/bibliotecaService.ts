@@ -99,7 +99,7 @@ export async function buscarAlunos(busca: string): Promise<AlunoBusca[]> {
     .from('alunos')
     .select('id, nome, turmas(nome)')
     .ilike('nome', `%${busca.trim()}%`)
-    .eq('status', 'ATIVO')
+    .eq('status', 'Ativo')
     .limit(10);
   if (error) throw error;
   return (data ?? []).map((a) => ({

@@ -21,7 +21,18 @@ export function CadastrosBibliotecaTab() {
   async function carregar() {
     setLoading(true);
     try {
-      setCadastros(await listarCadastrosPendentes());
+      const lista = await listarCadastrosPendentes();
+      setCadastros(lista);
+      // Pré-seleciona a sugestão que o próprio aluno já escolheu no formulário (ver
+      // rpc_buscar_alunos_matricula) — só facilita, quem confirma de fato ao clicar em
+      // "Aprovar" continua sendo a Secretaria.
+      const sugestoes: Record<string, AlunoBusca | null> = {};
+      lista.forEach((c) => {
+        if (c.aluno_id_sugerido && c.aluno_sugerido_nome) {
+          sugestoes[c.id] = { id: c.aluno_id_sugerido, nome: c.aluno_sugerido_nome, turma_nome: c.aluno_sugerido_turma_nome };
+        }
+      });
+      setSelecionadoPorCadastro((s) => ({ ...s, ...sugestoes }));
     } finally {
       setLoading(false);
     }
@@ -100,6 +111,9 @@ export function CadastrosBibliotecaTab() {
             </div>
 
             <div className="relative">
+              {c.aluno_id_sugerido && selecionadoPorCadastro[c.id]?.id === c.aluno_id_sugerido && (
+                <p className="text-[10px] text-ms-blue font-bold uppercase tracking-wider mb-1">✓ Aluno já selecionou este nome no próprio cadastro — confira antes de aprovar</p>
+              )}
               <div className="relative">
                 <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input

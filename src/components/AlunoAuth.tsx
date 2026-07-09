@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, Loader2 } from 'lucide-react';
+import { BookOpen, Loader2, Search, X } from 'lucide-react';
 import { signInWithPassword } from '../services/authService';
-import { solicitarCadastroBiblioteca, resolverEmailPorUsername } from '../services/cadastroBibliotecaService';
+import { solicitarCadastroBiblioteca, resolverEmailPorUsername, buscarAlunosMatricula } from '../services/cadastroBibliotecaService';
+import type { AlunoMatricula } from '../services/cadastroBibliotecaService';
 import { listarTurmas } from '../services/agendamentoService';
 
 interface AlunoAuthProps {
@@ -25,19 +26,44 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
   const [senha, setSenha] = useState('');
 
   const [turmas, setTurmas] = useState<{ id: string; nome: string }[]>([]);
-  const [nomeInformado, setNomeInformado] = useState('');
+  const [buscaNome, setBuscaNome] = useState('');
+  const [resultadosNome, setResultadosNome] = useState<AlunoMatricula[]>([]);
+  const [buscandoNome, setBuscandoNome] = useState(false);
+  const [alunoSelecionado, setAlunoSelecionado] = useState<AlunoMatricula | null>(null);
   const [dataNascimento, setDataNascimento] = useState('');
   const [turmaId, setTurmaId] = useState('');
   const [responsavelNome, setResponsavelNome] = useState('');
   const [responsavelContato, setResponsavelContato] = useState('');
   const [aceiteTermos, setAceiteTermos] = useState(false);
   const [aceiteFuncoesSociais, setAceiteFuncoesSociais] = useState(false);
+  const [mostrarTermos, setMostrarTermos] = useState(false);
 
   useEffect(() => {
     if (view === 'CADASTRO' && turmas.length === 0) {
       listarTurmas().then(setTurmas).catch(() => {});
     }
   }, [view, turmas.length]);
+
+  async function handleBuscarNome(valor: string) {
+    setBuscaNome(valor);
+    setAlunoSelecionado(null);
+    if (valor.trim().length < 3) {
+      setResultadosNome([]);
+      return;
+    }
+    setBuscandoNome(true);
+    try {
+      setResultadosNome(await buscarAlunosMatricula(valor));
+    } finally {
+      setBuscandoNome(false);
+    }
+  }
+
+  function handleSelecionarAluno(a: AlunoMatricula) {
+    setAlunoSelecionado(a);
+    setResultadosNome([]);
+    if (a.turma_id) setTurmaId(a.turma_id);
+  }
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -61,8 +87,11 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
     setError(null);
     setSuccess(null);
     try {
-      if (!username.trim() || !senha || !nomeInformado.trim()) {
-        throw new Error('Preencha usuário, senha e nome completo.');
+      if (!alunoSelecionado) {
+        throw new Error('Busque seu nome na lista e selecione — precisa ser o nome exatamente como está na matrícula.');
+      }
+      if (!username.trim() || !senha) {
+        throw new Error('Preencha usuário e senha.');
       }
       if (senha.length < 6) {
         throw new Error('A senha precisa ter pelo menos 6 caracteres.');
@@ -73,13 +102,14 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
       await solicitarCadastroBiblioteca({
         username,
         senha,
-        nomeInformado: nomeInformado.trim(),
+        nomeInformado: alunoSelecionado.nome,
         dataNascimento: dataNascimento || null,
         turmaId: turmaId || null,
         responsavelNome: responsavelNome.trim() || null,
         responsavelContato: responsavelContato.trim() || null,
         aceiteTermos,
         aceiteFuncoesSociais,
+        alunoIdSugerido: alunoSelecionado.id,
       });
       // O signUp já deixa uma sessão ativa — segue direto pro app, que mostra a tela
       // de "cadastro em análise" (App.tsx detecta: sessão sem professor e sem papel).
@@ -134,9 +164,39 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
               </form>
             ) : (
               <form onSubmit={handleCadastro} className="space-y-4">
-                <div>
+                <div className="relative">
                   <label className={rotuloClasse}>Nome completo *</label>
-                  <input required value={nomeInformado} onChange={(e) => setNomeInformado(e.target.value)} className={campoClasse} />
+                  <div className="relative">
+                    <Search className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      required
+                      value={alunoSelecionado ? alunoSelecionado.nome : buscaNome}
+                      onChange={(e) => handleBuscarNome(e.target.value)}
+                      placeholder="Digite pelo menos 3 letras do seu nome..."
+                      className={`${campoClasse} pl-9`}
+                    />
+                    {buscandoNome && <Loader2 className="w-4 h-4 text-gray-400 animate-spin absolute right-3 top-1/2 -translate-y-1/2" />}
+                  </div>
+                  <p className="text-[10px] text-gray-500 mt-1">
+                    Busque e selecione seu nome como está na matrícula da escola — só quem já é aluno matriculado consegue se cadastrar.
+                  </p>
+                  {resultadosNome.length > 0 && !alunoSelecionado && (
+                    <div className="absolute z-10 mt-1 w-full bg-white border border-[#003366]/20 rounded-xl overflow-hidden shadow-xl">
+                      {resultadosNome.map((a) => (
+                        <button
+                          type="button"
+                          key={a.id}
+                          onClick={() => handleSelecionarAluno(a)}
+                          className="w-full text-left px-4 py-2.5 text-sm text-[#003366] hover:bg-gray-100 font-medium"
+                        >
+                          {a.nome} {a.turma_nome && <span className="text-[10px] text-gray-500">· {a.turma_nome}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {buscaNome.trim().length >= 3 && !buscandoNome && resultadosNome.length === 0 && !alunoSelecionado && (
+                    <p className="text-[10px] text-amber-600 mt-1">Nenhum aluno encontrado com esse nome — confira a grafia ou fale com a Secretaria.</p>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
@@ -155,6 +215,7 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
                   <div>
                     <label className={rotuloClasse}>Usuário desejado *</label>
                     <input required value={username} onChange={(e) => setUsername(e.target.value)} placeholder="seu.usuario" className={campoClasse} />
+                    <p className="text-[10px] text-gray-500 mt-1">Isso vira seu login — sem espaços/acentos, ex.: joao.silva. Depois é só entrar com ele + sua senha.</p>
                   </div>
                   <div>
                     <label className={rotuloClasse}>Senha *</label>
@@ -174,7 +235,13 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
 
                 <label className="flex items-start gap-2 text-xs text-gray-600">
                   <input type="checkbox" checked={aceiteTermos} onChange={(e) => setAceiteTermos(e.target.checked)} className="mt-0.5" />
-                  Li e concordo com os termos de uso do BiblioClube. Sei que meu cadastro só será ativado depois que a Secretaria confirmar meus dados. *
+                  <span>
+                    Li e concordo com os{' '}
+                    <button type="button" onClick={() => setMostrarTermos(true)} className="font-bold text-ms-blue underline decoration-ms-blue/30 underline-offset-2">
+                      termos de uso
+                    </button>{' '}
+                    do BiblioClube. Sei que meu cadastro só será ativado depois que a Secretaria confirmar meus dados. *
+                  </span>
                 </label>
                 <label className="flex items-start gap-2 text-xs text-gray-600">
                   <input type="checkbox" checked={aceiteFuncoesSociais} onChange={(e) => setAceiteFuncoesSociais(e.target.checked)} className="mt-0.5" />
@@ -205,6 +272,33 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
           </button>
         </div>
       </div>
+
+      {mostrarTermos && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={() => setMostrarTermos(false)}>
+          <div className="bg-white max-w-lg w-full max-h-[80vh] rounded-2xl shadow-2xl flex flex-col" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 shrink-0">
+              <h3 className="text-sm font-black text-[#003366] uppercase tracking-widest">Termos de uso — BiblioClube JBR</h3>
+              <button type="button" onClick={() => setMostrarTermos(false)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-6 py-5 overflow-y-auto text-xs text-gray-700 space-y-3 leading-relaxed">
+              <p><strong>1. O que é o BiblioClube.</strong> É o clube de leitura da biblioteca da escola: você pode consultar o acervo, reservar títulos e, quando o cadastro é aprovado pela Secretaria, retirar livros físicos emprestados no balcão.</p>
+              <p><strong>2. Quem pode se cadastrar.</strong> Só alunos já matriculados na escola. O nome usado no cadastro precisa corresponder a um aluno real da matrícula — por isso o formulário pede para buscar e selecionar o próprio nome, em vez de digitá-lo livremente.</p>
+              <p><strong>3. Aprovação.</strong> O cadastro só é ativado depois que a Secretaria confirma seus dados. Até lá, sua conta consegue apenas ver o status do pedido.</p>
+              <p><strong>4. Empréstimos.</strong> Prazos, limite de renovações e eventual necessidade de reposição em caso de perda/dano do livro seguem as regras internas da biblioteca, informadas no balcão.</p>
+              <p><strong>5. Funções sociais (opcional).</strong> Se você marcar a opção de participar das funções sociais (resenhas, duplas de leitura), seu nome e resenhas ficam visíveis para colegas e professores dentro do sistema — nunca publicados na internet.</p>
+              <p><strong>6. Dados e privacidade.</strong> Os dados informados aqui (nome, nascimento, responsável) são usados só para a Secretaria confirmar seu vínculo com a escola. O consentimento formal (LGPD), incluindo o de participar das funções sociais, só é registrado no momento em que a Secretaria aprova o cadastro — é esse o ponto em que fica garantido que a família está ciente, no caso de aluno menor de idade.</p>
+              <p><strong>7. Conduta.</strong> Use o espaço com respeito — resenhas e interações seguem as mesmas regras de convivência da escola. A Coordenação pode ocultar conteúdo inadequado.</p>
+            </div>
+            <div className="px-6 py-4 border-t border-gray-200 shrink-0">
+              <button type="button" onClick={() => setMostrarTermos(false)} className="w-full bg-ms-blue hover:bg-blue-700 text-white font-bold uppercase tracking-widest py-2.5 rounded-lg transition-all">
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

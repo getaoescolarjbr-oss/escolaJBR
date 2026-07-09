@@ -19,6 +19,9 @@ export interface CadastroBibliotecaPendente {
   aceite_funcoes_sociais: boolean;
   username: string;
   status: 'PENDENTE' | 'APROVADO' | 'REJEITADO';
+  aluno_id_sugerido: string | null;
+  aluno_sugerido_nome: string | null;
+  aluno_sugerido_turma_nome: string | null;
   pessoa_id_vinculada: string | null;
   analisado_por: string | null;
   analisado_em: string | null;
@@ -36,6 +39,26 @@ export interface DadosCadastroAluno {
   responsavelContato: string | null;
   aceiteTermos: boolean;
   aceiteFuncoesSociais: boolean;
+  // Aluno da matrícula que o requerente selecionou na busca do próprio formulário —
+  // só uma sugestão pra Secretaria (ver rpc_buscar_alunos_matricula), não substitui a
+  // aprovação humana.
+  alunoIdSugerido: string | null;
+}
+
+export interface AlunoMatricula {
+  id: string;
+  nome: string;
+  turma_id: string | null;
+  turma_nome: string | null;
+}
+
+// Busca pública (anon) contra a matrícula real — usada no próprio formulário de
+// autocadastro, antes de existir sessão. Só devolve nome/turma (nunca dado sensível).
+export async function buscarAlunosMatricula(busca: string): Promise<AlunoMatricula[]> {
+  if (busca.trim().length < 2) return [];
+  const { data, error } = await supabase.rpc('rpc_buscar_alunos_matricula', { p_busca: busca.trim() });
+  if (error) throw error;
+  return (data ?? []) as AlunoMatricula[];
 }
 
 function normalizarUsername(username: string): string {
@@ -67,6 +90,7 @@ export async function solicitarCadastroBiblioteca(dados: DadosCadastroAluno): Pr
     responsavel_contato: dados.responsavelContato,
     aceite_termos: dados.aceiteTermos,
     aceite_funcoes_sociais: dados.aceiteFuncoesSociais,
+    aluno_id_sugerido: dados.alunoIdSugerido,
     username,
   }]);
   if (error) throw error;
@@ -97,11 +121,19 @@ export async function meuCadastroPendente(authUserId: string): Promise<CadastroB
 export async function listarCadastrosPendentes(): Promise<CadastroBibliotecaPendente[]> {
   const { data, error } = await supabase
     .from('cadastros_biblioteca_pendentes')
-    .select('*, turmas(nome)')
+    .select('*, turmas(nome), alunos!aluno_id_sugerido(nome, turmas(nome))')
     .eq('status', 'PENDENTE')
     .order('criado_em');
   if (error) throw error;
-  return (data ?? []).map((c) => ({ ...c, turma_nome: (c as unknown as { turmas: { nome: string } | null }).turmas?.nome ?? null }));
+  return (data ?? []).map((c) => {
+    const row = c as unknown as { turmas: { nome: string } | null; alunos: { nome: string; turmas: { nome: string } | null } | null };
+    return {
+      ...c,
+      turma_nome: row.turmas?.nome ?? null,
+      aluno_sugerido_nome: row.alunos?.nome ?? null,
+      aluno_sugerido_turma_nome: row.alunos?.turmas?.nome ?? null,
+    };
+  });
 }
 
 export async function aprovarCadastroBiblioteca(cadastroId: string, alunoId: string): Promise<void> {
