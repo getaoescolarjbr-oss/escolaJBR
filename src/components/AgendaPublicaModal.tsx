@@ -123,24 +123,36 @@ export function AgendaPublicaModal({ recurso, onClose, onRequireLogin }: AgendaP
           </button>
         </div>
 
-        <div className="p-6 md:p-8 space-y-3 max-h-[60vh] overflow-y-auto">
+        <div className="p-6 md:p-8 space-y-2 max-h-[60vh] overflow-y-auto">
           {loading ? (
             <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-[#002f6c]" /></div>
-          ) : (
-            dias.map((dia) => {
-              const dataStr = dia.toISOString().slice(0, 10);
-              const ocupados = slots
-                .filter((s) => s.data === dataStr)
-                .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
+          ) : (() => {
+            // Só lista os dias que têm algo marcado — dia livre não ocupa espaço na
+            // lista, só entra na contagem do resumo abaixo (era o que fazia o modal
+            // exigir rolagem pra semana inteira mesmo com tudo livre).
+            const diasComOcupacao = dias
+              .map((dia) => {
+                const dataStr = dia.toISOString().slice(0, 10);
+                const ocupados = slots
+                  .filter((s) => s.data === dataStr)
+                  .sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
+                return { dia, dataStr, ocupados };
+              })
+              .filter((d) => d.ocupados.length > 0);
 
-              return (
-                <div key={dataStr} className="border border-gray-200 rounded-xl p-4">
-                  <p className="font-black text-[#002f6c] uppercase text-xs tracking-wide mb-2">
-                    {dia.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })}
-                  </p>
-                  {ocupados.length === 0 ? (
-                    <p className="text-sm text-green-600 font-bold">Livre o dia todo</p>
-                  ) : (
+            if (diasComOcupacao.length === 0) {
+              return <p className="text-sm text-green-600 font-bold text-center py-4">Livre a semana toda</p>;
+            }
+
+            const diasLivres = 7 - diasComOcupacao.length;
+
+            return (
+              <>
+                {diasComOcupacao.map(({ dia, dataStr, ocupados }) => (
+                  <div key={dataStr} className="border border-gray-200 rounded-xl p-3">
+                    <p className="font-black text-[#002f6c] uppercase text-xs tracking-wide mb-1.5">
+                      {dia.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: '2-digit' })}
+                    </p>
                     <ul className="space-y-1">
                       {ocupados.map((s, idx) => (
                         <li key={idx} className="text-sm text-gray-700 flex items-center gap-2">
@@ -149,11 +161,16 @@ export function AgendaPublicaModal({ recurso, onClose, onRequireLogin }: AgendaP
                         </li>
                       ))}
                     </ul>
-                  )}
-                </div>
-              );
-            })
-          )}
+                  </div>
+                ))}
+                {diasLivres > 0 && (
+                  <p className="text-xs text-green-600 font-bold text-center pt-1">
+                    + {diasLivres} dia{diasLivres > 1 ? 's' : ''} livre{diasLivres > 1 ? 's' : ''} nesta semana
+                  </p>
+                )}
+              </>
+            );
+          })()}
         </div>
 
         <div className="p-6 md:p-8 pt-0">

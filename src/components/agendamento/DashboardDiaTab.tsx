@@ -46,14 +46,22 @@ export function DashboardDiaTab() {
         <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>
       ) : porRecurso.size === 0 ? (
         <p className="text-sm text-gray-500">Nenhum recurso ativo cadastrado.</p>
-      ) : (
-        <div className="space-y-4">
-          {Array.from(porRecurso.entries()).map(([recursoId, { nome, reservas }]) => (
-            <div key={recursoId} className="bg-ms-card border border-gray-800 rounded-2xl p-5 space-y-2">
-              <p className="text-sm font-black text-ms-main">{nome}</p>
-              {reservas.length === 0 ? (
-                <p className="text-xs text-gray-500">Livre o dia todo.</p>
-              ) : (
+      ) : (() => {
+        // Só lista quem tem reserva no dia — recurso livre só entra na contagem do
+        // resumo abaixo, não ocupa um card inteiro pra dizer "Livre o dia todo".
+        const entradas = Array.from(porRecurso.entries());
+        const ocupados = entradas.filter(([, { reservas }]) => reservas.length > 0);
+        const livres = entradas.length - ocupados.length;
+
+        if (ocupados.length === 0) {
+          return <p className="text-sm text-green-500 font-bold text-center py-4">Todos os recursos livres neste dia.</p>;
+        }
+
+        return (
+          <div className="space-y-2">
+            {ocupados.map(([recursoId, { nome, reservas }]) => (
+              <div key={recursoId} className="bg-ms-card border border-gray-800 rounded-2xl p-4 space-y-1.5">
+                <p className="text-sm font-black text-ms-main">{nome}</p>
                 <div className="space-y-1.5">
                   {reservas.map((r) => (
                     <div key={r.reserva_id} className={`flex items-center justify-between px-3 py-2 rounded-lg border text-sm ${r.status === 'PENDENTE' ? 'bg-amber-950/10 border-amber-700/40' : 'bg-ms-dark border-gray-800'}`}>
@@ -68,11 +76,16 @@ export function DashboardDiaTab() {
                     </div>
                   ))}
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+              </div>
+            ))}
+            {livres > 0 && (
+              <p className="text-xs text-green-500 font-bold text-center pt-1">
+                + {livres} recurso{livres > 1 ? 's' : ''} livre{livres > 1 ? 's' : ''} neste dia
+              </p>
+            )}
+          </div>
+        );
+      })()}
     </div>
   );
 }
