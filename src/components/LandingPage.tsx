@@ -7,11 +7,20 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { CalendarioLetivoModal } from './CalendarioLetivoModal';
+import { CardapioPublicoModal } from './CardapioPublicoModal';
+import { ContatoModal } from './ContatoModal';
+import { MatriculaInfoModal } from './MatriculaInfoModal';
+import { EmBreveModal } from './EmBreveModal';
+import { AgendaPublicaModal } from './AgendaPublicaModal';
+import { listarRecursos } from '../services/agendamentoService';
+import type { Recurso } from '../types/agendamento';
 import { calendarData } from '../data/calendarData';
 import './LandingPage.css';
 
 interface LandingPageProps {
-  onEnterPortal: (role?: 'professor' | 'coordinator' | 'director' | 'admin') => void;
+  // 'aluno' abre o login já no modo BiblioClube (AlunoAuth), em vez do login padrão
+  // de servidor — usado pelo atalho "Biblioteca" do Acesso Rápido.
+  onEnterPortal: (destino?: 'aluno') => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
@@ -22,10 +31,43 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
   const [loading, setLoading] = React.useState(true);
   const [showHistoryModal, setShowHistoryModal] = React.useState(false);
   const [showCalendarModal, setShowCalendarModal] = React.useState(false);
+  const [showCardapioModal, setShowCardapioModal] = React.useState(false);
+  const [showContatoModal, setShowContatoModal] = React.useState(false);
+  const [showMatriculaModal, setShowMatriculaModal] = React.useState(false);
+  const [emBreveTitulo, setEmBreveTitulo] = React.useState<string | null>(null);
+  const [recursos, setRecursos] = React.useState<Recurso[]>([]);
+  const [recursoAgendaAberta, setRecursoAgendaAberta] = React.useState<Recurso | null>(null);
 
   React.useEffect(() => {
     fetchLandingData();
   }, []);
+
+  // Recursos (Lab. Ciências, Lab. Informática, Quadra Esportiva, ...) são públicos —
+  // busca a lista para ligar os cards de Acesso Rápido à agenda de verdade, e para
+  // suportar o link direto ?modulo=agendamento&recurso=<id> (compartilhável).
+  React.useEffect(() => {
+    listarRecursos()
+      .then((lista) => {
+        setRecursos(lista);
+        const params = new URLSearchParams(window.location.search);
+        const recursoIdNaUrl = params.get('modulo') === 'agendamento' ? params.get('recurso') : null;
+        if (recursoIdNaUrl) {
+          const encontrado = lista.find((r) => r.id === recursoIdNaUrl);
+          if (encontrado) setRecursoAgendaAberta(encontrado);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  function abrirAgendaDoRecurso(trechoNome: string) {
+    const encontrado = recursos.find((r) => r.nome.toLowerCase().includes(trechoNome.toLowerCase()));
+    if (!encontrado) {
+      setEmBreveTitulo('Agendamento');
+      return;
+    }
+    setRecursoAgendaAberta(encontrado);
+    window.history.replaceState({}, '', `/?modulo=agendamento&recurso=${encontrado.id}`);
+  }
 
   const syncInstagramFeed = async () => {
     try {
@@ -384,7 +426,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
                 <a href="#">Projeto Político-Pedagógico</a>
                 <a href="#">Regimento Escolar</a>
                 <a href="#" onClick={(e) => { e.preventDefault(); setShowCalendarModal(true); }}>Calendário Letivo 2026</a>
-                <a href="#">Cardápio da Merenda</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); setShowCardapioModal(true); }}>Cardápio da Merenda</a>
                 <a href="#">Formulários</a>
               </div>
             )}
@@ -414,7 +456,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
             </a>
           </div>
           <div className="nav-item">
-            <a href="#" className="flex items-center gap-2">
+            <a href="#" className="flex items-center gap-2" onClick={(e) => { e.preventDefault(); setShowContatoModal(true); }}>
               <Phone size={18} /> Contato
             </a>
           </div>
@@ -484,37 +526,37 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
               <h4>Calendário Letivo</h4>
               <p>Datas e eventos 2026</p>
             </a>
-            <a className="quick-card" href="#">
+            <a className="quick-card" href="#" onClick={(e) => { e.preventDefault(); setShowMatriculaModal(true); }}>
               <span className="icon"><FileText size={32} strokeWidth={1.5} /></span>
               <h4>Matrícula</h4>
               <p>Informações e formulários</p>
             </a>
-            <a className="quick-card" href="#">
+            <a className="quick-card" href="#" onClick={(e) => { e.preventDefault(); setShowCardapioModal(true); }}>
               <span className="icon"><BookOpen size={32} strokeWidth={1.5} /></span>
               <h4>Cardápio Escolar</h4>
               <p>Merenda da semana</p>
             </a>
-            <a className="quick-card" href="#">
+            <a className="quick-card" href="#" onClick={(e) => { e.preventDefault(); onEnterPortal('aluno'); }}>
               <span className="icon"><Users size={32} strokeWidth={1.5} /></span>
               <h4>Biblioteca</h4>
               <p>BiblioClube JBR</p>
             </a>
-            <a className="quick-card" href="#">
+            <a className="quick-card" href="#" onClick={(e) => { e.preventDefault(); abrirAgendaDoRecurso('Ciências'); }}>
               <span className="icon"><Layers size={32} strokeWidth={1.5} /></span>
               <h4>Lab. Ciências</h4>
               <p>Reservas e atividades</p>
             </a>
-            <a className="quick-card" href="#">
+            <a className="quick-card" href="#" onClick={(e) => { e.preventDefault(); abrirAgendaDoRecurso('Informática'); }}>
               <span className="icon"><Globe size={32} strokeWidth={1.5} /></span>
               <h4>Lab. Informática</h4>
               <p>Agendamentos</p>
             </a>
-            <a className="quick-card" href="#">
+            <a className="quick-card" href="#" onClick={(e) => { e.preventDefault(); abrirAgendaDoRecurso('Quadra'); }}>
               <span className="icon"><Trophy size={32} strokeWidth={1.5} /></span>
               <h4>Quadra Esportiva</h4>
               <p>Horários e reservas</p>
             </a>
-            <a className="quick-card" href="#">
+            <a className="quick-card" href="#" onClick={(e) => { e.preventDefault(); setShowContatoModal(true); }}>
               <span className="icon"><Phone size={32} strokeWidth={1.5} /></span>
               <h4>Fale com a Escola</h4>
               <p>Canais de atendimento</p>
@@ -958,10 +1000,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
             <div className="footer-col">
               <h4>Serviços</h4>
               <ul>
-                <li><a href="#">Calendário</a></li>
-                <li><a href="#">Matrícula</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); setShowCalendarModal(true); }}>Calendário</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); setShowMatriculaModal(true); }}>Matrícula</a></li>
                 <li><a href="#" onClick={(e) => { e.preventDefault(); onEnterPortal(); }}>Portal do Servidor</a></li>
-                <li><a href="#">Biblioteca</a></li>
+                <li><a href="#" onClick={(e) => { e.preventDefault(); onEnterPortal('aluno'); }}>Biblioteca</a></li>
               </ul>
             </div>
             <div className="footer-col">
@@ -977,9 +1019,44 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
       </footer>
 
       {/* MODAL CALENDÁRIO LETIVO 2026 */}
-      <CalendarioLetivoModal 
-        isOpen={showCalendarModal} 
-        onClose={() => setShowCalendarModal(false)} 
+      <CalendarioLetivoModal
+        isOpen={showCalendarModal}
+        onClose={() => setShowCalendarModal(false)}
+      />
+
+      {/* MODAL CARDÁPIO ESCOLAR */}
+      <CardapioPublicoModal
+        isOpen={showCardapioModal}
+        onClose={() => setShowCardapioModal(false)}
+      />
+
+      {/* MODAL FALE COM A ESCOLA */}
+      <ContatoModal
+        isOpen={showContatoModal}
+        onClose={() => setShowContatoModal(false)}
+      />
+
+      {/* MODAL MATRÍCULA */}
+      <MatriculaInfoModal
+        isOpen={showMatriculaModal}
+        onClose={() => setShowMatriculaModal(false)}
+      />
+
+      {/* MODAL "EM BREVE" (Biblioteca — e fallback se algum recurso não for encontrado) */}
+      <EmBreveModal
+        isOpen={emBreveTitulo !== null}
+        titulo={emBreveTitulo ?? ''}
+        onClose={() => setEmBreveTitulo(null)}
+      />
+
+      {/* AGENDA PÚBLICA DO RECURSO (Lab. Ciências, Lab. Informática, Quadra Esportiva) */}
+      <AgendaPublicaModal
+        recurso={recursoAgendaAberta}
+        onClose={() => {
+          setRecursoAgendaAberta(null);
+          window.history.replaceState({}, '', '/');
+        }}
+        onRequireLogin={() => onEnterPortal()}
       />
     </div>
   );

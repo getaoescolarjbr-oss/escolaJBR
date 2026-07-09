@@ -16,7 +16,8 @@ export default {
           card: 'var(--bg-card)',   
           header: 'var(--header-bg)',
           accent: 'var(--accent-ms)',
-          main: 'var(--text-main)', 
+          main: 'var(--text-main)',
+          muted: 'var(--text-muted)',
           border: 'var(--border-main)',
           yellow: '#f59e0b', 
           red: '#ef4444'     

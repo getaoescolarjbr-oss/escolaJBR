@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor } from '../types';
 import { Cake, PartyPopper, Star } from 'lucide-react';
+import { SectionIcon } from './ui/SectionIcon';
 
 interface AniversarianteInfo {
   id: string;
@@ -75,12 +76,10 @@ export function AniversariantesPanel() {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-pink-500/10 border border-pink-500/20 flex items-center justify-center">
-          <Cake className="w-5 h-5 text-pink-400" />
-        </div>
+        <SectionIcon icon={Cake} cor="pink" tamanho="md" />
         <div>
           <h2 className="text-xl font-black text-white tracking-tight">
-            🎂 Aniversariantes de {MESES[mesAtual - 1]}
+            Aniversariantes de {MESES[mesAtual - 1]}
           </h2>
           <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">
             Servidores que fazem aniversário este mês

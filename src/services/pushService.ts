@@ -94,6 +94,68 @@ export async function notifyProfessorDevolutiva(opts: {
 }
 
 /**
+ * Notifica o professor quando alguém (Coordenação/Gestão) reserva um recurso em nome
+ * dele, ou quando a reserva nasce PENDENTE aguardando aprovação.
+ */
+export async function notifyReservaCriada(opts: {
+  professor_user_id: string;
+  recurso_nome: string;
+  data: string;
+  hora_inicio: string;
+  pendente: boolean;
+}): Promise<void> {
+  const dataFormatada = new Date(opts.data + 'T12:00:00').toLocaleDateString('pt-BR');
+  await sendPushToUsers({
+    user_ids: [opts.professor_user_id],
+    title: opts.pendente ? '📅 Reserva pendente de aprovação' : '📅 Reserva confirmada',
+    message: `${opts.recurso_nome} — ${dataFormatada} às ${opts.hora_inicio.slice(0, 5)}${opts.pendente ? ' (aguardando aprovação)' : ''}`,
+    url: '/?modulo=agendamento',
+    tag: 'reserva-criada',
+  });
+}
+
+/**
+ * Notifica o professor quando sua reserva pendente é aprovada ou recusada.
+ */
+export async function notifyReservaDecidida(opts: {
+  professor_user_id: string;
+  recurso_nome: string;
+  aprovada: boolean;
+}): Promise<void> {
+  await sendPushToUsers({
+    user_ids: [opts.professor_user_id],
+    title: opts.aprovada ? '✅ Reserva aprovada' : '❌ Reserva recusada',
+    message: opts.aprovada
+      ? `Sua reserva de ${opts.recurso_nome} foi confirmada pela Coordenação/Gestão.`
+      : `Sua reserva de ${opts.recurso_nome} foi recusada pela Coordenação/Gestão.`,
+    url: '/?modulo=agendamento',
+    tag: 'reserva-decidida',
+  });
+}
+
+/**
+ * Notifica um destinatário específico (professor ou coordenação) de que alguém
+ * compartilhou uma reserva com ele — mesma infraestrutura de push de sempre, sem
+ * segundo sistema de notificação.
+ */
+export async function notifyReservaCompartilhada(opts: {
+  destinatario_user_id: string;
+  compartilhado_por_nome: string;
+  recurso_nome: string;
+  data: string;
+  hora_inicio: string;
+}): Promise<void> {
+  const dataFormatada = new Date(opts.data + 'T12:00:00').toLocaleDateString('pt-BR');
+  await sendPushToUsers({
+    user_ids: [opts.destinatario_user_id],
+    title: '🔗 Reserva compartilhada com você',
+    message: `${opts.compartilhado_por_nome} compartilhou: ${opts.recurso_nome} — ${dataFormatada} às ${opts.hora_inicio.slice(0, 5)}`,
+    url: '/?modulo=agendamento',
+    tag: 'reserva-compartilhada',
+  });
+}
+
+/**
  * Notifica TODOS os servidores sobre o aniversário de um colega
  */
 export async function notifyAniversarioGeral(opts: {

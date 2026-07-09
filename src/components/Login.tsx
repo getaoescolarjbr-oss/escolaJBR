@@ -1,14 +1,19 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { signInWithPassword, registerFirstAccess, resetPassword } from '../services/authService';
+import { AlunoAuth } from './AlunoAuth';
 
 interface LoginProps {
   onLogin: () => void;
   onBack?: () => void;
+  // 'aluno' abre já no modo BiblioClube (atalho "Biblioteca" da home pública).
+  modoInicial?: 'servidor' | 'aluno';
 }
 
 type ViewState = 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD';
 
-export function Login({ onLogin, onBack }: LoginProps) {
+export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps) {
+  const [modoAluno, setModoAluno] = useState(modoInicial === 'aluno');
   const [view, setView] = useState<ViewState>('LOGIN');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -27,10 +32,10 @@ export function Login({ onLogin, onBack }: LoginProps) {
 
     try {
       if (view === 'LOGIN') {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        const { error } = await signInWithPassword(email, password);
         if (error) throw error;
         onLogin();
-      } 
+      }
       
       else if (view === 'REGISTER') {
         // 1. Verifica se o professor existe na tabela pelo email
@@ -49,10 +54,7 @@ export function Login({ onLogin, onBack }: LoginProps) {
         }
 
         // 2. Cria o usuário no auth
-        const { data: authData, error: authError } = await supabase.auth.signUp({
-          email,
-          password,
-        });
+        const { data: authData, error: authError } = await registerFirstAccess(email, password);
 
         if (authError) throw authError;
 
@@ -73,18 +75,22 @@ export function Login({ onLogin, onBack }: LoginProps) {
       } 
       
       else if (view === 'FORGOT_PASSWORD') {
-        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        const { error } = await resetPassword(email);
         if (error) throw error;
         setSuccess("Instruções de recuperação enviadas para o seu e-mail.");
         setView('LOGIN');
       }
 
-    } catch (err: any) {
-      setError(err.message || "Ocorreu um erro inesperado.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ocorreu um erro inesperado.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (modoAluno) {
+    return <AlunoAuth onLogin={onLogin} onVoltar={() => setModoAluno(false)} onBack={onBack} />;
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4 relative overflow-hidden">
@@ -210,6 +216,9 @@ export function Login({ onLogin, onBack }: LoginProps) {
               &larr; Voltar para o Login
             </button>
           )}
+          <button type="button" onClick={() => setModoAluno(true)} className="text-gray-500 hover:text-gray-700 transition-colors text-xs">
+            É aluno da escola? <span className="font-bold text-ms-blue underline decoration-ms-blue/30 underline-offset-4">Entrar no BiblioClube</span>
+          </button>
         </div>
       </div>
     </div>

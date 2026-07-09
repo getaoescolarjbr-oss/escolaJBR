@@ -374,7 +374,12 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
 
   if (loading) return <div className="p-20 text-center text-gray-500">Gerando relatórios e analisando métricas...</div>;
 
-  const alunosCriticos = alunos.filter(a => {
+  // Transferido/Remanejado/Cancelada não estão mais frequentando — não contam no
+  // total da turma nem entram na triagem de "estado crítico" (senão apareceriam
+  // sempre com 0% atividades / nota 0, mascarando quem realmente precisa de atenção).
+  const alunosAtivos = alunos.filter(a => a.status !== 'Transferido' && a.status !== 'Remanejado' && a.status !== 'Cancelada');
+
+  const alunosCriticos = alunosAtivos.filter(a => {
       const s = stats[a.aluno_id];
       if (!s) return false;
       const percRealizado = s.totalAtiv > 0 ? Math.round((s.totalVistos / s.totalAtiv) * 100) : 0;
@@ -619,7 +624,7 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                       <Users className="w-5 h-5" />
                   </div>
                   <h3 className={`text-lg font-black uppercase tracking-tight ${theme === 'light' ? 'text-[#1e5e2f]' : 'text-[#a7ffc4]'}`}>
-                      Panorama de Desempenho - {alunos.length} Alunos
+                      Panorama de Desempenho - {alunosAtivos.length} Alunos
                   </h3>
                 </div>
                 <button
@@ -629,7 +634,7 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                     const thead = document.createElement('thead');
                     thead.innerHTML = `<tr><th>Nº</th><th>Estudante</th><th>Média</th><th>Vistos</th><th>Status</th></tr>`;
                     const tbody = document.createElement('tbody');
-                    alunos.forEach((aluno, idx) => {
+                    alunosAtivos.forEach((aluno, idx) => {
                       const s = stats[aluno.aluno_id] || { totalVistos: 0, totalAtiv: 0, media: 0 };
                       const perc = s.totalAtiv > 0 ? Math.round((s.totalVistos / s.totalAtiv) * 100) : 0;
                       const ap = estaAprovado(s.media, 6);

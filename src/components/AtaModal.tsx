@@ -44,35 +44,18 @@ export function AtaModal({ aluno, template, ataExistente, onClose, onUploadSucce
       setNumeroSequencial(ataExistente.numero_sequencial || null);
       setMode('preview'); // Por padrão, visualizar se já existe
     } else {
-      // Obter próximo número sequencial sugerido do banco
+      // Prévia apenas visual — o número real e definitivo é atribuído de forma
+      // atômica pelo servidor (rpc_emitir_ata) no momento de salvar, por ano letivo.
       const fetchProximoNumero = async () => {
-        try {
-          // 1. Busca o último número sequencial usado
-          const { data: lastAta } = await supabase
-            .from('atas_alunos')
-            .select('numero_sequencial')
-            .order('numero_sequencial', { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          
-          const proximoAposUltimo = (lastAta?.numero_sequencial || 0) + 1;
-
-          // 2. Busca número inicial configurado pelo coordenador
-          let numeroInicial = 1;
-          try {
-            const { data: config } = await supabase
-              .from('configuracoes_escola')
-              .select('valor')
-              .eq('chave', 'ata_numero_inicial')
-              .maybeSingle();
-            if (config?.valor) numeroInicial = parseInt(config.valor, 10) || 1;
-          } catch { /* ignora erro se tabela não existir */ }
-
-          // Usa o maior entre o configurado e o próximo após o último
-          setNumeroSequencial(Math.max(proximoAposUltimo, numeroInicial));
-        } catch (e) {
-          setNumeroSequencial(1);
-        }
+        const anoLetivo = new Date(dataAta + 'T12:00:00').getFullYear();
+        const { data: lastAta } = await supabase
+          .from('atas_alunos')
+          .select('numero_sequencial')
+          .eq('ano_letivo', anoLetivo)
+          .order('numero_sequencial', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        setNumeroSequencial((lastAta?.numero_sequencial || 0) + 1);
       };
       fetchProximoNumero();
     }
@@ -193,20 +176,8 @@ Texto informal para aprimorar:
     try {
       setIsSaving(true);
 
-      // Obter ou recalcular o número sequencial final para evitar duplicados
-      let finalNum = numeroSequencial;
-      if (!ataExistente && !finalNum) {
-        const { data, error } = await supabase
-          .from('atas_alunos')
-          .select('numero_sequencial')
-          .order('numero_sequencial', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        finalNum = (data?.numero_sequencial || 0) + 1;
-      }
-
       if (ataExistente) {
-        // Atualizar ata existente
+        // Atualizar ata existente (conteúdo/data/acordado — número não muda)
         const { error } = await supabase
           .from('atas_alunos')
           .update({
@@ -219,21 +190,22 @@ Texto informal para aprimorar:
         if (error) throw error;
         alert('Ata atualizada com sucesso!');
       } else {
-        // Inserir nova ata
-        const { error } = await supabase
-          .from('atas_alunos')
-          .insert({
-            aluno_id: String(aluno.aluno_id).trim(),
-            template_id: template.id,
-            titulo: titulo,
-            conteudo_gerado: conteudoGerado,
-            numero_sequencial: finalNum,
-            data_ata: dataAta,
-            acordado: acordado,
-            bimestre_id: bimestreAtual
-          });
+        // Emissão: número sequencial é atribuído atomicamente pelo servidor
+        // (rpc_emitir_ata), por ano letivo — nunca calculado no cliente.
+        const anoLetivo = new Date(dataAta + 'T12:00:00').getFullYear();
+        const { data, error } = await supabase.rpc('rpc_emitir_ata', {
+          p_aluno_id: String(aluno.aluno_id).trim(),
+          p_template_id: template.id,
+          p_titulo: titulo,
+          p_conteudo_gerado: conteudoGerado,
+          p_data_ata: dataAta,
+          p_acordado: acordado,
+          p_bimestre_id: bimestreAtual,
+          p_ano_letivo: anoLetivo
+        });
 
         if (error) throw error;
+        setNumeroSequencial(data?.numero_sequencial ?? null);
         alert('Ata salva com sucesso!');
       }
 

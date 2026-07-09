@@ -12,9 +12,14 @@ interface HeaderProps {
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
   isAdmin?: boolean;
+  // Rótulo de contexto (módulo/rota atual), calculado no App.tsx a partir de papel e
+  // não de professor.cargo — evita mostrar um cargo de banco (ex.: "Coordenador")
+  // como se fosse o nível de acesso de quem está logado. Opcional só para não
+  // quebrar quem ainda não passa essa prop; cai de volta no cargo se ausente.
+  contexto?: string;
 }
 
-export function Header({ professor, onLogout, onUpdateProfessor, theme, onToggleTheme, isAdmin }: HeaderProps) {
+export function Header({ professor, onLogout, onUpdateProfessor, theme, onToggleTheme, isAdmin, contexto }: HeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const handleLogout = async () => {
@@ -63,7 +68,7 @@ export function Header({ professor, onLogout, onUpdateProfessor, theme, onToggle
                   </span>
                   <div className="flex flex-col items-end">
                     <span className="text-xs text-blue-200">
-                      {professor ? professor.cargo : 'Administrador'}
+                      {contexto || (professor ? professor.cargo : 'Administrador')}
                     </span>
                     {professor?.area_conhecimento && (
                       <span className="text-[10px] bg-ms-blue/20 text-blue-300 px-1.5 py-0.5 rounded-full font-medium mt-0.5 border border-blue-800">

@@ -800,43 +800,43 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:flex lg:flex-wrap lg:items-center gap-2 p-1 bg-ms-dark/50 border border-ms-border rounded-2xl w-full">
         <button 
           onClick={() => setActiveTab('overview')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'overview' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'overview' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
         >
           <LayoutDashboard className="w-5 h-5" /> Visão Geral
         </button>
         <button 
           onClick={() => setActiveTab('painel_turma')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'painel_turma' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'painel_turma' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
         >
           <Activity className="w-5 h-5" /> Painel da Turma
         </button>
         <button 
           onClick={() => setActiveTab('alunos')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'alunos' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'alunos' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
         >
           <GraduationCap className="w-5 h-5" /> Alunos
         </button>
         <button 
           onClick={() => setActiveTab('site')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'site' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'site' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
         >
           <Globe className="w-5 h-5" /> Gestão do Site
         </button>
         <button 
           onClick={() => setActiveTab('atas')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'atas' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'atas' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
         >
           <FileText className="w-5 h-5" /> Gestão de Atas
         </button>
         <button 
           onClick={() => setActiveTab('agenda_avaliacoes')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'agenda_avaliacoes' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'agenda_avaliacoes' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
         >
           <Calendar className="w-5 h-5" /> Agenda de Avaliações
         </button>
         <button 
           onClick={() => setActiveTab('novas_ocorrencias')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap relative ${activeTab === 'novas_ocorrencias' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap relative ${activeTab === 'novas_ocorrencias' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
         >
           <AlertTriangle className="w-5 h-5" /> Novas Ocorrências
           {ocorrenciasPendentes.length > 0 && (
@@ -847,13 +847,13 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
         </button>
         <button 
           onClick={() => setActiveTab('comunicados')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'comunicados' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'comunicados' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
         >
           <Mail className="w-5 h-5" /> Comunicados
         </button>
         <button
           onClick={() => setActiveTab('aniversariantes')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'aniversariantes' ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40' : 'text-gray-500 hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'aniversariantes' ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
         >
           <Cake className="w-5 h-5" /> Aniversários
         </button>
@@ -930,7 +930,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
               className="w-full px-6 py-4 bg-ms-blue/10 border-b border-ms-border flex items-center gap-3 lg:cursor-default"
             >
               <Users className="w-5 h-5 text-ms-blue" />
-              <h3 className="text-xs font-black text-white uppercase tracking-widest flex-1 text-left">Docentes Alocados</h3>
+              <h3 className="text-xs font-black text-white docentes-alocados-titulo uppercase tracking-widest flex-1 text-left">Docentes Alocados</h3>
               {!loading && allocations.length > 0 && (
                 <span className="lg:hidden text-[10px] font-black text-ms-blue bg-ms-blue/10 rounded-full px-2 py-0.5">{allocations.length}</span>
               )}

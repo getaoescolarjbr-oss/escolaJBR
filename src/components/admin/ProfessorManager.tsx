@@ -492,7 +492,10 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
                     >
                       <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform ${formData.publicar_aniversario !== false ? 'translate-x-6' : ''}`}></div>
                     </button>
-                    <span className="ml-3 text-xs text-gray-500 font-bold">{formData.publicar_aniversario !== false ? '🎂 Publicar' : 'Não publicar'}</span>
+                    <span className="ml-3 flex items-center gap-1.5 text-xs text-gray-500 font-bold">
+                      {formData.publicar_aniversario !== false && <Cake className="w-3.5 h-3.5 text-pink-400" />}
+                      {formData.publicar_aniversario !== false ? 'Publicar' : 'Não publicar'}
+                    </span>
                   </div>
                 </div>
               </div>

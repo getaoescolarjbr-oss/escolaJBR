@@ -1,0 +1,16 @@
+-- ====================================================================================
+-- GOVERNANÇA COLEGIADA — ajuste de modelo confirmado pelo usuário: composição oficial
+-- do Colegiado Escolar da rede estadual de MS é paritária (50% profissionais da
+-- educação básica — professores/coordenadores/servidores administrativos — e 50%
+-- estudantes e pais/responsáveis, incluindo representantes do Grêmio e da APM), mais
+-- membros NATOS (Diretor e Diretor-Adjunto, secretários executivos, sem direito a
+-- voto na presidência) — que ficam FORA da paridade.
+--
+-- membro_nato: true para Diretor/Diretor-Adjunto (e qualquer outro membro por cargo,
+-- não por eleição/indicação de segmento) — excluído do cálculo de paridade 50/50.
+-- Não modelamos um campo separado de "direito a voto" granular: a única restrição de
+-- voto citada (na presidência) é inerente ao próprio membro_nato=true, documentada na
+-- tela, não uma regra de negócio adicional no banco (não há fluxo de votação neste
+-- sistema).
+-- ====================================================================================
+ALTER TABLE membros_colegiado ADD COLUMN IF NOT EXISTS membro_nato BOOLEAN NOT NULL DEFAULT false;

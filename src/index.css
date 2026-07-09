@@ -108,6 +108,79 @@
   color: #334e68 !important;
 }
 
+.light-theme .text-gray-400 {
+  color: #334e68 !important;
+}
+
+/* Texto de menus/submenus (abas dentro de um módulo) — azul marinho, com o hover
+   de fundo já resolvido pelas classes hover:bg-ms-blue/10 hover:text-ms-blue no
+   próprio componente. Marcador dedicado (em vez de recolorir text-gray-500 global,
+   que é usado em centenas de lugares sem relação com menus). */
+.light-theme .menu-tab-inactive {
+  color: #003366 !important;
+}
+
+/* "Docentes Alocados" (CoordinatorDashboard) — o título está dentro de um <button>
+   (cabeçalho colapsável), então a regra genérica "button .text-white" (mais abaixo)
+   teria precedência e manteria o texto branco. Este marcador de 3 classes garante
+   especificidade maior para vencer aquele caso específico. */
+.light-theme .text-white.docentes-alocados-titulo {
+  color: #003366 !important;
+}
+
+/* Banners de aviso (LGPD, erro, sucesso, avisos informativos etc.) — construídos
+   como fundo translúcido escuro (ex.: bg-blue-950/20) + texto claro (ex.: text-
+   blue-300 ou text-blue-400), pensado pro tema escuro. No tema claro esse fundo
+   vira um tom pastel bem claro e o texto "300/400" fica claro demais em cima dele
+   (baixo contraste). Seletor de atributo com "*=" pega qualquer tom (300, 400...)
+   sem precisar listar cada um. Só dispara quando bg-{cor}-950/20 E text-{cor}-***
+   aparecem juntos (mesmo elemento ou descendente) — não mexe em usos isolados de
+   text-{cor}-*** (ícones, badges) fora desse padrão de banner. */
+.light-theme [class*="bg-amber-950/20"][class*="text-amber-"],
+.light-theme [class*="bg-amber-950/20"] [class*="text-amber-"] {
+  color: #92400e !important;
+}
+.light-theme [class*="bg-red-950/20"][class*="text-red-"],
+.light-theme [class*="bg-red-950/20"] [class*="text-red-"] {
+  color: #991b1b !important;
+}
+.light-theme [class*="bg-green-950/20"][class*="text-green-"],
+.light-theme [class*="bg-green-950/20"] [class*="text-green-"] {
+  color: #065f46 !important;
+}
+.light-theme [class*="bg-emerald-950/20"][class*="text-emerald-"],
+.light-theme [class*="bg-emerald-950/20"] [class*="text-emerald-"] {
+  color: #065f46 !important;
+}
+.light-theme [class*="bg-blue-950/20"][class*="text-blue-"],
+.light-theme [class*="bg-blue-950/20"] [class*="text-blue-"] {
+  color: #1e40af !important;
+}
+.light-theme [class*="bg-pink-950/20"][class*="text-pink-"],
+.light-theme [class*="bg-pink-950/20"] [class*="text-pink-"] {
+  color: #9d174d !important;
+}
+.light-theme [class*="bg-purple-950/20"][class*="text-purple-"],
+.light-theme [class*="bg-purple-950/20"] [class*="text-purple-"] {
+  color: #6b21a8 !important;
+}
+.light-theme [class*="bg-rose-950/20"][class*="text-rose-"],
+.light-theme [class*="bg-rose-950/20"] [class*="text-rose-"] {
+  color: #9f1239 !important;
+}
+.light-theme [class*="bg-indigo-950/20"][class*="text-indigo-"],
+.light-theme [class*="bg-indigo-950/20"] [class*="text-indigo-"] {
+  color: #3730a3 !important;
+}
+.light-theme [class*="bg-teal-950/20"][class*="text-teal-"],
+.light-theme [class*="bg-teal-950/20"] [class*="text-teal-"] {
+  color: #115e59 !important;
+}
+.light-theme [class*="bg-orange-950/20"][class*="text-orange-"],
+.light-theme [class*="bg-orange-950/20"] [class*="text-orange-"] {
+  color: #9a3412 !important;
+}
+
 /* Blindagem e Preservação de Texto Claro em Containers com Fundo Escuro Sólido */
 
 /* A. Menu Superior (Header) */
