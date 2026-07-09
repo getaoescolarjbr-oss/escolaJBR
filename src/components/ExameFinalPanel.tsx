@@ -25,6 +25,7 @@ export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLoc
   const [notasExame, setNotasExame] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [erroExame, setErroExame] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchAllAnualData() {
@@ -187,6 +188,7 @@ export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLoc
 
   const handleCreateExameAvaliacao = async () => {
     setIsSaving(true);
+    setErroExame(null);
     const { data, error } = await supabase.from('avaliacoes').insert({
       professor_id: professor.id,
       turma_id: turmaId,
@@ -198,6 +200,8 @@ export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLoc
 
     if (!error && data) {
       setExameAvaliacao(data);
+    } else if (error) {
+      setErroExame(error.message);
     }
     setIsSaving(false);
   };
@@ -221,6 +225,11 @@ export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLoc
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
+      {erroExame && (
+        <div className="p-3 bg-red-950/20 border border-red-900/50 rounded-lg text-xs text-red-400 flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" /> Erro ao abrir lançamento de exame: {erroExame}
+        </div>
+      )}
       <div className={`${theme === 'light' ? 'bg-white' : 'bg-ms-card'} rounded-2xl shadow-xl border border-ms-border overflow-hidden`}>
         <div className={`p-4 border-b ${theme === 'light' ? 'bg-[#e6f0ff] border-[#002677]/20' : 'bg-[#0a1a3a] border-[#002677]/30'} flex justify-between items-center`}>
           <div>
