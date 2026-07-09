@@ -32,7 +32,7 @@ interface IndicadorTileProps {
 function IndicadorTile({ label, valor, tom }: IndicadorTileProps) {
   if (!temDados(valor)) {
     return (
-      <div className="bg-ms-dark border border-dashed border-gray-700 rounded-2xl p-4 flex flex-col gap-2">
+      <div className="bg-ms-dark border border-dashed border-gray-700 rounded-2xl p-3 flex flex-col gap-1.5">
         <p className="text-[11px] uppercase tracking-wider text-gray-500 font-bold">{label}</p>
         <p className="flex items-center gap-1.5 text-sm text-gray-600">
           <CircleSlash className="w-3.5 h-3.5" /> Sem dados ainda
@@ -45,7 +45,7 @@ function IndicadorTile({ label, valor, tom }: IndicadorTileProps) {
   const emAtencao = tom === 'atencao' && valor > 0;
 
   return (
-    <div className="bg-ms-card border border-gray-800 rounded-2xl p-4 flex flex-col gap-1">
+    <div className="bg-ms-card border border-gray-800 rounded-2xl p-3 flex flex-col gap-1">
       <p className="text-[11px] uppercase tracking-wider text-gray-500 font-bold">{label}</p>
       <p className={`text-3xl font-black flex items-center gap-2 ${emAtencao ? 'text-amber-400' : 'text-ms-main'}`}>
         {emAtencao && <AlertTriangle className="w-5 h-5" />}
@@ -57,9 +57,9 @@ function IndicadorTile({ label, valor, tom }: IndicadorTileProps) {
 
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
   return (
-    <section className="space-y-2">
+    <section className="space-y-1.5">
       <h2 className="text-xs font-black uppercase tracking-wider text-gray-400">{titulo}</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">{children}</div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">{children}</div>
     </section>
   );
 }
@@ -67,7 +67,7 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
 function BreakdownTile({ label, contagens }: { label: string; contagens: Record<string, number> }) {
   const entradas = Object.entries(contagens);
   return (
-    <div className="bg-ms-card border border-gray-800 rounded-2xl p-4 flex flex-col gap-2">
+    <div className="bg-ms-card border border-gray-800 rounded-2xl p-3 flex flex-col gap-1.5">
       <p className="text-[11px] uppercase tracking-wider text-gray-500 font-bold">{label}</p>
       {entradas.length === 0 ? (
         <p className="text-sm text-gray-600">Nenhum registro.</p>
@@ -116,7 +116,7 @@ function IndicadoresTab() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-500">Atualizado em {new Date(dados.gerado_em).toLocaleString('pt-BR')}</p>
         <button onClick={carregar} className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-card border border-gray-800 rounded-lg text-xs text-gray-400 hover:text-ms-main hover:border-ms-blue transition-colors">
@@ -140,7 +140,7 @@ function IndicadoresTab() {
         <IndicadorTile label="Divergências matrícula × operacional" valor={dados.secretaria.divergencias_matricula.total} tom="atencao" />
       </Secao>
       {dados.secretaria.divergencias_matricula.matriculas_registradas === 0 && (
-        <p className="-mt-4 text-[11px] text-gray-600">
+        <p className="-mt-3 text-[11px] text-gray-600">
           Nenhuma matrícula formal registrada ainda no ano corrente — o indicador de divergências não é conclusivo até a Secretaria começar a usar essa tela.
         </p>
       )}
