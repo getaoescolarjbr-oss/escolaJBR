@@ -33,7 +33,7 @@ function IndicadorTile({ label, valor, tom }: IndicadorTileProps) {
   if (!temDados(valor)) {
     return (
       <div className="bg-ms-dark border border-dashed border-gray-700 rounded-2xl p-3 flex flex-col gap-1.5">
-        <p className="text-[11px] uppercase tracking-wider text-gray-500 font-bold">{label}</p>
+        <p className="text-[11px] uppercase tracking-wider text-[#2563eb] font-bold">{label}</p>
         <p className="flex items-center gap-1.5 text-sm text-gray-600">
           <CircleSlash className="w-3.5 h-3.5" /> Sem dados ainda
         </p>
@@ -46,7 +46,7 @@ function IndicadorTile({ label, valor, tom }: IndicadorTileProps) {
 
   return (
     <div className="bg-ms-card border border-gray-800 rounded-2xl p-3 flex flex-col gap-1">
-      <p className="text-[11px] uppercase tracking-wider text-gray-500 font-bold">{label}</p>
+      <p className="text-[11px] uppercase tracking-wider text-[#2563eb] font-bold">{label}</p>
       <p className={`text-3xl font-black flex items-center gap-2 ${emAtencao ? 'text-amber-400' : 'text-ms-main'}`}>
         {emAtencao && <AlertTriangle className="w-5 h-5" />}
         {formatarValor(valor)}
@@ -68,14 +68,14 @@ function BreakdownTile({ label, contagens }: { label: string; contagens: Record<
   const entradas = Object.entries(contagens);
   return (
     <div className="bg-ms-card border border-gray-800 rounded-2xl p-3 flex flex-col gap-1.5">
-      <p className="text-[11px] uppercase tracking-wider text-gray-500 font-bold">{label}</p>
+      <p className="text-[11px] uppercase tracking-wider text-[#2563eb] font-bold">{label}</p>
       {entradas.length === 0 ? (
         <p className="text-sm text-gray-600">Nenhum registro.</p>
       ) : (
         <div className="space-y-1">
           {entradas.map(([chave, valor]) => (
             <div key={chave} className="flex items-center justify-between text-sm">
-              <span className="text-gray-400">{chave}</span>
+              <span className="text-[#2563eb]">{chave}</span>
               <span className="font-bold text-ms-main">{formatarValor(valor)}</span>
             </div>
           ))}
