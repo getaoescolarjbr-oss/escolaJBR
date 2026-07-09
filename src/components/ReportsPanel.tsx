@@ -458,7 +458,89 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                       </div>
                   </div>
                   
-                  <div className="overflow-x-auto touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
+                  {/* Mobile: cards empilhados com as notas em etiquetas que quebram linha —
+                      mais confiável do que depender do usuário arrastar a tabela pro lado. */}
+                  <div className="sm:hidden divide-y divide-ms-border/30">
+                    {alunos.map((aluno, idx) => {
+                      const s = statsAnual[aluno.aluno_id] || { b1: 0, b2: 0, b3: 0, b4: 0, soma: 0, mediaAnual: 0, aprovado: false, bimestreEntrada: 1, exitBim: null };
+                      const bEntrada = s.bimestreEntrada || 1;
+                      const bimestres = [
+                        { n: 1, val: s.b1, na: bEntrada > 1 || (s.exitBim !== null && s.exitBim < 1) },
+                        { n: 2, val: s.b2, na: bEntrada > 2 || (s.exitBim !== null && s.exitBim < 2) },
+                        { n: 3, val: s.b3, na: bEntrada > 3 || (s.exitBim !== null && s.exitBim < 3) },
+                        { n: 4, val: s.b4, na: s.exitBim !== null && s.exitBim < 4 },
+                      ];
+                      return (
+                        <div key={aluno.aluno_id} className={`p-4 space-y-2.5 ${idx % 2 !== 0 ? (theme === 'light' ? 'bg-[#fcfdfe]' : 'bg-[#0d131f]') : ''}`}>
+                          <div className="flex items-center justify-between gap-2 flex-wrap">
+                            <span className={`text-xs font-bold ${
+                              aluno.status === 'Transferido' || aluno.status === 'Remanejado'
+                                ? 'line-through text-gray-500 opacity-60'
+                                : theme === 'light' ? 'text-blue-950' : 'text-white'
+                            }`}>
+                              <span className="text-[10px] font-black text-ms-gold mr-1">{idx + 1}.</span>
+                              {aluno.aluno_nome}
+                            </span>
+                            {aluno.status && aluno.status !== 'Ativo' && (
+                              <span className={`shrink-0 text-[8px] px-2 py-0.5 rounded-full font-black uppercase border tracking-normal ${
+                                aluno.status === 'Transferido' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+                                aluno.status === 'Remanejado' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                                aluno.status === 'Atestado' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+                                aluno.status === 'Suspenso' || aluno.status === 'Aluno Suspenso' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+                                aluno.status === 'Licença Maternidade' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
+                                'bg-red-500/20 text-red-400 border-red-500/30'
+                              }`}>
+                                {aluno.status}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex flex-wrap gap-1.5">
+                            {bimestres.map((b) => (
+                              <span key={b.n} className={`px-2 py-1 rounded-lg text-[10px] font-black ${b.na ? 'bg-gray-500/10 text-gray-400 italic font-medium' : 'bg-ms-dark/40 text-ms-main'}`}>
+                                {b.n}º BIM: {b.na ? 'N/A' : b.val.toFixed(1)}
+                              </span>
+                            ))}
+                            <span className="px-2 py-1 rounded-lg text-[10px] font-black bg-blue-500/5 text-blue-500">
+                              Soma: {s.soma.toFixed(1)}
+                            </span>
+                            <span className="px-2 py-1 rounded-lg text-[10px] font-black bg-blue-500/10" style={{ color: getCorGradiente(s.mediaAnual, theme) }}>
+                              Média: {s.mediaAnual.toFixed(1)}
+                            </span>
+                          </div>
+
+                          {aluno.status && aluno.status !== 'Ativo' && aluno.status !== 'Atestado' ? (
+                            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                aluno.status === 'Transferido' ? 'bg-orange-500/15 text-orange-500 border border-orange-500/20' :
+                                aluno.status === 'Remanejado' ? 'bg-purple-500/15 text-purple-500 border border-purple-500/20' :
+                                'bg-red-500/15 text-red-500 border border-red-500/20'
+                            }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${
+                                  aluno.status === 'Transferido' ? 'bg-orange-500' :
+                                  aluno.status === 'Remanejado' ? 'bg-purple-500' :
+                                  'bg-red-500'
+                                }`} />
+                                {aluno.status}
+                            </div>
+                          ) : (
+                            <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                s.aprovado
+                                  ? 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/20'
+                                  : 'bg-red-500/15 text-red-500 border border-red-500/20'
+                            }`}>
+                                <span className={`w-1.5 h-1.5 rounded-full ${s.aprovado ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                                {s.aprovado ? 'Aprovado' : 'Exame'}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {alunos.length === 0 && (
+                      <p className="py-10 text-center text-gray-500 text-xs italic">Nenhum aluno encontrado para esta turma.</p>
+                    )}
+                  </div>
+
+                  <div className="hidden sm:block overflow-x-auto touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
                       <table ref={tableAnualRef} className="w-full divide-y divide-ms-border/30">
                           <thead className={theme === 'light' ? 'bg-ms-blue' : 'bg-ms-accent'}>
                           <tr>
