@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Search, BookPlus, RotateCw, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import type { EmprestimoDetalhado, AlunoBusca, ExemplarComLivro } from '../../services/bibliotecaService';
+import type { EmprestimoDetalhado, AlunoBusca, ProfessorBusca, ExemplarComLivro } from '../../services/bibliotecaService';
 import {
   buscarAlunos,
+  buscarProfessores,
   buscarExemplaresDisponiveis,
   criarEmprestimo,
   listarEmprestimosAtivos,
@@ -11,6 +12,8 @@ import {
   renovarEmprestimo,
   contarReservasAtivas,
 } from '../../services/bibliotecaService';
+
+type TipoTomador = 'ALUNO' | 'PROFESSOR';
 
 const PRAZO_PADRAO_DIAS = 14;
 
@@ -30,9 +33,10 @@ export function EmprestimosTab() {
   const [emprestimos, setEmprestimos] = useState<EmprestimoDetalhado[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const [buscaAluno, setBuscaAluno] = useState('');
-  const [alunosEncontrados, setAlunosEncontrados] = useState<AlunoBusca[]>([]);
-  const [alunoSelecionado, setAlunoSelecionado] = useState<AlunoBusca | null>(null);
+  const [tipoTomador, setTipoTomador] = useState<TipoTomador>('ALUNO');
+  const [buscaTomador, setBuscaTomador] = useState('');
+  const [tomadoresEncontrados, setTomadoresEncontrados] = useState<(AlunoBusca | ProfessorBusca)[]>([]);
+  const [tomadorSelecionado, setTomadorSelecionado] = useState<(AlunoBusca | ProfessorBusca) | null>(null);
 
   const [buscaExemplar, setBuscaExemplar] = useState('');
   const [exemplaresEncontrados, setExemplaresEncontrados] = useState<ExemplarComLivro[]>([]);
@@ -57,10 +61,21 @@ export function EmprestimosTab() {
     return () => clearTimeout(timeout);
   }, []);
 
-  async function handleBuscarAluno(valor: string) {
-    setBuscaAluno(valor);
-    setAlunoSelecionado(null);
-    setAlunosEncontrados(valor.trim().length >= 2 ? await buscarAlunos(valor) : []);
+  async function handleBuscarTomador(valor: string) {
+    setBuscaTomador(valor);
+    setTomadorSelecionado(null);
+    if (valor.trim().length < 2) {
+      setTomadoresEncontrados([]);
+      return;
+    }
+    setTomadoresEncontrados(tipoTomador === 'ALUNO' ? await buscarAlunos(valor) : await buscarProfessores(valor));
+  }
+
+  function handleTrocarTipoTomador(tipo: TipoTomador) {
+    setTipoTomador(tipo);
+    setBuscaTomador('');
+    setTomadoresEncontrados([]);
+    setTomadorSelecionado(null);
   }
 
   async function handleBuscarExemplar(valor: string) {
@@ -70,16 +85,22 @@ export function EmprestimosTab() {
   }
 
   async function handleRegistrarEmprestimo() {
-    if (!alunoSelecionado || !exemplarSelecionado) {
-      setErro('Selecione o aluno e o exemplar.');
+    if (!tomadorSelecionado || !exemplarSelecionado) {
+      setErro(`Selecione o(a) ${tipoTomador === 'ALUNO' ? 'aluno' : 'professor'} e o exemplar.`);
       return;
     }
     setSalvando(true);
     setErro(null);
     try {
-      await criarEmprestimo({ exemplar_id: exemplarSelecionado.id, aluno_id: alunoSelecionado.id, data_prevista: dataPrevista, criado_por: usuarioId });
-      setAlunoSelecionado(null);
-      setBuscaAluno('');
+      await criarEmprestimo({
+        exemplar_id: exemplarSelecionado.id,
+        aluno_id: tipoTomador === 'ALUNO' ? tomadorSelecionado.id : null,
+        professor_id: tipoTomador === 'PROFESSOR' ? tomadorSelecionado.id : null,
+        data_prevista: dataPrevista,
+        criado_por: usuarioId,
+      });
+      setTomadorSelecionado(null);
+      setBuscaTomador('');
       setExemplarSelecionado(null);
       setBuscaExemplar('');
       setDataPrevista(dataPrevistaPadrao());
@@ -118,22 +139,37 @@ export function EmprestimosTab() {
     <div className="space-y-6">
       <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-4">
         <p className="text-xs font-black uppercase tracking-wider text-ms-main">Registrar empréstimo</p>
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleTrocarTipoTomador('ALUNO')}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${tipoTomador === 'ALUNO' ? 'bg-ms-blue text-white' : 'bg-ms-dark border border-gray-800 text-gray-400'}`}
+          >
+            Aluno
+          </button>
+          <button
+            onClick={() => handleTrocarTipoTomador('PROFESSOR')}
+            className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all ${tipoTomador === 'PROFESSOR' ? 'bg-ms-blue text-white' : 'bg-ms-dark border border-gray-800 text-gray-400'}`}
+          >
+            Professor
+          </button>
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="relative">
             <div className="relative">
               <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
-                placeholder="Buscar aluno pelo nome..."
-                value={alunoSelecionado ? alunoSelecionado.nome : buscaAluno}
-                onChange={(e) => handleBuscarAluno(e.target.value)}
+                placeholder={tipoTomador === 'ALUNO' ? 'Buscar aluno pelo nome...' : 'Buscar professor pelo nome...'}
+                value={tomadorSelecionado ? tomadorSelecionado.nome : buscaTomador}
+                onChange={(e) => handleBuscarTomador(e.target.value)}
                 className="w-full pl-9 pr-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
               />
             </div>
-            {alunosEncontrados.length > 0 && !alunoSelecionado && (
+            {tomadoresEncontrados.length > 0 && !tomadorSelecionado && (
               <div className="absolute z-10 mt-1 w-full bg-ms-dark border border-gray-800 rounded-xl overflow-hidden shadow-xl">
-                {alunosEncontrados.map((a) => (
-                  <button key={a.id} onClick={() => { setAlunoSelecionado(a); setAlunosEncontrados([]); }} className="w-full text-left px-4 py-2 text-sm text-ms-main hover:bg-ms-card">
-                    {a.nome} {a.turma_nome && <span className="text-[10px] text-gray-500">· {a.turma_nome}</span>}
+                {tomadoresEncontrados.map((t) => (
+                  <button key={t.id} onClick={() => { setTomadorSelecionado(t); setTomadoresEncontrados([]); }} className="w-full text-left px-4 py-2 text-sm text-ms-main hover:bg-ms-card">
+                    {t.nome} {'turma_nome' in t && t.turma_nome && <span className="text-[10px] text-gray-500">· {t.turma_nome}</span>}
+                    {'cargo' in t && t.cargo && <span className="text-[10px] text-gray-500">· {t.cargo}</span>}
                   </button>
                 ))}
               </div>
@@ -190,7 +226,7 @@ export function EmprestimosTab() {
                 <div>
                   <p className="text-sm font-bold text-ms-main">{e.livro_titulo} <span className="text-[10px] text-gray-500">({e.tombo})</span></p>
                   <p className="text-[11px] text-gray-500">
-                    {e.aluno_nome} · prevista para {new Date(e.data_prevista + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    {e.tomador_nome}{e.tomador_tipo === 'PROFESSOR' && <span className="text-[9px] text-ms-blue font-bold uppercase ml-1">(professor)</span>} · prevista para {new Date(e.data_prevista + 'T00:00:00').toLocaleDateString('pt-BR')}
                     {e.renovacoes > 0 && ` · ${e.renovacoes}x renovado`}
                     {atrasado && <span className="ml-2 text-red-400 font-bold">ATRASADO</span>}
                   </p>

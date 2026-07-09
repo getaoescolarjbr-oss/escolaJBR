@@ -22,8 +22,11 @@ export const MODULOS_NAV: ModuloNavItem[] = [
   { id: 'agendamento', label: 'Agendamento', icon: CalendarClock, roles: ['PROFESSOR', 'COORDENACAO', 'GESTAO'] },
   // Fase 2: acervo. Papel ALUNO entra no menu a partir da Fase 4 (home do aluno).
   // COORDENACAO entrou na Fase 7: tem poder de moderação (denúncias/resenhas) desde
-  // a Fase 1, mas só ganhou uma aba pra usar isso agora (ver ModeracaoTab).
-  { id: 'biblioteca', label: 'Biblioteca', icon: BookOpen, roles: ['BIBLIOTECA', 'COORDENACAO', 'GESTAO'] },
+  // a Fase 1, mas só ganhou uma aba pra usar isso agora (ver ModeracaoTab). PROFESSOR
+  // entrou depois pra poder reservar livros para si mesmo (autoatendimento) — dentro
+  // do módulo, App.tsx decide entre o painel do bibliotecário e a tela de
+  // autoatendimento conforme o papel (ver ProfessorBibliotecaTab).
+  { id: 'biblioteca', label: 'Biblioteca', icon: BookOpen, roles: ['BIBLIOTECA', 'COORDENACAO', 'GESTAO', 'PROFESSOR'] },
   // Fase 1: painel de indicadores (só leitura, só GESTAO). A partir dos sub-módulos
   // administrativos (Almoxarifado etc.) o módulo abriu pra todo servidor — a aba de
   // Indicadores continua restrita a GESTAO dentro do próprio painel

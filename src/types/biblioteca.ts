@@ -55,7 +55,9 @@ export type StatusEmprestimo = 'ATIVO' | 'DEVOLVIDO' | 'ATRASADO';
 export interface Emprestimo {
   id: string;
   exemplar_id: string;
-  aluno_id: string;
+  // Mutuamente exclusivos — ver create_biblioteca_professor_emprestimos.sql.
+  aluno_id: string | null;
+  professor_id: string | null;
   data_emprestimo: string;
   data_prevista: string;
   data_devolucao: string | null;
@@ -71,7 +73,8 @@ export type StatusReservaLivro = 'ATIVA' | 'ATENDIDA' | 'CANCELADA' | 'EXPIRADA'
 export interface ReservaLivro {
   id: string;
   livro_id: string;
-  aluno_id: string;
+  aluno_id: string | null;
+  professor_id: string | null;
   data: string;
   status: StatusReservaLivro;
   criado_em: string;

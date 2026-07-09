@@ -109,6 +109,25 @@ export async function buscarAlunos(busca: string): Promise<AlunoBusca[]> {
   }));
 }
 
+export interface ProfessorBusca {
+  id: string;
+  nome: string;
+  cargo: string | null;
+}
+
+// Mesma busca de patrono no balcão, agora para professor (ver
+// create_biblioteca_professor_emprestimos.sql).
+export async function buscarProfessores(busca: string): Promise<ProfessorBusca[]> {
+  if (!busca.trim()) return [];
+  const { data, error } = await supabase
+    .from('professores')
+    .select('id, nome, cargo')
+    .ilike('nome', `%${busca.trim()}%`)
+    .limit(10);
+  if (error) throw error;
+  return data ?? [];
+}
+
 export interface ExemplarComLivro extends Exemplar {
   livro_titulo: string;
   livro_autor: string;
@@ -136,26 +155,36 @@ export interface EmprestimoDetalhado extends Emprestimo {
   tombo: string;
   livro_id: string;
   livro_titulo: string;
-  aluno_nome: string;
+  // Nome de quem pegou emprestado — aluno ou professor (ver tomador_tipo).
+  tomador_nome: string;
+  tomador_tipo: 'ALUNO' | 'PROFESSOR';
 }
 
 export async function listarEmprestimosAtivos(): Promise<EmprestimoDetalhado[]> {
   const { data, error } = await supabase
     .from('emprestimos')
-    .select('*, exemplares(tombo, livro_id, livros(titulo)), alunos(nome)')
+    .select('*, exemplares(tombo, livro_id, livros(titulo)), alunos(nome), professores(nome)')
     .eq('status', 'ATIVO')
     .order('data_prevista');
   if (error) throw error;
-  return (data ?? []).map((e) => ({
-    ...e,
-    tombo: (e as unknown as { exemplares: { tombo: string; livro_id: string; livros: { titulo: string } } }).exemplares.tombo,
-    livro_id: (e as unknown as { exemplares: { tombo: string; livro_id: string; livros: { titulo: string } } }).exemplares.livro_id,
-    livro_titulo: (e as unknown as { exemplares: { tombo: string; livro_id: string; livros: { titulo: string } } }).exemplares.livros.titulo,
-    aluno_nome: (e as unknown as { alunos: { nome: string } }).alunos.nome,
-  }));
+  return (data ?? []).map((e) => {
+    const row = e as unknown as {
+      exemplares: { tombo: string; livro_id: string; livros: { titulo: string } };
+      alunos: { nome: string } | null;
+      professores: { nome: string } | null;
+    };
+    return {
+      ...e,
+      tombo: row.exemplares.tombo,
+      livro_id: row.exemplares.livro_id,
+      livro_titulo: row.exemplares.livros.titulo,
+      tomador_nome: row.alunos?.nome ?? row.professores?.nome ?? '—',
+      tomador_tipo: row.alunos ? 'ALUNO' : 'PROFESSOR',
+    };
+  });
 }
 
-export async function criarEmprestimo(dados: { exemplar_id: string; aluno_id: string; data_prevista: string; criado_por: string | null }): Promise<Emprestimo> {
+export async function criarEmprestimo(dados: { exemplar_id: string; aluno_id?: string | null; professor_id?: string | null; data_prevista: string; criado_por: string | null }): Promise<Emprestimo> {
   const { data, error } = await supabase.from('emprestimos').insert([dados]).select().single();
   if (error) throw error;
   return data;
@@ -183,25 +212,39 @@ export async function contarReservasAtivas(livroId: string): Promise<number> {
 // --- Reservas de título ---
 export interface ReservaLivroDetalhada extends ReservaLivro {
   livro_titulo: string;
-  aluno_nome: string;
+  tomador_nome: string;
+  tomador_tipo: 'ALUNO' | 'PROFESSOR';
 }
 
 export async function listarReservasAtivas(): Promise<ReservaLivroDetalhada[]> {
   const { data, error } = await supabase
     .from('reservas_livro')
-    .select('*, livros(titulo), alunos(nome)')
+    .select('*, livros(titulo), alunos(nome), professores(nome)')
     .eq('status', 'ATIVA')
     .order('data');
   if (error) throw error;
-  return (data ?? []).map((r) => ({
-    ...r,
-    livro_titulo: (r as unknown as { livros: { titulo: string } }).livros.titulo,
-    aluno_nome: (r as unknown as { alunos: { nome: string } }).alunos.nome,
-  }));
+  return (data ?? []).map((r) => {
+    const row = r as unknown as { livros: { titulo: string }; alunos: { nome: string } | null; professores: { nome: string } | null };
+    return {
+      ...r,
+      livro_titulo: row.livros.titulo,
+      tomador_nome: row.alunos?.nome ?? row.professores?.nome ?? '—',
+      tomador_tipo: row.alunos ? 'ALUNO' : 'PROFESSOR',
+    };
+  });
 }
 
 export async function criarReservaLivro(livroId: string, alunoId: string): Promise<ReservaLivro> {
   const { data, error } = await supabase.from('reservas_livro').insert([{ livro_id: livroId, aluno_id: alunoId }]).select().single();
+  if (error) throw error;
+  return data;
+}
+
+// Mesma reserva de título, só que para um professor (autoatendimento — ver
+// create_biblioteca_professor_emprestimos.sql: aluno_id/professor_id são mutuamente
+// exclusivos na mesma tabela, não é uma tabela nova).
+export async function criarReservaLivroProfessor(livroId: string, professorId: string): Promise<ReservaLivro> {
+  const { data, error } = await supabase.from('reservas_livro').insert([{ livro_id: livroId, professor_id: professorId }]).select().single();
   if (error) throw error;
   return data;
 }
@@ -263,6 +306,37 @@ export async function listarMeusEmprestimos(alunoId: string): Promise<Emprestimo
     livro_id: (e as unknown as { exemplares: { tombo: string; livro_id: string; livros: { titulo: string } } }).exemplares.livro_id,
     livro_titulo: (e as unknown as { exemplares: { tombo: string; livro_id: string; livros: { titulo: string } } }).exemplares.livros.titulo,
     aluno_nome: (e as unknown as { alunos: { nome: string } }).alunos.nome,
+  }));
+}
+
+export interface EmprestimoProfessor {
+  id: string;
+  status: string;
+  data_emprestimo: string;
+  data_prevista: string;
+  renovacoes: number;
+  tombo: string;
+  livro_id: string;
+  livro_titulo: string;
+}
+
+export async function listarMeusEmprestimosProfessor(professorId: string): Promise<EmprestimoProfessor[]> {
+  const { data, error } = await supabase
+    .from('emprestimos')
+    .select('id, status, data_emprestimo, data_prevista, renovacoes, exemplares(tombo, livro_id, livros(titulo))')
+    .eq('professor_id', professorId)
+    .eq('status', 'ATIVO')
+    .order('data_prevista');
+  if (error) throw error;
+  return (data ?? []).map((e) => ({
+    id: e.id,
+    status: e.status,
+    data_emprestimo: e.data_emprestimo,
+    data_prevista: e.data_prevista,
+    renovacoes: e.renovacoes,
+    tombo: (e as unknown as { exemplares: { tombo: string; livro_id: string; livros: { titulo: string } } }).exemplares.tombo,
+    livro_id: (e as unknown as { exemplares: { tombo: string; livro_id: string; livros: { titulo: string } } }).exemplares.livro_id,
+    livro_titulo: (e as unknown as { exemplares: { tombo: string; livro_id: string; livros: { titulo: string } } }).exemplares.livros.titulo,
   }));
 }
 

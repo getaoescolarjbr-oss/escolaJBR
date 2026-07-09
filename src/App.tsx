@@ -20,6 +20,7 @@ import { SecretariaPanel } from './components/secretaria/SecretariaPanel';
 import { CozinhaPanel } from './components/cozinha/CozinhaPanel';
 import { AgendamentoPanel } from './components/agendamento/AgendamentoPanel';
 import { BibliotecaPanel } from './components/biblioteca/BibliotecaPanel';
+import { ProfessorBibliotecaTab } from './components/biblioteca/ProfessorBibliotecaTab';
 import { AlunoHome } from './components/aluno/AlunoHome';
 import { CadastroPendenteScreen } from './components/aluno/CadastroPendenteScreen';
 import { GestaoEscolarPanel } from './components/gestaoEscolar/GestaoEscolarPanel';
@@ -367,7 +368,7 @@ function App() {
                   {modulo === 'secretaria' && <SecretariaPanel />}
                   {modulo === 'cozinha' && <CozinhaPanel />}
                   {modulo === 'agendamento' && <AgendamentoPanel />}
-                  {modulo === 'biblioteca' && <BibliotecaPanel />}
+                  {modulo === 'biblioteca' && (hasAnyRole(['BIBLIOTECA', 'GESTAO', 'COORDENACAO']) ? <BibliotecaPanel /> : <ProfessorBibliotecaTab />)}
                   {modulo === 'gestao' && <GestaoEscolarPanel />}
                   {modulo === 'perfil' && <PerfilPanel />}
                 </ModuleShell>

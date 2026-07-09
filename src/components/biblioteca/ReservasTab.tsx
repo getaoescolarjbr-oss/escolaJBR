@@ -144,7 +144,7 @@ export function ReservasTab() {
             <div key={r.id} className="flex items-center justify-between px-4 py-3 bg-ms-card border border-gray-800 rounded-xl">
               <div>
                 <p className="text-sm font-bold text-ms-main">{r.livro_titulo}</p>
-                <p className="text-[11px] text-gray-500">{r.aluno_nome} · desde {new Date(r.data).toLocaleDateString('pt-BR')}</p>
+                <p className="text-[11px] text-gray-500">{r.tomador_nome}{r.tomador_tipo === 'PROFESSOR' && <span className="text-[9px] text-ms-blue font-bold uppercase ml-1">(professor)</span>} · desde {new Date(r.data).toLocaleDateString('pt-BR')}</p>
               </div>
               <div className="flex gap-2">
                 <button onClick={() => handleAtender(r.id)} className="flex items-center gap-1 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg text-[11px] text-green-500 hover:bg-green-500/20 transition-colors">
