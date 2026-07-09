@@ -458,20 +458,20 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                       </div>
                   </div>
                   
-                  <div className="overflow-x-auto">
-                      <table ref={tableAnualRef} className="min-w-full divide-y divide-ms-border/30">
+                  <div className="overflow-x-auto touch-pan-x" style={{ WebkitOverflowScrolling: 'touch' }}>
+                      <table ref={tableAnualRef} className="w-full divide-y divide-ms-border/30">
                           <thead className={theme === 'light' ? 'bg-ms-blue' : 'bg-ms-accent'}>
                           <tr>
-                               <th className={`px-6 py-4 text-left text-[10px] font-black text-white uppercase tracking-widest sticky left-0 z-10 border-r border-white/10 ${
+                               <th className={`px-6 py-4 text-left text-[10px] font-black text-white uppercase tracking-widest sticky left-0 z-10 border-r border-white/10 whitespace-nowrap ${
                                  theme === 'light' ? 'bg-ms-blue' : 'bg-ms-accent'
                                }`}>Estudante</th>
-                              <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest">1º BIM</th>
-                              <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest">2º BIM</th>
-                              <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest">3º BIM</th>
-                              <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest">4º BIM</th>
-                              <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest bg-blue-600/10">Somatório</th>
-                              <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest bg-blue-600/20">Média Anual</th>
-                              <th className="px-6 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest bg-black/40">Status Final</th>
+                              <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest whitespace-nowrap">1º BIM</th>
+                              <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest whitespace-nowrap">2º BIM</th>
+                              <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest whitespace-nowrap">3º BIM</th>
+                              <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest whitespace-nowrap">4º BIM</th>
+                              <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest whitespace-nowrap bg-blue-600/10">Somatório</th>
+                              <th className="px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest whitespace-nowrap bg-blue-600/20">Média Anual</th>
+                              <th className="px-6 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest whitespace-nowrap bg-black/40">Status Final</th>
                           </tr>
                           </thead>
                           <tbody className="divide-y divide-ms-border/30">
@@ -511,31 +511,31 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                                    </td>
                                    
                                    {/* Notas Bimestrais adaptadas à matrícula e saída */}
-                                   <td className={`px-4 py-4 text-center text-xs font-black ${(bEntrada > 1 || (s.exitBim !== null && s.exitBim < 1)) ? 'text-gray-400 italic font-medium' : ''}`}>
+                                   <td className={`px-4 py-4 text-center text-xs font-black whitespace-nowrap ${(bEntrada > 1 || (s.exitBim !== null && s.exitBim < 1)) ? 'text-gray-400 italic font-medium' : ''}`}>
                                      {(bEntrada > 1 || (s.exitBim !== null && s.exitBim < 1)) ? 'N/A' : s.b1.toFixed(1)}
                                    </td>
-                                   <td className={`px-4 py-4 text-center text-xs font-black ${(bEntrada > 2 || (s.exitBim !== null && s.exitBim < 2)) ? 'text-gray-400 italic font-medium' : ''}`}>
+                                   <td className={`px-4 py-4 text-center text-xs font-black whitespace-nowrap ${(bEntrada > 2 || (s.exitBim !== null && s.exitBim < 2)) ? 'text-gray-400 italic font-medium' : ''}`}>
                                      {(bEntrada > 2 || (s.exitBim !== null && s.exitBim < 2)) ? 'N/A' : s.b2.toFixed(1)}
                                    </td>
-                                   <td className={`px-4 py-4 text-center text-xs font-black ${(bEntrada > 3 || (s.exitBim !== null && s.exitBim < 3)) ? 'text-gray-400 italic font-medium' : ''}`}>
+                                   <td className={`px-4 py-4 text-center text-xs font-black whitespace-nowrap ${(bEntrada > 3 || (s.exitBim !== null && s.exitBim < 3)) ? 'text-gray-400 italic font-medium' : ''}`}>
                                      {(bEntrada > 3 || (s.exitBim !== null && s.exitBim < 3)) ? 'N/A' : s.b3.toFixed(1)}
                                    </td>
-                                   <td className={`px-4 py-4 text-center text-xs font-black ${(s.exitBim !== null && s.exitBim < 4) ? 'text-gray-400 italic font-medium' : ''}`}>
+                                   <td className={`px-4 py-4 text-center text-xs font-black whitespace-nowrap ${(s.exitBim !== null && s.exitBim < 4) ? 'text-gray-400 italic font-medium' : ''}`}>
                                      {(s.exitBim !== null && s.exitBim < 4) ? 'N/A' : s.b4.toFixed(1)}
                                    </td>
 
                                    {/* Somatório */}
-                                   <td className="px-4 py-4 text-center text-xs font-black bg-blue-500/5 text-blue-500">
+                                   <td className="px-4 py-4 text-center text-xs font-black whitespace-nowrap bg-blue-500/5 text-blue-500">
                                      {s.soma.toFixed(1)}
                                    </td>
 
                                    {/* Média Anual */}
-                                   <td className="px-4 py-4 text-center text-xs font-black bg-blue-500/10" style={{ color: getCorGradiente(s.mediaAnual, theme) }}>
+                                   <td className="px-4 py-4 text-center text-xs font-black whitespace-nowrap bg-blue-500/10" style={{ color: getCorGradiente(s.mediaAnual, theme) }}>
                                      {s.mediaAnual.toFixed(1)}
                                    </td>
 
                                    {/* Status de Aprovação */}
-                                   <td className="px-6 py-4 text-center">
+                                   <td className="px-6 py-4 text-center whitespace-nowrap">
                                        {aluno.status && aluno.status !== 'Ativo' && aluno.status !== 'Atestado' ? (
                                          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
                                              aluno.status === 'Transferido' ? 'bg-orange-500/15 text-orange-500 border border-orange-500/20' :
@@ -665,6 +665,10 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                     const isPosterior = aluno.status === 'Transferido' || aluno.status === 'Remanejado' || aluno.status === 'Cancelada';
                     const isCritico = !isPosterior && (percRealizado <= 35 || arredondarNotaMS(s.media) < 3.5);
                     const aprovado = estaAprovado(s.media, 6);
+                    // "Aprovado" é um veredito de fim de ano — com o ano letivo em andamento,
+                    // só faz sentido mostrar no 4º bimestre (ou no Exame Final, que é outra
+                    // tela). Nos demais bimestres mostra a situação de matrícula do aluno.
+                    const mostrarVeredito = bimestreId === 4;
 
                     return (
                         <div key={aluno.aluno_id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all hover:translate-x-1 ${
@@ -723,11 +727,11 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                             <div className="flex items-center gap-4 mt-3 sm:mt-0 ml-14 sm:ml-0">
                                 <div className="flex flex-col items-end">
                                     <span className={`text-[9px] font-black uppercase ${
-                                      isPosterior 
+                                      isPosterior
                                         ? aluno.status === 'Transferido' ? 'text-orange-400' : aluno.status === 'Remanejado' ? 'text-purple-400' : 'text-red-400'
-                                        : aprovado ? 'text-green-500' : 'text-red-400'
+                                        : mostrarVeredito ? (aprovado ? 'text-green-500' : 'text-red-400') : 'text-[#2563eb]'
                                     }`}>
-                                        {isPosterior ? aluno.status : aprovado ? 'Aprovado' : 'Abaixo da Média'}
+                                        {isPosterior ? aluno.status : mostrarVeredito ? (aprovado ? 'Aprovado' : 'Abaixo da Média') : aluno.status}
                                     </span>
                                     <span className="text-[8px] text-gray-500 font-bold uppercase">Status</span>
                                 </div>
