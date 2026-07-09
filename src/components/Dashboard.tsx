@@ -1025,12 +1025,13 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
             )}
 
             {activeTab === 'relatorios' && (
-              <ReportsPanel 
+              <ReportsPanel
                 professor={professor}
                 turmaId={selectedTurma}
                 disciplinaId={selectedDisciplina}
                 bimestreId={selectedBimestre}
                 theme={theme}
+                isLocked={isEffectivelyLocked}
               />
             )}
           </>

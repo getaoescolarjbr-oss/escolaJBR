@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, ListaParaVistos } from '../types';
-import { AlertCircle, Printer, Settings2, Users } from 'lucide-react';
+import { AlertCircle, Printer, Settings2, Users, Calculator, ArrowLeft } from 'lucide-react';
 import { autoUpdateExpiredAbsences } from '../utils/studentUtils';
 import { arredondarNotaMS, getCorGradiente, estaAprovado, getBimestreFromDate } from '../utils/academicUtils';
 import { MatriculaModal } from './MatriculaModal';
+import { ExameFinalPanel } from './ExameFinalPanel';
 import { printReport } from '../utils/printUtils';
 
 interface ReportsPanelProps {
@@ -13,15 +14,19 @@ interface ReportsPanelProps {
   disciplinaId: string;
   bimestreId: number;
   theme: 'dark' | 'light';
+  isLocked?: boolean;
 }
 
-export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, theme }: ReportsPanelProps) {
+export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, theme, isLocked = false }: ReportsPanelProps) {
   const [alunos, setAlunos] = useState<ListaParaVistos[]>([]);
   const [stats, setStats] = useState<Record<string, { totalVistos: number; totalAtiv: number; media: number; bimestreEntrada: number }>>({});
   const [loading, setLoading] = useState(true);
   
   // Estados para o Painel de Desempenho Anual
-  const [reportTab, setReportTab] = useState<'bimestral' | 'anual'>('bimestral');
+  const [reportTab, setReportTab] = useState<'bimestral' | 'anual'>(bimestreId === 5 ? 'anual' : 'bimestral');
+  // Exame Final não tem "bimestre" pra comparar — só o menu de Desempenho Anual
+  // faz sentido aqui, com um botão pra abrir o lançamento das notas do exame.
+  const [mostrarLancamentoExame, setMostrarLancamentoExame] = useState(false);
   const [statsAnual, setStatsAnual] = useState<Record<string, {
     b1: number;
     b2: number;
@@ -361,8 +366,12 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
   };
 
   useEffect(() => {
-    if (turmaId && disciplinaId) {
+    // Exame Final (bimestreId 5) não tem atividades/vistos bimestrais de verdade —
+    // só o Desempenho Anual é exibido nesse caso, então não faz sentido buscar.
+    if (turmaId && disciplinaId && bimestreId !== 5) {
       fetchReportData();
+    } else if (bimestreId === 5) {
+      setLoading(false);
     }
   }, [professor.id, turmaId, disciplinaId, bimestreId]);
 
@@ -371,6 +380,10 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
       fetchAnualData();
     }
   }, [professor.id, turmaId, disciplinaId, reportTab]);
+
+  useEffect(() => {
+    if (bimestreId === 5) setReportTab('anual');
+  }, [bimestreId]);
 
   if (loading) return <div className="p-20 text-center text-gray-500">Gerando relatórios e analisando métricas...</div>;
 
@@ -390,36 +403,52 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
 
   return (
     <div className="space-y-8">
-      {/* Sub-Navegação da Central de Relatórios */}
-      <div className={`flex p-1 rounded-xl w-fit ${
-        theme === 'light' ? 'bg-blue-50/80 border border-blue-100/50' : 'bg-black/20'
-      }`}>
-          <button 
-            onClick={() => setReportTab('bimestral')}
-            className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
-                reportTab === 'bimestral' 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
-                  : theme === 'light' 
-                    ? 'text-blue-700 hover:text-blue-900 hover:bg-blue-100/40' 
-                    : 'text-blue-200 hover:text-white'
-            }`}
-          >
-              Desempenho do Bimestre
-          </button>
-          <button 
-            onClick={() => setReportTab('anual')}
-            className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
-                reportTab === 'anual' 
-                  ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20' 
-                  : theme === 'light' 
-                    ? 'text-blue-700 hover:text-blue-900 hover:bg-blue-100/40' 
-                    : 'text-blue-200 hover:text-white'
-            }`}
-          >
-              Desempenho Anual
-          </button>
-      </div>
+      {/* Sub-Navegação da Central de Relatórios — no Exame Final não existe "bimestre"
+          pra comparar, então só o Desempenho Anual faz sentido aqui. */}
+      {bimestreId !== 5 && (
+        <div className={`flex p-1 rounded-xl w-fit ${
+          theme === 'light' ? 'bg-blue-50/80 border border-blue-100/50' : 'bg-black/20'
+        }`}>
+            <button
+              onClick={() => setReportTab('bimestral')}
+              className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+                  reportTab === 'bimestral'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+                    : theme === 'light'
+                      ? 'text-blue-700 hover:text-blue-900 hover:bg-blue-100/40'
+                      : 'text-blue-200 hover:text-white'
+              }`}
+            >
+                Desempenho do Bimestre
+            </button>
+            <button
+              onClick={() => setReportTab('anual')}
+              className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+                  reportTab === 'anual'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+                    : theme === 'light'
+                      ? 'text-blue-700 hover:text-blue-900 hover:bg-blue-100/40'
+                      : 'text-blue-200 hover:text-white'
+              }`}
+            >
+                Desempenho Anual
+            </button>
+        </div>
+      )}
 
+      {bimestreId === 5 && mostrarLancamentoExame && (
+        <button
+          onClick={() => setMostrarLancamentoExame(false)}
+          className={`flex items-center gap-2 text-xs font-black uppercase tracking-widest ${theme === 'light' ? 'text-blue-700 hover:text-blue-900' : 'text-blue-300 hover:text-white'}`}
+        >
+          <ArrowLeft className="w-4 h-4" /> Voltar ao Desempenho Anual
+        </button>
+      )}
+
+      {bimestreId === 5 && mostrarLancamentoExame ? (
+        <ExameFinalPanel professor={professor} turmaId={turmaId} disciplinaId={disciplinaId} theme={theme} isLocked={isLocked} />
+      ) : (
+      <>
       {reportTab === 'anual' ? (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
             {loadingAnual ? (
@@ -446,6 +475,14 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                         }`}>
                            📌 Regra JBR: Média Anual ≥ 6.0
                         </div>
+                        {bimestreId === 5 && (
+                          <button
+                            onClick={() => setMostrarLancamentoExame(true)}
+                            className="flex items-center gap-2 px-4 py-2.5 bg-amber-600 hover:bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-md"
+                          >
+                            <Calculator className="w-3.5 h-3.5" /> Lançar Notas do Exame Final
+                          </button>
+                        )}
                         <button
                           onClick={() => printReport(tableAnualRef.current, {
                             title: 'Relatório de Desempenho Anual',
@@ -746,11 +783,14 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                     // vez de cair como "crítico" só porque não tem atividades/nota.
                     const isPosterior = aluno.status === 'Transferido' || aluno.status === 'Remanejado' || aluno.status === 'Cancelada';
                     const isCritico = !isPosterior && (percRealizado <= 35 || arredondarNotaMS(s.media) < 3.5);
-                    const aprovado = estaAprovado(s.media, 6);
-                    // "Aprovado" é um veredito de fim de ano — com o ano letivo em andamento,
-                    // só faz sentido mostrar no 4º bimestre (ou no Exame Final, que é outra
-                    // tela). Nos demais bimestres mostra a situação de matrícula do aluno.
-                    const mostrarVeredito = bimestreId === 4;
+                    // Não é veredito de aprovação (isso só existe no fim do ano, no Exame
+                    // Final) — é só a posição da média em relação a 6, válida em qualquer
+                    // bimestre.
+                    const mediaArred = arredondarNotaMS(s.media);
+                    const statusMedia: 'abaixo' | 'na_media' | 'acima' =
+                      mediaArred < 6 ? 'abaixo' : mediaArred === 6 ? 'na_media' : 'acima';
+                    const statusMediaLabel = { abaixo: 'Abaixo da Média', na_media: 'Na Média', acima: 'Acima da Média' }[statusMedia];
+                    const statusMediaCor = { abaixo: 'text-red-400', na_media: 'text-yellow-500', acima: 'text-green-500' }[statusMedia];
 
                     return (
                         <div key={aluno.aluno_id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all hover:translate-x-1 ${
@@ -811,9 +851,9 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                                     <span className={`text-[9px] font-black uppercase ${
                                       isPosterior
                                         ? aluno.status === 'Transferido' ? 'text-orange-400' : aluno.status === 'Remanejado' ? 'text-purple-400' : 'text-red-400'
-                                        : mostrarVeredito ? (aprovado ? 'text-green-500' : 'text-red-400') : 'text-[#2563eb]'
+                                        : statusMediaCor
                                     }`}>
-                                        {isPosterior ? aluno.status : mostrarVeredito ? (aprovado ? 'Aprovado' : 'Abaixo da Média') : aluno.status}
+                                        {isPosterior ? aluno.status : statusMediaLabel}
                                     </span>
                                     <span className="text-[8px] text-gray-500 font-bold uppercase">Status</span>
                                 </div>
@@ -835,8 +875,10 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
           </div>
         </>
       )}
+      </>
+      )}
 
-      <MatriculaModal 
+      <MatriculaModal
         isOpen={!!selectedAluno}
         onClose={() => setSelectedAluno(null)}
         alunoId={selectedAluno?.id || ''}
