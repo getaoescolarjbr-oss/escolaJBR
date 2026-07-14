@@ -122,13 +122,16 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
     // 5. Buscar Médias (Notas)
     const { data: avaliacoes } = await supabase
       .from('avaliacoes')
-      .select('id')
+      .select('id, nome')
       .eq('professor_id', professor.id)
       .eq('turma_id', turmaId)
       .eq('disciplina_id', disciplinaId)
       .eq('bimestre_id', bimestreId);
-    
+
     const avalIds = avaliacoes?.map(a => a.id) || [];
+    // RAV é recuperação: substitui a média do bimestre quando é maior, não soma junto
+    // com o resto (ver mesma regra em GradesPanel.tsx).
+    const ravAvalId = avaliacoes?.find(a => a.nome === 'RAV')?.id;
     let notas: any[] = [];
     if (avalIds.length > 0) {
         const { data: dataNotas } = await supabase
@@ -144,22 +147,24 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
       const currentAlunoId = String(aluno.aluno_id).trim();
       const matricula = dataMatricula?.find(m => String(m.aluno_id).trim() === currentAlunoId);
       const bimestreEntrada = matricula?.bimestre_entrada || 1;
-      
+
       const vistosAluno = vistos?.filter(v => String(v.aluno_id).trim() === currentAlunoId && v.valor !== '0' && v.valor !== '-') || [];
       const notasAluno = notas?.filter(n => String(n.aluno_id).trim() === currentAlunoId) || [];
-      const somaNotas = notasAluno.reduce((acc, curr) => acc + (curr.nota || 0), 0);
-      
+      const somaNotas = notasAluno.filter(n => n.avaliacao_id !== ravAvalId).reduce((acc, curr) => acc + (curr.nota || 0), 0);
+      const notaRav = notasAluno.find(n => n.avaliacao_id === ravAvalId)?.nota;
+
       const pesosVisto = vistosAluno.reduce((acc, v) => {
           if (v.valor === '1.0' || v.valor === '+' || v.valor === '.') return acc + 1;
           if (v.valor === '0.5') return acc + 0.5;
           return acc;
       }, 0);
       const notaVistoFinal = totalAtiv > 0 ? (pesosVisto / totalAtiv) * (professor.config_visto_valor_total || 2.0) : 0;
+      const mediaSemRav = somaNotas + notaVistoFinal;
 
       newStats[aluno.aluno_id] = {
           totalVistos: vistosAluno.length,
           totalAtiv: totalAtiv,
-          media: somaNotas + notaVistoFinal,
+          media: notaRav !== undefined && notaRav > mediaSemRav ? notaRav : mediaSemRav,
           bimestreEntrada: bimestreEntrada
       };
     });
@@ -241,18 +246,22 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
 
       const { data: avaliacoes } = await supabase
         .from('avaliacoes')
-        .select('id, bimestre_id, valor_maximo')
+        .select('id, bimestre_id, valor_maximo, nome')
         .eq('professor_id', professor.id)
         .eq('turma_id', turmaId)
         .eq('disciplina_id', disciplinaId);
-      
+
       const allAvalIds = avaliacoes?.map(a => a.id) || [];
-      
+
       const avaliacoesPorBimestre: Record<number, string[]> = { 1: [], 2: [], 3: [], 4: [] };
+      // RAV é recuperação: substitui a média do bimestre quando é maior, não soma
+      // junto com o resto (mesma regra em GradesPanel.tsx/fetchReportData acima).
+      const ravAvalIdsPorBimestre: Record<number, string | undefined> = {};
       avaliacoes?.forEach(av => {
         const bId = av.bimestre_id || 1;
         if (avaliacoesPorBimestre[bId]) {
           avaliacoesPorBimestre[bId].push(av.id);
+          if (av.nome === 'RAV') ravAvalIdsPorBimestre[bId] = av.id;
         }
       });
 
@@ -307,17 +316,20 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
           }
 
           const avalIdsBim = avaliacoesPorBimestre[b] || [];
+          const ravAvalId = ravAvalIdsPorBimestre[b];
           let somaNotasBim = 0;
+          let notaRavBim: number | undefined;
           if (avalIdsBim.length > 0) {
-            const notasBim = vistos.filter(n => false); // placeholder, let's keep it correct
-            const notasBimReal = notas.filter(n => 
-              String(n.aluno_id).trim() === currentAlunoId && 
+            const notasBimReal = notas.filter(n =>
+              String(n.aluno_id).trim() === currentAlunoId &&
               avalIdsBim.includes(n.avaliacao_id)
             );
-            somaNotasBim = notasBimReal.reduce((acc, curr) => acc + (curr.nota || 0), 0);
+            somaNotasBim = notasBimReal.filter(n => n.avaliacao_id !== ravAvalId).reduce((acc, curr) => acc + (curr.nota || 0), 0);
+            notaRavBim = notasBimReal.find(n => n.avaliacao_id === ravAvalId)?.nota;
           }
 
-          mediasBimestrais[b] = arredondarNotaMS(somaNotasBim + notaVistoFinal);
+          const mediaBimSemRav = somaNotasBim + notaVistoFinal;
+          mediasBimestrais[b] = arredondarNotaMS(notaRavBim !== undefined && notaRavBim > mediaBimSemRav ? notaRavBim : mediaBimSemRav);
         }
 
         const bimestresCursados = exitBim !== null

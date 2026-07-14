@@ -93,12 +93,19 @@ export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLoc
         
         [1, 2, 3, 4].forEach(bimestre => {
           let somaNotas = 0;
-          
-          // Avaliacoes do bimestre
+          let notaRav: number | undefined;
+
+          // Avaliacoes do bimestre — RAV substitui a média quando maior, não soma
+          // (mesma regra de GradesPanel.tsx/ReportsPanel.tsx).
           const avalsDoBimestre = avalsBimestrais.filter(a => a.bimestre_id === bimestre);
           avalsDoBimestre.forEach(av => {
             const notaRec = notasBimestraisData.find(n => n.avaliacao_id === av.id && String(n.aluno_id) === String(aluno.id));
-            if (notaRec) somaNotas += notaRec.nota;
+            if (!notaRec) return;
+            if (av.nome === 'RAV') {
+              notaRav = notaRec.nota;
+            } else {
+              somaNotas += notaRec.nota;
+            }
           });
 
           // Vistos do bimestre
@@ -124,7 +131,7 @@ export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLoc
           }
           
           somaNotas += Number(notaVistos.toFixed(2));
-          studentGradesPerBimestre[aluno.id][bimestre] = arredondarNotaMS(somaNotas);
+          studentGradesPerBimestre[aluno.id][bimestre] = arredondarNotaMS(notaRav !== undefined && notaRav > somaNotas ? notaRav : somaNotas);
         });
       });
 

@@ -507,10 +507,18 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
 
                             const notaVisto = isPosterior ? 0 : (vistosCalculados[aluno.aluno_id] || 0);
                             let somaNotas = notaVisto;
+                            let notaRav: number | undefined;
                             avaliacoes.forEach(av => {
+                                if (av.nome === 'RAV') {
+                                    notaRav = isPosterior ? undefined : notas[aluno.aluno_id]?.[av.id];
+                                    return;
+                                }
                                 somaNotas += isPosterior ? 0 : (notas[aluno.aluno_id]?.[av.id] || 0);
                             });
-                            const mediaBimestral = somaNotas;
+                            // RAV é recuperação: substitui a média do bimestre quando é maior, nunca
+                            // soma junto com o resto (senão a média passa de 10, como estava
+                            // acontecendo).
+                            const mediaBimestral = notaRav !== undefined && notaRav > somaNotas ? notaRav : somaNotas;
                             const d = new Date();
                             const year = d.getFullYear();
                             const month = String(d.getMonth() + 1).padStart(2, '0');
