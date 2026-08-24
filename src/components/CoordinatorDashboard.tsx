@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import type { Professor, Turma, Student } from '../types';
 import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer, AlertTriangle, CheckCheck, Clock, Mail, MessageSquare, BarChart2, Send, X, Cake, Pencil, Lock } from 'lucide-react';
 import { printReport } from '../utils/printUtils';
-import { getCurrentBimestre } from '../utils/academicUtils';
+import { getCurrentBimestre, getBimestreFromDate } from '../utils/academicUtils';
 import { autoUpdateExpiredAbsences } from '../utils/studentUtils';
 import { StudentProfileModal } from './StudentProfileModal';
 import { TeacherDiaryModal } from './TeacherDiaryModal';
@@ -704,16 +704,21 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   };
 
   const [printingLista, setPrintingLista] = useState(false);
+  const [bimestreFiltroImpressao, setBimestreFiltroImpressao] = useState<number | 'todos'>('todos');
 
   const handlePrintListaGeral = async () => {
     setPrintingLista(true);
     try {
-      const { data: rawOcorrencias, error } = await supabase
+      const { data: allOcorrencias, error } = await supabase
         .from('ocorrências')
         .select('*')
         .order('data', { ascending: false });
 
       if (error) throw error;
+
+      const rawOcorrencias = bimestreFiltroImpressao === 'todos'
+        ? allOcorrencias
+        : (allOcorrencias || []).filter(o => getBimestreFromDate(o.data || o.data_registro) === bimestreFiltroImpressao);
 
       if (!rawOcorrencias || rawOcorrencias.length === 0) {
         alert('Nenhuma ocorrência registrada para imprimir.');
@@ -779,7 +784,9 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
 
       printReport(table, {
         title: 'Relatório Geral de Ocorrências',
-        subtitle: 'Todas as ocorrências disciplinares registradas',
+        subtitle: bimestreFiltroImpressao === 'todos'
+          ? 'Todas as ocorrências disciplinares registradas'
+          : `Ocorrências disciplinares do ${bimestreFiltroImpressao}º Bimestre`,
         info: [
           { label: 'Total de Registros', value: String(rawOcorrencias.length) },
           { label: 'Pendentes', value: String(rawOcorrencias.filter(o => !o.visto_coordenador).length) },
@@ -1582,6 +1589,18 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                <p className="text-sm text-[#003366] font-bold">Ocorrências registradas pelos professores aguardando confirmação de leitura</p>
              </div>
              <div className="flex items-center gap-2 flex-wrap">
+                <select
+                  value={bimestreFiltroImpressao}
+                  onChange={(e) => setBimestreFiltroImpressao(e.target.value === 'todos' ? 'todos' : Number(e.target.value))}
+                  className="px-3 py-3 rounded-2xl text-xs font-black uppercase tracking-widest bg-ms-card text-gray-300 border border-ms-border focus:outline-none focus:border-ms-blue/50"
+                  title="Filtrar impressão por bimestre"
+                >
+                  <option value="todos">Todos os Bimestres</option>
+                  <option value={1}>1º Bimestre</option>
+                  <option value={2}>2º Bimestre</option>
+                  <option value={3}>3º Bimestre</option>
+                  <option value={4}>4º Bimestre</option>
+                </select>
                 <button
                   onClick={handlePrintListaGeral}
                   disabled={printingLista}
