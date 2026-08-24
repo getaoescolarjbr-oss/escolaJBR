@@ -703,6 +703,97 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
     }
   };
 
+  const [printingLista, setPrintingLista] = useState(false);
+
+  const handlePrintListaGeral = async () => {
+    setPrintingLista(true);
+    try {
+      const { data: rawOcorrencias, error } = await supabase
+        .from('ocorrências')
+        .select('*')
+        .order('data', { ascending: false });
+
+      if (error) throw error;
+
+      if (!rawOcorrencias || rawOcorrencias.length === 0) {
+        alert('Nenhuma ocorrência registrada para imprimir.');
+        return;
+      }
+
+      const studentIds = [...new Set(rawOcorrencias.map(o => o.aluno_id).filter(Boolean))];
+      const teacherIds = [...new Set(rawOcorrencias.map(o => o.id_do_professor).filter(Boolean))];
+      const classIds = [...new Set(rawOcorrencias.map(o => o.turma_id).filter(Boolean))];
+
+      const [studentsRes, teachersRes, classesRes] = await Promise.all([
+        supabase.from('alunos').select('id, nome, aluno_numero, turma_id').in('id', studentIds),
+        supabase.from('professores').select('id, nome, cargo').in('id', teacherIds),
+        supabase.from('turmas').select('id, nome').in('id', classIds)
+      ]);
+
+      const studentsMap = new Map(studentsRes.data?.map(s => [s.id, s]) || []);
+      const teachersMap = new Map(teachersRes.data?.map(t => [t.id, t]) || []);
+      const classesMap = new Map(classesRes.data?.map(c => [c.id, c]) || []);
+
+      const formatData = (dateStr: string | null) => {
+        if (!dateStr) return '—';
+        if (dateStr.includes('-') && !dateStr.includes('T')) {
+          const [y, m, d] = dateStr.split('-');
+          return `${d}/${m}/${y}`;
+        }
+        return new Date(dateStr).toLocaleDateString('pt-BR');
+      };
+
+      const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Aluno</th>
+            <th>Turma</th>
+            <th>Tipo</th>
+            <th>Descrição</th>
+            <th>Registrado por</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rawOcorrencias.map(o => {
+            const aluno = o.aluno_id ? studentsMap.get(o.aluno_id) : null;
+            const turma = o.turma_id ? classesMap.get(o.turma_id) : null;
+            const prof = o.id_do_professor ? teachersMap.get(o.id_do_professor) : null;
+            const status = o.visto_coordenador ? 'Revisada' : 'Pendente';
+            return `<tr>
+              <td>${formatData(o.data || o.data_registro)}</td>
+              <td>${escapeHtml(aluno?.nome || 'Aluno Desconhecido')}</td>
+              <td>${escapeHtml(turma?.nome || '—')}</td>
+              <td>${escapeHtml(o.tipo || '—')}</td>
+              <td style="text-align:left">${escapeHtml(o.descricao || '—')}</td>
+              <td>${escapeHtml(prof?.nome || o.registrado_por || 'Sistema')}</td>
+              <td>${status}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      `;
+
+      printReport(table, {
+        title: 'Relatório Geral de Ocorrências',
+        subtitle: 'Todas as ocorrências disciplinares registradas',
+        info: [
+          { label: 'Total de Registros', value: String(rawOcorrencias.length) },
+          { label: 'Pendentes', value: String(rawOcorrencias.filter(o => !o.visto_coordenador).length) },
+          { label: 'Revisadas', value: String(rawOcorrencias.filter(o => o.visto_coordenador).length) }
+        ]
+      });
+    } catch (err) {
+      console.error('Erro ao gerar relatório geral de ocorrências:', err);
+      alert('Erro ao gerar relatório geral de ocorrências.');
+    } finally {
+      setPrintingLista(false);
+    }
+  };
+
   const fetchAlunosReincidentes = async () => {
     setLoadingReincidentes(true);
     try {
@@ -1491,6 +1582,14 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                <p className="text-sm text-[#003366] font-bold">Ocorrências registradas pelos professores aguardando confirmação de leitura</p>
              </div>
              <div className="flex items-center gap-2 flex-wrap">
+                <button
+                  onClick={handlePrintListaGeral}
+                  disabled={printingLista}
+                  className="flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all border shadow-lg bg-ms-card text-gray-400 border-ms-border hover:text-white hover:border-ms-blue/50 disabled:opacity-50"
+                >
+                  {printingLista ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                  Imprimir Lista Geral
+                </button>
                 <button
                   onClick={() => {
                     const nextState = !showReincidentes;

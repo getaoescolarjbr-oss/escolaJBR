@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
-import { X, Calendar, ClipboardList, AlertTriangle, LogOut, FileText, Loader2, ChevronRight, BookOpen, Activity, Clock, FileBadge, CheckCheck, Trash2, Users, UserCheck, Camera } from 'lucide-react';
+import { X, Calendar, ClipboardList, AlertTriangle, LogOut, FileText, Loader2, ChevronRight, BookOpen, Activity, Clock, FileBadge, CheckCheck, Trash2, Users, UserCheck, Camera, Printer } from 'lucide-react';
 import { AtaModal } from './AtaModal';
 import { OcorrenciaModal } from './OcorrenciaModal';
+import { printReport } from '../utils/printUtils';
 
 interface StudentProfileModalProps {
   isOpen: boolean;
@@ -84,6 +85,57 @@ export function StudentProfileModal({
       fetchStudentData();
     }
   }, [isOpen, studentId, bimestre]);
+
+  const handlePrintOcorrencias = () => {
+    const lista = ocorrencias.filter(o => !o.tipo?.toLowerCase().includes('atraso'));
+    if (lista.length === 0) {
+      alert('Nenhuma ocorrência registrada para este aluno.');
+      return;
+    }
+
+    const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const formatData = (dateStr: string) => {
+      if (!dateStr) return '—';
+      if (dateStr.includes('-') && !dateStr.includes('T')) {
+        const [y, m, d] = dateStr.split('-');
+        return `${d}/${m}/${y}`;
+      }
+      return new Date(dateStr).toLocaleDateString('pt-BR');
+    };
+
+    const table = document.createElement('table');
+    table.innerHTML = `
+      <thead>
+        <tr>
+          <th>Data</th>
+          <th>Tipo</th>
+          <th>Descrição</th>
+          <th>Registrado por</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${lista.map(o => {
+          const registrador = o.professores?.nome || o.registrado_por || 'Sistema';
+          const cargo = o.professores?.cargo || o.registrado_por_cargo;
+          const status = o.visto_coordenador ? 'Visualizada pela Coordenação' : 'Aguardando leitura';
+          return `<tr>
+            <td>${formatData(o.data || o.data_registro)}</td>
+            <td>${escapeHtml(o.tipo || 'Ocorrência Disciplinar')}</td>
+            <td style="text-align:left">${escapeHtml(o.descricao || '—')}</td>
+            <td>${escapeHtml(registrador)}${cargo ? ` (${escapeHtml(cargo)})` : ''}</td>
+            <td>${status}</td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    `;
+
+    printReport(table, {
+      title: 'Histórico de Ocorrências',
+      subtitle: studentName,
+      info: [{ label: 'Total de Ocorrências', value: String(lista.length) }]
+    });
+  };
 
   async function fetchStudentData() {
     setLoading(true);
@@ -784,14 +836,25 @@ export function StudentProfileModal({
 
               {/* SEÇÃO 2: HISTÓRICO DE OCORRÊNCIAS DISCIPLINARES */}
               <div className="border-t border-ms-border/40 pt-8">
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center border-2 border-red-500/30">
-                    <AlertTriangle className="w-4 h-4 text-red-500" />
+                <div className="flex items-center justify-between gap-3 mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-xl bg-red-500/10 flex items-center justify-center border-2 border-red-500/30">
+                      <AlertTriangle className="w-4 h-4 text-red-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-black text-white uppercase tracking-wider">Histórico de Ocorrências</h3>
+                      <p className="text-[10px] text-gray-500 font-bold mt-0.5">Eventos disciplinares do estudante</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-sm font-black text-white uppercase tracking-wider">Histórico de Ocorrências</h3>
-                    <p className="text-[10px] text-gray-500 font-bold mt-0.5">Eventos disciplinares do estudante</p>
-                  </div>
+                  {isCoordinator && filterOcorrencias.length > 0 && (
+                    <button
+                      onClick={handlePrintOcorrencias}
+                      className="flex items-center gap-2 px-4 py-2 bg-ms-blue/10 hover:bg-ms-blue/20 border border-ms-blue/30 text-ms-blue font-bold rounded-xl text-xs transition-colors"
+                    >
+                      <Printer className="w-3.5 h-3.5" />
+                      Imprimir
+                    </button>
+                  )}
                 </div>
 
                 <div className="space-y-4">
