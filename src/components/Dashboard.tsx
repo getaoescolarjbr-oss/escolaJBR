@@ -72,6 +72,9 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
     return `${yyyy}-${mm}-${dd}`;
   });
   const [selectedAtividadeId, setSelectedAtividadeId] = useState<string | null>(null);
+  // true logo após "Nova Atividade": impede que o próximo visto marcado reaproveite
+  // a atividade anterior do mesmo dia (o app agora permite várias atividades por dia).
+  const [forceNovaAtividade, setForceNovaAtividade] = useState(false);
   const [recentAtividades, setRecentAtividades] = useState<Array<{id: string; data: string; descricao: string}>>([]);
   const [atividadesRefreshKey, setAtividadesRefreshKey] = useState(0);
   const [isRegistrando, setIsRegistrando] = useState(false);
@@ -531,10 +534,17 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
       }
     }
 
+    setForceNovaAtividade(false);
     setIsRegistrando(false);
     setRegistroSucesso(true);
     setAtividadesRefreshKey(k => k + 1);
     setTimeout(() => setRegistroSucesso(false), 2500);
+  };
+
+  const handleNovaAtividade = () => {
+    setDescricaoAtividade('');
+    setSelectedAtividadeId(null);
+    setForceNovaAtividade(true);
   };
 
   const handleExcluirAtividade = async () => {
@@ -558,6 +568,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
       // Limpar campos
       setSelectedAtividadeId(null);
       setDescricaoAtividade('');
+      setForceNovaAtividade(false);
       setAtividadesRefreshKey(k => k + 1);
     } catch (err) {
       console.error('Erro ao excluir atividade:', err);
@@ -825,6 +836,16 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                   </button>
                   {selectedAtividadeId && (
                     <button
+                      onClick={handleNovaAtividade}
+                      disabled={isRegistrando || isEffectivelyLocked}
+                      title="Manter esta atividade salva e começar outra nova no mesmo dia"
+                      className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider border border-emerald-500/30 text-emerald-500 hover:bg-emerald-500/10 shadow-md transition-all whitespace-nowrap disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
+                    >
+                      <PlusCircle className="w-4 h-4" /> Nova Atividade
+                    </button>
+                  )}
+                  {selectedAtividadeId && (
+                    <button
                       onClick={handleExcluirAtividade}
                       disabled={isRegistrando || isEffectivelyLocked}
                       title={isEffectivelyLocked ? "Bimestre bloqueado" : "Excluir esta atividade permanentemente"}
@@ -894,6 +915,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                                 setDataAula(ativ.data);
                                 setDescricaoAtividade(ativ.descricao || '');
                                 setSelectedAtividadeId(ativ.id);
+                                setForceNovaAtividade(false);
                               }
                             }}
                             title={ativ.descricao}
@@ -1006,7 +1028,10 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                 onAtividadeLoaded={(desc, id) => {
                   setDescricaoAtividade(desc);
                   setSelectedAtividadeId(id);
+                  setForceNovaAtividade(false);
                 }}
+                selectedAtividadeId={selectedAtividadeId}
+                forceNovaAtividade={forceNovaAtividade}
                 bulkAtividades={
                   isBulkMode && bulkSelectedIds.length > 1
                     ? recentAtividades.filter(a => bulkSelectedIds.includes(a.id))

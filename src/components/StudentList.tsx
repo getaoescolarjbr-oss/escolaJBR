@@ -29,9 +29,15 @@ interface StudentListProps {
   onAtividadeLoaded?: (descricao: string, id: string | null) => void;
   bulkAtividades?: { id: string; data: string; descricao: string }[];
   isLocked?: boolean;
+  // ID da atividade controlado pelo Dashboard (ex.: atalho clicado ou "Nova Atividade").
+  // Quando muda, sincroniza a atividade/vistos exibidos sem esperar um refetch completo.
+  selectedAtividadeId?: string | null;
+  // true logo após "Nova Atividade": o próximo visto marcado deve criar uma atividade
+  // nova em vez de reaproveitar a mais recente do dia.
+  forceNovaAtividade?: boolean;
 }
 
-export function StudentList({ professor, turmaId, disciplinaId, dataAula = new Date().toISOString().split('T')[0], bimestreId, descricaoAtividade, theme, onAtividadeLoaded, bulkAtividades = [], isLocked = false }: StudentListProps) {
+export function StudentList({ professor, turmaId, disciplinaId, dataAula = new Date().toISOString().split('T')[0], bimestreId, descricaoAtividade, theme, onAtividadeLoaded, bulkAtividades = [], isLocked = false, selectedAtividadeId, forceNovaAtividade = false }: StudentListProps) {
   // Config efetiva para esta turma (per-turma ou global)
   const configEfetivo = getConfigPorTurma(professor, turmaId);
   const [alunos, setAlunos] = useState<ListaParaVistos[]>([]);
@@ -55,7 +61,36 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
   // garante que todos os rows subsequentes usem o mesmo ID.
   const handleAtividadeCreated = (novoId: string) => {
     setAtividadeIdHoje(novoId);
+    // Avisa o Dashboard: a atividade criada por um visto (ex.: após "Nova Atividade")
+    // vira a atividade selecionada, evitando que "Registrar" crie outra duplicada.
+    onAtividadeLoaded?.(descricaoAtividade, novoId);
   };
+
+  // Sincroniza com o ID controlado pelo Dashboard (atalho de atividade clicado ou
+  // "Nova Atividade"), sem esperar o refetch completo por mudança de data/turma/disciplina.
+  useEffect(() => {
+    if (selectedAtividadeId === undefined) return;
+    if (selectedAtividadeId === atividadeIdHoje) return;
+
+    if (!selectedAtividadeId) {
+      // "Nova Atividade": mantém a atividade anterior salva no banco, só limpa a exibição
+      setAtividadeIdHoje(null);
+      setVistosDoDia({});
+      return;
+    }
+
+    setAtividadeIdHoje(selectedAtividadeId);
+    supabase
+      .from('vistos_v2')
+      .select('aluno_id, valor')
+      .eq('atividade_id', selectedAtividadeId)
+      .then(({ data }) => {
+        const mapVistos: Record<string, string> = {};
+        (data || []).forEach(v => { mapVistos[String(v.aluno_id).trim()] = String(v.valor); });
+        setVistosDoDia(mapVistos);
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAtividadeId]);
 
   useEffect(() => {
     async function fetchData() {
@@ -107,14 +142,18 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
       }
 
       // 2. Buscar Atividade Diária do Dia Selecionado
-      const { data: atividadeHoje } = await supabase
+      // Pode haver mais de uma atividade no mesmo dia (turma/disciplina) — usamos
+      // a mais recente como padrão ao abrir a aba; as demais ficam nos atalhos.
+      const { data: atividadesHojeList } = await supabase
         .from('atividades_diárias')
         .select('id, descricao')
         .eq('id_do_professor', professor.id)
         .eq('turma_id', turmaId)
         .eq('disciplina_id', disciplinaId)
         .eq('data', dataAula)
-        .maybeSingle();
+        .order('created_at', { ascending: false })
+        .limit(1);
+      const atividadeHoje = atividadesHojeList?.[0] || null;
 
       if (atividadeHoje) {
         setAtividadeIdHoje(atividadeHoje.id);
@@ -652,6 +691,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                   initialSaidaId={saidasAtivas[String(aluno.aluno_id).trim()] || null}
                   atividadeIdHoje={atividadeIdHoje}
                   onAtividadeCreated={handleAtividadeCreated}
+                  forceNovaAtividade={forceNovaAtividade && !atividadeIdHoje}
                   bulkAtividades={bulkAtividades}
                   bulkRefreshTrigger={bulkRefreshTrigger}
                   gradeBreakdown={notasDetalhes[aluno.aluno_id]}

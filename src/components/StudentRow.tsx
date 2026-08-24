@@ -25,13 +25,14 @@ interface StudentRowProps {
   initialSaidaId?: string | null;
   atividadeIdHoje: string | null;
   onAtividadeCreated?: (id: string) => void;
+  forceNovaAtividade?: boolean;
   bulkAtividades?: { id: string; data: string; descricao: string }[];
   bulkRefreshTrigger?: number;
   gradeBreakdown?: StudentGradeBreakdown;
   isLocked?: boolean;
 }
 
-export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAtividade, atividadesRealizadas, totalAtividades, index, theme, onUpdateVisto, initialVisto, initialPresenca, initialSaidaId, atividadeIdHoje, onAtividadeCreated, bulkAtividades = [], bulkRefreshTrigger = 0, gradeBreakdown, isLocked = false }: StudentRowProps) {
+export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAtividade, atividadesRealizadas, totalAtividades, index, theme, onUpdateVisto, initialVisto, initialPresenca, initialSaidaId, atividadeIdHoje, onAtividadeCreated, forceNovaAtividade = false, bulkAtividades = [], bulkRefreshTrigger = 0, gradeBreakdown, isLocked = false }: StudentRowProps) {
   // Configuração efetiva: per-turma se definida, senão usa padrão global
   const configEfetivo = getConfigPorTurma(professor, aluno.turma_id);
   const [presenca, setPresenca] = useState<boolean | null>(initialPresenca ?? null);
@@ -280,23 +281,32 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
         setValorVisto(valor);
         
         // ─── Garante que a atividade existe (SELECT-then-INSERT, sem depender de UNIQUE constraint) ───
+        // Pode haver mais de uma atividade no mesmo dia/turma/disciplina — por isso o
+        // SELECT abaixo só é usado quando NÃO estamos explicitamente criando uma nova
+        // atividade ("Nova Atividade"), e sempre pega a mais recente.
         let currentAtividadeId = atividadeId;
         if (!currentAtividadeId) {
-            // 1. Tenta encontrar atividade já existente para este professor/turma/data
-            const { data: existing } = await supabase
-                .from('atividades_diárias')
-                .select('id')
-                .eq('id_do_professor', professor.id)
-                .eq('turma_id', aluno.turma_id)
-                .eq('disciplina_id', aluno.disciplina_id)
-                .eq('data', dataAula)
-                .maybeSingle();
+            if (!forceNovaAtividade) {
+                // 1. Tenta encontrar a atividade mais recente já existente para este professor/turma/data
+                const { data: existing } = await supabase
+                    .from('atividades_diárias')
+                    .select('id')
+                    .eq('id_do_professor', professor.id)
+                    .eq('turma_id', aluno.turma_id)
+                    .eq('disciplina_id', aluno.disciplina_id)
+                    .eq('data', dataAula)
+                    .order('created_at', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
 
-            if (existing) {
-                // Atividade já existe (criada por outro row)
-                currentAtividadeId = existing.id;
-            } else {
-                // 2. Não existe: cria nova
+                if (existing) {
+                    // Atividade já existe (criada por outro row)
+                    currentAtividadeId = existing.id;
+                }
+            }
+
+            if (!currentAtividadeId) {
+                // 2. Não existe (ou o professor pediu explicitamente uma nova atividade): cria nova
                 const { data: newAtividade, error: ativError } = await supabase
                     .from('atividades_diárias')
                     .insert({
@@ -312,7 +322,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                     .single();
 
                 if (ativError) {
-                    // INSERT falhou (corrida entre rows) — tenta SELECT novamente
+                    // INSERT falhou (corrida entre rows) — tenta SELECT novamente (mais recente)
                     const { data: retry } = await supabase
                         .from('atividades_diárias')
                         .select('id')
@@ -320,6 +330,8 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         .eq('turma_id', aluno.turma_id)
                         .eq('disciplina_id', aluno.disciplina_id)
                         .eq('data', dataAula)
+                        .order('created_at', { ascending: false })
+                        .limit(1)
                         .maybeSingle();
                     if (retry) currentAtividadeId = retry.id;
                 } else if (newAtividade) {
