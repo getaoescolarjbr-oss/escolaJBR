@@ -35,9 +35,12 @@ interface StudentListProps {
   // true logo após "Nova Atividade": o próximo visto marcado deve criar uma atividade
   // nova em vez de reaproveitar a mais recente do dia.
   forceNovaAtividade?: boolean;
+  // Incrementado pelo Dashboard ao registrar/excluir uma atividade pelo botão
+  // "Registrar Atividade", para recalcular totalAtividades/notas com a lista atual.
+  refreshKey?: number;
 }
 
-export function StudentList({ professor, turmaId, disciplinaId, dataAula = new Date().toISOString().split('T')[0], bimestreId, descricaoAtividade, theme, onAtividadeLoaded, bulkAtividades = [], isLocked = false, selectedAtividadeId, forceNovaAtividade = false }: StudentListProps) {
+export function StudentList({ professor, turmaId, disciplinaId, dataAula = new Date().toISOString().split('T')[0], bimestreId, descricaoAtividade, theme, onAtividadeLoaded, bulkAtividades = [], isLocked = false, selectedAtividadeId, forceNovaAtividade = false, refreshKey = 0 }: StudentListProps) {
   // Config efetiva para esta turma (per-turma ou global)
   const configEfetivo = getConfigPorTurma(professor, turmaId);
   const [alunos, setAlunos] = useState<ListaParaVistos[]>([]);
@@ -64,6 +67,11 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
     // Avisa o Dashboard: a atividade criada por um visto (ex.: após "Nova Atividade")
     // vira a atividade selecionada, evitando que "Registrar" crie outra duplicada.
     onAtividadeLoaded?.(descricaoAtividade, novoId);
+    // Uma nova atividade muda o total de atividades do bimestre — refaz o fetch
+    // completo para recalcular totalAtividades/notas a partir do banco. Sem isso,
+    // o total ficava travado no valor de quando a tela abriu, inflando a nota de
+    // vistos ao criar mais atividades no mesmo dia (múltiplas atividades por dia).
+    setRefreshTrigger(prev => prev + 1);
   };
 
   // Sincroniza com o ID controlado pelo Dashboard (atalho de atividade clicado ou
@@ -340,7 +348,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
     if (turmaId && disciplinaId) {
       fetchData();
     }
-  }, [professor.id, turmaId, disciplinaId, bimestreId, dataAula, refreshTrigger]);
+  }, [professor.id, turmaId, disciplinaId, bimestreId, dataAula, refreshTrigger, refreshKey]);
 
   // Polling para saidas_sala para manter sincronizado com o mobile
   useEffect(() => {

@@ -1032,6 +1032,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                 }}
                 selectedAtividadeId={selectedAtividadeId}
                 forceNovaAtividade={forceNovaAtividade}
+                refreshKey={atividadesRefreshKey}
                 bulkAtividades={
                   isBulkMode && bulkSelectedIds.length > 1
                     ? recentAtividades.filter(a => bulkSelectedIds.includes(a.id))
