@@ -7,6 +7,7 @@ import {
   Italic,
   List,
   Loader2,
+  Quote,
   Radical,
   Sigma,
   Subscript,
@@ -114,6 +115,22 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
     });
   }
 
+  function wrapMarker(token: 'REF') {
+    const sel = getSelection();
+    if (!sel) return;
+    const { el, start, end } = sel;
+    const selecionado = value.slice(start, end);
+    const before = `[[${token}:`;
+    const after = ']]';
+    onChange(`${value.slice(0, start)}${before}${selecionado}${after}${value.slice(end)}`);
+    const novoInicio = start + before.length;
+    const novoFim = novoInicio + selecionado.length;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(novoInicio, novoFim);
+    });
+  }
+
   function inserirMarcador(nivel: 1 | 2 | 3) {
     const sel = getSelection();
     if (!sel) return;
@@ -195,6 +212,9 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
       </ToolbarButton>
       <ToolbarButton title="Sobrescrito" onClick={() => wrapSelection('sup')}>
         <Superscript className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton title="Marcar como referência (citação, fonte)" onClick={() => wrapMarker('REF')}>
+        <Quote className="h-3.5 w-3.5" />
       </ToolbarButton>
 
       <div className="mx-1 h-4 w-px bg-gray-800" />
