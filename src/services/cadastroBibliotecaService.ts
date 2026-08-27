@@ -15,6 +15,7 @@ export interface CadastroBibliotecaPendente {
   turma_nome: string | null;
   responsavel_nome: string | null;
   responsavel_contato: string | null;
+  email_pessoal: string | null;
   aceite_termos: boolean;
   aceite_funcoes_sociais: boolean;
   username: string;
@@ -37,6 +38,7 @@ export interface DadosCadastroAluno {
   turmaId: string | null;
   responsavelNome: string | null;
   responsavelContato: string | null;
+  emailPessoal: string;
   aceiteTermos: boolean;
   aceiteFuncoesSociais: boolean;
   // Aluno da matrícula que o requerente selecionou na busca do próprio formulário —
@@ -88,6 +90,7 @@ export async function solicitarCadastroBiblioteca(dados: DadosCadastroAluno): Pr
     turma_id: dados.turmaId,
     responsavel_nome: dados.responsavelNome,
     responsavel_contato: dados.responsavelContato,
+    email_pessoal: dados.emailPessoal,
     aceite_termos: dados.aceiteTermos,
     aceite_funcoes_sociais: dados.aceiteFuncoesSociais,
     aluno_id_sugerido: dados.alunoIdSugerido,

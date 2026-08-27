@@ -57,6 +57,15 @@ export async function listarQuestoes(filtro: FiltroQuestoes): Promise<ListaQuest
   return { questoes: (data as unknown as Question[]) ?? [], total: count ?? 0 };
 }
 
+// Busca questões específicas por id, sem paginação — usado para reconstruir o preview de
+// impressão de uma avaliação já salva (avaliacao_questoes só guarda question_id/ordem/valor).
+export async function buscarQuestoesPorIds(ids: string[]): Promise<Question[]> {
+  if (ids.length === 0) return [];
+  const { data, error } = await supabase.from('questions').select(QUESTION_SELECT_FIELDS).in('id', ids);
+  if (error) throw error;
+  return (data as unknown as Question[]) ?? [];
+}
+
 // Cria ou atualiza o texto associado (passagem de apoio) de uma questão. Retorna o id
 // pra ser gravado em questions.support_text_id.
 export async function salvarTextoApoio(id: string | null, discipline: string, content: string): Promise<string> {

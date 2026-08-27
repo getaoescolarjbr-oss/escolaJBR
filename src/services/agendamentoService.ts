@@ -106,6 +106,14 @@ export async function listarTurmas(): Promise<{ id: string; nome: string }[]> {
   return data ?? [];
 }
 
+// Turmas de uma série específica — usado no cadastro do BiblioClube (série filtra turma,
+// ver create_avaliacoes_schema.sql que adiciona turmas.serie_id).
+export async function listarTurmasPorSerie(serieId: string): Promise<{ id: string; nome: string }[]> {
+  const { data, error } = await supabase.from('turmas').select('id, nome').eq('serie_id', serieId).order('nome');
+  if (error) throw error;
+  return data ?? [];
+}
+
 // Traduz o erro de conflito (constraint de exclusão OU trigger de bloqueio de
 // manutenção, ambos usam o código 23P01) para uma mensagem que a tela pode mostrar
 // sem quebrar. Qualquer outro erro é repassado como está.

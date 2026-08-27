@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { BookOpen, Star, LogOut, Loader2, Home, Users, Rss, ShoppingBag, Trophy, Sparkles } from 'lucide-react';
+import { BookOpen, Star, LogOut, Loader2, Home, Users, Rss, ShoppingBag, Trophy, Sparkles, ClipboardList } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import { signOut } from '../../services/authService';
@@ -10,12 +10,13 @@ import { AlunoDuplasTab } from './AlunoDuplasTab';
 import { AlunoFeedTab } from './AlunoFeedTab';
 import { AlunoLojaTab } from './AlunoLojaTab';
 import { AlunoConquistasTab } from './AlunoConquistasTab';
+import { AlunoAvaliacoesTab } from './AlunoAvaliacoesTab';
 
 interface AlunoHomeProps {
   onLogout: () => void;
 }
 
-type Aba = 'inicio' | 'acervo' | 'duplas' | 'feed' | 'loja' | 'conquistas';
+type Aba = 'inicio' | 'avaliacoes' | 'acervo' | 'duplas' | 'feed' | 'loja' | 'conquistas';
 
 // A "app" do aluno (BiblioClube JBR) — Fase 4 trouxe a primeira versão (empréstimos,
 // busca, favoritos); Fase 5 somou metas/conquistas; Fase 6 a loja; Fase 7 duplas de
@@ -80,6 +81,7 @@ export function AlunoHome({ onLogout }: AlunoHomeProps) {
 
   const abas: { id: Aba; label: string; icon: LucideIcon; cor: string; corAtiva: string }[] = [
     { id: 'inicio', label: 'Início', icon: Home, cor: 'text-sky-400', corAtiva: 'bg-sky-500 shadow-sky-900/40' },
+    { id: 'avaliacoes', label: 'Avaliações', icon: ClipboardList, cor: 'text-teal-400', corAtiva: 'bg-teal-500 shadow-teal-900/40' },
     { id: 'acervo', label: 'Acervo', icon: BookOpen, cor: 'text-indigo-400', corAtiva: 'bg-indigo-500 shadow-indigo-900/40' },
     { id: 'duplas', label: 'Duplas', icon: Users, cor: 'text-pink-400', corAtiva: 'bg-pink-500 shadow-pink-900/40' },
     { id: 'feed', label: 'Feed', icon: Rss, cor: 'text-orange-400', corAtiva: 'bg-orange-500 shadow-orange-900/40' },
@@ -122,6 +124,7 @@ export function AlunoHome({ onLogout }: AlunoHomeProps) {
         </div>
 
         {aba === 'inicio' && <AlunoInicioTab alunoId={alunoId} onPontosMudaram={atualizarSaldo} />}
+        {aba === 'avaliacoes' && <AlunoAvaliacoesTab />}
         {aba === 'acervo' && <AlunoAcervoTab alunoId={alunoId} />}
         {aba === 'duplas' && <AlunoDuplasTab alunoId={alunoId} />}
         {aba === 'feed' && <AlunoFeedTab alunoId={alunoId} />}

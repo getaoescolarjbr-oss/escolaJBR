@@ -3,7 +3,9 @@ import { BookOpen, Loader2, Search, X } from 'lucide-react';
 import { signInWithPassword } from '../services/authService';
 import { solicitarCadastroBiblioteca, resolverEmailPorUsername, buscarAlunosMatricula } from '../services/cadastroBibliotecaService';
 import type { AlunoMatricula } from '../services/cadastroBibliotecaService';
-import { listarTurmas } from '../services/agendamentoService';
+import { listarTurmas, listarTurmasPorSerie } from '../services/agendamentoService';
+import { listarSeries } from '../services/secretariaService';
+import type { SerieReferencia } from '../types/secretaria';
 
 interface AlunoAuthProps {
   onLogin: () => void;
@@ -25,6 +27,8 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
   const [username, setUsername] = useState('');
   const [senha, setSenha] = useState('');
 
+  const [series, setSeries] = useState<SerieReferencia[]>([]);
+  const [serieId, setSerieId] = useState('');
   const [turmas, setTurmas] = useState<{ id: string; nome: string }[]>([]);
   const [buscaNome, setBuscaNome] = useState('');
   const [resultadosNome, setResultadosNome] = useState<AlunoMatricula[]>([]);
@@ -32,6 +36,7 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
   const [alunoSelecionado, setAlunoSelecionado] = useState<AlunoMatricula | null>(null);
   const [dataNascimento, setDataNascimento] = useState('');
   const [turmaId, setTurmaId] = useState('');
+  const [emailPessoal, setEmailPessoal] = useState('');
   const [responsavelNome, setResponsavelNome] = useState('');
   const [responsavelContato, setResponsavelContato] = useState('');
   const [aceiteTermos, setAceiteTermos] = useState(false);
@@ -39,10 +44,21 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
   const [mostrarTermos, setMostrarTermos] = useState(false);
 
   useEffect(() => {
-    if (view === 'CADASTRO' && turmas.length === 0) {
-      listarTurmas().then(setTurmas).catch(() => {});
+    if (view === 'CADASTRO' && series.length === 0) {
+      listarSeries().then(setSeries).catch(() => {});
     }
-  }, [view, turmas.length]);
+  }, [view, series.length]);
+
+  // Sem série escolhida, mostra todas as turmas (evita travar quem já sabe a turma mas
+  // não quer procurar a série antes) — ao escolher a série, filtra a lista.
+  useEffect(() => {
+    if (view !== 'CADASTRO') return;
+    if (!serieId) {
+      listarTurmas().then(setTurmas).catch(() => {});
+      return;
+    }
+    listarTurmasPorSerie(serieId).then(setTurmas).catch(() => {});
+  }, [view, serieId]);
 
   async function handleBuscarNome(valor: string) {
     setBuscaNome(valor);
@@ -96,6 +112,9 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
       if (senha.length < 6) {
         throw new Error('A senha precisa ter pelo menos 6 caracteres.');
       }
+      if (!emailPessoal.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailPessoal.trim())) {
+        throw new Error('Informe um e-mail pessoal válido.');
+      }
       if (!aceiteTermos) {
         throw new Error('É preciso aceitar os termos para se cadastrar.');
       }
@@ -105,6 +124,7 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
         nomeInformado: alunoSelecionado.nome,
         dataNascimento: dataNascimento || null,
         turmaId: turmaId || null,
+        emailPessoal: emailPessoal.trim(),
         responsavelNome: responsavelNome.trim() || null,
         responsavelContato: responsavelContato.trim() || null,
         aceiteTermos,
@@ -200,8 +220,15 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className={rotuloClasse}>Nascimento</label>
-                    <input type="date" value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)} className={campoClasse} />
+                    <label className={rotuloClasse}>Série</label>
+                    <select
+                      value={serieId}
+                      onChange={(e) => { setSerieId(e.target.value); setTurmaId(''); }}
+                      className={campoClasse}
+                    >
+                      <option value="">Todas</option>
+                      {series.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                    </select>
                   </div>
                   <div>
                     <label className={rotuloClasse}>Turma</label>
@@ -209,6 +236,16 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
                       <option value="">Selecione</option>
                       {turmas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
                     </select>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className={rotuloClasse}>Nascimento</label>
+                    <input type="date" value={dataNascimento} onChange={(e) => setDataNascimento(e.target.value)} className={campoClasse} />
+                  </div>
+                  <div>
+                    <label className={rotuloClasse}>E-mail pessoal *</label>
+                    <input type="email" required value={emailPessoal} onChange={(e) => setEmailPessoal(e.target.value)} placeholder="voce@email.com" className={campoClasse} />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

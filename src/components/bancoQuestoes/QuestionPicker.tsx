@@ -1,0 +1,167 @@
+import { useEffect, useState } from 'react';
+import { Loader2, Search } from 'lucide-react';
+import type { FilterOptions, FiltroQuestoes, Question } from '../../types/bancoQuestoes';
+import { buscarAssuntosPorDisciplina, buscarFilterOptions, listarQuestoes } from '../../services/bancoQuestoesService';
+import { QuestionCard } from './QuestionCard';
+
+const PAGE_SIZE = 10;
+
+const selectClass =
+  'w-full min-w-0 px-3 py-2.5 bg-ms-dark border border-gray-800 rounded-xl text-ms-main text-sm outline-none focus:ring-2 focus:ring-ms-blue truncate';
+
+interface QuestionPickerProps {
+  selecionadas: Map<string, Question>;
+  onToggleSelecionar: (q: Question) => void;
+  onEditar?: (q: Question) => void;
+}
+
+// Filtros + lista + seleção do banco de questões — extraído de QuestoesTab.tsx pra ser
+// reaproveitado também no passo 1 do gerador de avaliações (ver avaliacoes/NovaAvaliacaoTab.tsx).
+// O contador de selecionadas fica com quem usa este componente (selecionadas.size), pra cada
+// tela decidir onde/como mostrar.
+export function QuestionPicker({ selecionadas, onToggleSelecionar, onEditar }: QuestionPickerProps) {
+  const [opcoes, setOpcoes] = useState<FilterOptions | null>(null);
+  const [assuntosDisciplina, setAssuntosDisciplina] = useState<string[] | null>(null);
+  const [filtro, setFiltro] = useState<FiltroQuestoes>({ page: 0 });
+  const [busca, setBusca] = useState('');
+  const [questoes, setQuestoes] = useState<Question[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    buscarFilterOptions().then(setOpcoes).catch(() => setOpcoes(null));
+  }, []);
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (!filtro.discipline) {
+        setAssuntosDisciplina(null);
+        return;
+      }
+      buscarAssuntosPorDisciplina(filtro.discipline)
+        .then(setAssuntosDisciplina)
+        .catch(() => setAssuntosDisciplina([]));
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, [filtro.discipline]);
+
+  useEffect(() => {
+    const timeout = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const { questoes, total } = await listarQuestoes({ ...filtro, pageSize: PAGE_SIZE });
+        setQuestoes(questoes);
+        setTotal(total);
+      } finally {
+        setLoading(false);
+      }
+    }, 0);
+    return () => clearTimeout(timeout);
+  }, [filtro]);
+
+  function atualizarFiltro(patch: Partial<FiltroQuestoes>) {
+    setFiltro((f) => ({ ...f, ...patch, page: 0 }));
+  }
+
+  const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const paginaAtual = (filtro.page ?? 0) + 1;
+  const assuntosParaFiltro = assuntosDisciplina ?? opcoes?.assuntos ?? [];
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-4">
+        <div className="flex gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ms-muted" />
+            <input
+              placeholder="Buscar no enunciado..."
+              value={busca}
+              onChange={(e) => setBusca(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && atualizarFiltro({ busca })}
+              className="w-full pl-10 pr-4 py-2.5 bg-ms-dark border border-gray-800 rounded-xl text-ms-main text-sm outline-none focus:ring-2 focus:ring-ms-blue"
+            />
+          </div>
+          <button onClick={() => atualizarFiltro({ busca })} className="px-5 py-2.5 bg-ms-blue text-white rounded-xl text-sm font-bold hover:bg-blue-600">
+            Buscar
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <select
+            className={selectClass}
+            value={filtro.discipline ?? ''}
+            onChange={(e) => atualizarFiltro({ discipline: e.target.value || undefined, assunto: undefined })}
+          >
+            <option value="">Disciplina...</option>
+            {opcoes?.disciplines.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <select className={selectClass} value={filtro.assunto ?? ''} onChange={(e) => atualizarFiltro({ assunto: e.target.value || undefined })}>
+            <option value="">{filtro.discipline ? 'Assunto...' : 'Assunto (escolha a disciplina)'}</option>
+            {assuntosParaFiltro.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+          <select className={selectClass} value={filtro.level ?? ''} onChange={(e) => atualizarFiltro({ level: e.target.value || undefined })}>
+            <option value="">Nível...</option>
+            {opcoes?.levels.map((l) => <option key={l} value={l}>{l}</option>)}
+          </select>
+          <select className={selectClass} value={filtro.difficulty ?? ''} onChange={(e) => atualizarFiltro({ difficulty: e.target.value || undefined })}>
+            <option value="">Dificuldade...</option>
+            {opcoes?.difficulties.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+          <select className={selectClass} value={filtro.banca ?? ''} onChange={(e) => atualizarFiltro({ banca: e.target.value || undefined })}>
+            <option value="">Banca...</option>
+            {opcoes?.bancas.map((b) => <option key={b} value={b}>{b}</option>)}
+          </select>
+          <select className={selectClass} value={filtro.ano ?? ''} onChange={(e) => atualizarFiltro({ ano: e.target.value ? Number(e.target.value) : undefined })}>
+            <option value="">Ano...</option>
+            {opcoes?.anos.sort((a, b) => b - a).map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between bg-ms-blue/10 border border-ms-blue/40 rounded-xl px-5 py-3">
+        <p className="text-sm text-ms-main font-bold">{selecionadas.size} questão(ões) selecionada(s)</p>
+      </div>
+
+      {loading ? (
+        <div className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>
+      ) : questoes.length === 0 ? (
+        <p className="text-center text-ms-muted py-12">Nenhuma questão encontrada com estes filtros.</p>
+      ) : (
+        <>
+          <div className="space-y-4">
+            {questoes.map((q) => (
+              <QuestionCard
+                key={q.id}
+                question={q}
+                selecionada={selecionadas.has(q.id)}
+                onToggleSelecionar={() => onToggleSelecionar(q)}
+                onEditar={onEditar ? () => onEditar(q) : undefined}
+              />
+            ))}
+          </div>
+
+          <div className="flex items-center justify-between text-sm text-ms-muted">
+            <span>{total} questões encontradas</span>
+            <div className="flex items-center gap-3">
+              <button
+                disabled={paginaAtual <= 1}
+                onClick={() => setFiltro((f) => ({ ...f, page: (f.page ?? 0) - 1 }))}
+                className="px-3 py-1.5 rounded-lg border border-gray-800 disabled:opacity-40"
+              >
+                Anterior
+              </button>
+              <span>Página {paginaAtual} de {totalPaginas}</span>
+              <button
+                disabled={paginaAtual >= totalPaginas}
+                onClick={() => setFiltro((f) => ({ ...f, page: (f.page ?? 0) + 1 }))}
+                className="px-3 py-1.5 rounded-lg border border-gray-800 disabled:opacity-40"
+              >
+                Próxima
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
