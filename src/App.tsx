@@ -21,12 +21,13 @@ import { CozinhaPanel } from './components/cozinha/CozinhaPanel';
 import { AgendamentoPanel } from './components/agendamento/AgendamentoPanel';
 import { BibliotecaPanel } from './components/biblioteca/BibliotecaPanel';
 import { ProfessorBibliotecaTab } from './components/biblioteca/ProfessorBibliotecaTab';
+import { BancoQuestoesPanel } from './components/bancoQuestoes/BancoQuestoesPanel';
 import { AlunoHome } from './components/aluno/AlunoHome';
 import { CadastroPendenteScreen } from './components/aluno/CadastroPendenteScreen';
 import { GestaoEscolarPanel } from './components/gestaoEscolar/GestaoEscolarPanel';
 import { MODULOS_NAV, modulosVisiveis } from './config/moduleNav';
 
-const MODULOS_COM_SHELL = ['pessoas', 'secretaria', 'cozinha', 'agendamento', 'biblioteca', 'gestao', 'lgpd', 'usuarios', 'perfil'] as const;
+const MODULOS_COM_SHELL = ['pessoas', 'secretaria', 'cozinha', 'agendamento', 'biblioteca', 'banco-questoes', 'gestao', 'lgpd', 'usuarios', 'perfil'] as const;
 type ModuloComShell = (typeof MODULOS_COM_SHELL)[number];
 
 const TITULOS_MODULO: Record<ModuloComShell, { titulo: string; subtitulo?: string }> = {
@@ -35,6 +36,7 @@ const TITULOS_MODULO: Record<ModuloComShell, { titulo: string; subtitulo?: strin
   cozinha: { titulo: 'Cozinha', subtitulo: 'Cardápio, estoque, fornecedores e indicadores PNAE' },
   agendamento: { titulo: 'Agendamento de Recursos', subtitulo: 'Recursos, bloqueios de manutenção e reservas' },
   biblioteca: { titulo: 'Biblioteca', subtitulo: 'Acervo, empréstimos e clube de leitura' },
+  'banco-questoes': { titulo: 'Banco de Questões', subtitulo: 'Consulte e monte provas com questões organizadas por disciplina' },
   gestao: { titulo: 'Gestão Escolar', subtitulo: 'Indicadores, Almoxarifado e demais sub-módulos administrativos' },
   lgpd: { titulo: 'LGPD — Exportar e Excluir Dados', subtitulo: 'Solicitações de titulares de dados' },
   usuarios: { titulo: 'Usuários e Funções', subtitulo: 'Controle de acesso (RBAC)' },
@@ -369,6 +371,7 @@ function App() {
                   {modulo === 'cozinha' && <CozinhaPanel />}
                   {modulo === 'agendamento' && <AgendamentoPanel />}
                   {modulo === 'biblioteca' && (hasAnyRole(['BIBLIOTECA', 'GESTAO', 'COORDENACAO']) ? <BibliotecaPanel /> : <ProfessorBibliotecaTab />)}
+                  {modulo === 'banco-questoes' && <BancoQuestoesPanel />}
                   {modulo === 'gestao' && <GestaoEscolarPanel />}
                   {modulo === 'perfil' && <PerfilPanel />}
                 </ModuleShell>
