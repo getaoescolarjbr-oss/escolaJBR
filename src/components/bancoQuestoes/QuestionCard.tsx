@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
+import { BookOpen, Check, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import type { Question } from '../../types/bancoQuestoes';
 import { buildFonte, renderLightMarkup } from '../../lib/questionMarkup';
 
@@ -12,6 +12,7 @@ interface Props {
 
 export function QuestionCard({ question: q, selecionada, onToggleSelecionar, onEditar }: Props) {
   const [mostrarGabarito, setMostrarGabarito] = useState(false);
+  const [mostrarTexto, setMostrarTexto] = useState(false);
 
   return (
     <div className="bg-ms-card border border-ms-border rounded-2xl p-6 space-y-4">
@@ -56,10 +57,22 @@ export function QuestionCard({ question: q, selecionada, onToggleSelecionar, onE
       </div>
 
       {q.support_texts && (
-        <div className="border-l-4 border-ms-gold pl-4 text-sm text-ms-muted space-y-2">
-          {renderLightMarkup(q.support_texts.content, `st-${q.support_texts.id}`)}
-          {q.support_texts.image_url && (
-            <img src={q.support_texts.image_url} alt="" className="max-h-[280px] rounded-lg border border-ms-border" />
+        <div>
+          <button
+            onClick={() => setMostrarTexto((v) => !v)}
+            className="flex items-center gap-1.5 text-sm font-bold text-ms-gold hover:underline"
+          >
+            <BookOpen className="w-4 h-4" />
+            {mostrarTexto ? 'Ocultar texto associado' : 'Ver texto associado'}
+            {mostrarTexto ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+          </button>
+          {mostrarTexto && (
+            <div className="mt-2 border-l-4 border-ms-gold pl-4 text-sm text-ms-muted space-y-2">
+              {renderLightMarkup(q.support_texts.content, `st-${q.support_texts.id}`)}
+              {q.support_texts.image_url && (
+                <img src={q.support_texts.image_url} alt="" className="max-h-[280px] rounded-lg border border-ms-border" />
+              )}
+            </div>
           )}
         </div>
       )}
