@@ -37,7 +37,10 @@ export async function listarQuestoes(filtro: FiltroQuestoes): Promise<ListaQuest
     .from('questions')
     .select(QUESTION_SELECT_FIELDS, { count: 'exact' })
     .eq('active', true)
+    // created_at sozinho não é único (muitas questões do lote importado têm o mesmo
+    // timestamp), o que fazia a paginação repetir/pular linhas entre páginas.
     .order('created_at', { ascending: false })
+    .order('id', { ascending: false })
     .range(page * pageSize, page * pageSize + pageSize - 1);
 
   if (filtro.discipline) query = query.eq('discipline', filtro.discipline);
@@ -65,6 +68,12 @@ export async function salvarTextoApoio(id: string | null, discipline: string, co
     }
     return id;
   }
+  // Antes de criar, reaproveita um texto já cadastrado com o mesmo conteúdo (é comum a
+  // mesma passagem de apoio ser usada em várias questões) em vez de duplicar no banco.
+  const { data: existente, error: buscaErro } = await supabase.from('support_texts').select('id').eq('content', content).limit(1);
+  if (buscaErro) throw buscaErro;
+  if (existente && existente.length > 0) return existente[0].id;
+
   const { data, error } = await supabase.from('support_texts').insert([{ discipline, content }]).select('id');
   if (error) throw error;
   if (!data || data.length === 0) {
