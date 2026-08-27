@@ -5,6 +5,8 @@ export interface Avaliacao {
   id: string;
   titulo: string;
   disciplina: string | null;
+  disciplina_id: string | null;
+  bimestre_id: number | null;
   instrucoes: string | null;
   valor_total: number;
   modo: ModoAvaliacao;
@@ -28,6 +30,8 @@ export interface AvaliacaoQuestaoInput {
 export interface NovaAvaliacaoInput {
   titulo: string;
   disciplina: string;
+  disciplinaId: string | null;
+  bimestreId: number | null;
   instrucoes: string;
   valorTotal: number;
   modo: ModoAvaliacao;

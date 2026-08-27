@@ -14,6 +14,7 @@ const selectClass =
 interface QuestionPickerProps {
   selecionadas: Map<string, Question>;
   onToggleSelecionar: (q: Question) => void;
+  onContinuar?: () => void;
 }
 
 // Filtros + lista + seleção do banco de questões — extraído de QuestoesTab.tsx pra ser
@@ -21,7 +22,7 @@ interface QuestionPickerProps {
 // O contador de selecionadas fica com quem usa este componente (selecionadas.size), pra cada
 // tela decidir onde/como mostrar. Criar/editar questão também fica autocontido aqui — a
 // questão criada/editada entra no banco compartilhado, visível para todos.
-export function QuestionPicker({ selecionadas, onToggleSelecionar }: QuestionPickerProps) {
+export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar }: QuestionPickerProps) {
   const { hasAnyRole, usuarioId } = useAuth();
   const podeEditar = hasAnyRole(['GESTAO', 'PROFESSOR']);
   const [opcoes, setOpcoes] = useState<FilterOptions | null>(null);
@@ -138,15 +139,26 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar }: QuestionPic
 
       <div className="flex items-center justify-between bg-ms-blue/10 border border-ms-blue/40 rounded-xl px-5 py-3">
         <p className="text-sm text-ms-main font-bold">{selecionadas.size} questão(ões) selecionada(s)</p>
-        {podeEditar && (
-          <button
-            onClick={() => setCriando(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-sm font-bold hover:bg-gray-800"
-          >
-            <Plus className="w-4 h-4" />
-            Nova questão
-          </button>
-        )}
+        <div className="flex items-center gap-3">
+          {onContinuar && (
+            <button
+              disabled={selecionadas.size === 0}
+              onClick={onContinuar}
+              className="px-4 py-2 bg-ms-blue text-white rounded-lg text-sm font-bold hover:bg-blue-600 disabled:opacity-40"
+            >
+              Continuar com {selecionadas.size} questão(ões)
+            </button>
+          )}
+          {podeEditar && (
+            <button
+              onClick={() => setCriando(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-sm font-bold hover:bg-gray-800"
+            >
+              <Plus className="w-4 h-4" />
+              Nova questão
+            </button>
+          )}
+        </div>
       </div>
 
       {loading ? (

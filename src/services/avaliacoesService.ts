@@ -10,7 +10,7 @@ import type {
   StatusAvaliacao,
 } from '../types/avaliacoes';
 
-const AVALIACAO_SELECT = 'id, titulo, disciplina, instrucoes, valor_total, modo, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at';
+const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at';
 
 function mapAvaliacaoRow(row: Record<string, unknown>): Avaliacao {
   const turmas = (row.prova_turmas as { turmas: { id: string; nome: string } | null }[] | undefined) ?? [];
@@ -46,6 +46,12 @@ export async function obterAvaliacao(id: string): Promise<Avaliacao | null> {
   return mapAvaliacaoRow(data as unknown as Record<string, unknown>);
 }
 
+export async function listarDisciplinasCatalogo(): Promise<{ id: string; nome: string }[]> {
+  const { data, error } = await supabase.from('disciplinas').select('id, nome').order('nome');
+  if (error) throw error;
+  return data ?? [];
+}
+
 export async function obterQuestoesDaAvaliacao(id: string): Promise<{ question_id: string; ordem: number; valor: number }[]> {
   const { data, error } = await supabase
     .from('prova_questoes')
@@ -69,6 +75,8 @@ export async function criarAvaliacao(dados: NovaAvaliacaoInput, status: StatusAv
     .insert([{
       titulo: dados.titulo,
       disciplina: dados.disciplina || null,
+      disciplina_id: dados.disciplinaId,
+      bimestre_id: dados.bimestreId,
       instrucoes: dados.instrucoes || null,
       valor_total: dados.valorTotal,
       modo: dados.modo,
@@ -96,18 +104,102 @@ export async function criarAvaliacao(dados: NovaAvaliacaoInput, status: StatusAv
     if (tErro) throw tErro;
   }
 
+  if (status === 'PUBLICADA') {
+    await sincronizarNotasDaProva(avaliacaoId, {
+      titulo: dados.titulo,
+      valorTotal: dados.valorTotal,
+      dataAplicacao: dados.dataAplicacao,
+      disciplinaId: dados.disciplinaId,
+      bimestreId: dados.bimestreId,
+      turmaIds: dados.turmaIds,
+    });
+  }
+
   return avaliacaoId;
 }
 
+// Cria, em "Notas e Avaliações" (avaliacoes/notas_avaliacoes — GradesPanel.tsx), uma
+// avaliação de nota por turma da prova publicada, pra já aparecer o campo de nota
+// pronto pro professor lançar. Idempotente (não duplica se a turma já foi
+// sincronizada) e silenciosa se faltar disciplina/bimestre ou o autor não tiver um
+// registro em `professores` (ex.: COORDENACAO/GESTAO sem vínculo de professor) — a
+// prova em si já foi salva com sucesso, isso é só o vínculo com o boletim.
+async function sincronizarNotasDaProva(
+  provaId: string,
+  dados: { titulo: string; valorTotal: number; dataAplicacao: string | null; disciplinaId: string | null; bimestreId: number | null; turmaIds: string[] }
+): Promise<void> {
+  if (!dados.disciplinaId || !dados.bimestreId || dados.turmaIds.length === 0) return;
+
+  const { data: userData } = await supabase.auth.getUser();
+  if (!userData.user) return;
+
+  const { data: prof } = await supabase.from('professores').select('id').eq('user_id', userData.user.id).maybeSingle();
+  if (!prof) return;
+
+  const { data: vinculosExistentes } = await supabase
+    .from('prova_avaliacao_notas')
+    .select('turma_id')
+    .eq('prova_id', provaId);
+  const turmasJaSincronizadas = new Set((vinculosExistentes ?? []).map((v) => v.turma_id as string));
+
+  for (const turmaId of dados.turmaIds) {
+    if (turmasJaSincronizadas.has(turmaId)) continue;
+
+    const { data: notaAvaliacao, error: notaErro } = await supabase
+      .from('avaliacoes')
+      .insert({
+        professor_id: prof.id,
+        turma_id: turmaId,
+        disciplina_id: dados.disciplinaId,
+        bimestre_id: dados.bimestreId,
+        nome: dados.titulo,
+        valor_maximo: dados.valorTotal,
+        data_avaliacao: dados.dataAplicacao,
+        publicada: true,
+      })
+      .select('id')
+      .single();
+    if (notaErro || !notaAvaliacao) continue;
+
+    await supabase.from('prova_avaliacao_notas').insert({ prova_id: provaId, turma_id: turmaId, avaliacao_id: notaAvaliacao.id });
+  }
+}
+
 export async function atualizarStatusAvaliacao(id: string, status: StatusAvaliacao): Promise<void> {
-  const { data, error } = await supabase.from('provas').update({ status }).eq('id', id).select('id');
+  const { data, error } = await supabase.from('provas').update({ status }).eq('id', id).select('id, titulo, valor_total, data_aplicacao, disciplina_id, bimestre_id');
   if (error) throw error;
   if (!data || data.length === 0) {
     throw new Error('Não foi possível atualizar a avaliação. Verifique suas permissões.');
   }
+
+  if (status === 'PUBLICADA') {
+    const prova = data[0] as { id: string; titulo: string; valor_total: number; data_aplicacao: string | null; disciplina_id: string | null; bimestre_id: number | null };
+    const { data: turmas } = await supabase.from('prova_turmas').select('turma_id').eq('prova_id', id);
+    await sincronizarNotasDaProva(id, {
+      titulo: prova.titulo,
+      valorTotal: prova.valor_total,
+      dataAplicacao: prova.data_aplicacao,
+      disciplinaId: prova.disciplina_id,
+      bimestreId: prova.bimestre_id,
+      turmaIds: (turmas ?? []).map((t) => t.turma_id as string),
+    });
+  }
 }
 
+// Exclui a prova e, se ela já tiver avaliação(ões) de nota vinculada(s) (ver
+// sincronizarNotasDaProva), apaga também as notas lançadas e a avaliação em "Notas e
+// Avaliações" — pra nunca sobrar um boletim com uma coluna de nota "órfã" de uma prova
+// que não existe mais. A confirmação (com o aviso sobre isso) fica na tela que chama
+// esta função (MinhasAvaliacoesTab.tsx).
 export async function excluirAvaliacao(id: string): Promise<void> {
+  const { data: vinculos } = await supabase.from('prova_avaliacao_notas').select('avaliacao_id').eq('prova_id', id);
+  const notasIds = (vinculos ?? []).map((v) => v.avaliacao_id as string);
+
+  if (notasIds.length > 0) {
+    await supabase.from('notas_avaliacoes').delete().in('avaliacao_id', notasIds);
+    await supabase.from('avaliacoes').delete().in('id', notasIds);
+  }
+
   const { error } = await supabase.from('provas').delete().eq('id', id);
   if (error) throw error;
 }

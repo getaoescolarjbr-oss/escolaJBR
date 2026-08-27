@@ -55,8 +55,11 @@ export function MinhasAvaliacoesTab() {
     }
   }
 
-  async function excluir(id: string) {
-    if (!confirm('Excluir esta avaliação? Essa ação não pode ser desfeita.')) return;
+  async function excluir(id: string, status: StatusAvaliacao) {
+    const aviso = status === 'RASCUNHO'
+      ? 'Excluir esta avaliação? Essa ação não pode ser desfeita.'
+      : 'Excluir esta avaliação publicada? A coluna de nota correspondente em "Notas e Avaliações", as notas já lançadas e as respostas dos alunos serão apagadas junto. Essa ação não pode ser desfeita.';
+    if (!confirm(aviso)) return;
     setProcessando(id);
     try {
       await excluirAvaliacao(id);
@@ -131,15 +134,13 @@ export function MinhasAvaliacoesTab() {
                       <Users className="w-3.5 h-3.5" /> Resultados
                     </button>
                   )}
-                  {a.status === 'RASCUNHO' && (
-                    <button
-                      disabled={processando === a.id}
-                      onClick={() => excluir(a.id)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-900/30 border border-red-800 text-red-300 rounded-lg text-xs font-bold hover:bg-red-900/50 disabled:opacity-40"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Excluir
-                    </button>
-                  )}
+                  <button
+                    disabled={processando === a.id}
+                    onClick={() => excluir(a.id, a.status)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-900/30 border border-red-800 text-red-300 rounded-lg text-xs font-bold hover:bg-red-900/50 disabled:opacity-40"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Excluir
+                  </button>
                 </div>
               </div>
             </div>

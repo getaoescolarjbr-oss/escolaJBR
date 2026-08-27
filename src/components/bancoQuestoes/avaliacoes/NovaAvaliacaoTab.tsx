@@ -62,7 +62,11 @@ export function NovaAvaliacaoTab({ onAvaliacaoSalva }: Props) {
 
       {passo === 'questoes' && (
         <div className="space-y-6">
-          <QuestionPicker selecionadas={selecionadas} onToggleSelecionar={toggleSelecionar} />
+          <QuestionPicker
+            selecionadas={selecionadas}
+            onToggleSelecionar={toggleSelecionar}
+            onContinuar={() => setPasso('config')}
+          />
           <div className="flex justify-end">
             <button
               disabled={questoesSelecionadas.length === 0}
