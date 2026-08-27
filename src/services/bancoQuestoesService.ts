@@ -58,13 +58,19 @@ export async function listarQuestoes(filtro: FiltroQuestoes): Promise<ListaQuest
 // pra ser gravado em questions.support_text_id.
 export async function salvarTextoApoio(id: string | null, discipline: string, content: string): Promise<string> {
   if (id) {
-    const { error } = await supabase.from('support_texts').update({ discipline, content }).eq('id', id);
+    const { data, error } = await supabase.from('support_texts').update({ discipline, content }).eq('id', id).select('id');
     if (error) throw error;
+    if (!data || data.length === 0) {
+      throw new Error('Nenhum texto associado foi atualizado. Verifique suas permissões.');
+    }
     return id;
   }
-  const { data, error } = await supabase.from('support_texts').insert([{ discipline, content }]).select('id').single();
+  const { data, error } = await supabase.from('support_texts').insert([{ discipline, content }]).select('id');
   if (error) throw error;
-  return data.id;
+  if (!data || data.length === 0) {
+    throw new Error('Falha ao criar o texto associado. Verifique suas permissões.');
+  }
+  return data[0].id;
 }
 
 export async function criarQuestao(dados: Partial<Question>): Promise<Question> {
@@ -74,8 +80,13 @@ export async function criarQuestao(dados: Partial<Question>): Promise<Question> 
 }
 
 export async function atualizarQuestao(id: string, dados: Partial<Question>): Promise<void> {
-  const { error } = await supabase.from('questions').update(dados).eq('id', id);
+  // .select() aqui é essencial: sem ele, um update bloqueado pelo RLS (ou que não bate
+  // com nenhuma linha) não gera erro nenhum — só silenciosamente não atualiza nada.
+  const { data, error } = await supabase.from('questions').update(dados).eq('id', id).select('id');
   if (error) throw error;
+  if (!data || data.length === 0) {
+    throw new Error('Nenhuma questão foi atualizada. Verifique suas permissões.');
+  }
 }
 
 export async function excluirQuestao(id: string): Promise<void> {
