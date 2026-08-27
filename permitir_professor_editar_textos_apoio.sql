@@ -1,8 +1,11 @@
--- A liberação anterior (permitir_professor_editar_questoes.sql) esqueceu de estender a
--- policy de support_texts junto com a de questions — por isso salvar "texto associado"
--- como professor falhava no RLS (a tabela support_texts continuava só GESTAO).
+-- Complementa permitir_professor_editar_questoes.sql: aquele arquivo liberou a escrita
+-- de public.questions para PROFESSOR, mas esqueceu de public.support_texts (o "texto
+-- associado" opcional da questão). Como QuestionEditorDialog salva o texto associado
+-- antes da própria questão, ficar só com GESTAO ali travava o salvamento inteiro sempre
+-- que o professor preenchia esse campo.
 
 DROP POLICY IF EXISTS "Gestão pode gerenciar textos de apoio" ON public.support_texts;
+DROP POLICY IF EXISTS "Gestão e professores podem gerenciar textos de apoio" ON public.support_texts;
 CREATE POLICY "Gestão e professores podem gerenciar textos de apoio"
   ON public.support_texts FOR ALL
   TO authenticated

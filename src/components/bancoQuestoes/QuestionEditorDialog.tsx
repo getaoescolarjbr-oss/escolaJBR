@@ -125,7 +125,8 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
       onSalvo();
       onClose();
     } catch (err) {
-      setErro(err instanceof Error ? err.message : 'Erro ao salvar questão.');
+      const msg = err instanceof Error ? err.message : (err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : null);
+      setErro(msg || 'Erro ao salvar questão.');
     } finally {
       setSalvando(false);
     }

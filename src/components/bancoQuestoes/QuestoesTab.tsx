@@ -2,18 +2,13 @@ import { useMemo, useState } from 'react';
 import { Copy, Check, FileText } from 'lucide-react';
 import type { Question } from '../../types/bancoQuestoes';
 import { QuestionPicker } from './QuestionPicker';
-import { QuestionEditorDialog } from './QuestionEditorDialog';
 import { buildFonte } from '../../lib/questionMarkup';
 import { GerarProvaModal } from './GerarProvaModal';
-import { useAuth } from '../../hooks/useAuth';
 
 export function QuestoesTab() {
-  const { hasAnyRole } = useAuth();
-  const podeEditar = hasAnyRole(['GESTAO', 'PROFESSOR']);
   const [selecionadas, setSelecionadas] = useState<Map<string, Question>>(new Map());
   const [copiado, setCopiado] = useState(false);
   const [gerarProvaAberto, setGerarProvaAberto] = useState(false);
-  const [editando, setEditando] = useState<Question | null>(null);
 
   function toggleSelecionar(q: Question) {
     setSelecionadas((prev) => {
@@ -55,22 +50,10 @@ export function QuestoesTab() {
         </div>
       )}
 
-      <QuestionPicker
-        selecionadas={selecionadas}
-        onToggleSelecionar={toggleSelecionar}
-        onEditar={podeEditar ? (q) => setEditando(q) : undefined}
-      />
+      <QuestionPicker selecionadas={selecionadas} onToggleSelecionar={toggleSelecionar} />
 
       {gerarProvaAberto && (
         <GerarProvaModal questoes={questoesSelecionadas} onClose={() => setGerarProvaAberto(false)} />
-      )}
-
-      {editando && (
-        <QuestionEditorDialog
-          questao={editando}
-          onClose={() => setEditando(null)}
-          onSalvo={() => {}}
-        />
       )}
     </div>
   );

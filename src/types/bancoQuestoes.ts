@@ -26,10 +26,11 @@ export interface Question {
   support_text_id: string | null;
   support_texts: SupportText | null;
   active: boolean;
+  criado_por: string | null;
 }
 
 export const QUESTION_SELECT_FIELDS =
-  'id, discipline, area, level, banca, orgao, cargo, ano, difficulty, assunto, statement, image_url, alternatives, correct_letter, explanation, support_text_id, active, support_texts:support_text_id(id, discipline, content, image_url)';
+  'id, discipline, area, level, banca, orgao, cargo, ano, difficulty, assunto, statement, image_url, alternatives, correct_letter, explanation, support_text_id, active, criado_por, support_texts:support_text_id(id, discipline, content, image_url)';
 
 export interface FiltroQuestoes {
   discipline?: string;
@@ -40,6 +41,7 @@ export interface FiltroQuestoes {
   difficulty?: string;
   assunto?: string;
   busca?: string;
+  apenasMinhas?: string;
   page?: number;
   pageSize?: number;
 }

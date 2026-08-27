@@ -51,7 +51,8 @@ export function AvaliacaoPreviewModal({ config, questoes, valoresPorQuestao, tur
       if (imprimirDepois) printProva(previewRef.current, config.titulo || 'Avaliação');
       onSalvo();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Não foi possível salvar a avaliação.');
+      const msg = e instanceof Error ? e.message : (e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : null);
+      setErro(msg || 'Não foi possível salvar a avaliação.');
     } finally {
       setSalvando(false);
     }

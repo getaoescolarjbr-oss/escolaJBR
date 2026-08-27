@@ -51,6 +51,7 @@ export async function listarQuestoes(filtro: FiltroQuestoes): Promise<ListaQuest
   if (filtro.difficulty) query = query.eq('difficulty', filtro.difficulty);
   if (filtro.assunto) query = query.eq('assunto', filtro.assunto);
   if (filtro.busca) query = query.ilike('statement', `%${filtro.busca}%`);
+  if (filtro.apenasMinhas) query = query.eq('criado_por', filtro.apenasMinhas);
 
   const { data, error, count } = await query;
   if (error) throw error;
@@ -92,7 +93,12 @@ export async function salvarTextoApoio(id: string | null, discipline: string, co
 }
 
 export async function criarQuestao(dados: Partial<Question>): Promise<Question> {
-  const { data, error } = await supabase.from('questions').insert([dados]).select(QUESTION_SELECT_FIELDS).single();
+  const { data: userData } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from('questions')
+    .insert([{ ...dados, criado_por: userData.user?.id ?? null }])
+    .select(QUESTION_SELECT_FIELDS)
+    .single();
   if (error) throw error;
   return data as unknown as Question;
 }

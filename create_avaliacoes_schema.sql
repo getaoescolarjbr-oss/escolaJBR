@@ -1,4 +1,13 @@
   -- ====================================================================================
+  -- ATENÇÃO — NÃO RODAR ESTE ARQUIVO NOVAMENTE.
+  -- Este script usou por engano o nome de tabela `avaliacoes`, que já pertencia ao
+  -- módulo de Notas (GradesPanel.tsx) e teve todos os dados apagados como efeito
+  -- colateral. A correção (renomeando o gerador de provas para provas/prova_* e
+  -- restaurando a tabela `avaliacoes` original) está em fix_provas_table_collision.sql
+  -- — é esse arquivo que deve ser executado a partir de agora.
+  -- ====================================================================================
+
+  -- ====================================================================================
   -- AVALIAÇÕES — gerador de provas/simulados a partir do Banco de Questões, com opção de
   -- aplicação impressa e/ou online. A parte online usa a mesma conta de aluno já
   -- existente do BiblioClube (login por usuário+senha, aprovado pela Secretaria — ver

@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2, Plus, Search } from 'lucide-react';
 import type { FilterOptions, FiltroQuestoes, Question } from '../../types/bancoQuestoes';
 import { buscarAssuntosPorDisciplina, buscarFilterOptions, listarQuestoes } from '../../services/bancoQuestoesService';
 import { QuestionCard } from './QuestionCard';
+import { QuestionEditorDialog } from './QuestionEditorDialog';
+import { useAuth } from '../../hooks/useAuth';
 
 const PAGE_SIZE = 10;
 
@@ -12,14 +14,16 @@ const selectClass =
 interface QuestionPickerProps {
   selecionadas: Map<string, Question>;
   onToggleSelecionar: (q: Question) => void;
-  onEditar?: (q: Question) => void;
 }
 
 // Filtros + lista + seleção do banco de questões — extraído de QuestoesTab.tsx pra ser
 // reaproveitado também no passo 1 do gerador de avaliações (ver avaliacoes/NovaAvaliacaoTab.tsx).
 // O contador de selecionadas fica com quem usa este componente (selecionadas.size), pra cada
-// tela decidir onde/como mostrar.
-export function QuestionPicker({ selecionadas, onToggleSelecionar, onEditar }: QuestionPickerProps) {
+// tela decidir onde/como mostrar. Criar/editar questão também fica autocontido aqui — a
+// questão criada/editada entra no banco compartilhado, visível para todos.
+export function QuestionPicker({ selecionadas, onToggleSelecionar }: QuestionPickerProps) {
+  const { hasAnyRole, usuarioId } = useAuth();
+  const podeEditar = hasAnyRole(['GESTAO', 'PROFESSOR']);
   const [opcoes, setOpcoes] = useState<FilterOptions | null>(null);
   const [assuntosDisciplina, setAssuntosDisciplina] = useState<string[] | null>(null);
   const [filtro, setFiltro] = useState<FiltroQuestoes>({ page: 0 });
@@ -27,6 +31,9 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onEditar }: Q
   const [questoes, setQuestoes] = useState<Question[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [editando, setEditando] = useState<Question | null>(null);
+  const [criando, setCriando] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
     buscarFilterOptions().then(setOpcoes).catch(() => setOpcoes(null));
@@ -57,7 +64,7 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onEditar }: Q
       }
     }, 0);
     return () => clearTimeout(timeout);
-  }, [filtro]);
+  }, [filtro, refreshKey]);
 
   function atualizarFiltro(patch: Partial<FiltroQuestoes>) {
     setFiltro((f) => ({ ...f, ...patch, page: 0 }));
@@ -116,10 +123,30 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onEditar }: Q
             {opcoes?.anos.sort((a, b) => b - a).map((a) => <option key={a} value={a}>{a}</option>)}
           </select>
         </div>
+
+        {podeEditar && usuarioId && (
+          <label className="flex items-center gap-2 text-sm text-ms-muted font-bold cursor-pointer w-fit">
+            <input
+              type="checkbox"
+              checked={!!filtro.apenasMinhas}
+              onChange={(e) => atualizarFiltro({ apenasMinhas: e.target.checked ? usuarioId : undefined })}
+            />
+            Somente minhas questões
+          </label>
+        )}
       </div>
 
       <div className="flex items-center justify-between bg-ms-blue/10 border border-ms-blue/40 rounded-xl px-5 py-3">
         <p className="text-sm text-ms-main font-bold">{selecionadas.size} questão(ões) selecionada(s)</p>
+        {podeEditar && (
+          <button
+            onClick={() => setCriando(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-sm font-bold hover:bg-gray-800"
+          >
+            <Plus className="w-4 h-4" />
+            Nova questão
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -135,7 +162,7 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onEditar }: Q
                 question={q}
                 selecionada={selecionadas.has(q.id)}
                 onToggleSelecionar={() => onToggleSelecionar(q)}
-                onEditar={onEditar ? () => onEditar(q) : undefined}
+                onEditar={podeEditar ? () => setEditando(q) : undefined}
               />
             ))}
           </div>
@@ -161,6 +188,17 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onEditar }: Q
             </div>
           </div>
         </>
+      )}
+
+      {(editando || criando) && (
+        <QuestionEditorDialog
+          questao={criando ? null : editando}
+          onClose={() => {
+            setEditando(null);
+            setCriando(false);
+          }}
+          onSalvo={() => setRefreshKey((k) => k + 1)}
+        />
       )}
     </div>
   );
