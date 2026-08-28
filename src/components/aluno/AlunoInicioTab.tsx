@@ -99,12 +99,12 @@ export function AlunoInicioTab({ alunoId, onPontosMudaram }: AlunoInicioTabProps
   }
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   return (
     <div className="space-y-8">
-      {mensagem && <div className="p-3 bg-ms-card border border-ms-blue/30 rounded-xl text-sm text-ms-main">{mensagem}</div>}
+      {mensagem && <div className="p-3 bg-ms-card border border-ms-blueText/30 rounded-xl text-sm text-ms-main">{mensagem}</div>}
 
       <section className="space-y-3">
         <h2 className="text-xs font-black uppercase tracking-wider text-gray-400 flex items-center gap-1"><Target className="w-3.5 h-3.5" /> Minhas metas</h2>
@@ -150,7 +150,7 @@ export function AlunoInicioTab({ alunoId, onPontosMudaram }: AlunoInicioTabProps
                 <p className="text-sm font-bold text-ms-main">{e.livro_titulo}</p>
                 <p className="text-[11px] text-gray-500">devolver até {new Date(e.data_prevista + 'T00:00:00').toLocaleDateString('pt-BR')}</p>
               </div>
-              <button onClick={() => handleRenovar(e.id)} className="flex items-center gap-1 px-3 py-1.5 bg-ms-dark border border-gray-800 rounded-lg text-[11px] text-gray-300 hover:border-ms-blue transition-colors">
+              <button onClick={() => handleRenovar(e.id)} className="flex items-center gap-1 px-3 py-1.5 bg-ms-dark border border-gray-800 rounded-lg text-[11px] text-gray-300 hover:border-ms-blueText transition-colors">
                 <RotateCw className="w-3 h-3" /> Renovar
               </button>
             </div>

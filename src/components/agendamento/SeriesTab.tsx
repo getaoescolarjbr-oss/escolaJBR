@@ -105,7 +105,7 @@ export function SeriesTab() {
   function nomeProfessor(id: string) { return professores.find((p) => p.id === id)?.nome ?? '—'; }
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   return (

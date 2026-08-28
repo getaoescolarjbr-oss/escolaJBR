@@ -74,7 +74,7 @@ export function PessoasPanel() {
             {loading ? (
               <tr>
                 <td colSpan={4} className="px-6 py-20 text-center">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue mb-4" />
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText mb-4" />
                 </td>
               </tr>
             ) : pessoas.length === 0 ? (
@@ -88,7 +88,7 @@ export function PessoasPanel() {
                 <tr key={p.id} className={idx % 2 === 0 ? 'bg-ms-dark/20' : 'bg-transparent'}>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-ms-blue/10 flex items-center justify-center text-[10px] font-black text-ms-blue border border-ms-blue/20">
+                      <div className="w-8 h-8 rounded-full bg-ms-blue/10 flex items-center justify-center text-[10px] font-black text-ms-blueText border border-ms-blueText/20">
                         {p.nome.charAt(0)}
                       </div>
                       <p className="text-sm font-black text-[#003366] uppercase tracking-tight">{p.nome}</p>
@@ -102,14 +102,14 @@ export function PessoasPanel() {
                     <div className="flex items-center justify-center gap-2">
                       <button
                         onClick={() => setVerVinculos(p)}
-                        className="p-2 hover:bg-ms-blue/20 text-ms-blue rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ms-blue"
+                        className="p-2 hover:bg-ms-blue/20 text-ms-blueText rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ms-blue"
                         title="Ver vínculos"
                       >
                         <LinkIcon className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => setEditando(p)}
-                        className="p-2 hover:bg-ms-blue/20 text-ms-blue rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ms-blue"
+                        className="p-2 hover:bg-ms-blue/20 text-ms-blueText rounded-lg transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ms-blue"
                         title="Editar"
                       >
                         <Edit2 className="w-4 h-4" />

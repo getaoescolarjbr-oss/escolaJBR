@@ -121,7 +121,7 @@ export function LivroFormModal({ livro, generos, colecoes, onClose, onSalvo }: L
       <div className="bg-ms-card max-w-2xl w-full rounded-2xl shadow-2xl relative my-auto border border-gray-800">
         <div className="flex items-center justify-between p-6 border-b border-gray-800">
           <div className="flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-ms-blue" />
+            <BookOpen className="w-5 h-5 text-ms-blueText" />
             <p className="text-sm font-black text-ms-main">{livro ? 'Editar livro' : 'Novo livro'}</p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-ms-dark rounded-lg transition-colors">
@@ -153,7 +153,7 @@ export function LivroFormModal({ livro, generos, colecoes, onClose, onSalvo }: L
             <p className="text-xs font-bold text-gray-400 mb-2">Capa</p>
             <div className="flex items-center gap-4">
               {previewCapa && <img src={previewCapa} alt="Capa" className="w-16 h-20 object-cover rounded-lg border border-gray-800" />}
-              <label className="flex items-center gap-2 px-4 py-2 bg-ms-dark border border-gray-800 rounded-xl text-sm text-gray-300 cursor-pointer hover:border-ms-blue transition-colors">
+              <label className="flex items-center gap-2 px-4 py-2 bg-ms-dark border border-gray-800 rounded-xl text-sm text-gray-300 cursor-pointer hover:border-ms-blueText transition-colors">
                 <Upload className="w-4 h-4" /> Enviar imagem
                 <input type="file" accept="image/*" onChange={handleCapaChange} className="hidden" />
               </label>
@@ -166,14 +166,14 @@ export function LivroFormModal({ livro, generos, colecoes, onClose, onSalvo }: L
               <button
                 type="button"
                 onClick={() => handleTipoAcervoChange('FISICO')}
-                className={`flex-1 px-4 py-2 rounded-xl text-sm font-bold border transition-all ${tipoAcervo === 'FISICO' ? 'bg-ms-blue text-white border-ms-blue' : 'bg-ms-dark text-gray-400 border-gray-800'}`}
+                className={`flex-1 px-4 py-2 rounded-xl text-sm font-bold border transition-all ${tipoAcervo === 'FISICO' ? 'bg-ms-blue text-white border-ms-blueText' : 'bg-ms-dark text-gray-400 border-gray-800'}`}
               >
                 Físico (com exemplares)
               </button>
               <button
                 type="button"
                 onClick={() => handleTipoAcervoChange('ONLINE')}
-                className={`flex-1 px-4 py-2 rounded-xl text-sm font-bold border transition-all ${tipoAcervo === 'ONLINE' ? 'bg-ms-blue text-white border-ms-blue' : 'bg-ms-dark text-gray-400 border-gray-800'}`}
+                className={`flex-1 px-4 py-2 rounded-xl text-sm font-bold border transition-all ${tipoAcervo === 'ONLINE' ? 'bg-ms-blue text-white border-ms-blueText' : 'bg-ms-dark text-gray-400 border-gray-800'}`}
               >
                 Acervo Online (domínio público)
               </button>
@@ -193,9 +193,9 @@ export function LivroFormModal({ livro, generos, colecoes, onClose, onSalvo }: L
                 />
                 <div className="flex items-center gap-4">
                   {arquivoOnlineAtual && !arquivoOnline && (
-                    <a href={arquivoOnlineAtual} target="_blank" rel="noreferrer" className="text-xs text-ms-blue hover:underline">Arquivo atual</a>
+                    <a href={arquivoOnlineAtual} target="_blank" rel="noreferrer" className="text-xs text-ms-blueText hover:underline">Arquivo atual</a>
                   )}
-                  <label className="flex items-center gap-2 px-4 py-2 bg-ms-dark border border-gray-800 rounded-xl text-sm text-gray-300 cursor-pointer hover:border-ms-blue transition-colors">
+                  <label className="flex items-center gap-2 px-4 py-2 bg-ms-dark border border-gray-800 rounded-xl text-sm text-gray-300 cursor-pointer hover:border-ms-blueText transition-colors">
                     <Upload className="w-4 h-4" /> {arquivoOnline ? arquivoOnline.name : 'Enviar arquivo (PDF/texto) *'}
                     <input
                       type="file"

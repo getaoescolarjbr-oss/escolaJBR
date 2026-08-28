@@ -201,7 +201,7 @@ export function CategoriasTab() {
 
       <div className="space-y-2">
         {loading ? (
-          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : termos.length === 0 ? (
           <p className="text-center text-ms-muted py-6 text-sm">Nenhum termo cadastrado ainda.</p>
         ) : (

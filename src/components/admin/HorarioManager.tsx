@@ -170,7 +170,7 @@ export function HorarioManager({ theme }: { theme: 'dark' | 'light' }) {
   if (loading) {
       return (
           <div className="flex flex-col items-center justify-center py-20">
-              <Loader2 className="w-10 h-10 animate-spin text-ms-blue mb-4" />
+              <Loader2 className="w-10 h-10 animate-spin text-ms-blueText mb-4" />
               <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Carregando gerenciador de horários...</p>
           </div>
       );
@@ -180,7 +180,7 @@ export function HorarioManager({ theme }: { theme: 'dark' | 'light' }) {
     <div className="space-y-6">
       <div className="bg-ms-card rounded-2xl p-6 border border-ms-border shadow-xl">
         <h3 className="text-lg font-black text-white mb-4 flex items-center gap-2">
-            <User className="w-5 h-5 text-ms-blue" />
+            <User className="w-5 h-5 text-ms-blueText" />
             Selecione o Professor
         </h3>
         <div className="flex flex-col md:flex-row gap-4 mb-4 items-center">
@@ -191,11 +191,11 @@ export function HorarioManager({ theme }: { theme: 'dark' | 'light' }) {
                 placeholder="Buscar professor por nome..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl text-ms-blue placeholder-gray-500 outline-none focus:border-ms-blue focus:ring-1 focus:ring-ms-blue transition-all"
+                className="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl text-ms-blueText placeholder-gray-500 outline-none focus:border-ms-blueText focus:ring-1 focus:ring-ms-blue transition-all"
               />
             </div>
             <select
-               className="px-4 py-3 bg-white border border-gray-300 rounded-xl text-ms-blue outline-none focus:border-ms-blue focus:ring-1 focus:ring-ms-blue w-full md:w-auto"
+               className="px-4 py-3 bg-white border border-gray-300 rounded-xl text-ms-blueText outline-none focus:border-ms-blueText focus:ring-1 focus:ring-ms-blue w-full md:w-auto"
                value={selectedProf || ''}
                onChange={(e) => setSelectedProf(e.target.value || null)}
             >
@@ -215,7 +215,7 @@ export function HorarioManager({ theme }: { theme: 'dark' | 'light' }) {
 
       {loadingHorarios && profsToDisplay.length > 1 ? (
           <div className="py-20 flex justify-center">
-              <Loader2 className="w-10 h-10 animate-spin text-ms-blue" />
+              <Loader2 className="w-10 h-10 animate-spin text-ms-blueText" />
           </div>
       ) : (
           <div className="space-y-10">
@@ -232,7 +232,7 @@ export function HorarioManager({ theme }: { theme: 'dark' | 'light' }) {
             
             {loadingHorarios ? (
                 <div className="py-20 flex justify-center">
-                    <Loader2 className="w-10 h-10 animate-spin text-ms-blue" />
+                    <Loader2 className="w-10 h-10 animate-spin text-ms-blueText" />
                 </div>
             ) : (
                 <div className="overflow-x-auto overflow-y-auto max-h-[65vh] w-full">

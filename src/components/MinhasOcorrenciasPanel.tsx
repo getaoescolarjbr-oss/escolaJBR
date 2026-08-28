@@ -115,7 +115,7 @@ export function MinhasOcorrenciasPanel({ professor, theme }: MinhasOcorrenciasPa
                 </div>
                 <div className="text-left">
                   <p className={`text-sm font-black ${theme === 'light' ? 'text-blue-900' : 'text-white'}`}>{grupo.aluno?.nome || 'Aluno Desconhecido'}</p>
-                  <p className="text-[10px] font-black text-ms-blue uppercase">
+                  <p className="text-[10px] font-black text-ms-blueText uppercase">
                     {grupo.aluno?.aluno_numero ? `Nº ${grupo.aluno.aluno_numero} · ` : ''}{grupo.turma?.nome || 'Sem Turma'}
                   </p>
                 </div>

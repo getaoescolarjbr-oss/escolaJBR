@@ -85,7 +85,7 @@ export function AprovacaoTab() {
 
       <div className="space-y-2">
         {loading ? (
-          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : reservas.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhuma reserva encontrada.</p>
         ) : (

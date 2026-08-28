@@ -381,7 +381,7 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
             {loading ? (
               <tr>
                 <td colSpan={4} className="px-6 py-20 text-center">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue mb-4" />
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText mb-4" />
                   <p className="text-[#003366] font-black uppercase text-[10px] tracking-widest">Carregando lista de alunos...</p>
                 </td>
               </tr>
@@ -407,7 +407,7 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-ms-blue/10 flex items-center justify-center text-[10px] font-black text-ms-blue border border-ms-blue/20">
+                    <div className="w-8 h-8 rounded-full bg-ms-blue/10 flex items-center justify-center text-[10px] font-black text-ms-blueText border border-ms-blueText/20">
                       {s.nome.charAt(0)}
                     </div>
                     <p className="text-sm font-black text-[#003366] uppercase tracking-tight">{s.nome}</p>
@@ -443,7 +443,7 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
                         setFotoPreview(s.foto_url || null);
                         setIsModalOpen(true);
                       }}
-                      className="p-2 hover:bg-ms-blue/20 text-ms-blue rounded-lg transition-all"
+                      className="p-2 hover:bg-ms-blue/20 text-ms-blueText rounded-lg transition-all"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
@@ -480,11 +480,11 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
                     <img
                       src={fotoPreview}
                       alt="Foto do aluno"
-                      className="w-20 h-20 rounded-2xl object-cover border-2 border-ms-blue/40 shadow-lg"
+                      className="w-20 h-20 rounded-2xl object-cover border-2 border-ms-blueText/40 shadow-lg"
                     />
                   ) : (
-                    <div className="w-20 h-20 rounded-2xl bg-ms-blue/10 border-2 border-dashed border-ms-blue/30 flex items-center justify-center">
-                      <Camera className="w-7 h-7 text-ms-blue/40" />
+                    <div className="w-20 h-20 rounded-2xl bg-ms-blue/10 border-2 border-dashed border-ms-blueText/30 flex items-center justify-center">
+                      <Camera className="w-7 h-7 text-ms-blueText/40" />
                     </div>
                   )}
                   <button

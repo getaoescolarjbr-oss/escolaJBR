@@ -144,7 +144,7 @@ export function PortariaPanel() {
           <div className="space-y-2">
             <p className="text-xs font-black uppercase tracking-wider text-ms-main">Presentes agora ({presentes.length})</p>
             {loading ? (
-              <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+              <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
             ) : presentes.length === 0 ? (
               <p className="text-sm text-gray-500">Nenhum visitante na escola no momento.</p>
             ) : (
@@ -157,7 +157,7 @@ export function PortariaPanel() {
                       {v.pessoa_a_visitar && ` · visita: ${v.pessoa_a_visitar}`}
                     </p>
                   </div>
-                  <button onClick={() => handleRegistrarSaida(v.id)} className="flex items-center gap-1 px-3 py-1.5 bg-ms-dark border border-gray-800 rounded-lg text-[11px] text-gray-300 hover:border-ms-blue transition-colors">
+                  <button onClick={() => handleRegistrarSaida(v.id)} className="flex items-center gap-1 px-3 py-1.5 bg-ms-dark border border-gray-800 rounded-lg text-[11px] text-gray-300 hover:border-ms-blueText transition-colors">
                     <LogOut className="w-3 h-3" /> Registrar saída
                   </button>
                 </div>

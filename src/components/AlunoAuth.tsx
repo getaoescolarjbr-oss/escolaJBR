@@ -274,7 +274,7 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
                   <input type="checkbox" checked={aceiteTermos} onChange={(e) => setAceiteTermos(e.target.checked)} className="mt-0.5" />
                   <span>
                     Li e concordo com os{' '}
-                    <button type="button" onClick={() => setMostrarTermos(true)} className="font-bold text-ms-blue underline decoration-ms-blue/30 underline-offset-2">
+                    <button type="button" onClick={() => setMostrarTermos(true)} className="font-bold text-ms-blueText underline decoration-ms-blue/30 underline-offset-2">
                       termos de uso
                     </button>{' '}
                     do BiblioClube. Sei que meu cadastro só será ativado depois que a Secretaria confirmar meus dados. *
@@ -299,9 +299,9 @@ export function AlunoAuth({ onLogin, onVoltar, onBack }: AlunoAuthProps) {
         <div className="mt-8 flex flex-col gap-3 text-center text-sm">
           <button type="button" onClick={() => { setView(view === 'LOGIN' ? 'CADASTRO' : 'LOGIN'); setError(null); setSuccess(null); }} className="text-gray-600 hover:text-gray-800 transition-colors">
             {view === 'LOGIN' ? (
-              <>Ainda não tenho conta? <span className="font-bold text-ms-blue underline decoration-ms-blue/30 underline-offset-4">Cadastrar</span></>
+              <>Ainda não tenho conta? <span className="font-bold text-ms-blueText underline decoration-ms-blue/30 underline-offset-4">Cadastrar</span></>
             ) : (
-              <>Já tenho conta? <span className="font-bold text-ms-blue underline decoration-ms-blue/30 underline-offset-4">Entrar</span></>
+              <>Já tenho conta? <span className="font-bold text-ms-blueText underline decoration-ms-blue/30 underline-offset-4">Entrar</span></>
             )}
           </button>
           <button type="button" onClick={onVoltar} className="text-gray-500 hover:text-gray-700 transition-colors text-xs">

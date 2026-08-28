@@ -107,7 +107,7 @@ export function DisciplinaManager({ theme }: { theme: 'dark' | 'light' }) {
             {loading ? (
               <tr>
                 <td colSpan={2} className="px-6 py-20 text-center">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue mb-4" />
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText mb-4" />
                   <p className="text-[#003366] font-bold">Carregando disciplinas...</p>
                 </td>
               </tr>
@@ -135,7 +135,7 @@ export function DisciplinaManager({ theme }: { theme: 'dark' | 'light' }) {
                         setFormData({ nome: d.nome });
                         setIsModalOpen(true);
                       }}
-                      className="p-2 hover:bg-ms-blue/20 text-ms-blue rounded-lg transition-all"
+                      className="p-2 hover:bg-ms-blue/20 text-ms-blueText rounded-lg transition-all"
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>

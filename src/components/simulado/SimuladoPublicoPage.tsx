@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Check, ClipboardList, Loader2, Send, XCircle } from 'lucide-react';
+import { ClipboardList, Loader2, Send } from 'lucide-react';
 import type { SimuladoPublicoIniciarResposta, SimuladoPublicoItemResultado } from '../../types/avaliacoes';
 import { iniciarSimuladoPublico, submeterSimuladoPublico } from '../../services/avaliacoesService';
 import { renderLightMarkup } from '../../lib/questionMarkup';
@@ -69,7 +69,7 @@ export function SimuladoPublicoPage({ token }: Props) {
     <div className="min-h-screen bg-ms-dark flex items-start justify-center p-4 py-10">
       <div className="w-full max-w-3xl bg-ms-card border border-gray-800 rounded-2xl overflow-hidden">
         <div className="px-6 py-5 border-b border-gray-800 flex items-center gap-3">
-          <ClipboardList className="w-6 h-6 text-ms-blue shrink-0" />
+          <ClipboardList className="w-6 h-6 text-blue-400 shrink-0" />
           <div>
             <h1 className="text-lg font-bold text-ms-main">{dados?.prova.titulo ?? 'Simulado'}</h1>
             <p className="text-xs text-ms-muted">Escola José Barbosa Rodrigues · Este simulado não gera nota no boletim.</p>
@@ -142,7 +142,7 @@ export function SimuladoPublicoPage({ token }: Props) {
                   return (
                     <div key={q.question_id} className="border-b border-gray-800 pb-4 last:border-0">
                       <div className="text-sm text-ms-main">
-                        {renderLightMarkup(q.statement, `sp-${q.question_id}`, <span className="font-bold text-ms-blue">{i + 1}. </span>)}
+                        {renderLightMarkup(q.statement, `sp-${q.question_id}`, <span className="font-bold text-blue-400">{i + 1}. </span>)}
                         <span className="text-xs text-ms-muted ml-1">({Number(q.valor).toFixed(2)} pt)</span>
                       </div>
                       {q.image_url && <img src={q.image_url} alt="" className="max-w-full rounded-lg my-2" />}
@@ -162,7 +162,7 @@ export function SimuladoPublicoPage({ token }: Props) {
                                     ? 'border-red-600 bg-red-900/20'
                                     : 'border-gray-800'
                                   : marcada
-                                  ? 'border-ms-blue bg-ms-blue/10'
+                                  ? 'border-blue-400 bg-blue-400/10'
                                   : 'border-gray-800 hover:border-gray-700'
                               }`}
                             >
@@ -173,10 +173,10 @@ export function SimuladoPublicoPage({ token }: Props) {
                                 disabled={!!resultado}
                                 onChange={() => marcar(q.question_id, a.letter)}
                               />
-                              <span className="font-bold">{a.letter})</span>
-                              <span className="flex-1 text-ms-main">{renderLightMarkup(a.text, `sp-${q.question_id}-${a.letter}`, undefined, 'left')}</span>
-                              {item && correta && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
-                              {item && errouEssa && <XCircle className="w-4 h-4 text-red-400 shrink-0" />}
+                              <span className={`font-bold ${item ? (correta ? 'text-emerald-400' : errouEssa ? 'text-red-400' : '') : ''}`}>{a.letter})</span>
+                              <span className={`flex-1 ${item ? (correta ? 'text-emerald-300' : errouEssa ? 'text-red-300' : 'text-ms-main') : 'text-ms-main'}`}>
+                                {renderLightMarkup(a.text, `sp-${q.question_id}-${a.letter}`, undefined, 'left')}
+                              </span>
                             </label>
                           );
                         })}

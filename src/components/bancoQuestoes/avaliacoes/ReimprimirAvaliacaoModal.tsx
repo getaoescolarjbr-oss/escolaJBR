@@ -70,7 +70,7 @@ export function ReimprimirAvaliacaoModal({ avaliacao, onClose }: Props) {
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {erro && <p className="text-sm text-red-400 font-bold">{erro}</p>}
-          {!questoes && !erro && <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" />}
+          {!questoes && !erro && <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" />}
 
           {questoes && (
             <div className="border border-gray-800 rounded-xl p-4 bg-white overflow-x-auto">

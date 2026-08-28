@@ -15,6 +15,7 @@ import type {
   SimuladoPublicoSubmeterResposta,
   StatusAvaliacao,
 } from '../types/avaliacoes';
+import { QUESTION_SELECT_FIELDS, type Question } from '../types/bancoQuestoes';
 
 const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at';
 
@@ -170,6 +171,91 @@ async function sincronizarNotasDaProva(
     if (notaErro || !notaAvaliacao) continue;
 
     await supabase.from('prova_avaliacao_notas').insert({ prova_id: provaId, turma_id: turmaId, avaliacao_id: notaAvaliacao.id });
+  }
+}
+
+// Busca as questões já vinculadas à prova (com o objeto Question completo, pra reabrir o
+// QuestionPicker/ConfigAvaliacaoForm já preenchidos ao editar) e o valor lançado por questão.
+export async function obterQuestoesCompletasDaAvaliacao(id: string): Promise<{ questoes: Question[]; valoresPorQuestao: Record<string, number> }> {
+  const { data, error } = await supabase
+    .from('prova_questoes')
+    .select(`ordem, valor, questions(${QUESTION_SELECT_FIELDS})`)
+    .eq('prova_id', id)
+    .order('ordem');
+  if (error) throw error;
+
+  const linhas = (data ?? []) as unknown as { ordem: number; valor: number; questions: Question | null }[];
+  const questoes = linhas.map((l) => l.questions).filter((q): q is Question => !!q);
+  const valoresPorQuestao: Record<string, number> = {};
+  linhas.forEach((l) => {
+    if (l.questions) valoresPorQuestao[l.questions.id] = Number(l.valor) || 0;
+  });
+  return { questoes, valoresPorQuestao };
+}
+
+// Quantos alunos já enviaram resposta pra esta avaliação/simulado — usado para avisar o
+// professor antes de editar uma avaliação já publicada (mudar as questões depois que alguém
+// respondeu pode invalidar o resultado já registrado).
+export async function contarRespostasEnviadas(avaliacaoId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('prova_respostas')
+    .select('id', { count: 'exact', head: true })
+    .eq('prova_id', avaliacaoId)
+    .not('finalizado_em', 'is', null);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+// Edita uma avaliação já salva (rascunho ou publicada): atualiza os dados da prova e
+// substitui por completo o vínculo de questões e de turmas. Não mexe em prova_respostas —
+// respostas já enviadas continuam registradas, mas podem ficar "fora de sincronia" se as
+// questões mudaram (por isso o aviso na tela antes de confirmar).
+export async function atualizarAvaliacao(id: string, dados: NovaAvaliacaoInput, status: StatusAvaliacao): Promise<void> {
+  const { error: avErro } = await supabase
+    .from('provas')
+    .update({
+      titulo: dados.titulo,
+      disciplina: dados.disciplina || null,
+      disciplina_id: dados.disciplinaId,
+      bimestre_id: dados.bimestreId,
+      instrucoes: dados.instrucoes || null,
+      valor_total: dados.valorTotal,
+      modo: dados.modo,
+      tipo: dados.tipo,
+      data_aplicacao: dados.dataAplicacao || null,
+      prazo_entrega: dados.prazoEntrega || null,
+      status,
+    })
+    .eq('id', id);
+  if (avErro) throw avErro;
+
+  const { error: delQErro } = await supabase.from('prova_questoes').delete().eq('prova_id', id);
+  if (delQErro) throw delQErro;
+  if (dados.questoes.length > 0) {
+    const { error: qErro } = await supabase
+      .from('prova_questoes')
+      .insert(dados.questoes.map((q) => ({ prova_id: id, question_id: q.question_id, ordem: q.ordem, valor: q.valor })));
+    if (qErro) throw qErro;
+  }
+
+  const { error: delTErro } = await supabase.from('prova_turmas').delete().eq('prova_id', id);
+  if (delTErro) throw delTErro;
+  if (dados.turmaIds.length > 0) {
+    const { error: tErro } = await supabase
+      .from('prova_turmas')
+      .insert(dados.turmaIds.map((turmaId) => ({ prova_id: id, turma_id: turmaId })));
+    if (tErro) throw tErro;
+  }
+
+  if (status === 'PUBLICADA' && dados.tipo === 'AVALIACAO') {
+    await sincronizarNotasDaProva(id, {
+      titulo: dados.titulo,
+      valorTotal: dados.valorTotal,
+      dataAplicacao: dados.dataAplicacao,
+      disciplinaId: dados.disciplinaId,
+      bimestreId: dados.bimestreId,
+      turmaIds: dados.turmaIds,
+    });
   }
 }
 

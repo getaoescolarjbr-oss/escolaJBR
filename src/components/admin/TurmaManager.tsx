@@ -119,7 +119,7 @@ export function TurmaManager({ theme }: { theme: 'dark' | 'light' }) {
                       setFormData({ nome: t.nome, nivel: t.nivel || 'Fundamental' });
                       setIsModalOpen(true);
                     }}
-                    className="p-2 hover:bg-ms-blue/20 text-ms-blue rounded-lg transition-all"
+                    className="p-2 hover:bg-ms-blue/20 text-ms-blueText rounded-lg transition-all"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
@@ -166,7 +166,7 @@ export function TurmaManager({ theme }: { theme: 'dark' | 'light' }) {
 
       {loading ? (
         <div className="py-20 text-center">
-          <Loader2 className="w-10 h-10 animate-spin mx-auto text-ms-blue mb-4" />
+          <Loader2 className="w-10 h-10 animate-spin mx-auto text-ms-blueText mb-4" />
           <p className="text-[#003366] font-bold">Carregando turmas...</p>
         </div>
       ) : (
@@ -203,13 +203,13 @@ export function TurmaManager({ theme }: { theme: 'dark' | 'light' }) {
                 <div className="grid grid-cols-2 gap-2">
                   <button 
                     onClick={() => setFormData({ ...formData, nivel: 'Fundamental' })}
-                    className={`py-3 rounded-xl font-bold border transition-all ${formData.nivel === 'Fundamental' ? 'bg-ms-blue border-ms-blue text-white' : 'bg-ms-dark border-gray-800 text-gray-500'}`}
+                    className={`py-3 rounded-xl font-bold border transition-all ${formData.nivel === 'Fundamental' ? 'bg-ms-blue border-ms-blueText text-white' : 'bg-ms-dark border-gray-800 text-gray-500'}`}
                   >
                     Fundamental
                   </button>
                   <button 
                     onClick={() => setFormData({ ...formData, nivel: 'Médio' })}
-                    className={`py-3 rounded-xl font-bold border transition-all ${formData.nivel === 'Médio' ? 'bg-ms-blue border-ms-blue text-white' : 'bg-ms-dark border-gray-800 text-gray-500'}`}
+                    className={`py-3 rounded-xl font-bold border transition-all ${formData.nivel === 'Médio' ? 'bg-ms-blue border-ms-blueText text-white' : 'bg-ms-dark border-gray-800 text-gray-500'}`}
                   >
                     Médio
                   </button>

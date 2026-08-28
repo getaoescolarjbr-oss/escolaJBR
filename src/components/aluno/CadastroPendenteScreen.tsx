@@ -37,9 +37,9 @@ export function CadastroPendenteScreen({ authUserId, onLogout }: CadastroPendent
   return (
     <div className="min-h-screen flex items-center justify-center bg-ms-dark p-6">
       <div className="max-w-md w-full text-center bg-ms-card border border-gray-800 rounded-2xl p-8">
-        <BookOpen className="mx-auto w-10 h-10 text-ms-blue mb-4" />
+        <BookOpen className="mx-auto w-10 h-10 text-ms-blueText mb-4" />
         {loading ? (
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" />
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" />
         ) : status === 'REJEITADO' ? (
           <>
             <XCircle className="mx-auto w-10 h-10 text-red-400 mb-3" />

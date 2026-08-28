@@ -54,7 +54,7 @@ export function ComposicaoColegiadoEscolar({ membros, nomePessoa }: Props) {
               <div className="bg-emerald-500" style={{ width: `${pctComunidade}%` }} />
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-ms-blue font-bold">Profissionais da educação: {grupoProfissionais.length} ({pctProfissionais}%)</span>
+              <span className="text-ms-blueText font-bold">Profissionais da educação: {grupoProfissionais.length} ({pctProfissionais}%)</span>
               <span className="text-emerald-400 font-bold">Estudantes/Pais: {grupoComunidade.length} ({pctComunidade}%)</span>
             </div>
             {!paritario && (

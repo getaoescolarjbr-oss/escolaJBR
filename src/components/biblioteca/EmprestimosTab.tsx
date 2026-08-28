@@ -215,7 +215,7 @@ export function EmprestimosTab() {
       <div className="space-y-2">
         <p className="text-xs font-black uppercase tracking-wider text-ms-main">Empréstimos ativos ({emprestimos.length})</p>
         {loading ? (
-          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : emprestimos.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhum empréstimo ativo.</p>
         ) : (
@@ -226,13 +226,13 @@ export function EmprestimosTab() {
                 <div>
                   <p className="text-sm font-bold text-ms-main">{e.livro_titulo} <span className="text-[10px] text-gray-500">({e.tombo})</span></p>
                   <p className="text-[11px] text-gray-500">
-                    {e.tomador_nome}{e.tomador_tipo === 'PROFESSOR' && <span className="text-[9px] text-ms-blue font-bold uppercase ml-1">(professor)</span>} · prevista para {new Date(e.data_prevista + 'T00:00:00').toLocaleDateString('pt-BR')}
+                    {e.tomador_nome}{e.tomador_tipo === 'PROFESSOR' && <span className="text-[9px] text-ms-blueText font-bold uppercase ml-1">(professor)</span>} · prevista para {new Date(e.data_prevista + 'T00:00:00').toLocaleDateString('pt-BR')}
                     {e.renovacoes > 0 && ` · ${e.renovacoes}x renovado`}
                     {atrasado && <span className="ml-2 text-red-400 font-bold">ATRASADO</span>}
                   </p>
                 </div>
                 <div className="flex gap-2">
-                  <button onClick={() => handleRenovar(e)} className="flex items-center gap-1 px-3 py-1.5 bg-ms-dark border border-gray-800 rounded-lg text-[11px] text-gray-300 hover:border-ms-blue transition-colors">
+                  <button onClick={() => handleRenovar(e)} className="flex items-center gap-1 px-3 py-1.5 bg-ms-dark border border-gray-800 rounded-lg text-[11px] text-gray-300 hover:border-ms-blueText transition-colors">
                     <RotateCw className="w-3 h-3" /> Renovar
                   </button>
                   <button onClick={() => handleDevolver(e)} className="flex items-center gap-1 px-3 py-1.5 bg-green-500/10 border border-green-500/20 rounded-lg text-[11px] text-green-500 hover:bg-green-500/20 transition-colors">

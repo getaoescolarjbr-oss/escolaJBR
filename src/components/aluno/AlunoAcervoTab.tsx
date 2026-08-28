@@ -70,7 +70,7 @@ export function AlunoAcervoTab({ alunoId }: AlunoAcervoTabProps) {
 
   return (
     <div className="space-y-8">
-      {mensagem && <div className="p-3 bg-ms-card border border-ms-blue/30 rounded-xl text-sm text-ms-main">{mensagem}</div>}
+      {mensagem && <div className="p-3 bg-ms-card border border-ms-blueText/30 rounded-xl text-sm text-ms-main">{mensagem}</div>}
 
       <section className="space-y-3">
         <h2 className="text-xs font-black uppercase tracking-wider text-gray-400">Buscar no acervo</h2>
@@ -102,7 +102,7 @@ export function AlunoAcervoTab({ alunoId }: AlunoAcervoTabProps) {
                     <Heart className="w-4 h-4" />
                   </button>
                   {l.tipo_acervo === 'FISICO' && (
-                    <button onClick={() => handleReservar(l.id)} className="px-3 py-2 bg-ms-dark border border-gray-800 rounded-lg text-[11px] text-gray-300 hover:border-ms-blue transition-colors">
+                    <button onClick={() => handleReservar(l.id)} className="px-3 py-2 bg-ms-dark border border-gray-800 rounded-lg text-[11px] text-gray-300 hover:border-ms-blueText transition-colors">
                       Reservar
                     </button>
                   )}
@@ -116,7 +116,7 @@ export function AlunoAcervoTab({ alunoId }: AlunoAcervoTabProps) {
       <section className="space-y-3">
         <h2 className="text-xs font-black uppercase tracking-wider text-gray-400">Meus favoritos</h2>
         {loading ? (
-          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : favoritos.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhum favorito ainda — busque um livro acima e toque no coração.</p>
         ) : (

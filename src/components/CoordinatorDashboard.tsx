@@ -898,43 +898,43 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
       <div className="grid grid-cols-2 sm:grid-cols-4 lg:flex lg:flex-wrap lg:items-center gap-2 p-1 bg-ms-dark/50 border border-ms-border rounded-2xl w-full">
         <button 
           onClick={() => setActiveTab('overview')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'overview' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'overview' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blueText'}`}
         >
           <LayoutDashboard className="w-5 h-5" /> Visão Geral
         </button>
         <button 
           onClick={() => setActiveTab('painel_turma')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'painel_turma' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'painel_turma' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blueText'}`}
         >
           <Activity className="w-5 h-5" /> Painel da Turma
         </button>
         <button 
           onClick={() => setActiveTab('alunos')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'alunos' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'alunos' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blueText'}`}
         >
           <GraduationCap className="w-5 h-5" /> Alunos
         </button>
         <button 
           onClick={() => setActiveTab('site')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'site' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'site' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blueText'}`}
         >
           <Globe className="w-5 h-5" /> Gestão do Site
         </button>
         <button 
           onClick={() => setActiveTab('atas')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'atas' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'atas' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blueText'}`}
         >
           <FileText className="w-5 h-5" /> Gestão de Atas
         </button>
         <button 
           onClick={() => setActiveTab('agenda_avaliacoes')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'agenda_avaliacoes' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'agenda_avaliacoes' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blueText'}`}
         >
           <Calendar className="w-5 h-5" /> Agenda de Avaliações
         </button>
         <button 
           onClick={() => setActiveTab('novas_ocorrencias')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap relative ${activeTab === 'novas_ocorrencias' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap relative ${activeTab === 'novas_ocorrencias' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blueText'}`}
         >
           <AlertTriangle className="w-5 h-5" /> Novas Ocorrências
           {ocorrenciasPendentes.length > 0 && (
@@ -945,13 +945,13 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
         </button>
         <button 
           onClick={() => setActiveTab('comunicados')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'comunicados' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'comunicados' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blueText'}`}
         >
           <Mail className="w-5 h-5" /> Comunicados
         </button>
         <button
           onClick={() => setActiveTab('aniversariantes')}
-          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'aniversariantes' ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blue'}`}
+          className={`flex items-center justify-center lg:justify-start gap-1.5 px-3 lg:px-3 py-2.5 rounded-xl text-[10px] lg:text-[11px] font-black uppercase tracking-wider lg:tracking-normal transition-all w-full lg:w-auto whitespace-nowrap ${activeTab === 'aniversariantes' ? 'bg-pink-600 text-white shadow-lg shadow-pink-900/40' : 'text-gray-500 menu-tab-inactive hover:bg-ms-blue/10 hover:text-ms-blueText'}`}
         >
           <Cake className="w-5 h-5" /> Aniversários
         </button>
@@ -983,7 +983,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-            <LayoutDashboard className="w-6 h-6 text-ms-blue" />
+            <LayoutDashboard className="w-6 h-6 text-ms-blueText" />
             Visão Geral da Coordenação
           </h2>
           <p className="text-sm text-[#003366] font-bold">Monitoramento de turmas, docentes e rendimento discente</p>
@@ -1003,7 +1003,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
           </div>
           <div className="relative w-full md:w-64 group">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ms-blue group-hover:scale-110 transition-transform" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ms-blueText group-hover:scale-110 transition-transform" />
             <select
               value={selectedTurma}
               onChange={(e) => setSelectedTurma(e.target.value)}
@@ -1027,16 +1027,16 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
               onClick={() => setDocentesOpen(o => !o)}
               className="w-full px-6 py-4 bg-ms-blue/10 border-b border-ms-border flex items-center gap-3 lg:cursor-default"
             >
-              <Users className="w-5 h-5 text-ms-blue" />
+              <Users className="w-5 h-5 text-ms-blueText" />
               <h3 className="text-xs font-black text-white docentes-alocados-titulo uppercase tracking-widest flex-1 text-left">Docentes Alocados</h3>
               {!loading && allocations.length > 0 && (
-                <span className="lg:hidden text-[10px] font-black text-ms-blue bg-ms-blue/10 rounded-full px-2 py-0.5">{allocations.length}</span>
+                <span className="lg:hidden text-[10px] font-black text-ms-blueText bg-ms-blue/10 rounded-full px-2 py-0.5">{allocations.length}</span>
               )}
-              <ChevronDown className={`lg:hidden w-4 h-4 text-ms-blue transition-transform ${docentesOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`lg:hidden w-4 h-4 text-ms-blueText transition-transform ${docentesOpen ? 'rotate-180' : ''}`} />
             </button>
             <div className={`p-4 space-y-3 ${docentesOpen ? 'block' : 'hidden'} lg:block`}>
               {loading ? (
-                <div className="py-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-ms-blue" /></div>
+                <div className="py-10 flex justify-center"><Loader2 className="w-6 h-6 animate-spin text-ms-blueText" /></div>
               ) : allocations.length === 0 ? (
                 <p className="text-center py-6 text-[#003366] text-xs font-bold italic">Nenhuma alocação encontrada.</p>
               ) : allocations.map((a, i) => (
@@ -1049,13 +1049,13 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                     disciplinaNome: a.disciplinas?.nome,
                     configVistoValorTotal: a.professores?.config_visto_valor_total ?? 2.0
                   })}
-                  className="w-full flex items-center text-left gap-3 p-3 bg-ms-dark/30 rounded-2xl border border-ms-border/50 hover:bg-ms-blue/10 hover:border-ms-blue/30 transition-all cursor-pointer group"
+                  className="w-full flex items-center text-left gap-3 p-3 bg-ms-dark/30 rounded-2xl border border-ms-border/50 hover:bg-ms-blue/10 hover:border-ms-blueText/30 transition-all cursor-pointer group"
                 >
-                  <div className="w-10 h-10 rounded-xl bg-ms-blue/10 flex items-center justify-center text-xs font-black text-ms-blue border border-ms-blue/20 group-hover:bg-ms-blue group-hover:text-white transition-all">
+                  <div className="w-10 h-10 rounded-xl bg-ms-blue/10 flex items-center justify-center text-xs font-black text-ms-blueText border border-ms-blueText/20 group-hover:bg-ms-blue group-hover:text-white transition-all">
                     {(a.professores?.nome || '?').charAt(0)}
                   </div>
                   <div>
-                    <p className="text-sm font-bold text-ms-blue leading-tight group-hover:text-ms-blue transition-colors">{a.professores?.nome}</p>
+                    <p className="text-sm font-bold text-ms-blueText leading-tight group-hover:text-ms-blueText transition-colors">{a.professores?.nome}</p>
                     <p className="text-[10px] font-black uppercase tracking-tighter" style={{ color: '#fbbf24' }}>{a.disciplinas?.nome}</p>
                   </div>
                 </button>
@@ -1085,7 +1085,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
             <div className="px-8 py-5 border-b border-ms-border flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-3">
-                  <BookOpen className="w-5 h-5 text-ms-blue" />
+                  <BookOpen className="w-5 h-5 text-ms-blueText" />
                   <h3 className="text-xs font-black text-white uppercase tracking-widest">Lista de Alunos</h3>
                 </div>
                 <button
@@ -1116,7 +1116,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
             <div className="flex-1 overflow-auto">
               {loading ? (
                 <div className="py-20 flex flex-col items-center justify-center">
-                  <Loader2 className="w-10 h-10 animate-spin text-ms-blue mb-4" />
+                  <Loader2 className="w-10 h-10 animate-spin text-ms-blueText mb-4" />
                   <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Consultando banco de dados...</p>
                 </div>
               ) : filteredStudents.length === 0 ? (
@@ -1139,7 +1139,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                         </td>
                         <td className="px-3 sm:px-6 py-3 sm:py-4">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-lg bg-ms-blue/10 flex items-center justify-center text-[10px] font-black text-ms-blue border border-ms-blue/20">
+                            <div className="w-8 h-8 rounded-lg bg-ms-blue/10 flex items-center justify-center text-[10px] font-black text-ms-blueText border border-ms-blueText/20">
                               {s.nome.charAt(0)}
                             </div>
                             <p className="text-sm font-bold text-white">{s.nome}</p>
@@ -1179,7 +1179,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                           <div className="flex items-center justify-center">
                             <button
                               onClick={() => setSelectedStudent({ id: s.id, nome: s.nome })}
-                              className="flex items-center gap-2 px-4 py-2 bg-ms-blue/10 text-ms-blue rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-ms-blue hover:text-white transition-all shadow-lg hover:shadow-blue-900/40"
+                              className="flex items-center gap-2 px-4 py-2 bg-ms-blue/10 text-ms-blueText rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-ms-blue hover:text-white transition-all shadow-lg hover:shadow-blue-900/40"
                             >
                               <FileText className="w-3.5 h-3.5" />
                               Ficha
@@ -1201,7 +1201,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-                <Activity className="w-6 h-6 text-ms-blue" />
+                <Activity className="w-6 h-6 text-ms-blueText" />
                 Painel da Turma
               </h2>
               <p className="text-sm text-[#003366] font-bold">Desempenho consolidado de todos os alunos em todas as disciplinas</p>
@@ -1247,7 +1247,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                 <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
               </div>
               <div className="relative w-full md:w-64 group">
-                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ms-blue group-hover:scale-110 transition-transform" />
+                <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ms-blueText group-hover:scale-110 transition-transform" />
                 <select
                   value={selectedTurma}
                   onChange={(e) => setSelectedTurma(e.target.value)}
@@ -1265,7 +1265,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
           <div className="bg-ms-card rounded-2xl shadow-xl border border-ms-border overflow-hidden">
              {loadingPainel || loading ? (
                  <div className="py-20 flex flex-col items-center justify-center">
-                   <Loader2 className="w-10 h-10 animate-spin text-ms-blue mb-4" />
+                   <Loader2 className="w-10 h-10 animate-spin text-ms-blueText mb-4" />
                    <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Processando boletim consolidado...</p>
                  </div>
              ) : students.length === 0 ? (
@@ -1461,7 +1461,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
              <div>
                <h2 className="text-2xl font-black text-white tracking-tight flex items-center gap-3">
-                 <Calendar className="w-6 h-6 text-ms-blue" />
+                 <Calendar className="w-6 h-6 text-ms-blueText" />
                  Agenda de Avaliações
                </h2>
                <p className="text-sm text-[#003366] font-bold">Cronograma de provas, trabalhos e seminários agendados e publicados no calendário escolar</p>
@@ -1486,7 +1486,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
                </div>
                <div className="relative w-full md:w-64 group">
-                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ms-blue group-hover:scale-110 transition-transform" />
+                 <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ms-blueText group-hover:scale-110 transition-transform" />
                  <select
                    value={selectedTurma}
                    onChange={(e) => setSelectedTurma(e.target.value)}
@@ -1504,7 +1504,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
            <div className="bg-ms-card rounded-2xl shadow-xl border border-ms-border overflow-hidden">
              {loadingAgenda ? (
                <div className="py-20 flex flex-col items-center justify-center">
-                 <Loader2 className="w-10 h-10 animate-spin text-ms-blue mb-4" />
+                 <Loader2 className="w-10 h-10 animate-spin text-ms-blueText mb-4" />
                  <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Carregando agenda de avaliações...</p>
                </div>
              ) : avaliacoesAgenda.length === 0 ? (
@@ -1592,7 +1592,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                 <select
                   value={bimestreFiltroImpressao}
                   onChange={(e) => setBimestreFiltroImpressao(e.target.value === 'todos' ? 'todos' : Number(e.target.value))}
-                  className="px-3 py-3 rounded-2xl text-xs font-black uppercase tracking-widest bg-ms-card text-gray-300 border border-ms-border focus:outline-none focus:border-ms-blue/50"
+                  className="px-3 py-3 rounded-2xl text-xs font-black uppercase tracking-widest bg-ms-card text-gray-300 border border-ms-border focus:outline-none focus:border-ms-blueText/50"
                   title="Filtrar impressão por bimestre"
                 >
                   <option value="todos">Todos os Bimestres</option>
@@ -1604,7 +1604,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                 <button
                   onClick={handlePrintListaGeral}
                   disabled={printingLista}
-                  className="flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all border shadow-lg bg-ms-card text-gray-400 border-ms-border hover:text-white hover:border-ms-blue/50 disabled:opacity-50"
+                  className="flex items-center gap-2 px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-widest transition-all border shadow-lg bg-ms-card text-gray-400 border-ms-border hover:text-white hover:border-ms-blueText/50 disabled:opacity-50"
                 >
                   {printingLista ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
                   Imprimir Lista Geral
@@ -1688,7 +1688,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                             </div>
                             <div>
                               <p className="text-sm font-bold text-white leading-tight">{item.aluno?.nome}</p>
-                              <p className="text-[10px] font-black text-ms-blue uppercase">
+                              <p className="text-[10px] font-black text-ms-blueText uppercase">
                                 {item.aluno?.aluno_numero ? `Nº ${item.aluno.aluno_numero} · ` : ''}{item.aluno?.turmas?.nome || '—'}
                               </p>
                             </div>
@@ -1739,7 +1739,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                                   <span className="text-white font-bold text-sm">
                                     {oc.aluno?.nome || 'Aluno Desconhecido'}
                                   </span>
-                                  <span className="text-[9px] font-black uppercase bg-ms-blue/15 text-ms-blue px-2 py-0.5 rounded-full">
+                                  <span className="text-[9px] font-black uppercase bg-ms-blue/15 text-ms-blueText px-2 py-0.5 rounded-full">
                                     {oc.turma?.nome || 'Sem Turma'}
                                   </span>
                                   {oc.tipo && (
@@ -1790,7 +1790,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
            {/* Pending Occurrences */}
            {loadingOcorrencias ? (
              <div className="py-20 flex flex-col items-center justify-center">
-               <Loader2 className="w-10 h-10 animate-spin text-ms-blue mb-4" />
+               <Loader2 className="w-10 h-10 animate-spin text-ms-blueText mb-4" />
                <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Carregando ocorrências pendentes...</p>
              </div>
            ) : ocorrenciasPendentes.length === 0 ? (
@@ -1816,7 +1816,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                              <span className="text-white font-black text-sm">
                                {oc.aluno?.nome || 'Aluno Desconhecido'}
                              </span>
-                             <span className="text-[9px] font-black uppercase bg-ms-blue/20 text-ms-blue px-2 py-0.5 rounded-full border border-ms-blue/30">
+                             <span className="text-[9px] font-black uppercase bg-ms-blue/20 text-ms-blueText px-2 py-0.5 rounded-full border border-ms-blueText/30">
                                {oc.turma?.nome || 'Sem Turma'}
                              </span>
                              {oc.tipo && (
@@ -1895,7 +1895,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
               <div className="bg-ms-dark/30 rounded-2xl border border-ms-border/50 p-4 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-white font-black text-sm">{devolutivaModalOc.aluno?.nome || 'Aluno'}</span>
-                  <span className="text-[9px] font-black uppercase bg-ms-blue/20 text-ms-blue px-2 py-0.5 rounded-full border border-ms-blue/30">
+                  <span className="text-[9px] font-black uppercase bg-ms-blue/20 text-ms-blueText px-2 py-0.5 rounded-full border border-ms-blueText/30">
                     {devolutivaModalOc.turma?.nome || '—'}
                   </span>
                   {devolutivaModalOc.tipo && (
@@ -1917,7 +1917,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
               {/* Devolutiva field */}
               <div className="space-y-3">
                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-                  <MessageSquare className="w-3.5 h-3.5 text-ms-blue" />
+                  <MessageSquare className="w-3.5 h-3.5 text-ms-blueText" />
                   Devolutiva para o Professor (opcional)
                 </label>
 
@@ -1935,8 +1935,8 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                       onClick={() => setDevolutivaText(sugestao)}
                       className={`text-[10px] px-3 py-1.5 rounded-full border font-bold transition-all ${
                         devolutivaText === sugestao
-                          ? 'bg-ms-blue text-white border-ms-blue shadow-md shadow-blue-900/30'
-                          : 'bg-ms-dark/40 text-gray-400 border-ms-border hover:border-ms-blue/40 hover:text-gray-200'
+                          ? 'bg-ms-blue text-white border-ms-blueText shadow-md shadow-blue-900/30'
+                          : 'bg-ms-dark/40 text-gray-400 border-ms-border hover:border-ms-blueText/40 hover:text-gray-200'
                       }`}
                     >
                       {sugestao}
@@ -2060,7 +2060,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                   <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
                     <div className="space-y-1">
                       <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                        <Calendar className="w-3.5 h-3.5 text-ms-blue" /> Data de Início
+                        <Calendar className="w-3.5 h-3.5 text-ms-blueText" /> Data de Início
                       </label>
                       <input
                         type="date"
@@ -2071,7 +2071,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                     </div>
                     <div className="space-y-1">
                       <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                        <Calendar className="w-3.5 h-3.5 text-ms-blue" /> Data de Fim (Opcional)
+                        <Calendar className="w-3.5 h-3.5 text-ms-blueText" /> Data de Fim (Opcional)
                       </label>
                       <input
                         type="date"
@@ -2086,7 +2086,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                 {statusModalNewStatus === 'Transferido' && (
                   <div className="space-y-1 animate-in slide-in-from-top-2 duration-300">
                     <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                      <Calendar className="w-3.5 h-3.5 text-ms-blue" /> Data da Transferência
+                      <Calendar className="w-3.5 h-3.5 text-ms-blueText" /> Data da Transferência
                     </label>
                     <input
                       type="date"
@@ -2101,7 +2101,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                   <div className="space-y-4 animate-in slide-in-from-top-2 duration-300">
                     <div className="space-y-1">
                       <label className="flex items-center gap-2 text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                        <Calendar className="w-3.5 h-3.5 text-ms-blue" /> Data do Remanejamento
+                        <Calendar className="w-3.5 h-3.5 text-ms-blueText" /> Data do Remanejamento
                       </label>
                       <input
                         type="date"

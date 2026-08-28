@@ -172,7 +172,7 @@ export function OrgaosTab() {
   }
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   return (
@@ -227,7 +227,7 @@ export function OrgaosTab() {
                     {o.tipo === 'APM' && (
                       <div className="flex items-center gap-3">
                         {o.estatuto_doc_path ? (
-                          <button onClick={() => handleVerEstatuto(o)} className="flex items-center gap-1.5 text-xs font-bold text-ms-blue hover:text-blue-400">
+                          <button onClick={() => handleVerEstatuto(o)} className="flex items-center gap-1.5 text-xs font-bold text-ms-blueText hover:text-blue-400">
                             <FileText className="w-3.5 h-3.5" /> Ver estatuto
                           </button>
                         ) : (

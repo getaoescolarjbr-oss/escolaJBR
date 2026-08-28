@@ -114,7 +114,7 @@ export function IndicacoesCompraTab() {
       <div className="space-y-2">
         <p className="text-xs font-black uppercase tracking-wider text-ms-main">Sugestões ({indicacoes.length})</p>
         {loading ? (
-          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : indicacoes.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhuma sugestão registrada ainda.</p>
         ) : (

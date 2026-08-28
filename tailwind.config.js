@@ -8,7 +8,8 @@ export default {
     extend: {
       colors: {
         ms: {
-          blue: '#002677',   // Azul da Bandeira MS
+          blue: '#002677',   // Azul da Bandeira MS (uso em fundo sólido / marca)
+          blueText: 'var(--ms-blue-text)', // Azul MS para texto/ícone/borda — adapta contraste por tema
           green: '#21732e',  // Verde da Bandeira MS
           gold: '#fcc201',   // Dourado da Bandeira MS
           gray: '#f1f5f9',

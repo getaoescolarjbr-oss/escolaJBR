@@ -183,7 +183,7 @@ export function ReservaFormModal({ recursoIdInicial, onClose, onCriada }: Reserv
               Seu perfil não tem permissão para reservar recursos. Se você acredita que isso é um engano, fale com a Coordenação/Gestão.
             </p>
           ) : carregandoOpcoes ? (
-            <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+            <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
           ) : sucesso ? (
             <div className="p-4 bg-green-950/20 border border-green-900/50 rounded-lg text-sm text-green-400">{sucesso}</div>
           ) : (
@@ -193,7 +193,7 @@ export function ReservaFormModal({ recursoIdInicial, onClose, onCriada }: Reserv
                   <button
                     type="button"
                     onClick={() => setMostrarRecentes(!mostrarRecentes)}
-                    className="flex items-center gap-1.5 text-xs font-bold text-ms-blue hover:text-blue-400"
+                    className="flex items-center gap-1.5 text-xs font-bold text-ms-blueText hover:text-blue-400"
                   >
                     <History className="w-3.5 h-3.5" /> Repetir uma reserva recente
                   </button>

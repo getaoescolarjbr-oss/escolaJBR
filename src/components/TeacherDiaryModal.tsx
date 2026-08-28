@@ -194,8 +194,8 @@ export function TeacherDiaryModal({
         {/* Header */}
         <div className="px-4 sm:px-8 py-4 sm:py-5 bg-gradient-to-r from-ms-blue/20 to-transparent border-b border-ms-border flex items-center justify-between flex-shrink-0 gap-3">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-ms-blue/20 flex items-center justify-center border border-ms-blue/30 shadow-inner flex-shrink-0">
-              <ClipboardList className="w-5 h-5 sm:w-7 sm:h-7 text-ms-blue" />
+            <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-ms-blue/20 flex items-center justify-center border border-ms-blueText/30 shadow-inner flex-shrink-0">
+              <ClipboardList className="w-5 h-5 sm:w-7 sm:h-7 text-ms-blueText" />
             </div>
             <div className="min-w-0">
               <h2 className="text-base sm:text-2xl font-black text-white tracking-tight leading-tight">Diário de Atividades</h2>
@@ -276,7 +276,7 @@ export function TeacherDiaryModal({
         <div className="flex-1 overflow-auto p-3 sm:p-8 space-y-6 sm:space-y-8 custom-scrollbar">
           {loading ? (
             <div className="h-full py-40 flex flex-col items-center justify-center">
-              <Loader2 className="w-12 h-12 animate-spin text-ms-blue mb-4" />
+              <Loader2 className="w-12 h-12 animate-spin text-ms-blueText mb-4" />
               <p className="text-gray-400 font-bold uppercase tracking-widest text-xs">Consultando banco de dados...</p>
             </div>
           ) : students.length === 0 ? (
@@ -298,7 +298,7 @@ export function TeacherDiaryModal({
               <div className="space-y-6 animate-in fade-in duration-300">
                 {/* Detalhes da Atividade Selecionada (principalmente para Mobile) */}
                 {selectedActivityDetail && (
-                  <div className="p-4 bg-ms-blue/15 border border-ms-blue/30 rounded-2xl animate-in slide-in-from-top duration-250 flex items-start justify-between gap-3 shadow-lg">
+                  <div className="p-4 bg-ms-blue/15 border border-ms-blueText/30 rounded-2xl animate-in slide-in-from-top duration-250 flex items-start justify-between gap-3 shadow-lg">
                     <div className="space-y-1">
                       <p className="text-[10px] font-black text-[#93c5fd] uppercase tracking-widest flex items-center gap-1.5">
                         <BookOpen className="w-3.5 h-3.5 text-blue-400" />
@@ -397,13 +397,13 @@ export function TeacherDiaryModal({
                 {/* Timeline de Atividades */}
                 <div className="space-y-4">
                   <div className="flex items-center gap-2">
-                    <BookOpen className="w-5 h-5 text-ms-blue" />
+                    <BookOpen className="w-5 h-5 text-ms-blueText" />
                     <h3 className="text-sm font-black text-white uppercase tracking-wider">Conteúdo Programático e Atividades</h3>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {activities.map((act, index) => (
-                      <div key={act.id} className="p-4 bg-ms-dark/20 border border-ms-border/60 rounded-2xl flex items-start gap-4 hover:border-ms-blue/30 transition-all">
-                        <div className="w-10 h-10 rounded-xl bg-ms-blue/10 flex items-center justify-center text-xs font-black text-ms-blue border border-ms-blue/20 flex-shrink-0">
+                      <div key={act.id} className="p-4 bg-ms-dark/20 border border-ms-border/60 rounded-2xl flex items-start gap-4 hover:border-ms-blueText/30 transition-all">
+                        <div className="w-10 h-10 rounded-xl bg-ms-blue/10 flex items-center justify-center text-xs font-black text-ms-blueText border border-ms-blueText/20 flex-shrink-0">
                           {index + 1}
                         </div>
                         <div className="flex-1 space-y-1">
@@ -450,7 +450,7 @@ export function TeacherDiaryModal({
                           </span>
                         </div>
                         <div className="flex justify-between items-center text-[10px]">
-                          <span className="text-gray-550 font-bold uppercase">Pontos: <span className="text-ms-blue font-black">{av.valor_maximo} pts</span></span>
+                          <span className="text-gray-550 font-bold uppercase">Pontos: <span className="text-ms-blueText font-black">{av.valor_maximo} pts</span></span>
                           <span className="text-gray-555 font-bold uppercase">Data: <span className="text-ms-gold font-black">{av.data_avaliacao ? new Date(av.data_avaliacao + 'T00:00:00').toLocaleDateString('pt-BR') : 'Sem Data'}</span></span>
                         </div>
                       </div>

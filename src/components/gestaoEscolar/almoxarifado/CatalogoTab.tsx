@@ -80,7 +80,7 @@ export function CatalogoTab() {
 
       <div className="space-y-2">
         {loading ? (
-          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : (
           materiais.map((m) => {
             const abaixoDoMinimo = m.saldo <= m.estoque_minimo;

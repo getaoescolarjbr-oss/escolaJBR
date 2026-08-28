@@ -383,7 +383,7 @@ export function RAVListModal({
           theme === 'light' ? 'bg-blue-50/50 border-blue-100' : 'bg-ms-dark/30 border-ms-border'
         }`}>
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-ms-blue/20 flex items-center justify-center text-ms-blue border border-ms-blue/20">
+            <div className="w-10 h-10 rounded-xl bg-ms-blue/20 flex items-center justify-center text-ms-blueText border border-ms-blueText/20">
               <Sparkles className="w-5 h-5 text-[#d4af37] animate-pulse" />
             </div>
             <div>
@@ -391,7 +391,7 @@ export function RAVListModal({
                 Alunos de RAV — Recuperar para Avançar
               </h2>
               <p className="text-[10px] text-gray-500 font-black uppercase tracking-wider">
-                Regra Escolar Ativa: <span className="text-ms-blue">{ravMode === 'bimestral' ? 'Bimestral' : 'Semestral'}</span>
+                Regra Escolar Ativa: <span className="text-ms-blueText">{ravMode === 'bimestral' ? 'Bimestral' : 'Semestral'}</span>
               </p>
             </div>
           </div>
@@ -419,7 +419,7 @@ export function RAVListModal({
             </div>
             <div className={`p-4 rounded-2xl border ${theme === 'light' ? 'bg-blue-50/30 border-blue-100/50' : 'bg-ms-dark/20 border-ms-border/40'}`}>
               <span className="block text-[8px] font-black uppercase text-gray-500 tracking-wider">Bimestre Referência</span>
-              <span className={`text-sm font-bold text-ms-blue`}>{bimestreId}º Bimestre</span>
+              <span className={`text-sm font-bold text-ms-blueText`}>{bimestreId}º Bimestre</span>
             </div>
             <div className={`p-4 rounded-2xl border ${theme === 'light' ? 'bg-blue-50/30 border-blue-100/50' : 'bg-ms-dark/20 border-ms-border/40'}`}>
               <span className="block text-[8px] font-black uppercase text-gray-500 tracking-wider">Total de Alunos de RAV</span>
@@ -431,9 +431,9 @@ export function RAVListModal({
           <div className={`p-5 rounded-2xl border flex gap-4 text-xs leading-relaxed ${
             theme === 'light' ? 'bg-blue-50 border-blue-100 text-blue-900 shadow-sm' : 'bg-ms-dark/30 border-ms-border text-gray-400'
           }`}>
-            <AlertCircle className="w-6 h-6 text-ms-blue flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-6 h-6 text-ms-blueText flex-shrink-0 mt-0.5" />
             <div>
-              <strong className="text-ms-blue block mb-1">Entenda as Regras Matemáticas das Projeções:</strong>
+              <strong className="text-ms-blueText block mb-1">Entenda as Regras Matemáticas das Projeções:</strong>
               {ravMode === 'bimestral' ? (
                 <p>
                   No modelo **Bimestral**, todos os alunos que obtiveram média inferior a **6.0** no bimestre vigente ({bimestreId}º Bimestre) entram de RAV. A nota mínima exigida para recuperação é **6.0** para substituir ou complementar a nota original.

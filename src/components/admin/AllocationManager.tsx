@@ -367,14 +367,14 @@ export function AllocationManager() {
                         placeholder="Buscar por nome do professor..."
                         value={filterSearch}
                         onChange={(e) => setFilterSearch(e.target.value)}
-                        className="w-full pl-14 pr-6 py-4 bg-ms-dark border-2 border-gray-800 rounded-2xl text-ms-main placeholder-gray-500 outline-none focus:border-ms-blue focus:ring-4 focus:ring-ms-blue/10 font-bold transition-all"
+                        className="w-full pl-14 pr-6 py-4 bg-ms-dark border-2 border-gray-800 rounded-2xl text-ms-main placeholder-gray-500 outline-none focus:border-ms-blueText focus:ring-4 focus:ring-ms-blue/10 font-bold transition-all"
                     />
                 </div>
                 <div className="w-full md:w-80 relative">
                     <select
                         value={selectedProfessorId}
                         onChange={(e) => setSelectedProfessorId(e.target.value)}
-                        className="w-full px-6 py-4 bg-ms-dark border-2 border-gray-800 rounded-2xl text-ms-main font-bold outline-none focus:border-ms-blue focus:ring-4 focus:ring-ms-blue/10 cursor-pointer appearance-none"
+                        className="w-full px-6 py-4 bg-ms-dark border-2 border-gray-800 rounded-2xl text-ms-main font-bold outline-none focus:border-ms-blueText focus:ring-4 focus:ring-ms-blue/10 cursor-pointer appearance-none"
                     >
                         <option value="all">Ver Todos os Professores</option>
                         {professors.map(p => (
@@ -382,7 +382,7 @@ export function AllocationManager() {
                         ))}
                     </select>
                     <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                        <Filter className="w-4 h-4 text-ms-blue" />
+                        <Filter className="w-4 h-4 text-ms-blueText" />
                     </div>
                 </div>
             </div>
@@ -391,7 +391,7 @@ export function AllocationManager() {
             <div className="flex flex-col gap-8 w-full max-w-5xl mx-auto">
                 {loading ? (
                     <div className="py-40 text-center">
-                        <Loader2 className="w-12 h-12 animate-spin mx-auto text-ms-blue mb-4" />
+                        <Loader2 className="w-12 h-12 animate-spin mx-auto text-ms-blueText mb-4" />
                         <p className="text-gray-400 font-medium text-lg">Organizando lista...</p>
                     </div>
                 ) : filteredProfs.length === 0 ? (
@@ -418,17 +418,17 @@ export function AllocationManager() {
                     }
 
                     return (
-                        <div key={prof.id} className="bg-ms-card border border-gray-800 rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:border-ms-blue/30 transition-all group">
+                        <div key={prof.id} className="bg-ms-card border border-gray-800 rounded-[2.5rem] overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.3)] hover:border-ms-blueText/30 transition-all group">
                             {/* Cabeçalho do Professor */}
                             <div className="px-10 py-6 bg-gradient-to-r from-gray-800/30 via-transparent to-transparent border-b border-gray-800 flex items-center justify-between">
                                 <div className="flex items-center gap-6">
-                                    <div className="w-16 h-16 rounded-2xl bg-ms-blue/10 flex items-center justify-center text-ms-blue font-black border border-ms-blue/20 text-2xl shadow-inner group-hover:scale-105 transition-transform">
+                                    <div className="w-16 h-16 rounded-2xl bg-ms-blue/10 flex items-center justify-center text-ms-blueText font-black border border-ms-blueText/20 text-2xl shadow-inner group-hover:scale-105 transition-transform">
                                         {prof.nome.charAt(0)}
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-black text-ms-blue uppercase tracking-tight leading-tight">{prof.nome}</h3>
+                                        <h3 className="text-xl font-black text-ms-blueText uppercase tracking-tight leading-tight">{prof.nome}</h3>
                                         <div className="flex items-center gap-3 mt-2">
-                                            <span className="px-3 py-1 rounded-full text-[10px] font-black bg-ms-blue/10 text-ms-blue border border-ms-blue/20 uppercase tracking-widest">
+                                            <span className="px-3 py-1 rounded-full text-[10px] font-black bg-ms-blue/10 text-ms-blueText border border-ms-blueText/20 uppercase tracking-widest">
                                                 {profAllocs.length} {profAllocs.length === 1 ? 'TURMA' : 'TURMAS'} / {new Set(profAllocs.map(a => a.disciplina_id)).size} {new Set(profAllocs.map(a => a.disciplina_id)).size === 1 ? 'DISCIPLINA' : 'DISCIPLINAS'}
                                             </span>
                                             <span className="w-1 h-1 rounded-full bg-gray-700"></span>
@@ -454,14 +454,14 @@ export function AllocationManager() {
                                                 <td className="px-10 py-2.5">
                                                     <div className="flex items-center gap-4">
                                                         <div className={`w-1.5 h-1.5 rounded-full ${alloc.is_espelho ? 'bg-amber-400 shadow-[0_0_10px_rgba(251,191,36,0.5)]' : 'bg-ms-blue shadow-[0_0_10px_rgba(0,102,255,0.5)]'}`}></div>
-                                                        <span className={`text-sm font-black uppercase tracking-tight ${alloc.is_espelho ? 'text-amber-400' : 'text-ms-blue'}`}>{alloc.turma_nome}</span>
+                                                        <span className={`text-sm font-black uppercase tracking-tight ${alloc.is_espelho ? 'text-amber-400' : 'text-ms-blueText'}`}>{alloc.turma_nome}</span>
                                                     </div>
                                                 </td>
                                                 <td className="px-10 py-2.5">
                                                     <div className="flex flex-col gap-1">
                                                         <div className="flex items-center gap-3">
-                                                            <BookOpen className={`w-4 h-4 ${alloc.is_espelho ? 'text-amber-400' : 'text-ms-blue'}`} />
-                                                            <span className={`text-sm font-bold ${alloc.is_espelho ? 'text-amber-400' : 'text-ms-blue'}`}>{alloc.disciplina_nome}</span>
+                                                            <BookOpen className={`w-4 h-4 ${alloc.is_espelho ? 'text-amber-400' : 'text-ms-blueText'}`} />
+                                                            <span className={`text-sm font-bold ${alloc.is_espelho ? 'text-amber-400' : 'text-ms-blueText'}`}>{alloc.disciplina_nome}</span>
                                                         </div>
                                                         {alloc.is_espelho && alloc.professor_original_nome && (
                                                             <div className="flex items-center gap-1.5 ml-7">
@@ -485,7 +485,7 @@ export function AllocationManager() {
                                                         {!alloc.is_espelho && (
                                                             <button 
                                                                 onClick={() => handleDelete(alloc.id)}
-                                                                className="p-2 text-ms-blue hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
+                                                                className="p-2 text-ms-blueText hover:text-red-500 hover:bg-red-500/10 rounded-xl transition-all"
                                                                 title="Excluir alocação"
                                                             >
                                                                 <Trash2 className="w-4 h-4" />
@@ -526,7 +526,7 @@ export function AllocationManager() {
                         <div className="px-12 py-10 border-b border-gray-800 bg-gradient-to-br from-ms-blue/20 via-transparent to-transparent flex items-center justify-between">
                             <div>
                                 <h3 className="text-3xl font-black text-ms-main tracking-tighter uppercase italic">Nova Alocação</h3>
-                                <p className="text-ms-blue font-black text-[10px] uppercase tracking-[0.4em] mt-2">Sistema de Gestão JBR</p>
+                                <p className="text-ms-blueText font-black text-[10px] uppercase tracking-[0.4em] mt-2">Sistema de Gestão JBR</p>
                             </div>
                             <button onClick={() => setIsModalOpen(false)} className="p-4 hover:bg-white/5 rounded-full text-gray-500 hover:text-white transition-all">
                                 <X className="w-8 h-8" />
@@ -537,12 +537,12 @@ export function AllocationManager() {
                             {/* Seleção de Professor */}
                             <div className="space-y-4">
                                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] ml-2 flex items-center gap-3">
-                                    <User className="w-4 h-4 text-ms-blue" /> Selecione o Professor
+                                    <User className="w-4 h-4 text-ms-blueText" /> Selecione o Professor
                                 </label>
                                 <select 
                                     value={formData.professor_id}
                                     onChange={(e) => setFormData({...formData, professor_id: e.target.value})}
-                                    className="w-full px-8 py-5 bg-ms-dark border-2 border-gray-800 rounded-3xl text-ms-main outline-none focus:border-ms-blue focus:ring-4 focus:ring-ms-blue/10 font-bold text-base transition-all hover:bg-gray-800/50 appearance-none cursor-pointer"
+                                    className="w-full px-8 py-5 bg-ms-dark border-2 border-gray-800 rounded-3xl text-ms-main outline-none focus:border-ms-blueText focus:ring-4 focus:ring-ms-blue/10 font-bold text-base transition-all hover:bg-gray-800/50 appearance-none cursor-pointer"
                                 >
                                     <option value="">Buscar docente...</option>
                                     {professors.map(p => <option key={p.id} value={p.id}>{p.nome}</option>)}
@@ -553,12 +553,12 @@ export function AllocationManager() {
                                 {/* Seleção de Turma */}
                                 <div className="space-y-4">
                                     <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] ml-2 flex items-center gap-3">
-                                        <Layers className="w-4 h-4 text-ms-blue" /> Turma
+                                        <Layers className="w-4 h-4 text-ms-blueText" /> Turma
                                     </label>
                                     <select 
                                         value={formData.turma_id}
                                         onChange={(e) => setFormData({...formData, turma_id: e.target.value})}
-                                        className="w-full px-6 py-5 bg-ms-dark border-2 border-gray-800 rounded-3xl text-ms-main outline-none focus:border-ms-blue focus:ring-4 focus:ring-ms-blue/10 font-bold text-sm transition-all appearance-none cursor-pointer"
+                                        className="w-full px-6 py-5 bg-ms-dark border-2 border-gray-800 rounded-3xl text-ms-main outline-none focus:border-ms-blueText focus:ring-4 focus:ring-ms-blue/10 font-bold text-sm transition-all appearance-none cursor-pointer"
                                     >
                                         <option value="">Série...</option>
                                         {turmas.map(t => (
@@ -572,12 +572,12 @@ export function AllocationManager() {
                                 {/* Seleção de Disciplina */}
                                 <div className="space-y-4">
                                     <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] ml-2 flex items-center gap-3">
-                                        <BookOpen className="w-4 h-4 text-ms-blue" /> Disciplina
+                                        <BookOpen className="w-4 h-4 text-ms-blueText" /> Disciplina
                                     </label>
                                     <select 
                                         value={formData.disciplina_id}
                                         onChange={(e) => setFormData({...formData, disciplina_id: e.target.value})}
-                                        className="w-full px-6 py-5 bg-ms-dark border-2 border-gray-800 rounded-3xl text-ms-main outline-none focus:border-ms-blue focus:ring-4 focus:ring-ms-blue/10 font-bold text-sm transition-all appearance-none cursor-pointer"
+                                        className="w-full px-6 py-5 bg-ms-dark border-2 border-gray-800 rounded-3xl text-ms-main outline-none focus:border-ms-blueText focus:ring-4 focus:ring-ms-blue/10 font-bold text-sm transition-all appearance-none cursor-pointer"
                                     >
                                         <option value="">Matéria...</option>
                                         {disciplinas.map(d => (

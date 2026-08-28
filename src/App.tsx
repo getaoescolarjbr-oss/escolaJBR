@@ -265,7 +265,7 @@ function App() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-ms-dark">
-        <div className="animate-spin rounded-full h-10 w-10 border-4 border-ms-blue border-t-transparent shadow-[0_0_15px_rgba(0,38,119,0.5)]"></div>
+        <div className="animate-spin rounded-full h-10 w-10 border-4 border-ms-blueText border-t-transparent shadow-[0_0_15px_rgba(0,38,119,0.5)]"></div>
       </div>
     );
   }
@@ -406,9 +406,9 @@ function App() {
                   <button
                     key={item.id}
                     onClick={() => navegarPara(item.id)}
-                    className="flex flex-col items-center gap-2 p-6 bg-ms-card border border-gray-800 rounded-2xl hover:border-ms-blue transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ms-blue text-center"
+                    className="flex flex-col items-center gap-2 p-6 bg-ms-card border border-gray-800 rounded-2xl hover:border-ms-blueText transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ms-blue text-center"
                   >
-                    <item.icon className="w-7 h-7 text-ms-blue" />
+                    <item.icon className="w-7 h-7 text-ms-blueText" />
                     <span className="text-sm font-bold text-ms-main">{item.label}</span>
                   </button>
                 ))}

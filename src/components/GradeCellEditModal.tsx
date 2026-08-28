@@ -271,8 +271,8 @@ export function GradeCellEditModal({
         {/* Header */}
         <div className="px-8 py-5 bg-gradient-to-r from-ms-blue/20 to-transparent border-b border-ms-border flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-ms-blue/20 flex items-center justify-center text-sm font-black text-ms-blue border border-ms-blue/30 shadow-inner">
-              <User className="w-5 h-5 text-ms-blue" />
+            <div className="w-10 h-10 rounded-xl bg-ms-blue/20 flex items-center justify-center text-sm font-black text-ms-blueText border border-ms-blueText/30 shadow-inner">
+              <User className="w-5 h-5 text-ms-blueText" />
             </div>
             <div>
               <h3 className={`text-base font-black uppercase tracking-tight ${theme === 'light' ? 'text-blue-900' : 'text-white'}`}>
@@ -292,7 +292,7 @@ export function GradeCellEditModal({
         <div className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
           {loading ? (
             <div className="py-20 flex flex-col items-center justify-center">
-              <Loader2 className="w-10 h-10 animate-spin text-ms-blue mb-4" />
+              <Loader2 className="w-10 h-10 animate-spin text-ms-blueText mb-4" />
               <p className="text-gray-500 text-xs font-bold uppercase tracking-widest">Carregando avaliações...</p>
             </div>
           ) : errorMsg ? (

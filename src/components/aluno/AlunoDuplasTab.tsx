@@ -112,7 +112,7 @@ export function AlunoDuplasTab({ alunoId }: AlunoDuplasTabProps) {
   }
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   if (!dupla) {
@@ -144,7 +144,7 @@ export function AlunoDuplasTab({ alunoId }: AlunoDuplasTabProps) {
   if (dupla.status === 'PENDENTE') {
     return (
       <div className="max-w-md bg-ms-card border border-gray-800 rounded-2xl p-6 text-center space-y-4">
-        <Users className="w-8 h-8 text-ms-blue mx-auto" />
+        <Users className="w-8 h-8 text-ms-blueText mx-auto" />
         {dupla.sou_eu_quem_convidou ? (
           <>
             <p className="text-sm text-ms-main">Convite enviado para <strong>{dupla.parceiro_nome}</strong> — aguardando aceite.</p>

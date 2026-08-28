@@ -208,7 +208,7 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
                 Esqueceu a senha?
               </button>
               <button type="button" onClick={() => { setView('REGISTER'); setError(null); setSuccess(null); }} className="text-gray-600 hover:text-gray-800 transition-colors">
-                Primeiro acesso? <span className="font-bold text-ms-blue underline decoration-ms-blue/30 underline-offset-4">Cadastre sua senha</span>
+                Primeiro acesso? <span className="font-bold text-ms-blueText underline decoration-ms-blue/30 underline-offset-4">Cadastre sua senha</span>
               </button>
             </div>
           ) : (
@@ -217,7 +217,7 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
             </button>
           )}
           <button type="button" onClick={() => setModoAluno(true)} className="text-gray-500 hover:text-gray-700 transition-colors text-xs">
-            É aluno da escola? <span className="font-bold text-ms-blue underline decoration-ms-blue/30 underline-offset-4">Entrar no BiblioClube</span>
+            É aluno da escola? <span className="font-bold text-ms-blueText underline decoration-ms-blue/30 underline-offset-4">Entrar no BiblioClube</span>
           </button>
         </div>
       </div>

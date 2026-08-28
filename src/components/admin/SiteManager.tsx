@@ -214,7 +214,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
       <div className="px-8 py-6 border-b border-ms-border bg-ms-dark/30">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-ms-blue/20 flex items-center justify-center text-ms-blue border border-ms-blue/30 shadow-lg">
+            <div className="w-12 h-12 rounded-2xl bg-ms-blue/20 flex items-center justify-center text-ms-blueText border border-ms-blueText/30 shadow-lg">
               <Globe className="w-6 h-6" />
             </div>
             <div>
@@ -319,7 +319,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
                   <div className="px-6 pb-6 pt-2 text-xs text-gray-500 space-y-3 leading-relaxed border-t border-ms-border/30">
                     <ol className="list-decimal pl-4 space-y-2">
                       <li>
-                        Acesse o site <a href="https://behold.so" target="_blank" rel="noopener noreferrer" className="text-ms-blue hover:underline">behold.so</a> e crie uma conta gratuita.
+                        Acesse o site <a href="https://behold.so" target="_blank" rel="noopener noreferrer" className="text-ms-blueText hover:underline">behold.so</a> e crie uma conta gratuita.
                       </li>
                       <li>
                         Siga os passos rápidos na plataforma deles para conectar a conta pública do Instagram da escola (<strong className="text-gray-400">@jbrautoria</strong>).
@@ -341,7 +341,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
 
             {loading ? (
               <div className="py-20 flex flex-col items-center justify-center">
-                <Loader2 className="w-12 h-12 animate-spin text-ms-blue mb-4" />
+                <Loader2 className="w-12 h-12 animate-spin text-ms-blueText mb-4" />
                 <p className="text-gray-500 font-black uppercase text-[10px] tracking-widest">Carregando conteúdo...</p>
               </div>
             ) : displayedItems.length === 0 ? (
@@ -352,7 +352,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {displayedItems.map((item) => (
-                  <div key={item.id} className="bg-ms-dark/40 rounded-3xl border border-ms-border overflow-hidden group hover:border-ms-blue/50 transition-all shadow-lg">
+                  <div key={item.id} className="bg-ms-dark/40 rounded-3xl border border-ms-border overflow-hidden group hover:border-ms-blueText/50 transition-all shadow-lg">
                     {activeTab === 'noticias' && (
                       <div className="h-40 bg-ms-dark flex items-center justify-center overflow-hidden border-b border-ms-border relative">
                         {item.imagem_url ? (
@@ -407,7 +407,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
           <form onSubmit={handleSave} className="bg-ms-dark/30 rounded-3xl border border-ms-border p-8 shadow-inner">
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-xl font-black text-ms-main flex items-center gap-3">
-                {editingId ? <Edit2 className="w-6 h-6 text-ms-blue" /> : <Plus className="w-6 h-6 text-ms-blue" />}
+                {editingId ? <Edit2 className="w-6 h-6 text-ms-blueText" /> : <Plus className="w-6 h-6 text-ms-blueText" />}
                 {editingId ? 'Editar' : 'Novo'} {activeTab === 'noticias' ? (isInstagramType ? 'Post do Instagram' : 'Post de Notícia') : activeTab === 'eventos' ? 'Evento' : 'Aviso'}
               </h3>
               <button 
@@ -423,12 +423,12 @@ export function SiteManager({ theme }: SiteManagerProps) {
               <div className="space-y-6">
                 {activeTab === 'noticias' && (
                   <div>
-                    <label className="block text-[10px] font-black text-ms-blue uppercase tracking-widest mb-2">Tipo de Publicação</label>
+                    <label className="block text-[10px] font-black text-ms-blueText uppercase tracking-widest mb-2">Tipo de Publicação</label>
                     <div className="flex gap-4">
                       <button
                         type="button"
                         onClick={() => setIsInstagramType(false)}
-                        className={`flex-1 py-3 rounded-xl border-2 transition-all font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 ${!isInstagramType ? 'bg-ms-blue/20 border-ms-blue text-ms-blue shadow-lg' : 'bg-ms-dark border-ms-border text-gray-500 hover:text-white'}`}
+                        className={`flex-1 py-3 rounded-xl border-2 transition-all font-black uppercase text-[10px] tracking-widest flex items-center justify-center gap-2 ${!isInstagramType ? 'bg-ms-blue/20 border-ms-blueText text-ms-blueText shadow-lg' : 'bg-ms-dark border-ms-border text-gray-500 hover:text-white'}`}
                       >
                         <Newspaper className="w-4 h-4" /> Notícia Interna
                       </button>
@@ -449,7 +449,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
                 )}
 
                 <div>
-                  <label className="block text-[10px] font-black text-ms-blue uppercase tracking-widest mb-2">
+                  <label className="block text-[10px] font-black text-ms-blueText uppercase tracking-widest mb-2">
                     {activeTab === 'noticias' && isInstagramType ? 'Título / Assunto (Post do Instagram)' : 'Título'}
                   </label>
                   <input 
@@ -464,7 +464,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
 
                 {activeTab === 'noticias' && (
                   <div>
-                    <label className="block text-[10px] font-black text-ms-blue uppercase tracking-widest mb-2">
+                    <label className="block text-[10px] font-black text-ms-blueText uppercase tracking-widest mb-2">
                       {isInstagramType ? 'Legenda do Post (Instagram)' : 'Subtítulo (Resumo)'}
                     </label>
                     <textarea 
@@ -480,7 +480,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
                 {activeTab === 'eventos' && (
                   <>
                     <div>
-                      <label className="block text-[10px] font-black text-ms-blue uppercase tracking-widest mb-2">Data do Evento</label>
+                      <label className="block text-[10px] font-black text-ms-blueText uppercase tracking-widest mb-2">Data do Evento</label>
                       <input 
                         type="datetime-local" 
                         required
@@ -490,7 +490,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-black text-ms-blue uppercase tracking-widest mb-2">Tipo de Evento</label>
+                      <label className="block text-[10px] font-black text-ms-blueText uppercase tracking-widest mb-2">Tipo de Evento</label>
                       <select 
                         value={formData.tipo || 'Evento'}
                         onChange={(e) => setFormData({...formData, tipo: e.target.value})}
@@ -506,7 +506,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
 
                 {activeTab === 'avisos' && (
                   <div>
-                    <label className="block text-[10px] font-black text-ms-blue uppercase tracking-widest mb-2">Cor do Alerta</label>
+                    <label className="block text-[10px] font-black text-ms-blueText uppercase tracking-widest mb-2">Cor do Alerta</label>
                     <div className="flex gap-4">
                       {['blue', 'yellow', 'green'].map(color => (
                         <button 
@@ -526,7 +526,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
               <div className="space-y-6">
                 {activeTab === 'noticias' && isInstagramType ? (
                   <div>
-                    <label className="block text-[10px] font-black text-ms-blue uppercase tracking-widest mb-2">Link da Postagem no Instagram (URL)</label>
+                    <label className="block text-[10px] font-black text-ms-blueText uppercase tracking-widest mb-2">Link da Postagem no Instagram (URL)</label>
                     <div className="relative">
                       <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                         <rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect>
@@ -549,7 +549,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
                 ) : (
                   (activeTab === 'noticias' || activeTab === 'eventos') && (
                     <div>
-                      <label className="block text-[10px] font-black text-ms-blue uppercase tracking-widest mb-2">
+                      <label className="block text-[10px] font-black text-ms-blueText uppercase tracking-widest mb-2">
                         {activeTab === 'noticias' ? 'Conteúdo Detalhado' : 'Descrição'}
                       </label>
                       <textarea 
@@ -566,7 +566,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
 
                 {activeTab === 'noticias' && (
                   <div>
-                    <label className="block text-[10px] font-black text-ms-blue uppercase tracking-widest mb-2">
+                    <label className="block text-[10px] font-black text-ms-blueText uppercase tracking-widest mb-2">
                       {isInstagramType ? 'URL da Imagem do Post (Instagram)' : 'URL da Imagem'}
                     </label>
                     <div className="relative">
@@ -589,7 +589,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
 
                 {activeTab === 'avisos' && (
                   <div>
-                    <label className="block text-[10px] font-black text-ms-blue uppercase tracking-widest mb-2">Mensagem do Alerta</label>
+                    <label className="block text-[10px] font-black text-ms-blueText uppercase tracking-widest mb-2">Mensagem do Alerta</label>
                     <textarea 
                       rows={5}
                       required

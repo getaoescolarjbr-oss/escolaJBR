@@ -92,7 +92,7 @@ export function AlunoFeedTab({ alunoId }: AlunoFeedTabProps) {
     <div className="space-y-6 max-w-xl">
       {frase && (
         <div className="bg-ms-card border border-gray-800 rounded-2xl p-5 flex items-start gap-3">
-          <Quote className="w-5 h-5 text-ms-blue shrink-0 mt-0.5" />
+          <Quote className="w-5 h-5 text-ms-blueText shrink-0 mt-0.5" />
           <div>
             <p className="text-sm text-ms-main italic">"{frase.texto}"</p>
             {frase.autor && <p className="text-[11px] text-gray-500 mt-1">— {frase.autor}</p>}
@@ -100,7 +100,7 @@ export function AlunoFeedTab({ alunoId }: AlunoFeedTabProps) {
         </div>
       )}
 
-      {mensagem && <div className="p-3 bg-ms-card border border-ms-blue/30 rounded-xl text-sm text-ms-main">{mensagem}</div>}
+      {mensagem && <div className="p-3 bg-ms-card border border-ms-blueText/30 rounded-xl text-sm text-ms-main">{mensagem}</div>}
 
       <section className="bg-ms-card border border-gray-800 rounded-2xl p-5 space-y-3">
         <p className="text-xs font-black uppercase tracking-wider text-ms-main">Escrever resenha</p>
@@ -144,7 +144,7 @@ export function AlunoFeedTab({ alunoId }: AlunoFeedTabProps) {
       <section className="space-y-3">
         <p className="text-xs font-black uppercase tracking-wider text-gray-400">Resenhas da escola</p>
         {loading ? (
-          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : feed.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhuma resenha publicada ainda — seja o primeiro!</p>
         ) : (

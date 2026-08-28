@@ -104,7 +104,7 @@ export function ProfessorMensagensPanel({ currentTeacher, theme, onReadConfirmed
       }`}>
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-blue-500/10 rounded-2xl border border-blue-500/20">
-            <Mail className="w-5 h-5 text-ms-blue" />
+            <Mail className="w-5 h-5 text-ms-blueText" />
           </div>
           <div>
             <h2 className={`text-lg font-black tracking-tight ${theme === 'light' ? 'text-blue-900' : 'text-white'}`}> Comunicados da Coordenação</h2>
@@ -166,7 +166,7 @@ export function ProfessorMensagensPanel({ currentTeacher, theme, onReadConfirmed
           <div className={`py-24 text-center rounded-3xl border ${
             theme === 'light' ? 'bg-white border-blue-100' : 'bg-ms-card border-ms-border'
           }`}>
-            <Loader2 className="w-10 h-10 animate-spin text-ms-blue mx-auto mb-4" />
+            <Loader2 className="w-10 h-10 animate-spin text-ms-blueText mx-auto mb-4" />
             <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Consultando comunicados...</p>
           </div>
         ) : mensagens.length === 0 ? (

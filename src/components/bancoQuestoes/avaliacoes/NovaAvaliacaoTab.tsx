@@ -20,6 +20,7 @@ export function NovaAvaliacaoTab({ onAvaliacaoSalva }: Props) {
   const [config, setConfig] = useState<Omit<NovaAvaliacaoInput, 'questoes'> | null>(null);
   const [valoresPorQuestao, setValoresPorQuestao] = useState<Record<string, number>>({});
   const [turmaNomes, setTurmaNomes] = useState<string[]>([]);
+  const [questoesOrdenadas, setQuestoesOrdenadas] = useState<Question[]>([]);
 
   function toggleSelecionar(q: Question) {
     setSelecionadas((prev) => {
@@ -83,10 +84,11 @@ export function NovaAvaliacaoTab({ onAvaliacaoSalva }: Props) {
         <ConfigAvaliacaoForm
           questoes={questoesSelecionadas}
           onVoltar={() => setPasso('questoes')}
-          onContinuar={(cfg, valores, nomes) => {
+          onContinuar={(cfg, valores, nomes, ordenadas) => {
             setConfig(cfg);
             setValoresPorQuestao(valores);
             setTurmaNomes(nomes);
+            setQuestoesOrdenadas(ordenadas);
             setPasso('preview');
           }}
         />
@@ -95,7 +97,7 @@ export function NovaAvaliacaoTab({ onAvaliacaoSalva }: Props) {
       {passo === 'preview' && config && (
         <AvaliacaoPreviewModal
           config={config}
-          questoes={questoesSelecionadas}
+          questoes={questoesOrdenadas}
           valoresPorQuestao={valoresPorQuestao}
           turmaNomes={turmaNomes}
           onVoltar={() => setPasso('config')}

@@ -65,14 +65,14 @@ export function LivrosTab() {
           <option value="">Todos os gêneros</option>
           {generos.map((g) => <option key={g.id} value={g.id}>{g.nome}</option>)}
         </select>
-        <button onClick={carregar} className="px-4 py-2.5 bg-ms-dark border border-gray-800 rounded-xl text-sm text-gray-300 hover:border-ms-blue transition-colors">Filtrar</button>
+        <button onClick={carregar} className="px-4 py-2.5 bg-ms-dark border border-gray-800 rounded-xl text-sm text-gray-300 hover:border-ms-blueText transition-colors">Filtrar</button>
         <button onClick={() => setLivroEditando(null)} className="flex items-center gap-2 px-6 py-2.5 bg-ms-blue text-white rounded-xl font-bold hover:bg-blue-600 transition-all">
           <Plus className="w-4 h-4" /> Novo livro
         </button>
       </div>
 
       {loading ? (
-        <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+        <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
       ) : livros.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum livro encontrado.</p>
       ) : (
@@ -95,7 +95,7 @@ export function LivrosTab() {
                 <div className="flex gap-3 mt-3">
                   <button onClick={() => setLivroEditando(l)} className="flex items-center gap-1 text-[11px] text-gray-400 hover:text-ms-main font-bold"><Pencil className="w-3 h-3" /> Editar</button>
                   {l.tipo_acervo === 'FISICO' && (
-                    <button onClick={() => setLivroExemplares(l)} className="flex items-center gap-1 text-[11px] text-ms-blue hover:underline font-bold"><BookCopy className="w-3 h-3" /> Exemplares</button>
+                    <button onClick={() => setLivroExemplares(l)} className="flex items-center gap-1 text-[11px] text-ms-blueText hover:underline font-bold"><BookCopy className="w-3 h-3" /> Exemplares</button>
                   )}
                 </div>
               </div>

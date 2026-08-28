@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, Copy, Eye, Loader2, Printer, Send, Square, Trash2, Users } from 'lucide-react';
+import { Check, Copy, Eye, Loader2, Pencil, Printer, Send, Square, Trash2, Users } from 'lucide-react';
 import type { Avaliacao, StatusAvaliacao } from '../../../types/avaliacoes';
 import { atualizarStatusAvaliacao, excluirAvaliacao, linkPublicoSimulado, listarMinhasAvaliacoes } from '../../../services/avaliacoesService';
 import { AvaliacaoResultadosModal } from './AvaliacaoResultadosModal';
+import { EditarAvaliacaoModal } from './EditarAvaliacaoModal';
 import { PreviewAvaliacaoAlunoModal } from './PreviewAvaliacaoAlunoModal';
 import { ReimprimirAvaliacaoModal } from './ReimprimirAvaliacaoModal';
 
@@ -27,6 +28,7 @@ export function MinhasAvaliacoesTab() {
   const [resultadosDe, setResultadosDe] = useState<Avaliacao | null>(null);
   const [reimprimirDe, setReimprimirDe] = useState<Avaliacao | null>(null);
   const [previewDe, setPreviewDe] = useState<Avaliacao | null>(null);
+  const [editandoDe, setEditandoDe] = useState<Avaliacao | null>(null);
   const [processando, setProcessando] = useState<string | null>(null);
   const [linkCopiadoId, setLinkCopiadoId] = useState<string | null>(null);
 
@@ -83,7 +85,7 @@ export function MinhasAvaliacoesTab() {
     }
   }
 
-  if (loading) return <div className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>;
+  if (loading) return <div className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
 
   return (
     <div className="space-y-4">
@@ -115,6 +117,12 @@ export function MinhasAvaliacoesTab() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    onClick={() => setEditandoDe(a)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-xs font-bold hover:bg-gray-800"
+                  >
+                    <Pencil className="w-3.5 h-3.5" /> Editar
+                  </button>
                   {a.status === 'RASCUNHO' && (
                     <button
                       disabled={processando === a.id}
@@ -187,6 +195,16 @@ export function MinhasAvaliacoesTab() {
       {resultadosDe && <AvaliacaoResultadosModal avaliacao={resultadosDe} onClose={() => setResultadosDe(null)} />}
       {reimprimirDe && <ReimprimirAvaliacaoModal avaliacao={reimprimirDe} onClose={() => setReimprimirDe(null)} />}
       {previewDe && <PreviewAvaliacaoAlunoModal avaliacao={previewDe} onClose={() => setPreviewDe(null)} />}
+      {editandoDe && (
+        <EditarAvaliacaoModal
+          avaliacao={editandoDe}
+          onClose={() => setEditandoDe(null)}
+          onSalvo={() => {
+            setEditandoDe(null);
+            carregar();
+          }}
+        />
+      )}
     </div>
   );
 }

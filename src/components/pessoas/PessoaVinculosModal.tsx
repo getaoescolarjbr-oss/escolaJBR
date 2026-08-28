@@ -142,7 +142,7 @@ export function PessoaVinculosModal({ pessoa, onClose }: PessoaVinculosModalProp
         <div className="p-8 space-y-6 overflow-y-auto">
           {loading ? (
             <div className="py-10 text-center">
-              <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" />
+              <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" />
             </div>
           ) : (
             <>
@@ -152,7 +152,7 @@ export function PessoaVinculosModal({ pessoa, onClose }: PessoaVinculosModalProp
 
               {/* Aluno */}
               <div className="flex items-start gap-3 p-4 rounded-xl border border-gray-800 bg-ms-dark/30">
-                <GraduationCap className="w-5 h-5 text-ms-blue mt-0.5 shrink-0" />
+                <GraduationCap className="w-5 h-5 text-ms-blueText mt-0.5 shrink-0" />
                 <div>
                   <p className="text-xs font-black uppercase tracking-wider text-ms-main">Aluno</p>
                   {vinculos?.aluno ? (
@@ -171,7 +171,7 @@ export function PessoaVinculosModal({ pessoa, onClose }: PessoaVinculosModalProp
               {vinculos?.aluno && (
                 <div className="p-4 rounded-xl border border-gray-800 bg-ms-dark/30">
                   <div className="flex items-start gap-3">
-                    <ShieldCheck className="w-5 h-5 text-ms-blue mt-0.5 shrink-0" />
+                    <ShieldCheck className="w-5 h-5 text-ms-blueText mt-0.5 shrink-0" />
                     <div className="flex-1">
                       <p className="text-xs font-black uppercase tracking-wider text-ms-main">Consentimento LGPD</p>
 
@@ -231,7 +231,7 @@ export function PessoaVinculosModal({ pessoa, onClose }: PessoaVinculosModalProp
 
               {/* Servidor */}
               <div className="flex items-start gap-3 p-4 rounded-xl border border-gray-800 bg-ms-dark/30">
-                <Briefcase className="w-5 h-5 text-ms-blue mt-0.5 shrink-0" />
+                <Briefcase className="w-5 h-5 text-ms-blueText mt-0.5 shrink-0" />
                 <div>
                   <p className="text-xs font-black uppercase tracking-wider text-ms-main">Servidor</p>
                   {vinculos?.servidor ? (
@@ -245,7 +245,7 @@ export function PessoaVinculosModal({ pessoa, onClose }: PessoaVinculosModalProp
               {/* Responsável */}
               <div className="p-4 rounded-xl border border-gray-800 bg-ms-dark/30">
                 <div className="flex items-start gap-3">
-                  <UserRoundCheck className="w-5 h-5 text-ms-blue mt-0.5 shrink-0" />
+                  <UserRoundCheck className="w-5 h-5 text-ms-blueText mt-0.5 shrink-0" />
                   <div className="flex-1">
                     <p className="text-xs font-black uppercase tracking-wider text-ms-main">Responsável</p>
 

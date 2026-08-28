@@ -69,7 +69,7 @@ export function AprovacoesTab() {
   }
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   return (

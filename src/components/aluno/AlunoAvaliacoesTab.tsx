@@ -28,7 +28,7 @@ export function AlunoAvaliacoesTab() {
     carregar();
   }, [carregar]);
 
-  if (loading) return <div className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>;
+  if (loading) return <div className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
 
   const aFazer = avaliacoes.filter((a) => a.resposta_status === 'PENDENTE' && a.status === 'PUBLICADA');
   const enviadas = avaliacoes.filter((a) => a.resposta_status === 'ENVIADA');
@@ -87,7 +87,7 @@ function Secao({
             key={a.avaliacao_id}
             onClick={() => onAbrir?.(a)}
             disabled={!onAbrir}
-            className="w-full text-left bg-ms-card border border-gray-800 rounded-xl px-4 py-3 hover:border-ms-blue/50 disabled:hover:border-gray-800 disabled:opacity-70 transition-colors"
+            className="w-full text-left bg-ms-card border border-gray-800 rounded-xl px-4 py-3 hover:border-ms-blueText/50 disabled:hover:border-gray-800 disabled:opacity-70 transition-colors"
           >
             <p className="text-sm font-bold text-ms-main">{a.titulo}</p>
             <p className="text-xs text-ms-muted mt-1">

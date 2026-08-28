@@ -106,7 +106,7 @@ export function NecessidadesEspeciaisTab() {
   }
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   return (
@@ -155,7 +155,7 @@ export function NecessidadesEspeciaisTab() {
               </div>
               <div className="flex items-center gap-3">
                 {n.laudo_arquivo_path ? (
-                  <button onClick={() => handleVerLaudo(n)} className="flex items-center gap-1.5 text-xs font-bold text-ms-blue hover:text-blue-400">
+                  <button onClick={() => handleVerLaudo(n)} className="flex items-center gap-1.5 text-xs font-bold text-ms-blueText hover:text-blue-400">
                     <FileText className="w-3.5 h-3.5" /> Ver laudo anexado
                   </button>
                 ) : (

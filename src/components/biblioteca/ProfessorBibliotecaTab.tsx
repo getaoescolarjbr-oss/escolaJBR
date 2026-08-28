@@ -80,7 +80,7 @@ export function ProfessorBibliotecaTab() {
   }
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   if (!professorId) {
@@ -89,7 +89,7 @@ export function ProfessorBibliotecaTab() {
 
   return (
     <div className="space-y-8 max-w-3xl">
-      {mensagem && <div className="p-3 bg-ms-card border border-ms-blue/30 rounded-xl text-sm text-ms-main">{mensagem}</div>}
+      {mensagem && <div className="p-3 bg-ms-card border border-ms-blueText/30 rounded-xl text-sm text-ms-main">{mensagem}</div>}
 
       <section className="space-y-3">
         <h2 className="text-xs font-black uppercase tracking-wider text-gray-400">Buscar no acervo</h2>
@@ -117,7 +117,7 @@ export function ProfessorBibliotecaTab() {
                   <p className="text-[11px] text-gray-500">{l.autor}</p>
                 </div>
                 {l.tipo_acervo === 'FISICO' && (
-                  <button onClick={() => handleReservar(l.id)} className="px-3 py-2 bg-ms-dark border border-gray-800 rounded-lg text-[11px] text-gray-300 hover:border-ms-blue transition-colors">
+                  <button onClick={() => handleReservar(l.id)} className="px-3 py-2 bg-ms-dark border border-gray-800 rounded-lg text-[11px] text-gray-300 hover:border-ms-blueText transition-colors">
                     Reservar
                   </button>
                 )}
@@ -136,7 +136,7 @@ export function ProfessorBibliotecaTab() {
             {emprestimos.map((e) => (
               <div key={e.id} className="flex items-center justify-between px-4 py-3 bg-ms-card border border-gray-800 rounded-xl">
                 <div className="flex items-center gap-3">
-                  <BookOpen className="w-4 h-4 text-ms-blue shrink-0" />
+                  <BookOpen className="w-4 h-4 text-ms-blueText shrink-0" />
                   <div>
                     <p className="text-sm font-bold text-ms-main">{e.livro_titulo}</p>
                     <p className="text-[11px] text-gray-500">
@@ -147,7 +147,7 @@ export function ProfessorBibliotecaTab() {
                 <button
                   onClick={() => handleRenovar(e.id)}
                   disabled={renovando === e.id}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-dark border border-gray-800 rounded-lg text-[11px] text-gray-300 hover:border-ms-blue transition-colors disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-dark border border-gray-800 rounded-lg text-[11px] text-gray-300 hover:border-ms-blueText transition-colors disabled:opacity-50"
                 >
                   {renovando === e.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} Renovar
                 </button>

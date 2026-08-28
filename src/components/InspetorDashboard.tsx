@@ -263,8 +263,8 @@ export function InspetorDashboard({ professor, theme }: Props) {
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-center gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-ms-blue/20 flex items-center justify-center border border-ms-blue/30">
-          <Users className="w-6 h-6 text-ms-blue" />
+        <div className="w-12 h-12 rounded-2xl bg-ms-blue/20 flex items-center justify-center border border-ms-blueText/30">
+          <Users className="w-6 h-6 text-ms-blueText" />
         </div>
         <div>
           <h1 className="text-2xl font-black text-white">Portal do Administrativo</h1>
@@ -282,7 +282,7 @@ export function InspetorDashboard({ professor, theme }: Props) {
               className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${
                 active
                   ? t.color === 'pink' ? 'bg-pink-600 text-white shadow-lg' : 'bg-ms-blue text-white shadow-lg'
-                  : theme === 'light' ? 'text-[#003366] hover:bg-ms-blue/10 hover:text-ms-blue' : 'text-gray-500 hover:text-white'
+                  : theme === 'light' ? 'text-[#003366] hover:bg-ms-blue/10 hover:text-ms-blueText' : 'text-gray-500 hover:text-white'
               }`}>
               <Icon className="w-4 h-4" /> {t.label}
             </button>
@@ -527,7 +527,7 @@ export function InspetorDashboard({ professor, theme }: Props) {
               </button>
               <button 
                 onClick={fetchMonitor} 
-                className={`px-3 py-2 border rounded-lg text-xs font-black transition-all ${theme === 'light' ? 'bg-[#003366]/10 border-[#003366]/20 text-[#003366] hover:bg-[#003366]/20' : 'bg-ms-blue/20 border border-ms-blue/30 text-blue-400 hover:bg-ms-blue/30'}`}
+                className={`px-3 py-2 border rounded-lg text-xs font-black transition-all ${theme === 'light' ? 'bg-[#003366]/10 border-[#003366]/20 text-[#003366] hover:bg-[#003366]/20' : 'bg-ms-blue/20 border border-ms-blueText/30 text-blue-400 hover:bg-ms-blue/30'}`}
               >
                 ↻ Atualizar
               </button>

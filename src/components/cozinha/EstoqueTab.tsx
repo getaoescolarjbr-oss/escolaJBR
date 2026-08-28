@@ -161,7 +161,7 @@ export function EstoqueTab() {
   }
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   return (
@@ -275,7 +275,7 @@ export function EstoqueTab() {
             return (
               <div key={s.lote_id} className={`flex items-center justify-between px-4 py-3 rounded-xl border ${vencido ? 'bg-red-950/10 border-red-700/40' : 'bg-ms-card border-gray-800'}`}>
                 <span className="text-sm text-ms-main">{nomeItem(s.item_id)} — lote {s.numero_lote}{s.validade ? ` (validade ${new Date(s.validade + 'T12:00:00').toLocaleDateString('pt-BR')})` : ''}</span>
-                <span className={`text-sm font-black ${vencido ? 'text-red-500' : 'text-ms-blue'}`}>{s.saldo_atual}</span>
+                <span className={`text-sm font-black ${vencido ? 'text-red-500' : 'text-ms-blueText'}`}>{s.saldo_atual}</span>
               </div>
             );
           })

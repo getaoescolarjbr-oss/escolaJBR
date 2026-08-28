@@ -225,7 +225,7 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
               onClick={() => setSelectedCategory(cat)}
               className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
                 selectedCategory === cat
-                  ? 'bg-ms-blue text-white border-ms-blue shadow-lg shadow-blue-900/20'
+                  ? 'bg-ms-blue text-white border-ms-blueText shadow-lg shadow-blue-900/20'
                   : theme === 'light'
                   ? 'bg-white text-blue-900 border-blue-100 hover:border-blue-300'
                   : 'bg-ms-card text-gray-300 border-gray-800 hover:border-gray-700'
@@ -262,7 +262,7 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
             {loading ? (
               <tr>
                 <td colSpan={5} className="px-6 py-20 text-center">
-                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue mb-4" />
+                  <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText mb-4" />
                   <p className="text-gray-500 font-medium">Carregando lista de servidores...</p>
                 </td>
               </tr>
@@ -282,7 +282,7 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
                   >
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black border ${atestadoAtivo ? 'bg-amber-400/10 text-amber-400 border-amber-400/30' : 'bg-ms-blue/10 text-ms-blue border-ms-blue/20'}`}>
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black border ${atestadoAtivo ? 'bg-amber-400/10 text-amber-400 border-amber-400/30' : 'bg-ms-blue/10 text-ms-blueText border-ms-blueText/20'}`}>
                           {p.nome.charAt(0)}
                         </div>
                         <div>
@@ -309,7 +309,7 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex flex-col gap-1.5">
-                        <span className="px-3 py-1 bg-blue-500/10 text-ms-blue rounded-full text-[10px] font-black uppercase border border-ms-blue/20 w-fit">
+                        <span className="px-3 py-1 bg-blue-500/10 text-ms-blueText rounded-full text-[10px] font-black uppercase border border-ms-blueText/20 w-fit">
                           {p.cargo}
                         </span>
                         {p.status_servidor && (
@@ -355,7 +355,7 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
                             setFormData(p);
                             setIsModalOpen(true);
                           }}
-                          className="p-2 hover:bg-ms-blue/20 text-ms-blue rounded-lg transition-all"
+                          className="p-2 hover:bg-ms-blue/20 text-ms-blueText rounded-lg transition-all"
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
@@ -416,7 +416,7 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
                     <button
                       type="button"
                       onClick={handleAddCategory}
-                      className="text-[10px] font-black text-ms-blue hover:underline uppercase tracking-wider"
+                      className="text-[10px] font-black text-ms-blueText hover:underline uppercase tracking-wider"
                     >
                       + Nova
                     </button>
@@ -456,7 +456,7 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
                   <button
                     type="button"
                     onClick={handleAddStatus}
-                    className="text-[10px] font-black text-ms-blue hover:underline uppercase tracking-wider"
+                    className="text-[10px] font-black text-ms-blueText hover:underline uppercase tracking-wider"
                   >
                     + Novo Status
                   </button>

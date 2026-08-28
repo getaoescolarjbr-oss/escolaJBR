@@ -120,7 +120,7 @@ export function ModeracaoTab() {
 
       {erro && <p className="text-xs text-red-400">{erro}</p>}
       {loading ? (
-        <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+        <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
       ) : subAba === 'denuncias' ? (
         denuncias.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhuma denúncia em aberto.</p>

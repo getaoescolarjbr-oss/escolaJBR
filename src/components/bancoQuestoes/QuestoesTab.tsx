@@ -36,7 +36,7 @@ export function QuestoesTab() {
   return (
     <div className="space-y-6">
       {selecionadas.size > 0 && (
-        <div className="flex items-center justify-end bg-ms-blue/10 border border-ms-blue/40 rounded-xl px-5 py-3">
+        <div className="flex items-center justify-end bg-ms-blue/10 border border-ms-blueText/40 rounded-xl px-5 py-3">
           <div className="flex items-center gap-2">
             <button onClick={copiarSelecionadas} className="flex items-center gap-2 px-4 py-2 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-sm font-bold hover:bg-gray-800">
               {copiado ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}

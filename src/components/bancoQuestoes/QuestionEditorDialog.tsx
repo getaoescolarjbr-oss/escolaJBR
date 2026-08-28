@@ -197,7 +197,7 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
             </div>
           ))}
           {alternatives.length < 6 && (
-            <button onClick={adicionarAlternativa} className="flex items-center gap-1.5 text-sm font-bold text-ms-blue hover:underline">
+            <button onClick={adicionarAlternativa} className="flex items-center gap-1.5 text-sm font-bold text-ms-blueText hover:underline">
               <Plus className="w-4 h-4" /> Adicionar alternativa
             </button>
           )}

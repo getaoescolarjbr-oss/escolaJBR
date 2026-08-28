@@ -29,6 +29,9 @@
   --header-bg: #002677; /* MS Blue (Official) */
   --header-text: #ffffff;
   --accent-ms: #002677;
+  /* Azul MS aplicado a texto/ícone/borda (não a fundo sólido) precisa ser mais claro
+     no tema escuro — #002677 direto sobre --bg-card (#0d1117) fica quase ilegível. */
+  --ms-blue-text: #5b9bf5;
 }
 
 .light-theme {
@@ -43,6 +46,7 @@
   --accent-ms: #21732e; /* MS Green */
   --header-text: #ffffff;
   --hover-row: #f3f4f6;
+  --ms-blue-text: #002677; /* No tema claro o azul MS original já tem ótimo contraste */
 }
 
 @layer base {

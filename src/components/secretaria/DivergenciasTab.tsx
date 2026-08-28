@@ -22,7 +22,7 @@ export function DivergenciasTab() {
       </p>
 
       {loading ? (
-        <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+        <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
       ) : divergencias.length === 0 ? (
         <p className="text-sm text-green-500">Nenhuma divergência encontrada.</p>
       ) : (

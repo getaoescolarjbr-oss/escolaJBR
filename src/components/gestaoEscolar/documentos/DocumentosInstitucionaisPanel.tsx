@@ -175,7 +175,7 @@ export function DocumentosInstitucionaisPanel() {
   }
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   const documentosPorTipo = tiposPermitidos.map((tipo) => ({ tipo, docs: documentos.filter((d) => d.tipo === tipo) }));
@@ -250,7 +250,7 @@ export function DocumentosInstitucionaisPanel() {
                               {vigente.resumo_alteracoes && <p className="text-[11px] text-gray-500">{vigente.resumo_alteracoes}</p>}
                             </div>
                           </div>
-                          <button onClick={() => handleVerArquivo(vigente)} className="flex items-center gap-1.5 text-xs font-bold text-ms-blue hover:text-blue-400 flex-shrink-0">
+                          <button onClick={() => handleVerArquivo(vigente)} className="flex items-center gap-1.5 text-xs font-bold text-ms-blueText hover:text-blue-400 flex-shrink-0">
                             <FileText className="w-3.5 h-3.5" /> Ver arquivo
                           </button>
                         </div>
@@ -278,7 +278,7 @@ export function DocumentosInstitucionaisPanel() {
                                       </div>
                                       <div className="flex items-center gap-2 flex-shrink-0">
                                         {v.arquivo_path && (
-                                          <button onClick={() => handleVerArquivo(v)} className="p-1 hover:bg-ms-blue/20 text-ms-blue rounded"><FileText className="w-3.5 h-3.5" /></button>
+                                          <button onClick={() => handleVerArquivo(v)} className="p-1 hover:bg-ms-blue/20 text-ms-blueText rounded"><FileText className="w-3.5 h-3.5" /></button>
                                         )}
                                         {podePromover && (
                                           <button

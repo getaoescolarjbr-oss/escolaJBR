@@ -66,7 +66,7 @@ export function AtaTemplateManager() {
     <div className="bg-ms-card rounded-3xl shadow-xl border border-ms-border overflow-hidden">
       <div className="px-8 py-5 border-b border-ms-border flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <FileBadge className="w-5 h-5 text-ms-blue" />
+          <FileBadge className="w-5 h-5 text-ms-blueText" />
           <h3 className="text-sm font-black text-white uppercase tracking-widest">Modelos de Atas</h3>
         </div>
         <button
@@ -81,7 +81,7 @@ export function AtaTemplateManager() {
         {/* Lista de Templates */}
         <div className="p-4 overflow-y-auto">
           {loading ? (
-            <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-ms-blue" /></div>
+            <div className="flex justify-center py-10"><Loader2 className="w-6 h-6 animate-spin text-ms-blueText" /></div>
           ) : templates.length === 0 ? (
             <p className="text-center text-gray-500 py-10 text-sm">Nenhum modelo cadastrado.</p>
           ) : (
@@ -92,7 +92,7 @@ export function AtaTemplateManager() {
                     onClick={() => setSelectedTemplate(t)}
                     className={`flex-1 text-left px-4 py-3 rounded-xl border text-sm font-bold transition-all ${
                       selectedTemplate?.id === t.id 
-                        ? 'bg-ms-blue/20 border-ms-blue text-white' 
+                        ? 'bg-ms-blue/20 border-ms-blueText text-white' 
                         : 'bg-transparent border-ms-border text-gray-400 hover:bg-white/5'
                     }`}
                   >
@@ -120,7 +120,7 @@ export function AtaTemplateManager() {
                   type="text"
                   value={selectedTemplate.titulo}
                   onChange={e => setSelectedTemplate({...selectedTemplate, titulo: e.target.value})}
-                  className="w-full bg-ms-card border border-ms-border rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-ms-blue"
+                  className="w-full bg-ms-card border border-ms-border rounded-xl px-4 py-3 text-white font-bold outline-none focus:border-ms-blueText"
                   placeholder="Ex: Ata nº 01"
                 />
               </div>
@@ -128,14 +128,14 @@ export function AtaTemplateManager() {
               <div className="flex-1 flex flex-col">
                 <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-2 mb-2">
                   <label className="block text-[10px] font-black uppercase tracking-widest text-gray-500">Conteúdo da Ata</label>
-                  <span className="text-[10px] font-bold text-ms-blue bg-ms-blue/10 px-3 py-1.5 rounded-xl border border-ms-blue/20">
+                  <span className="text-[10px] font-bold text-ms-blueText bg-ms-blue/10 px-3 py-1.5 rounded-xl border border-ms-blueText/20">
                     Variáveis: {"{{NOME_ALUNO}}"} · {"{{DATA_ATA}}"} · {"{{NUMERO_ATA}}"} · {"{{ACORDADO}}"}
                   </span>
                 </div>
                 <textarea
                   value={selectedTemplate.conteudo}
                   onChange={e => setSelectedTemplate({...selectedTemplate, conteudo: e.target.value})}
-                  className="w-full flex-1 bg-ms-card border border-ms-border rounded-xl p-4 text-white font-medium outline-none focus:border-ms-blue resize-none custom-scrollbar"
+                  className="w-full flex-1 bg-ms-card border border-ms-border rounded-xl p-4 text-white font-medium outline-none focus:border-ms-blueText resize-none custom-scrollbar"
                   placeholder="Escreva o texto da ata aqui..."
                 />
               </div>

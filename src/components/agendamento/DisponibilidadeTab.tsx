@@ -20,7 +20,7 @@ export function DisponibilidadeTab() {
   }, []);
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   return (
@@ -29,7 +29,7 @@ export function DisponibilidadeTab() {
         <button
           key={r.id}
           onClick={() => setRecursoAberto(r)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-ms-card border border-gray-800 rounded-xl hover:border-ms-blue/50 transition-all text-left"
+          className="w-full flex items-center justify-between px-4 py-3 bg-ms-card border border-gray-800 rounded-xl hover:border-ms-blueText/50 transition-all text-left"
         >
           <div className="flex items-center gap-3">
             <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: r.cor ?? '#2563eb' }} />

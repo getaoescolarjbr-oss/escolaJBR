@@ -90,12 +90,12 @@ export function RecompensasTab() {
 
       <div className="space-y-2">
         {loading ? (
-          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : (
           recompensas.map((r) => (
             <div key={r.id} className={`flex items-center justify-between px-4 py-3 bg-ms-card border rounded-xl ${r.ativo ? 'border-gray-800' : 'border-gray-800 opacity-50'}`}>
               <div className="flex items-center gap-3">
-                <Gift className="w-8 h-8 text-ms-blue shrink-0" />
+                <Gift className="w-8 h-8 text-ms-blueText shrink-0" />
                 <div>
                   <p className="text-sm font-bold text-ms-main">{r.nome}</p>
                   <p className="text-[10px] text-gray-500">{r.custo_pontos} pontos · estoque: {r.estoque}</p>

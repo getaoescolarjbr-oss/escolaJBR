@@ -62,7 +62,7 @@ export function AlunoHome({ onLogout }: AlunoHomeProps) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-ms-dark">
-        <Loader2 className="w-10 h-10 animate-spin text-ms-blue" />
+        <Loader2 className="w-10 h-10 animate-spin text-ms-blueText" />
       </div>
     );
   }

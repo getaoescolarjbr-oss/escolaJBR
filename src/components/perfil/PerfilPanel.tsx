@@ -61,7 +61,7 @@ export function PerfilPanel() {
   if (loading) {
     return (
       <div className="py-10 text-center">
-        <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" />
+        <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" />
       </div>
     );
   }
@@ -77,7 +77,7 @@ export function PerfilPanel() {
             <p className="text-xs text-gray-500">Nenhuma função atribuída ainda — fale com a Gestão.</p>
           ) : (
             papeis.map((p) => (
-              <span key={p} className="px-3 py-1 rounded-full text-xs font-bold bg-ms-blue/10 text-ms-blue border border-ms-blue/20">
+              <span key={p} className="px-3 py-1 rounded-full text-xs font-bold bg-ms-blue/10 text-ms-blueText border border-ms-blueText/20">
                 {ROTULOS_PAPEL[p] ?? p}
               </span>
             ))

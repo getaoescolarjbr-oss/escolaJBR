@@ -43,7 +43,7 @@ export function DashboardDiaTab() {
       {erro && <p className="text-sm text-red-400">{erro}</p>}
 
       {loading ? (
-        <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>
+        <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>
       ) : porRecurso.size === 0 ? (
         <p className="text-sm text-gray-500">Nenhum recurso ativo cadastrado.</p>
       ) : (() => {

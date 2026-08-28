@@ -113,7 +113,7 @@ export function UsuariosPanel() {
 
       {loading ? (
         <div className="py-10 text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" />
+          <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" />
         </div>
       ) : (
         <div className="space-y-3">
@@ -136,7 +136,7 @@ export function UsuariosPanel() {
                 <div className="mt-3 flex flex-wrap gap-2">
                   {u.papeis.length === 0 && <p className="text-xs text-gray-500">Nenhuma função atribuída.</p>}
                   {u.papeis.map((p) => (
-                    <span key={p} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-ms-blue/10 text-ms-blue border border-ms-blue/20">
+                    <span key={p} className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-ms-blue/10 text-ms-blueText border border-ms-blueText/20">
                       {ROTULOS_PAPEL[p]}
                       <button
                         onClick={() => handleRemover(u.usuarioId, p)}

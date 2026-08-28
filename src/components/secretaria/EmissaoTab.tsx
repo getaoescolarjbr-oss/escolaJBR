@@ -99,7 +99,7 @@ export function EmissaoTab({ pessoa }: EmissaoTabProps) {
       <div className="space-y-2">
         <p className="text-xs font-black uppercase tracking-wider text-ms-main">Documentos já emitidos</p>
         {loading ? (
-          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : emitidos.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhum documento emitido ainda.</p>
         ) : (
@@ -109,7 +109,7 @@ export function EmissaoTab({ pessoa }: EmissaoTabProps) {
                 <p className="text-sm font-bold text-ms-main">{TIPOS_DISPONIVEIS.find((t) => t.valor === doc.tipo)?.rotulo ?? doc.tipo}</p>
                 <p className="text-[10px] text-gray-500">Nº {doc.numero}/{doc.ano} · {new Date(doc.emitido_em).toLocaleString('pt-BR')}</p>
               </div>
-              <button onClick={() => imprimirDocumentoEmitido(doc)} className="p-2 hover:bg-ms-blue/20 text-ms-blue rounded-lg transition-all" title="Reimprimir">
+              <button onClick={() => imprimirDocumentoEmitido(doc)} className="p-2 hover:bg-ms-blue/20 text-ms-blueText rounded-lg transition-all" title="Reimprimir">
                 <Printer className="w-4 h-4" />
               </button>
             </div>

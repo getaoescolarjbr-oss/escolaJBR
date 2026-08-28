@@ -108,7 +108,7 @@ function IndicadoresTab() {
   }, []);
 
   if (loading) {
-    return <div className="py-16 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-16 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   if (erro || !dados) {
@@ -119,7 +119,7 @@ function IndicadoresTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-500">Atualizado em {new Date(dados.gerado_em).toLocaleString('pt-BR')}</p>
-        <button onClick={carregar} className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-card border border-gray-800 rounded-lg text-xs text-gray-400 hover:text-ms-main hover:border-ms-blue transition-colors">
+        <button onClick={carregar} className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-card border border-gray-800 rounded-lg text-xs text-gray-400 hover:text-ms-main hover:border-ms-blueText transition-colors">
           <RefreshCw className="w-3.5 h-3.5" /> Atualizar
         </button>
       </div>

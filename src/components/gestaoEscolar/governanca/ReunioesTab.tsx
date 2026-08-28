@@ -158,7 +158,7 @@ export function ReunioesTab() {
   }
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   return (
@@ -274,7 +274,7 @@ export function ReunioesTab() {
                           <div className="space-y-2 pt-2 border-t border-gray-800">
                             <div className="flex items-center justify-between">
                               <p className="text-xs font-black text-ms-main">Ata nº {ata.numero_sequencial}/{ata.ano_letivo}</p>
-                              <button onClick={() => window.print()} className="flex items-center gap-1.5 text-xs font-bold text-ms-blue hover:text-blue-400">
+                              <button onClick={() => window.print()} className="flex items-center gap-1.5 text-xs font-bold text-ms-blueText hover:text-blue-400">
                                 <Printer className="w-3.5 h-3.5" /> Imprimir
                               </button>
                             </div>

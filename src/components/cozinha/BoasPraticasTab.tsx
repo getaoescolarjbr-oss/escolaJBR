@@ -136,7 +136,7 @@ export function BoasPraticasTab() {
   }
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   return (
@@ -184,7 +184,7 @@ export function BoasPraticasTab() {
             <div key={i.id} className="flex items-center justify-between text-sm px-3 py-2 bg-ms-dark rounded-lg border border-gray-800">
               <span className="text-gray-300">{i.orgao} — {new Date(i.data + 'T12:00:00').toLocaleDateString('pt-BR')} — {i.resultado}</span>
               {i.arquivo_path ? (
-                <button onClick={() => handleVerArquivoInspecao(i)} className="flex items-center gap-1 text-xs font-bold text-ms-blue hover:text-blue-400"><FileText className="w-3.5 h-3.5" /> Ver arquivo</button>
+                <button onClick={() => handleVerArquivoInspecao(i)} className="flex items-center gap-1 text-xs font-bold text-ms-blueText hover:text-blue-400"><FileText className="w-3.5 h-3.5" /> Ver arquivo</button>
               ) : (
                 <label className="flex items-center gap-1 text-xs font-bold text-gray-400 hover:text-gray-200 cursor-pointer">
                   {enviandoArquivo === i.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Upload className="w-3.5 h-3.5" />}

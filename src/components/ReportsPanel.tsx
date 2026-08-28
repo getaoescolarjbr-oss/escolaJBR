@@ -808,7 +808,7 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                         <div key={aluno.aluno_id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-xl border transition-all hover:translate-x-1 ${
                             isCritico 
                                 ? 'bg-red-500/5 border-red-500/20 shadow-[0_0_15px_rgba(239,68,68,0.05)]' 
-                                : theme === 'light' ? 'bg-white border-blue-50 hover:border-blue-200' : 'bg-ms-card border-ms-border hover:border-ms-blue/30'
+                                : theme === 'light' ? 'bg-white border-blue-50 hover:border-blue-200' : 'bg-ms-card border-ms-border hover:border-ms-blueText/30'
                         }`}>
                             <div className="flex items-center gap-4 flex-1">
                                 <div className={`w-10 h-10 rounded-lg flex items-center justify-center font-black text-sm border ${

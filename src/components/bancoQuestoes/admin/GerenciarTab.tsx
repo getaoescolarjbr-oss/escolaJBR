@@ -129,7 +129,7 @@ export function GerenciarTab() {
       </div>
 
       {loading ? (
-        <div className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>
+        <div className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>
       ) : questoes.length === 0 ? (
         <p className="text-center text-ms-muted py-12">Nenhuma questão encontrada com estes filtros.</p>
       ) : (
@@ -138,7 +138,7 @@ export function GerenciarTab() {
             {questoes.map((q) => (
               <div key={q.id} className="flex items-center justify-between gap-4 px-4 py-3 bg-ms-card border border-gray-800 rounded-xl">
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-ms-blue">{q.discipline}{q.assunto ? ` — ${q.assunto}` : ''}</p>
+                  <p className="text-xs font-bold text-ms-blueText">{q.discipline}{q.assunto ? ` — ${q.assunto}` : ''}</p>
                   <p className="text-sm text-ms-main truncate">{q.statement}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

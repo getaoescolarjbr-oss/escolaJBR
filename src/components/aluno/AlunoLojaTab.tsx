@@ -55,12 +55,12 @@ export function AlunoLojaTab({ alunoId, onPontosMudaram }: AlunoLojaTabProps) {
   }
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   return (
     <div className="space-y-6">
-      {mensagem && <div className="p-3 bg-ms-card border border-ms-blue/30 rounded-xl text-sm text-ms-main">{mensagem}</div>}
+      {mensagem && <div className="p-3 bg-ms-card border border-ms-blueText/30 rounded-xl text-sm text-ms-main">{mensagem}</div>}
 
       <section className="space-y-3">
         <h2 className="text-xs font-black uppercase tracking-wider text-gray-400 flex items-center gap-1"><Gift className="w-3.5 h-3.5" /> Loja de prêmios ({saldo} pontos)</h2>

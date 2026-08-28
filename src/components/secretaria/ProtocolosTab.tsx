@@ -129,7 +129,7 @@ export function ProtocolosTab() {
 
       <div className="space-y-2">
         {loading ? (
-          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : protocolos.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhum protocolo encontrado.</p>
         ) : (
@@ -151,7 +151,7 @@ export function ProtocolosTab() {
                       <option key={valor} value={valor}>{rotulo}</option>
                     ))}
                   </select>
-                  <button onClick={() => toggleAnexos(p)} className="p-2 hover:bg-ms-blue/20 text-ms-blue rounded-lg transition-all" title="Anexos">
+                  <button onClick={() => toggleAnexos(p)} className="p-2 hover:bg-ms-blue/20 text-ms-blueText rounded-lg transition-all" title="Anexos">
                     <Paperclip className="w-4 h-4" />
                   </button>
                 </div>
@@ -163,7 +163,7 @@ export function ProtocolosTab() {
                     <button
                       key={a.id}
                       onClick={async () => window.open(await obterUrlAssinadaAnexo(a, p.pessoa_id), '_blank')}
-                      className="block text-xs text-ms-blue hover:underline"
+                      className="block text-xs text-ms-blueText hover:underline"
                     >
                       {a.nome_arquivo}
                     </button>

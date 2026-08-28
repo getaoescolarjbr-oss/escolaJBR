@@ -222,7 +222,7 @@ export function GestaoAtasPanel() {
       <div className="flex justify-between items-center bg-ms-card px-6 py-4 rounded-3xl border border-ms-border shadow-lg">
         <div className="flex items-center gap-3">
           <div className="p-2.5 bg-blue-500/10 rounded-2xl border border-blue-500/20">
-            <FileBadge className="w-5 h-5 text-ms-blue" />
+            <FileBadge className="w-5 h-5 text-ms-blueText" />
           </div>
           <div>
             <h2 className="text-lg font-black text-white tracking-tight">Gestão Central de Atas</h2>
@@ -301,7 +301,7 @@ export function GestaoAtasPanel() {
                 placeholder="Buscar por nome do aluno ou Nº de ata..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-ms-dark/60 border border-ms-border rounded-2xl pl-11 pr-4 py-3 text-sm font-bold text-white outline-none focus:border-ms-blue focus:ring-2 focus:ring-ms-blue/10 transition-all placeholder-gray-500"
+                className="w-full bg-ms-dark/60 border border-ms-border rounded-2xl pl-11 pr-4 py-3 text-sm font-bold text-white outline-none focus:border-ms-blueText focus:ring-2 focus:ring-ms-blue/10 transition-all placeholder-gray-500"
               />
             </div>
 
@@ -345,7 +345,7 @@ export function GestaoAtasPanel() {
           <div className="overflow-x-auto">
             {loading ? (
               <div className="py-24 flex flex-col items-center justify-center">
-                <Loader2 className="w-10 h-10 animate-spin text-ms-blue mb-4" />
+                <Loader2 className="w-10 h-10 animate-spin text-ms-blueText mb-4" />
                 <p className="text-gray-500 font-bold uppercase tracking-widest text-xs">Carregando lista de atas...</p>
               </div>
             ) : filteredAtas.length === 0 ? (
@@ -417,7 +417,7 @@ export function GestaoAtasPanel() {
                                   setSelectedAta(ata);
                                   setSelectedAtaStudent(ata.alunos);
                                 }}
-                                className="p-2.5 bg-blue-500/10 border border-blue-500/20 text-ms-blue hover:bg-ms-blue hover:text-white rounded-xl transition-all"
+                                className="p-2.5 bg-blue-500/10 border border-blue-500/20 text-ms-blueText hover:bg-ms-blue hover:text-white rounded-xl transition-all"
                                 title="Visualizar e Gerenciar"
                               >
                                 <Eye className="w-4 h-4" />

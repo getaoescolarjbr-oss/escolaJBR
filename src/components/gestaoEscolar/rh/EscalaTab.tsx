@@ -78,7 +78,7 @@ export function EscalaTab() {
   }
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   return (
@@ -112,7 +112,7 @@ export function EscalaTab() {
               type="button"
               onClick={() => toggleDia(idx)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                nova.dias_semana.includes(idx) ? 'bg-ms-blue text-white border-ms-blue' : 'bg-ms-dark text-gray-400 border-gray-800 hover:text-gray-200'
+                nova.dias_semana.includes(idx) ? 'bg-ms-blue text-white border-ms-blueText' : 'bg-ms-dark text-gray-400 border-gray-800 hover:text-gray-200'
               }`}
             >
               {label}

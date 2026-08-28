@@ -137,7 +137,7 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar }
         )}
       </div>
 
-      <div className="flex items-center justify-between bg-ms-blue/10 border border-ms-blue/40 rounded-xl px-5 py-3">
+      <div className="flex items-center justify-between bg-ms-blue/10 border border-ms-blueText/40 rounded-xl px-5 py-3">
         <p className="text-sm text-ms-main font-bold">{selecionadas.size} questão(ões) selecionada(s)</p>
         <div className="flex items-center gap-3">
           {onContinuar && (
@@ -162,7 +162,7 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar }
       </div>
 
       {loading ? (
-        <div className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>
+        <div className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>
       ) : questoes.length === 0 ? (
         <p className="text-center text-ms-muted py-12">Nenhuma questão encontrada com estes filtros.</p>
       ) : (

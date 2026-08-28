@@ -85,7 +85,7 @@ export function SecretariaPanel() {
             </div>
           )}
           {pessoa && (
-            <div className="mt-2 flex items-center justify-between px-4 py-2 bg-ms-blue/10 border border-ms-blue/20 rounded-xl">
+            <div className="mt-2 flex items-center justify-between px-4 py-2 bg-ms-blue/10 border border-ms-blueText/20 rounded-xl">
               <span className="text-sm font-bold text-ms-main">{pessoa.nome}</span>
               <button onClick={() => { setPessoa(null); setBusca(''); }} className="text-xs text-gray-400 hover:text-gray-200">
                 Trocar

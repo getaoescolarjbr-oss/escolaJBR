@@ -105,21 +105,21 @@ export function DocumentosTab({ pessoa }: DocumentosTabProps) {
 
       <div className="space-y-2">
         {loading ? (
-          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : documentos.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhum documento enviado ainda.</p>
         ) : (
           documentos.map((doc) => (
             <div key={doc.id} className="flex items-center justify-between px-4 py-3 bg-ms-card border border-gray-800 rounded-xl">
               <div className="flex items-center gap-3 min-w-0">
-                <FileText className="w-4 h-4 text-ms-blue shrink-0" />
+                <FileText className="w-4 h-4 text-ms-blueText shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-bold text-ms-main truncate">{doc.nome_arquivo}</p>
                   <p className="text-[10px] text-gray-500">{ROTULOS_TIPO[doc.tipo]} · {new Date(doc.enviado_em).toLocaleDateString('pt-BR')}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <button onClick={() => handleVisualizar(doc)} className="p-2 hover:bg-ms-blue/20 text-ms-blue rounded-lg transition-all" title="Visualizar">
+                <button onClick={() => handleVisualizar(doc)} className="p-2 hover:bg-ms-blue/20 text-ms-blueText rounded-lg transition-all" title="Visualizar">
                   <Eye className="w-4 h-4" />
                 </button>
                 <button onClick={() => handleExcluir(doc)} className="p-2 hover:bg-red-500/20 text-red-500 rounded-lg transition-all" title="Excluir">

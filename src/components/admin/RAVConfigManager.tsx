@@ -112,7 +112,7 @@ export function RAVConfigManager({ theme }: RAVConfigManagerProps) {
       {/* Header */}
       <div className="px-8 py-6 border-b border-ms-border bg-ms-dark/30">
         <div className="flex items-center gap-4">
-          <div className="w-12 h-12 rounded-2xl bg-ms-blue/20 flex items-center justify-center text-ms-blue border border-ms-blue/30 shadow-lg">
+          <div className="w-12 h-12 rounded-2xl bg-ms-blue/20 flex items-center justify-center text-ms-blueText border border-ms-blueText/30 shadow-lg">
             <Settings className="w-6 h-6" />
           </div>
           <div>
@@ -125,13 +125,13 @@ export function RAVConfigManager({ theme }: RAVConfigManagerProps) {
       <div className="p-8 space-y-8">
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center">
-            <Loader2 className="w-12 h-12 animate-spin text-ms-blue mb-4" />
+            <Loader2 className="w-12 h-12 animate-spin text-ms-blueText mb-4" />
             <p className="text-gray-500 font-black uppercase text-[10px] tracking-widest">Carregando parâmetros...</p>
           </div>
         ) : (
           <div className="space-y-6 max-w-3xl">
             <div>
-              <label className="block text-[11px] font-black text-ms-blue uppercase tracking-widest mb-4">Escolha o Modelo de Recuperação Ativo</label>
+              <label className="block text-[11px] font-black text-ms-blueText uppercase tracking-widest mb-4">Escolha o Modelo de Recuperação Ativo</label>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Option Bimestral */}
@@ -140,7 +140,7 @@ export function RAVConfigManager({ theme }: RAVConfigManagerProps) {
                   onClick={() => setMode('bimestral')}
                   className={`p-6 rounded-3xl border-2 text-left transition-all relative flex flex-col gap-4 shadow-lg group ${
                     mode === 'bimestral'
-                      ? 'bg-ms-blue/15 border-ms-blue shadow-[0_0_20px_rgba(0,38,119,0.15)]'
+                      ? 'bg-ms-blue/15 border-ms-blueText shadow-[0_0_20px_rgba(0,38,119,0.15)]'
                       : theme === 'light'
                         ? 'bg-white border-blue-100 hover:border-blue-300 text-blue-900'
                         : 'bg-ms-dark/50 border-ms-border hover:border-gray-700 text-white'
@@ -153,7 +153,7 @@ export function RAVConfigManager({ theme }: RAVConfigManagerProps) {
                       <Calendar className="w-5 h-5" />
                     </div>
                     <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      mode === 'bimestral' ? 'border-ms-blue bg-ms-blue' : 'border-gray-600'
+                      mode === 'bimestral' ? 'border-ms-blueText bg-ms-blue' : 'border-gray-600'
                     }`}>
                       {mode === 'bimestral' && <span className="w-2 h-2 rounded-full bg-white"></span>}
                     </span>
@@ -161,7 +161,7 @@ export function RAVConfigManager({ theme }: RAVConfigManagerProps) {
 
                   <div>
                     <h3 className={`text-base font-black tracking-tight ${
-                      mode === 'bimestral' ? 'text-ms-blue' : theme === 'light' ? 'text-blue-900' : 'text-white'
+                      mode === 'bimestral' ? 'text-ms-blueText' : theme === 'light' ? 'text-blue-900' : 'text-white'
                     }`}>Recuperação Bimestral</h3>
                     <p className="text-xs text-gray-500 mt-2 font-medium leading-relaxed">
                       O processo de recuperação ocorre ao final de **cada bimestre** de forma isolada. 
@@ -176,7 +176,7 @@ export function RAVConfigManager({ theme }: RAVConfigManagerProps) {
                   onClick={() => setMode('semestral')}
                   className={`p-6 rounded-3xl border-2 text-left transition-all relative flex flex-col gap-4 shadow-lg group ${
                     mode === 'semestral'
-                      ? 'bg-ms-blue/15 border-ms-blue shadow-[0_0_20px_rgba(0,38,119,0.15)]'
+                      ? 'bg-ms-blue/15 border-ms-blueText shadow-[0_0_20px_rgba(0,38,119,0.15)]'
                       : theme === 'light'
                         ? 'bg-white border-blue-100 hover:border-blue-300 text-blue-900'
                         : 'bg-ms-dark/50 border-ms-border hover:border-gray-700 text-white'
@@ -189,7 +189,7 @@ export function RAVConfigManager({ theme }: RAVConfigManagerProps) {
                       <Layers className="w-5 h-5" />
                     </div>
                     <span className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                      mode === 'semestral' ? 'border-ms-blue bg-ms-blue' : 'border-gray-600'
+                      mode === 'semestral' ? 'border-ms-blueText bg-ms-blue' : 'border-gray-600'
                     }`}>
                       {mode === 'semestral' && <span className="w-2 h-2 rounded-full bg-white"></span>}
                     </span>
@@ -197,7 +197,7 @@ export function RAVConfigManager({ theme }: RAVConfigManagerProps) {
 
                   <div>
                     <h3 className={`text-base font-black tracking-tight ${
-                      mode === 'semestral' ? 'text-ms-blue' : theme === 'light' ? 'text-blue-900' : 'text-white'
+                      mode === 'semestral' ? 'text-ms-blueText' : theme === 'light' ? 'text-blue-900' : 'text-white'
                     }`}>Recuperação Semestral</h3>
                     <p className="text-xs text-gray-500 mt-2 font-medium leading-relaxed">
                       O processo de recuperação ocorre ao final de **cada semestre** (2º e 4º bimestres).

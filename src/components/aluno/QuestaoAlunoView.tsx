@@ -20,7 +20,7 @@ export function QuestaoAlunoView({ questao, indice, letraMarcada, resultado, som
   return (
     <div className="border-b border-gray-800 pb-4 last:border-0">
       <div className="text-sm text-ms-main">
-        {renderLightMarkup(questao.statement, `p-${questao.question_id}`, <span className="font-bold text-ms-blue">{indice + 1}. </span>)}
+        {renderLightMarkup(questao.statement, `p-${questao.question_id}`, <span className="font-bold text-ms-blueText">{indice + 1}. </span>)}
         <span className="text-xs text-ms-muted ml-1">({Number(questao.valor).toFixed(2)} pt)</span>
       </div>
       {questao.image_url && <img src={questao.image_url} alt="" className="max-w-full rounded-lg my-2" />}
@@ -40,7 +40,7 @@ export function QuestaoAlunoView({ questao, indice, letraMarcada, resultado, som
                     ? 'border-red-600 bg-red-900/20'
                     : 'border-gray-800'
                   : marcada
-                  ? 'border-ms-blue bg-ms-blue/10'
+                  ? 'border-ms-blueText bg-ms-blue/10'
                   : 'border-gray-800 hover:border-gray-700'
               }`}
             >

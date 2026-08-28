@@ -133,7 +133,7 @@ export function MinhasReservasTab({ recursoIdInicial }: MinhasReservasTabProps) 
 
       <div className="space-y-2">
         {loading ? (
-          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : reservasFiltradas.length === 0 ? (
           <p className="text-sm text-gray-500">{filtro ? 'Nenhuma reserva corresponde ao filtro.' : 'Você ainda não tem reservas.'}</p>
         ) : (
@@ -145,7 +145,7 @@ export function MinhasReservasTab({ recursoIdInicial }: MinhasReservasTabProps) 
                   {new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR')} · {r.hora_inicio.slice(0, 5)}–{r.hora_fim.slice(0, 5)}
                   {r.turma_nome ? ` · ${r.turma_nome}` : ''}
                 </p>
-                {r.tema && <p className="text-xs text-ms-blue font-bold">Tema: {r.tema}</p>}
+                {r.tema && <p className="text-xs text-ms-blueText font-bold">Tema: {r.tema}</p>}
                 {r.objetivos && <p className="text-xs text-gray-500">Objetivos: {r.objetivos}</p>}
                 {r.finalidade && <p className="text-xs text-gray-600 italic">{r.finalidade}</p>}
               </div>
@@ -155,7 +155,7 @@ export function MinhasReservasTab({ recursoIdInicial }: MinhasReservasTabProps) 
                 </span>
                 {(r.status === 'CONFIRMADA' || r.status === 'PENDENTE') && (
                   <>
-                    <button onClick={() => handleAbrirCompartilhar(r)} className="p-1.5 hover:bg-ms-blue/20 text-ms-blue rounded-lg transition-all" title="Compartilhar">
+                    <button onClick={() => handleAbrirCompartilhar(r)} className="p-1.5 hover:bg-ms-blue/20 text-ms-blueText rounded-lg transition-all" title="Compartilhar">
                       <Share2 className="w-4 h-4" />
                     </button>
                     <button onClick={() => handleCancelar(r.id)} className="p-1.5 hover:bg-red-500/20 text-red-500 rounded-lg transition-all" title="Cancelar">

@@ -223,7 +223,7 @@ export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onT
                   className="transition-transform active:scale-95 disabled:opacity-50"
                 >
                   {professor.habilitar_chamada_interna ? (
-                    <ToggleRight className="w-10 h-10 text-ms-blue" />
+                    <ToggleRight className="w-10 h-10 text-ms-blueText" />
                   ) : (
                     <ToggleLeft className="w-10 h-10 text-gray-700" />
                   )}

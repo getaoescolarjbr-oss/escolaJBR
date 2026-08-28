@@ -3,7 +3,7 @@ import { BookOpen, Filter } from 'lucide-react';
 export function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-24 px-4">
-      <div className="w-24 h-24 bg-ms-blue/10 rounded-full flex items-center justify-center mb-6 border border-ms-blue/20">
+      <div className="w-24 h-24 bg-ms-blue/10 rounded-full flex items-center justify-center mb-6 border border-ms-blueText/20">
         <BookOpen className="w-12 h-12 text-blue-400" />
       </div>
       <h3 className="text-xl font-bold text-white mb-2">

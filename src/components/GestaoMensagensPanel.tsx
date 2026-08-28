@@ -436,7 +436,7 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
         <div className="bg-ms-dark/20 border-b border-ms-border px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-blue-500/10 rounded-2xl border border-blue-500/20">
-              <Mail className="w-5 h-5 text-ms-blue" />
+              <Mail className="w-5 h-5 text-ms-blueText" />
             </div>
             <div>
               <h3 className="text-base font-black text-white uppercase tracking-wider">Histórico Enviado</h3>
@@ -461,7 +461,7 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
               placeholder="Filtrar histórico..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 bg-ms-dark border border-ms-border rounded-xl text-xs text-white outline-none focus:border-ms-blue transition-all"
+              className="w-full pl-9 pr-3 py-2 bg-ms-dark border border-ms-border rounded-xl text-xs text-white outline-none focus:border-ms-blueText transition-all"
             />
           </div>
           <div className="flex items-center gap-2 bg-ms-dark border border-ms-border rounded-xl px-2.5 py-1">
@@ -482,7 +482,7 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
         <div className="flex-1 overflow-auto p-6 space-y-4 custom-scrollbar">
           {loading ? (
             <div className="h-full flex flex-col items-center justify-center py-20">
-              <Loader2 className="w-10 h-10 animate-spin text-ms-blue mb-4" />
+              <Loader2 className="w-10 h-10 animate-spin text-ms-blueText mb-4" />
               <p className="text-gray-500 text-xs font-black uppercase tracking-widest">Carregando histórico...</p>
             </div>
           ) : filteredMensagens.length === 0 ? (
@@ -500,7 +500,7 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
               return (
                 <div 
                   key={msg.id} 
-                  className={`p-4 bg-ms-dark/10 rounded-2xl border border-ms-border flex flex-col justify-between hover:border-ms-blue/30 transition-all gap-4 group`}
+                  className={`p-4 bg-ms-dark/10 rounded-2xl border border-ms-border flex flex-col justify-between hover:border-ms-blueText/30 transition-all gap-4 group`}
                 >
                   <div className="flex justify-between items-start gap-4">
                     <div className="space-y-1.5 flex-1 min-w-0">
@@ -510,7 +510,7 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
                             <Users className="w-2.5 h-2.5" /> Transmissão
                           </span>
                         ) : (
-                          <span className="text-[8px] font-black uppercase tracking-wide bg-ms-blue/15 text-ms-blue px-2 py-0.5 rounded-full border border-ms-blue/20">
+                          <span className="text-[8px] font-black uppercase tracking-wide bg-ms-blue/15 text-ms-blueText px-2 py-0.5 rounded-full border border-ms-blueText/20">
                             👤 {msg.destinatarioNome}
                           </span>
                         )}
@@ -532,7 +532,7 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
                   <div className="flex items-center justify-between pt-3 border-t border-ms-border/30 gap-4 flex-wrap">
                     <div className="flex items-center gap-3">
                       <div className="text-[10px] font-black text-gray-500 uppercase tracking-widest">
-                        Leitura: <span className={readRatio === 1 ? 'text-green-500' : 'text-ms-blue'}>
+                        Leitura: <span className={readRatio === 1 ? 'text-green-500' : 'text-ms-blueText'}>
                           {msg.totalLidos} / {msg.totalDestinatarios}
                         </span>
                       </div>
@@ -548,7 +548,7 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
 
                     <button
                       onClick={() => handleViewConfirmations(msg)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 hover:bg-ms-blue hover:text-white border border-blue-500/20 text-ms-blue text-[9px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-500/10 hover:bg-ms-blue hover:text-white border border-blue-500/20 text-ms-blueText text-[9px] font-black uppercase tracking-wider rounded-xl transition-all active:scale-95"
                     >
                       <Eye className="w-3 h-3" />
                       Visualizar Leituras
@@ -570,7 +570,7 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
             <div className="bg-gradient-to-r from-ms-blue/20 to-transparent border-b border-ms-border px-6 py-5 flex items-center justify-between">
               <div>
                 <h3 className="text-sm font-black text-white uppercase tracking-widest flex items-center gap-2">
-                  <FileText className="w-4 h-4 text-ms-blue" /> Confirmações de Leitura
+                  <FileText className="w-4 h-4 text-ms-blueText" /> Confirmações de Leitura
                 </h3>
                 <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Assunto: {selectedGroupMsg.titulo}</p>
               </div>
@@ -586,7 +586,7 @@ export function GestaoMensagensPanel({ currentCoordinator, theme }: GestaoMensag
             <div className="flex-1 overflow-auto p-6 space-y-3 custom-scrollbar">
               {loadingDetails ? (
                 <div className="py-20 flex flex-col items-center justify-center">
-                  <Loader2 className="w-8 h-8 animate-spin text-ms-blue mb-3" />
+                  <Loader2 className="w-8 h-8 animate-spin text-ms-blueText mb-3" />
                   <p className="text-gray-500 text-[10px] font-black uppercase tracking-widest">Consultando leituras...</p>
                 </div>
               ) : groupDetails.length === 0 ? (

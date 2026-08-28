@@ -81,7 +81,7 @@ export function ExemplaresModal({ livro, onClose }: ExemplaresModalProps) {
       <div className="bg-ms-card max-w-2xl w-full rounded-2xl shadow-2xl relative my-auto border border-gray-800">
         <div className="flex items-center justify-between p-6 border-b border-gray-800">
           <div className="flex items-center gap-2">
-            <BookCopy className="w-5 h-5 text-ms-blue" />
+            <BookCopy className="w-5 h-5 text-ms-blueText" />
             <div>
               <p className="text-sm font-black text-ms-main">Exemplares — {livro.titulo}</p>
               <p className="text-[10px] text-gray-500">{exemplares.length} exemplar(es) cadastrado(s)</p>
@@ -108,7 +108,7 @@ export function ExemplaresModal({ livro, onClose }: ExemplaresModalProps) {
 
           <div className="space-y-2">
             {loading ? (
-              <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+              <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
             ) : exemplares.length === 0 ? (
               <p className="text-sm text-gray-500">Nenhum exemplar cadastrado ainda.</p>
             ) : (

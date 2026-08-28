@@ -154,7 +154,7 @@ export function RequisitarTab() {
       <div className="space-y-2">
         <p className="text-xs font-black uppercase tracking-wider text-ms-main">Minhas requisições</p>
         {loading ? (
-          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+          <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : minhasRequisicoes.length === 0 ? (
           <p className="text-sm text-gray-500">Nenhuma requisição ainda.</p>
         ) : (

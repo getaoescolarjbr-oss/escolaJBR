@@ -56,7 +56,7 @@ export function AgendaTurmaTab() {
   }, [turmaId]);
 
   if (loading) {
-    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blue" /></div>;
+    return <div className="py-10 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
   }
 
   return (
@@ -82,7 +82,7 @@ export function AgendaTurmaTab() {
                     <p className="text-xs text-gray-500">
                       {new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR')} · {r.hora_inicio.slice(0, 5)}–{r.hora_fim.slice(0, 5)} · {r.professor_nome}
                     </p>
-                    {r.tema && <p className="text-xs text-ms-blue">{r.tema}</p>}
+                    {r.tema && <p className="text-xs text-ms-blueText">{r.tema}</p>}
                   </div>
                   <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-black ${r.status === 'PENDENTE' ? 'bg-amber-500/10 text-amber-500' : 'bg-green-500/10 text-green-500'}`}>
                     {r.status}

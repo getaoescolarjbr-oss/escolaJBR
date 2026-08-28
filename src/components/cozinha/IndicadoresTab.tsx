@@ -66,7 +66,7 @@ export function IndicadoresTab() {
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-300">Ultraprocessado</span>
-              <span className={`font-black ${indicadores.valor_total > 0 && indicadores.valor_ultraprocessado / indicadores.valor_total > 0.10 ? 'text-red-500' : 'text-ms-blue'}`}>
+              <span className={`font-black ${indicadores.valor_total > 0 && indicadores.valor_ultraprocessado / indicadores.valor_total > 0.10 ? 'text-red-500' : 'text-ms-blueText'}`}>
                 {pct(indicadores.valor_ultraprocessado, indicadores.valor_total)}
               </span>
             </div>

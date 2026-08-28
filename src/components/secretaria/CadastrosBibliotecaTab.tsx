@@ -91,7 +91,7 @@ export function CadastrosBibliotecaTab() {
       {erro && <p className="text-xs text-red-400">{erro}</p>}
 
       {loading ? (
-        <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blue" /></div>
+        <div className="py-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
       ) : cadastros.length === 0 ? (
         <p className="text-sm text-gray-500">Nenhum cadastro aguardando aprovação.</p>
       ) : (
@@ -112,7 +112,7 @@ export function CadastrosBibliotecaTab() {
 
             <div className="relative">
               {c.aluno_id_sugerido && selecionadoPorCadastro[c.id]?.id === c.aluno_id_sugerido && (
-                <p className="text-[10px] text-ms-blue font-bold uppercase tracking-wider mb-1">✓ Aluno já selecionou este nome no próprio cadastro — confira antes de aprovar</p>
+                <p className="text-[10px] text-ms-blueText font-bold uppercase tracking-wider mb-1">✓ Aluno já selecionou este nome no próprio cadastro — confira antes de aprovar</p>
               )}
               <div className="relative">
                 <Search className="w-4 h-4 text-gray-500 absolute left-3 top-1/2 -translate-y-1/2" />
