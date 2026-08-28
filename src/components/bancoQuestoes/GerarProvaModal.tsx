@@ -165,7 +165,7 @@ export function GerarProvaModal({ questoes, onClose }: Props) {
                       {q.alternatives.map((a) => (
                         <div className="alternativa" key={a.letter}>
                           <b>{a.letter})</b>
-                          <div className="alternativa-texto">{renderLightMarkup(a.text, `p-${q.id}-${a.letter}`)}</div>
+                          <div className="alternativa-texto">{renderLightMarkup(a.text, `p-${q.id}-${a.letter}`, undefined, 'left')}</div>
                         </div>
                       ))}
                     </div>

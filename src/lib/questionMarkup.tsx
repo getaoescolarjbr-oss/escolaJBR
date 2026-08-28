@@ -86,7 +86,7 @@ function normalizeHtmlArtifacts(content: string): string {
     .replace(/<\/i>/gi, '</em>');
 }
 
-export function renderLightMarkup(content: string, keyPrefix: string, leadingPrefix?: ReactNode) {
+export function renderLightMarkup(content: string, keyPrefix: string, leadingPrefix?: ReactNode, imageAlign: 'center' | 'left' = 'center') {
   content = normalizeHtmlArtifacts(content);
   const blocks: { type: 'text' | 'ref' | 'img' | 'table'; content: string }[] = [];
   let lastIndex = 0;
@@ -124,7 +124,7 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
     if (block.type === 'imggroup') {
       const key = `${keyPrefix}-${i++}`;
       nodes.push(
-        <div key={key} className="flex flex-wrap items-start justify-center gap-4">
+        <div key={key} className={`flex flex-wrap items-start gap-4 ${imageAlign === 'left' ? 'justify-start' : 'justify-center'}`}>
           {block.images!.map((raw, imgIdx) => {
             const { url, width } = parseImageEntry(raw);
             return (

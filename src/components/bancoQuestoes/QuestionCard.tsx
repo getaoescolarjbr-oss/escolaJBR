@@ -91,7 +91,7 @@ export function QuestionCard({ question: q, selecionada, onToggleSelecionar, onE
             }`}
           >
             <span className="font-bold">{alt.letter})</span>
-            <div className="flex-1">{renderLightMarkup(alt.text, `${q.id}-${alt.letter}`)}</div>
+            <div className="flex-1">{renderLightMarkup(alt.text, `${q.id}-${alt.letter}`, undefined, 'left')}</div>
           </div>
         ))}
       </div>

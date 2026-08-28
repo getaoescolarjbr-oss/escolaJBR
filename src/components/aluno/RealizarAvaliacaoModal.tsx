@@ -123,7 +123,7 @@ export function RealizarAvaliacaoModal({ avaliacao, onClose, onEnviada }: Props)
                           onChange={() => marcar(q.question_id, a.letter)}
                         />
                         <span className="font-bold">{a.letter})</span>
-                        <span className="flex-1 text-ms-main">{renderLightMarkup(a.text, `p-${q.question_id}-${a.letter}`)}</span>
+                        <span className="flex-1 text-ms-main">{renderLightMarkup(a.text, `p-${q.question_id}-${a.letter}`, undefined, 'left')}</span>
                         {item && correta && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
                         {item && errouEssa && <XCircle className="w-4 h-4 text-red-400 shrink-0" />}
                       </label>

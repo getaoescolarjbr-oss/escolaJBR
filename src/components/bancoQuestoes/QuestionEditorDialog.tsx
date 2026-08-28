@@ -184,7 +184,7 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
                   onChange={(v) => atualizarAlternativa(idx, v)}
                   placeholder={`Alternativa ${alt.letter}`}
                   rows={1}
-                  showImage={false}
+                  showImage
                   showList={false}
                   onErro={setErro}
                 />
