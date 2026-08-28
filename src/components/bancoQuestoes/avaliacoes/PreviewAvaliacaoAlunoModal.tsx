@@ -21,7 +21,10 @@ export function PreviewAvaliacaoAlunoModal({ avaliacao, onClose }: Props) {
   useEffect(() => {
     obterQuestoesAvaliacaoPreview(avaliacao.id)
       .then(setQuestoes)
-      .catch((e) => setErro(e instanceof Error ? e.message : 'Não foi possível carregar as questões.'));
+      .catch((e) => {
+        const msg = e?.message || (e instanceof Error ? e.message : typeof e === 'string' ? e : 'Não foi possível carregar as questões.');
+        setErro(msg);
+      });
   }, [avaliacao.id]);
 
   return (

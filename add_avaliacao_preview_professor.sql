@@ -29,19 +29,19 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_avaliacao avaliacoes;
+  v_prova provas;
 BEGIN
-  SELECT * INTO v_avaliacao FROM avaliacoes WHERE id = p_avaliacao_id;
+  SELECT * INTO v_prova FROM provas WHERE id = p_avaliacao_id;
   IF NOT FOUND THEN
     RAISE EXCEPTION 'Avaliação não encontrada.';
   END IF;
 
-  -- Quem criou a avaliação sempre pode; coordenação e gestão também, para poderem
-  -- revisar o que vai para os alunos.
+  -- Quem criou a avaliação sempre pode; professores, coordenação e gestão também.
   IF NOT (
-    v_avaliacao.criado_por = auth.uid()
+    v_prova.criado_por = auth.uid()
     OR public.usuario_tem_papel('COORDENACAO')
     OR public.usuario_tem_papel('GESTAO')
+    OR public.usuario_tem_papel('PROFESSOR')
   ) THEN
     RAISE EXCEPTION 'Sem permissão para visualizar esta avaliação.';
   END IF;
@@ -49,8 +49,8 @@ BEGIN
   RETURN QUERY
   SELECT
     q.id,
-    aq.ordem,
-    aq.valor,
+    pq.ordem,
+    pq.valor,
     q.statement,
     q.image_url,
     q.alternatives,
@@ -58,13 +58,14 @@ BEGIN
     st.image_url,
     false,        -- preview nunca tem resposta gravada
     NULL::text
-  FROM avaliacao_questoes aq
-  JOIN questions q ON q.id = aq.question_id
+  FROM prova_questoes pq
+  JOIN questions q ON q.id = pq.question_id
   LEFT JOIN support_texts st ON st.id = q.support_text_id
-  WHERE aq.avaliacao_id = p_avaliacao_id
-  ORDER BY aq.ordem;
+  WHERE pq.prova_id = p_avaliacao_id
+  ORDER BY pq.ordem;
 END;
 $$;
 
 REVOKE ALL ON FUNCTION public.rpc_questoes_avaliacao_preview(uuid) FROM public;
 GRANT EXECUTE ON FUNCTION public.rpc_questoes_avaliacao_preview(uuid) TO authenticated;
+
