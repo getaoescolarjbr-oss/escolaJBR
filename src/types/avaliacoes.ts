@@ -1,5 +1,9 @@
 export type ModoAvaliacao = 'IMPRESSA' | 'ONLINE' | 'AMBAS';
 export type StatusAvaliacao = 'RASCUNHO' | 'PUBLICADA' | 'ENCERRADA';
+// AVALIACAO gera nota em "Notas e Avaliações" (sincronizarNotasDaProva); SIMULADO nunca
+// sincroniza nota e é aplicado por link público (token_publico) sem login — ver
+// create_simulados_publico.sql.
+export type TipoAvaliacao = 'AVALIACAO' | 'SIMULADO';
 
 export interface Avaliacao {
   id: string;
@@ -10,6 +14,8 @@ export interface Avaliacao {
   instrucoes: string | null;
   valor_total: number;
   modo: ModoAvaliacao;
+  tipo: TipoAvaliacao;
+  token_publico: string;
   data_aplicacao: string | null;
   prazo_entrega: string | null;
   status: StatusAvaliacao;
@@ -35,6 +41,7 @@ export interface NovaAvaliacaoInput {
   instrucoes: string;
   valorTotal: number;
   modo: ModoAvaliacao;
+  tipo: TipoAvaliacao;
   dataAplicacao: string | null;
   prazoEntrega: string | null;
   turmaIds: string[];
@@ -89,4 +96,54 @@ export interface ResultadoAluno {
   turma_nome: string | null;
   nota: number | null;
   finalizado_em: string | null;
+}
+
+// ---- Simulado público (sem login, ver rpc_simulado_publico_iniciar) ----
+
+export interface SimuladoPublicoAluno {
+  nome: string;
+  numero_chamada: number | null;
+  turma: string | null;
+  serie: string | null;
+}
+
+export interface SimuladoPublicoProva {
+  id: string;
+  titulo: string;
+  disciplina: string | null;
+  instrucoes: string | null;
+  valor_total: number;
+  status: StatusAvaliacao;
+}
+
+export interface SimuladoPublicoQuestao {
+  question_id: string;
+  ordem: number;
+  valor: number;
+  statement: string;
+  image_url: string | null;
+  alternatives: { letter: string; text: string; image_url?: string | null }[];
+  support_text_content: string | null;
+  support_text_image_url: string | null;
+}
+
+export interface SimuladoPublicoIniciarResposta {
+  prova: SimuladoPublicoProva;
+  aluno: SimuladoPublicoAluno;
+  ja_enviado: boolean;
+  nota: number | null;
+  questoes: SimuladoPublicoQuestao[];
+}
+
+export interface SimuladoPublicoItemResultado {
+  question_id: string;
+  letra_marcada: string | null;
+  correct_letter: string;
+  correta: boolean;
+  valor_obtido: number;
+}
+
+export interface SimuladoPublicoSubmeterResposta {
+  nota_final: number;
+  itens: SimuladoPublicoItemResultado[];
 }

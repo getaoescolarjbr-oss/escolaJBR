@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { Printer, X } from 'lucide-react';
 import type { Question } from '../../types/bancoQuestoes';
 import { renderLightMarkup } from '../../lib/questionMarkup';
-import { printProva } from '../../utils/printProva';
+import { PROVA_QUESTOES_CSS, printProva } from '../../utils/printProva';
 
 interface Props {
   questoes: Question[];
@@ -112,20 +112,9 @@ export function GerarProvaModal({ questoes, onClose }: Props) {
           </div>
 
           <div className="border border-gray-800 rounded-xl p-4 bg-white overflow-x-auto">
-            <style>{`
-              .questoes-coluna.duas-colunas { column-count: 2; column-gap: 18px; column-rule: 1px solid #999; }
-              .questao { margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px dashed #ddd; }
-              .questao-num { font-weight: 900; color: #002677; }
-              .questao-enunciado { margin: 3px 0 5px; line-height: 1.35; text-align: justify; }
-              .questao-img { max-width: 100%; margin: 4px 0; }
-              .prova-nota-box { display: flex; flex-direction: column; width: 74px; min-width: 74px; flex-shrink: 0; border: 1.5px solid #002677; border-radius: 6px; overflow: hidden; }
-              .prova-nota-label { font-size: 0.72em; font-weight: 900; color: #002677; text-align: center; text-transform: uppercase; letter-spacing: 0.4px; padding: 3px 0; border-bottom: 1.5px solid #002677; background: #f0f4ff; }
-              .alternativas-linha { display: flex; flex-wrap: wrap; gap: 4px 14px; }
-              .alternativas-coluna { display: flex; flex-direction: column; gap: 3px; }
-              .alternativa { display: flex; gap: 4px; align-items: flex-start; }
-              .alternativa b { flex-shrink: 0; }
-              .alternativa-texto { flex: 1; text-align: justify; }
-            `}</style>
+            {/* Mesmo CSS da impressão, pra este preview mostrar o que de fato
+                sai no papel — inclusive o limite de tamanho das figuras. */}
+            <style>{PROVA_QUESTOES_CSS}</style>
             <div ref={previewRef} style={{ color: '#1a1a2e', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '11pt' }}>
               <div className="prova-header" style={{ display: 'flex', alignItems: 'stretch', justifyContent: 'flex-start', gap: 12 }}>
                 <img

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Printer, Send, Square, Trash2, Users } from 'lucide-react';
+import { Check, Copy, Eye, Loader2, Printer, Send, Square, Trash2, Users } from 'lucide-react';
 import type { Avaliacao, StatusAvaliacao } from '../../../types/avaliacoes';
-import { atualizarStatusAvaliacao, excluirAvaliacao, listarMinhasAvaliacoes } from '../../../services/avaliacoesService';
+import { atualizarStatusAvaliacao, excluirAvaliacao, linkPublicoSimulado, listarMinhasAvaliacoes } from '../../../services/avaliacoesService';
 import { AvaliacaoResultadosModal } from './AvaliacaoResultadosModal';
+import { PreviewAvaliacaoAlunoModal } from './PreviewAvaliacaoAlunoModal';
 import { ReimprimirAvaliacaoModal } from './ReimprimirAvaliacaoModal';
 
 const STATUS_LABEL: Record<StatusAvaliacao, string> = {
@@ -25,7 +26,15 @@ export function MinhasAvaliacoesTab() {
   const [erro, setErro] = useState<string | null>(null);
   const [resultadosDe, setResultadosDe] = useState<Avaliacao | null>(null);
   const [reimprimirDe, setReimprimirDe] = useState<Avaliacao | null>(null);
+  const [previewDe, setPreviewDe] = useState<Avaliacao | null>(null);
   const [processando, setProcessando] = useState<string | null>(null);
+  const [linkCopiadoId, setLinkCopiadoId] = useState<string | null>(null);
+
+  async function copiarLinkSimulado(a: Avaliacao) {
+    await navigator.clipboard.writeText(linkPublicoSimulado(a.token_publico));
+    setLinkCopiadoId(a.id);
+    setTimeout(() => setLinkCopiadoId(null), 2000);
+  }
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -55,11 +64,14 @@ export function MinhasAvaliacoesTab() {
     }
   }
 
-  async function excluir(id: string, status: StatusAvaliacao) {
-    const aviso = status === 'RASCUNHO'
+  async function excluir(a: Avaliacao) {
+    const aviso = a.status === 'RASCUNHO'
       ? 'Excluir esta avaliação? Essa ação não pode ser desfeita.'
+      : a.tipo === 'SIMULADO'
+      ? 'Excluir este simulado publicado? O link público deixa de funcionar e as respostas já enviadas pelos alunos serão apagadas. Essa ação não pode ser desfeita.'
       : 'Excluir esta avaliação publicada? A coluna de nota correspondente em "Notas e Avaliações", as notas já lançadas e as respostas dos alunos serão apagadas junto. Essa ação não pode ser desfeita.';
     if (!confirm(aviso)) return;
+    const id = a.id;
     setProcessando(id);
     try {
       await excluirAvaliacao(id);
@@ -88,6 +100,9 @@ export function MinhasAvaliacoesTab() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-sm font-bold text-ms-main">{a.titulo}</h3>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${STATUS_CLASS[a.status]}`}>{STATUS_LABEL[a.status]}</span>
+                    {a.tipo === 'SIMULADO' && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-700/30 text-purple-300">Simulado · sem nota</span>
+                    )}
                   </div>
                   <p className="text-xs text-ms-muted mt-1">
                     {a.disciplina ? `${a.disciplina} · ` : ''}
@@ -118,6 +133,27 @@ export function MinhasAvaliacoesTab() {
                       <Square className="w-3.5 h-3.5" /> Encerrar
                     </button>
                   )}
+                  {a.tipo === 'SIMULADO' && a.status !== 'RASCUNHO' && (
+                    <button
+                      onClick={() => copiarLinkSimulado(a)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-xs font-bold hover:bg-gray-800"
+                    >
+                      {linkCopiadoId === a.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {linkCopiadoId === a.id ? 'Copiado!' : 'Copiar link'}
+                    </button>
+                  )}
+                  {/* Conferir a avaliação com os olhos do aluno antes de os alunos
+                      abrirem. Faz sentido em qualquer modo: mesmo numa prova só
+                      impressa, é a forma mais rápida de revisar figura e fórmula
+                      questão a questão. */}
+                  {(a.total_questoes ?? 0) > 0 && (
+                    <button
+                      onClick={() => setPreviewDe(a)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-xs font-bold hover:bg-gray-800"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> Ver como aluno
+                    </button>
+                  )}
                   {(a.modo === 'IMPRESSA' || a.modo === 'AMBAS') && (
                     <button
                       onClick={() => setReimprimirDe(a)}
@@ -136,7 +172,7 @@ export function MinhasAvaliacoesTab() {
                   )}
                   <button
                     disabled={processando === a.id}
-                    onClick={() => excluir(a.id, a.status)}
+                    onClick={() => excluir(a)}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-red-900/30 border border-red-800 text-red-300 rounded-lg text-xs font-bold hover:bg-red-900/50 disabled:opacity-40"
                   >
                     <Trash2 className="w-3.5 h-3.5" /> Excluir
@@ -150,6 +186,7 @@ export function MinhasAvaliacoesTab() {
 
       {resultadosDe && <AvaliacaoResultadosModal avaliacao={resultadosDe} onClose={() => setResultadosDe(null)} />}
       {reimprimirDe && <ReimprimirAvaliacaoModal avaliacao={reimprimirDe} onClose={() => setReimprimirDe(null)} />}
+      {previewDe && <PreviewAvaliacaoAlunoModal avaliacao={previewDe} onClose={() => setPreviewDe(null)} />}
     </div>
   );
 }

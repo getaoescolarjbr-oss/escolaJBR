@@ -7,10 +7,12 @@ import type {
   QuestaoParaAluno,
   RespostaEnvio,
   ResultadoAluno,
+  SimuladoPublicoIniciarResposta,
+  SimuladoPublicoSubmeterResposta,
   StatusAvaliacao,
 } from '../types/avaliacoes';
 
-const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at';
+const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at';
 
 function mapAvaliacaoRow(row: Record<string, unknown>): Avaliacao {
   const turmas = (row.prova_turmas as { turmas: { id: string; nome: string } | null }[] | undefined) ?? [];
@@ -80,6 +82,7 @@ export async function criarAvaliacao(dados: NovaAvaliacaoInput, status: StatusAv
       instrucoes: dados.instrucoes || null,
       valor_total: dados.valorTotal,
       modo: dados.modo,
+      tipo: dados.tipo,
       data_aplicacao: dados.dataAplicacao || null,
       prazo_entrega: dados.prazoEntrega || null,
       status,
@@ -104,7 +107,8 @@ export async function criarAvaliacao(dados: NovaAvaliacaoInput, status: StatusAv
     if (tErro) throw tErro;
   }
 
-  if (status === 'PUBLICADA') {
+  // Simulado nunca gera nota em "Notas e Avaliações" — ver create_simulados_publico.sql.
+  if (status === 'PUBLICADA' && dados.tipo === 'AVALIACAO') {
     await sincronizarNotasDaProva(avaliacaoId, {
       titulo: dados.titulo,
       valorTotal: dados.valorTotal,
@@ -166,14 +170,14 @@ async function sincronizarNotasDaProva(
 }
 
 export async function atualizarStatusAvaliacao(id: string, status: StatusAvaliacao): Promise<void> {
-  const { data, error } = await supabase.from('provas').update({ status }).eq('id', id).select('id, titulo, valor_total, data_aplicacao, disciplina_id, bimestre_id');
+  const { data, error } = await supabase.from('provas').update({ status }).eq('id', id).select('id, titulo, valor_total, data_aplicacao, disciplina_id, bimestre_id, tipo');
   if (error) throw error;
   if (!data || data.length === 0) {
     throw new Error('Não foi possível atualizar a avaliação. Verifique suas permissões.');
   }
 
-  if (status === 'PUBLICADA') {
-    const prova = data[0] as { id: string; titulo: string; valor_total: number; data_aplicacao: string | null; disciplina_id: string | null; bimestre_id: number | null };
+  const prova = data[0] as { id: string; titulo: string; valor_total: number; data_aplicacao: string | null; disciplina_id: string | null; bimestre_id: number | null; tipo: 'AVALIACAO' | 'SIMULADO' };
+  if (status === 'PUBLICADA' && prova.tipo === 'AVALIACAO') {
     const { data: turmas } = await supabase.from('prova_turmas').select('turma_id').eq('prova_id', id);
     await sincronizarNotasDaProva(id, {
       titulo: prova.titulo,
@@ -224,6 +228,15 @@ export async function obterQuestoesAvaliacaoAluno(avaliacaoId: string): Promise<
   return (data ?? []) as QuestaoParaAluno[];
 }
 
+// Mesmo payload da função acima, mas para quem criou a avaliação (ou coordenação/
+// gestão) conferir como ela chega ao aluno. Também não traz correct_letter — ver
+// add_avaliacao_preview_professor.sql.
+export async function obterQuestoesAvaliacaoPreview(avaliacaoId: string): Promise<QuestaoParaAluno[]> {
+  const { data, error } = await supabase.rpc('rpc_questoes_avaliacao_preview', { p_avaliacao_id: avaliacaoId });
+  if (error) throw error;
+  return (data ?? []) as QuestaoParaAluno[];
+}
+
 export async function submeterRespostasAvaliacao(avaliacaoId: string, respostas: RespostaEnvio[]): Promise<ItemResultadoSubmissao[]> {
   const { data, error } = await supabase.rpc('rpc_submeter_resposta_avaliacao', {
     p_avaliacao_id: avaliacaoId,
@@ -231,4 +244,26 @@ export async function submeterRespostasAvaliacao(avaliacaoId: string, respostas:
   });
   if (error) throw error;
   return (data ?? []) as ItemResultadoSubmissao[];
+}
+
+// ---- Simulado público (sem login — ver create_simulados_publico.sql) ----
+
+export function linkPublicoSimulado(tokenPublico: string): string {
+  return `${window.location.origin}/?simulado=${tokenPublico}`;
+}
+
+export async function iniciarSimuladoPublico(token: string, codigoSgde: string): Promise<SimuladoPublicoIniciarResposta> {
+  const { data, error } = await supabase.rpc('rpc_simulado_publico_iniciar', { p_token: token, p_codigo_sgde: codigoSgde.trim() });
+  if (error) throw error;
+  return data as SimuladoPublicoIniciarResposta;
+}
+
+export async function submeterSimuladoPublico(token: string, codigoSgde: string, respostas: RespostaEnvio[]): Promise<SimuladoPublicoSubmeterResposta> {
+  const { data, error } = await supabase.rpc('rpc_simulado_publico_submeter', {
+    p_token: token,
+    p_codigo_sgde: codigoSgde.trim(),
+    p_respostas: respostas,
+  });
+  if (error) throw error;
+  return data as SimuladoPublicoSubmeterResposta;
 }

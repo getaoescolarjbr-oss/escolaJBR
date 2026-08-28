@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { supabase } from './lib/supabase';
 import type { Professor } from './types';
 import { Login } from './components/Login';
@@ -25,6 +25,7 @@ import { BancoQuestoesPanel } from './components/bancoQuestoes/BancoQuestoesPane
 import { AlunoHome } from './components/aluno/AlunoHome';
 import { CadastroPendenteScreen } from './components/aluno/CadastroPendenteScreen';
 import { GestaoEscolarPanel } from './components/gestaoEscolar/GestaoEscolarPanel';
+import { SimuladoPublicoPage } from './components/simulado/SimuladoPublicoPage';
 import { MODULOS_NAV, modulosVisiveis } from './config/moduleNav';
 
 const MODULOS_COM_SHELL = ['pessoas', 'secretaria', 'cozinha', 'agendamento', 'biblioteca', 'banco-questoes', 'gestao', 'lgpd', 'usuarios', 'perfil'] as const;
@@ -69,6 +70,7 @@ function App() {
     window.history.replaceState({}, '', modulo === 'dashboard' ? '/' : `/?modulo=${modulo}`);
   }
   const [forceLanding, setForceLanding] = useState(() => new URLSearchParams(window.location.search).has('home'));
+  const simuladoToken = useMemo(() => new URLSearchParams(window.location.search).get('simulado'), []);
 
   // Continuidade de link direto (ex.: home pública -> "Agendar" -> login):
   // o `view` só é lido da URL uma vez, no mount inicial (antes do login existir).
@@ -252,6 +254,13 @@ function App() {
     setLoading(false);
   };
 
+
+  // Link público de simulado (?simulado=<token>): sem login, prioridade sobre
+  // qualquer outro estado (spinner de auth, landing, login) — ver
+  // create_simulados_publico.sql / SimuladoPublicoPage.
+  if (simuladoToken) {
+    return <SimuladoPublicoPage token={simuladoToken} />;
+  }
 
   if (loading) {
     return (

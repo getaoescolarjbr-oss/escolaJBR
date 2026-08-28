@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
-import { Loader2, Printer, Save, Send, X } from 'lucide-react';
+import { Check, Copy, Loader2, Printer, Save, Send, X } from 'lucide-react';
 import type { Question } from '../../../types/bancoQuestoes';
 import type { NovaAvaliacaoInput } from '../../../types/avaliacoes';
 import { renderLightMarkup } from '../../../lib/questionMarkup';
 import { printProva } from '../../../utils/printProva';
-import { criarAvaliacao } from '../../../services/avaliacoesService';
+import { criarAvaliacao, linkPublicoSimulado, obterAvaliacao } from '../../../services/avaliacoesService';
 
 interface Props {
   config: Omit<NovaAvaliacaoInput, 'questoes'>;
@@ -34,6 +34,8 @@ export function AvaliacaoPreviewModal({ config, questoes, valoresPorQuestao, tur
   const [colunas, setColunas] = useState<1 | 2>(2);
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+  const [linkSimulado, setLinkSimulado] = useState<string | null>(null);
+  const [linkCopiado, setLinkCopiado] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
 
   const conteudos = Array.from(new Set(questoes.map((q) => q.assunto).filter((a): a is string => !!a))).join(', ');
@@ -47,8 +49,18 @@ export function AvaliacaoPreviewModal({ config, questoes, valoresPorQuestao, tur
     setSalvando(true);
     setErro(null);
     try {
-      await criarAvaliacao({ ...config, questoes: questoesInput }, status);
+      const avaliacaoId = await criarAvaliacao({ ...config, questoes: questoesInput }, status);
       if (imprimirDepois) printProva(previewRef.current, config.titulo || 'Avaliação');
+
+      // Simulado publicado: mostra o link público (com o código SGDE) antes de fechar,
+      // em vez de já voltar pra lista — é o que o professor precisa copiar/compartilhar.
+      if (config.tipo === 'SIMULADO' && status === 'PUBLICADA') {
+        const salvo = await obterAvaliacao(avaliacaoId);
+        if (salvo) {
+          setLinkSimulado(linkPublicoSimulado(salvo.token_publico));
+          return;
+        }
+      }
       onSalvo();
     } catch (e) {
       const msg = e instanceof Error ? e.message : (e && typeof e === 'object' && 'message' in e ? String((e as { message: unknown }).message) : null);
@@ -56,6 +68,13 @@ export function AvaliacaoPreviewModal({ config, questoes, valoresPorQuestao, tur
     } finally {
       setSalvando(false);
     }
+  }
+
+  async function copiarLink() {
+    if (!linkSimulado) return;
+    await navigator.clipboard.writeText(linkSimulado);
+    setLinkCopiado(true);
+    setTimeout(() => setLinkCopiado(false), 2000);
   }
 
   const cartaoResposta = (
@@ -75,6 +94,32 @@ export function AvaliacaoPreviewModal({ config, questoes, valoresPorQuestao, tur
       </div>
     </div>
   );
+
+  if (linkSimulado) {
+    return (
+      <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
+        <div className="bg-ms-card border border-gray-800 rounded-2xl w-full max-w-lg p-6 space-y-4">
+          <h2 className="text-lg font-bold text-ms-main">Simulado publicado!</h2>
+          <p className="text-sm text-ms-muted">
+            Compartilhe este link com os alunos. Eles vão digitar o código SGDE para ter nome, turma e série
+            preenchidos automaticamente — sem precisar fazer login. Este simulado não gera nota no boletim.
+          </p>
+          <div className="flex items-center gap-2 bg-ms-dark border border-gray-800 rounded-lg px-3 py-2">
+            <input readOnly value={linkSimulado} className="flex-1 bg-transparent text-sm text-ms-main outline-none" onFocus={(e) => e.target.select()} />
+            <button onClick={copiarLink} className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-blue text-white rounded-lg text-xs font-bold hover:bg-blue-600 shrink-0">
+              {linkCopiado ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              {linkCopiado ? 'Copiado!' : 'Copiar'}
+            </button>
+          </div>
+          <div className="flex justify-end">
+            <button onClick={onSalvo} className="px-5 py-2 bg-ms-blue text-white rounded-lg text-sm font-bold hover:bg-blue-600">
+              Concluir
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">

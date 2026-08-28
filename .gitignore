@@ -26,3 +26,6 @@ dist-ssr
 # Scratch and temp files
 scratch/
 supabase/.temp/
+.claude/
+.claude-flow/
+Imagens Questões/

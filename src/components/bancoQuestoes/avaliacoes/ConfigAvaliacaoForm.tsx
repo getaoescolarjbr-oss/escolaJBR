@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import type { Question } from '../../../types/bancoQuestoes';
-import type { ModoAvaliacao, NovaAvaliacaoInput } from '../../../types/avaliacoes';
+import type { ModoAvaliacao, NovaAvaliacaoInput, TipoAvaliacao } from '../../../types/avaliacoes';
 import { listarTurmas } from '../../../services/agendamentoService';
 import { listarDisciplinasCatalogo } from '../../../services/avaliacoesService';
 import { getBimestreFromDate } from '../../../utils/academicUtils';
@@ -31,6 +31,7 @@ export function ConfigAvaliacaoForm({ questoes, onVoltar, onContinuar }: Props) 
   const [instrucoes, setInstrucoes] = useState('Leia atentamente cada questão antes de responder. Use caneta azul ou preta.');
   const [valorTotal, setValorTotal] = useState(10);
   const [valoresPorQuestao, setValoresPorQuestao] = useState<Record<string, number>>({});
+  const [tipo, setTipo] = useState<TipoAvaliacao>('AVALIACAO');
   const [modo, setModo] = useState<ModoAvaliacao>('IMPRESSA');
   const [dataAplicacao, setDataAplicacao] = useState(() => new Date().toISOString().slice(0, 10));
   const [bimestreId, setBimestreId] = useState<number>(() => getBimestreFromDate(new Date().toISOString().slice(0, 10)) ?? 1);
@@ -86,8 +87,17 @@ export function ConfigAvaliacaoForm({ questoes, onVoltar, onContinuar }: Props) 
     });
   }
 
-  const precisaOnline = modo === 'ONLINE' || modo === 'AMBAS';
-  const podeContinuar = titulo.trim().length > 0 && !!disciplinaId && turmaIds.size > 0 && (!precisaOnline || prazoEntrega);
+  const ehSimulado = tipo === 'SIMULADO';
+  // Simulado é sempre respondido pelo link público (sem login) — não faz sentido no
+  // modo "impressa" nem exige disciplina/bimestre, já que nunca gera nota em "Notas e
+  // Avaliações" (ver create_simulados_publico.sql).
+  const modoEfetivo: ModoAvaliacao = ehSimulado ? 'ONLINE' : modo;
+  const precisaOnline = modoEfetivo === 'ONLINE' || modoEfetivo === 'AMBAS';
+  const podeContinuar =
+    titulo.trim().length > 0 &&
+    (ehSimulado || !!disciplinaId) &&
+    turmaIds.size > 0 &&
+    (!precisaOnline || prazoEntrega);
 
   function handleContinuar() {
     const turmaNomes = turmas.filter((t) => turmaIds.has(t.id)).map((t) => t.nome);
@@ -100,7 +110,8 @@ export function ConfigAvaliacaoForm({ questoes, onVoltar, onContinuar }: Props) 
         bimestreId,
         instrucoes: instrucoes.trim(),
         valorTotal,
-        modo,
+        modo: modoEfetivo,
+        tipo,
         dataAplicacao: dataAplicacao || null,
         prazoEntrega: precisaOnline && prazoEntrega ? new Date(prazoEntrega).toISOString() : null,
         turmaIds: Array.from(turmaIds),
@@ -113,24 +124,48 @@ export function ConfigAvaliacaoForm({ questoes, onVoltar, onContinuar }: Props) 
   return (
     <div className="space-y-6">
       <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-4">
+        <div>
+          <label className="text-xs font-bold text-ms-muted">Tipo</label>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
+            <button
+              type="button"
+              onClick={() => setTipo('AVALIACAO')}
+              className={`text-left px-4 py-2.5 rounded-lg border text-sm ${tipo === 'AVALIACAO' ? 'border-ms-blue bg-ms-blue/10' : 'border-gray-800'}`}
+            >
+              <p className="font-bold text-ms-main">Avaliação</p>
+              <p className="text-xs text-ms-muted">Gera nota em "Notas e Avaliações" ao publicar.</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setTipo('SIMULADO')}
+              className={`text-left px-4 py-2.5 rounded-lg border text-sm ${tipo === 'SIMULADO' ? 'border-ms-blue bg-ms-blue/10' : 'border-gray-800'}`}
+            >
+              <p className="font-bold text-ms-main">Simulado</p>
+              <p className="text-xs text-ms-muted">Link público sem login (aluno digita o código SGDE) — não gera nota de boletim.</p>
+            </button>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           <div>
             <label className="text-xs font-bold text-ms-muted">Título *</label>
             <input className={inputClass} value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Avaliação / Prova / Simulado" />
           </div>
           <div>
-            <label className="text-xs font-bold text-ms-muted">Disciplina *</label>
+            <label className="text-xs font-bold text-ms-muted">Disciplina {ehSimulado ? '' : '*'}</label>
             <select className={inputClass} value={disciplinaId} onChange={(e) => setDisciplinaId(e.target.value)} disabled={loadingDisciplinas}>
               <option value="">{loadingDisciplinas ? 'Carregando...' : 'Selecione...'}</option>
               {disciplinas.map((d) => <option key={d.id} value={d.id}>{d.nome}</option>)}
             </select>
           </div>
-          <div>
-            <label className="text-xs font-bold text-ms-muted">Bimestre *</label>
-            <select className={inputClass} value={bimestreId} onChange={(e) => setBimestreId(Number(e.target.value))}>
-              {BIMESTRES.map((b) => <option key={b} value={b}>{b}º Bimestre</option>)}
-            </select>
-          </div>
+          {!ehSimulado && (
+            <div>
+              <label className="text-xs font-bold text-ms-muted">Bimestre *</label>
+              <select className={inputClass} value={bimestreId} onChange={(e) => setBimestreId(Number(e.target.value))}>
+                {BIMESTRES.map((b) => <option key={b} value={b}>{b}º Bimestre</option>)}
+              </select>
+            </div>
+          )}
           <div>
             <label className="text-xs font-bold text-ms-muted">Valor total</label>
             <input
@@ -142,14 +177,16 @@ export function ConfigAvaliacaoForm({ questoes, onVoltar, onContinuar }: Props) 
               onChange={(e) => setValorTotal(Number(e.target.value) || 0)}
             />
           </div>
-          <div>
-            <label className="text-xs font-bold text-ms-muted">Modo de aplicação</label>
-            <select className={inputClass} value={modo} onChange={(e) => setModo(e.target.value as ModoAvaliacao)}>
-              <option value="IMPRESSA">Só impressa</option>
-              <option value="ONLINE">Só online</option>
-              <option value="AMBAS">Impressa e online</option>
-            </select>
-          </div>
+          {!ehSimulado && (
+            <div>
+              <label className="text-xs font-bold text-ms-muted">Modo de aplicação</label>
+              <select className={inputClass} value={modo} onChange={(e) => setModo(e.target.value as ModoAvaliacao)}>
+                <option value="IMPRESSA">Só impressa</option>
+                <option value="ONLINE">Só online</option>
+                <option value="AMBAS">Impressa e online</option>
+              </select>
+            </div>
+          )}
           <div>
             <label className="text-xs font-bold text-ms-muted">Data de aplicação</label>
             <input type="date" className={inputClass} value={dataAplicacao} onChange={(e) => setDataAplicacao(e.target.value)} />

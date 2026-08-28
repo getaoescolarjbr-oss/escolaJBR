@@ -124,7 +124,12 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
     if (block.type === 'imggroup') {
       const key = `${keyPrefix}-${i++}`;
       nodes.push(
-        <div key={key} className={`flex flex-wrap items-start gap-4 ${imageAlign === 'left' ? 'justify-start' : 'justify-center'}`}>
+        // As classes qm-* não mudam nada na tela — o Tailwind ao lado é que
+        // estiliza. Existem porque a impressão monta um documento novo, sem
+        // Tailwind, e precisa de um seletor estável pra limitar a imagem. Sem
+        // isso a figura sai no tamanho natural e estoura a margem. Ver
+        // printProva.ts.
+        <div key={key} className={`qm-img-group flex flex-wrap items-start gap-4 ${imageAlign === 'left' ? 'justify-start' : 'justify-center'}`}>
           {block.images!.map((raw, imgIdx) => {
             const { url, width } = parseImageEntry(raw);
             return (
@@ -133,7 +138,7 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
                 src={url}
                 alt=""
                 style={width ? { width: `${width}px` } : undefined}
-                className={`block w-auto max-w-full rounded-lg border border-ms-border object-contain ${width ? '' : 'max-h-[240px]'}`}
+                className={`qm-img block w-auto max-w-full rounded-lg border border-ms-border object-contain ${width ? '' : 'max-h-[240px]'}`}
               />
             );
           })}
@@ -142,15 +147,15 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
     } else if (block.type === 'table') {
       if (block.content.trim() === '') continue;
       const key = `${keyPrefix}-${i++}`;
-      let rows: string[][] = [];
+      let rows: string[][];
       try {
         rows = JSON.parse(decodeURIComponent(block.content));
       } catch {
         rows = [];
       }
       nodes.push(
-        <div key={key} className="overflow-x-auto">
-          <table className="my-2 w-auto border-collapse border border-ms-border text-sm">
+        <div key={key} className="qm-table-wrap overflow-x-auto">
+          <table className="qm-table my-2 w-auto border-collapse border border-ms-border text-sm">
             <tbody>
               {rows.map((row, ri) => (
                 <tr key={`${key}-r${ri}`}>
@@ -169,7 +174,7 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
       if (block.content.trim() === '') continue;
       const key = `${keyPrefix}-${i++}`;
       nodes.push(
-        <p key={key} className="text-right text-sm italic text-ms-muted">
+        <p key={key} className="qm-ref text-right text-sm italic text-ms-muted">
           {renderWithBreaks(block.content.trim(), key)}
         </p>
       );

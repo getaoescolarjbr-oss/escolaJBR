@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Check, Loader2, Send, X, XCircle } from 'lucide-react';
+import { Loader2, Send, X } from 'lucide-react';
 import type { AvaliacaoAluno, ItemResultadoSubmissao, QuestaoParaAluno } from '../../types/avaliacoes';
 import { obterQuestoesAvaliacaoAluno, submeterRespostasAvaliacao } from '../../services/avaliacoesService';
-import { renderLightMarkup } from '../../lib/questionMarkup';
+import { QuestaoAlunoView } from './QuestaoAlunoView';
 
 interface Props {
   avaliacao: AvaliacaoAluno;
@@ -86,53 +86,17 @@ export function RealizarAvaliacaoModal({ avaliacao, onClose, onEnviada }: Props)
             </div>
           )}
 
-          {questoes?.map((q, i) => {
-            const item = resultadoPorQuestao.get(q.question_id);
-            return (
-              <div key={q.question_id} className="border-b border-gray-800 pb-4 last:border-0">
-                <div className="text-sm text-ms-main">
-                  {renderLightMarkup(q.statement, `p-${q.question_id}`, <span className="font-bold text-ms-blue">{i + 1}. </span>)}
-                  <span className="text-xs text-ms-muted ml-1">({Number(q.valor).toFixed(2)} pt)</span>
-                </div>
-                {q.image_url && <img src={q.image_url} alt="" className="max-w-full rounded-lg my-2" />}
-                <div className="space-y-2 mt-2">
-                  {q.alternatives.map((a) => {
-                    const marcada = respostas[q.question_id] === a.letter;
-                    const correta = item && a.letter === item.correct_letter;
-                    const errouEssa = item && marcada && !item.correta;
-                    return (
-                      <label
-                        key={a.letter}
-                        className={`flex items-center gap-3 px-3 py-2 rounded-lg border cursor-pointer text-sm ${
-                          item
-                            ? correta
-                              ? 'border-emerald-600 bg-emerald-900/20'
-                              : errouEssa
-                              ? 'border-red-600 bg-red-900/20'
-                              : 'border-gray-800'
-                            : marcada
-                            ? 'border-ms-blue bg-ms-blue/10'
-                            : 'border-gray-800 hover:border-gray-700'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name={q.question_id}
-                          checked={marcada}
-                          disabled={jaEnviada || !!resultado}
-                          onChange={() => marcar(q.question_id, a.letter)}
-                        />
-                        <span className="font-bold">{a.letter})</span>
-                        <span className="flex-1 text-ms-main">{renderLightMarkup(a.text, `p-${q.question_id}-${a.letter}`, undefined, 'left')}</span>
-                        {item && correta && <Check className="w-4 h-4 text-emerald-400 shrink-0" />}
-                        {item && errouEssa && <XCircle className="w-4 h-4 text-red-400 shrink-0" />}
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
+          {questoes?.map((q, i) => (
+            <QuestaoAlunoView
+              key={q.question_id}
+              questao={q}
+              indice={i}
+              letraMarcada={respostas[q.question_id] ?? null}
+              resultado={resultadoPorQuestao.get(q.question_id)}
+              somenteLeitura={jaEnviada || !!resultado}
+              onMarcar={(letra) => marcar(q.question_id, letra)}
+            />
+          ))}
         </div>
 
         {questoes && !jaEnviada && !resultado && (
