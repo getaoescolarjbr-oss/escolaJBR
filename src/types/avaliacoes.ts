@@ -98,6 +98,38 @@ export interface ResultadoAluno {
   finalizado_em: string | null;
 }
 
+export interface RespostaItemAluno {
+  question_id: string;
+  letra_marcada: string | null;
+  correta: boolean;
+  valor_obtido: number;
+}
+
+export interface QuestaoInfoRelatorio {
+  question_id: string;
+  ordem: number;
+  valor: number;
+  correct_letter?: string;
+  statement?: string;
+}
+
+export interface ResultadoAlunoDetalhado {
+  aluno_id: string;
+  aluno_nome: string;
+  codigo_sgde?: string | null;
+  turma_nome: string | null;
+  nota: number | null;
+  finalizado_em: string | null;
+  respostas: Record<string, RespostaItemAluno>;
+  total_acertos: number;
+  total_questoes: number;
+}
+
+export interface RelatorioAvaliacaoCompleto {
+  questoes: QuestaoInfoRelatorio[];
+  alunos: ResultadoAlunoDetalhado[];
+}
+
 // ---- Simulado público (sem login, ver rpc_simulado_publico_iniciar) ----
 
 export interface SimuladoPublicoAluno {

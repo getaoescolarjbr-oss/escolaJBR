@@ -4,9 +4,13 @@ import type {
   AvaliacaoAluno,
   ItemResultadoSubmissao,
   NovaAvaliacaoInput,
+  QuestaoInfoRelatorio,
   QuestaoParaAluno,
+  RelatorioAvaliacaoCompleto,
   RespostaEnvio,
+  RespostaItemAluno,
   ResultadoAluno,
+  ResultadoAlunoDetalhado,
   SimuladoPublicoIniciarResposta,
   SimuladoPublicoSubmeterResposta,
   StatusAvaliacao,
@@ -212,6 +216,139 @@ export async function listarResultadosAvaliacao(avaliacaoId: string): Promise<Re
   const { data, error } = await supabase.rpc('rpc_resultados_avaliacao', { p_avaliacao_id: avaliacaoId });
   if (error) throw error;
   return (data ?? []) as ResultadoAluno[];
+}
+
+export async function obterResultadosDetalhadosAvaliacao(avaliacaoId: string): Promise<RelatorioAvaliacaoCompleto> {
+  // 1. Questões da avaliação ordenadas com gabarito
+  const { data: questoesData, error: qErr } = await supabase
+    .from('prova_questoes')
+    .select('question_id, ordem, valor, questions(id, statement, correct_letter)')
+    .eq('prova_id', avaliacaoId)
+    .order('ordem');
+  if (qErr) throw qErr;
+
+  const questoes: QuestaoInfoRelatorio[] = (questoesData ?? []).map((row: Record<string, unknown>) => {
+    const qObj = row.questions as { correct_letter?: string; statement?: string } | null;
+    return {
+      question_id: row.question_id as string,
+      ordem: Number(row.ordem) || 0,
+      valor: Number(row.valor) || 0,
+      correct_letter: qObj?.correct_letter ?? '',
+      statement: qObj?.statement ?? '',
+    };
+  });
+
+  // 2. Turmas vinculadas
+  const { data: turmasData } = await supabase
+    .from('prova_turmas')
+    .select('turma_id')
+    .eq('prova_id', avaliacaoId);
+  const turmaIds = (turmasData ?? []).map((t) => t.turma_id as string).filter(Boolean);
+
+  // 3. Alunos das turmas
+  let todosAlunos: { id: string; nome: string; codigo_sgde: string | null; turma_nome: string | null }[] = [];
+  if (turmaIds.length > 0) {
+    const { data: alunosData } = await supabase
+      .from('alunos')
+      .select('id, nome, codigo_sgde, turmas(nome)')
+      .in('turma_id', turmaIds)
+      .order('nome');
+    todosAlunos = (alunosData ?? []).map((a: Record<string, unknown>) => {
+      const tObj = a.turmas as { nome?: string } | null;
+      return {
+        id: a.id as string,
+        nome: (a.nome as string) ?? '',
+        codigo_sgde: (a.codigo_sgde as string) ?? null,
+        turma_nome: tObj?.nome ?? null,
+      };
+    });
+  }
+
+  // 4. Respostas enviadas
+  const { data: respostasData, error: rErr } = await supabase
+    .from('prova_respostas')
+    .select('id, aluno_id, nota, finalizado_em, alunos(id, nome, codigo_sgde, turmas(nome)), prova_respostas_itens(question_id, letra_marcada, correta, valor_obtido)')
+    .eq('prova_id', avaliacaoId);
+  if (rErr) throw rErr;
+
+  const respostasMap = new Map<string, Record<string, unknown>>();
+  for (const r of respostasData ?? []) {
+    respostasMap.set(r.aluno_id as string, r as Record<string, unknown>);
+  }
+
+  const alunosResultados: ResultadoAlunoDetalhado[] = [];
+  const alunosProcessados = new Set<string>();
+
+  for (const al of todosAlunos) {
+    alunosProcessados.add(al.id);
+    const resp = respostasMap.get(al.id);
+    const itens = (resp?.prova_respostas_itens as Record<string, unknown>[] | undefined) ?? [];
+    const itensMap: Record<string, RespostaItemAluno> = {};
+    let totalAcertos = 0;
+
+    for (const item of itens) {
+      const qId = item.question_id as string;
+      const isCorreta = Boolean(item.correta);
+      itensMap[qId] = {
+        question_id: qId,
+        letra_marcada: (item.letra_marcada as string) ?? null,
+        correta: isCorreta,
+        valor_obtido: Number(item.valor_obtido) || 0,
+      };
+      if (isCorreta) totalAcertos++;
+    }
+
+    alunosResultados.push({
+      aluno_id: al.id,
+      aluno_nome: al.nome,
+      codigo_sgde: al.codigo_sgde,
+      turma_nome: al.turma_nome,
+      nota: resp?.finalizado_em ? Number(resp.nota) || 0 : null,
+      finalizado_em: (resp?.finalizado_em as string) ?? null,
+      respostas: itensMap,
+      total_acertos: totalAcertos,
+      total_questoes: questoes.length,
+    });
+  }
+
+  for (const resp of respostasData ?? []) {
+    const alunoId = resp.aluno_id as string;
+    if (!alunosProcessados.has(alunoId)) {
+      const alObj = resp.alunos as { nome?: string; codigo_sgde?: string | null; turmas?: { nome?: string } | null } | null;
+      const itens = (resp.prova_respostas_itens as Record<string, unknown>[] | undefined) ?? [];
+      const itensMap: Record<string, RespostaItemAluno> = {};
+      let totalAcertos = 0;
+
+      for (const item of itens) {
+        const qId = item.question_id as string;
+        const isCorreta = Boolean(item.correta);
+        itensMap[qId] = {
+          question_id: qId,
+          letra_marcada: (item.letra_marcada as string) ?? null,
+          correta: isCorreta,
+          valor_obtido: Number(item.valor_obtido) || 0,
+        };
+        if (isCorreta) totalAcertos++;
+      }
+
+      alunosResultados.push({
+        aluno_id: alunoId,
+        aluno_nome: alObj?.nome ?? 'Aluno',
+        codigo_sgde: alObj?.codigo_sgde ?? null,
+        turma_nome: alObj?.turmas?.nome ?? null,
+        nota: resp.finalizado_em ? Number(resp.nota) || 0 : null,
+        finalizado_em: (resp.finalizado_em as string) ?? null,
+        respostas: itensMap,
+        total_acertos: totalAcertos,
+        total_questoes: questoes.length,
+      });
+    }
+  }
+
+  return {
+    questoes,
+    alunos: alunosResultados,
+  };
 }
 
 // ---- lado do aluno ----
