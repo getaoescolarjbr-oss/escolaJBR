@@ -2,6 +2,7 @@ import { supabase } from '../lib/supabase';
 import type {
   Avaliacao,
   AvaliacaoAluno,
+  ItemPendenteCorrecao,
   ItemResultadoSubmissao,
   NovaAvaliacaoInput,
   QuestaoInfoRelatorio,
@@ -467,6 +468,41 @@ export async function submeterRespostasAvaliacao(avaliacaoId: string, respostas:
   });
   if (error) throw error;
   return (data ?? []) as ItemResultadoSubmissao[];
+}
+
+// ---- Correção manual (dissertativa/redação) ----
+
+// Um item por resposta escrita de aluno nesta prova, com o que o professor precisa pra
+// pontuar (enunciado, critérios, texto do aluno) e o que já foi corrigido.
+export async function listarItensPendentesCorrecao(provaId: string): Promise<ItemPendenteCorrecao[]> {
+  const { data, error } = await supabase.rpc('rpc_itens_pendentes_correcao', { p_prova_id: provaId });
+  if (error) throw error;
+  return (data ?? []) as ItemPendenteCorrecao[];
+}
+
+// Grava a nota e a observação de UM item escrito. A RPC também recalcula a nota da
+// resposta e o status_correcao (vira CORRIGIDA quando não sobrar item pendente).
+export async function corrigirItemDissertativo(itemId: string, valorObtido: number, observacao: string | null): Promise<void> {
+  const { error } = await supabase.rpc('rpc_corrigir_item_dissertativo', {
+    p_item_id: itemId,
+    p_valor_obtido: valorObtido,
+    p_observacao: observacao,
+  });
+  if (error) throw error;
+}
+
+// Ids das provas que têm pelo menos uma resposta aguardando correção manual — usado só
+// pra decidir se o botão "Corrigir" aparece na lista de avaliações. Uma consulta só pra
+// todas as provas, em vez de uma RPC por linha. Devolve conjunto vazio (sem estourar) se
+// a coluna status_correcao ainda não existir no banco: a lista de avaliações não pode
+// quebrar por causa de um botão opcional.
+export async function obterProvasComCorrecaoPendente(): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from('prova_respostas')
+    .select('prova_id')
+    .eq('status_correcao', 'PENDENTE');
+  if (error) return new Set();
+  return new Set((data ?? []).map((r) => r.prova_id as string));
 }
 
 // ---- Simulado público (sem login — ver create_simulados_publico.sql) ----

@@ -2,10 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader2, Printer, X } from 'lucide-react';
 import type { Question } from '../../../types/bancoQuestoes';
 import type { Avaliacao } from '../../../types/avaliacoes';
-import { renderLightMarkup } from '../../../lib/questionMarkup';
-import { PROVA_QUESTOES_CSS, printProva } from '../../../utils/printProva';
+import { PROVA_QUESTOES_CSS, entraNoCartaoResposta, printProva } from '../../../utils/printProva';
 import { obterQuestoesDaAvaliacao } from '../../../services/avaliacoesService';
 import { buscarQuestoesPorIds } from '../../../services/bancoQuestoesService';
+import { QuestaoImpressa } from '../QuestaoImpressa';
 
 interface Props {
   avaliacao: Avaliacao;
@@ -13,15 +13,6 @@ interface Props {
 }
 
 const LETRAS = ['A', 'B', 'C', 'D', 'E'] as const;
-
-function textoLimpo(texto: string) {
-  return texto.replace(/\[\[[^\]]*\]\]|<[^>]+>/g, '').trim();
-}
-
-function alternativasCabemNaLinha(q: Question) {
-  const total = q.alternatives.reduce((soma, a) => soma + textoLimpo(a.text).length, 0);
-  return total <= 60;
-}
 
 // Reimpressão de uma avaliação já salva — reconstrói o mesmo layout do AvaliacaoPreviewModal
 // a partir dos dados persistidos, sem gravar nada de novo (só leitura + printProva).
@@ -103,39 +94,31 @@ export function ReimprimirAvaliacaoModal({ avaliacao, onClose }: Props) {
 
                 <div className="questoes-coluna duas-colunas">
                   {questoes.map((q, i) => (
-                    <div className="questao" key={q.id}>
-                      <div className="questao-enunciado">
-                        {renderLightMarkup(q.statement, `p-${q.id}`, <span className="questao-num">{i + 1}. </span>)}
-                        {' '}<span style={{ fontSize: '0.8em', color: '#666' }}>({(valores[q.id] ?? 0).toFixed(2)} pt)</span>
-                      </div>
-                      {q.image_url && <img src={q.image_url} alt="" className="questao-img" />}
-                      <div className={alternativasCabemNaLinha(q) ? 'alternativas-linha' : 'alternativas-coluna'}>
-                        {q.alternatives.map((a) => (
-                          <div className="alternativa" key={a.letter}>
-                            <b>{a.letter})</b>
-                            <div className="alternativa-texto">{renderLightMarkup(a.text, `p-${q.id}-${a.letter}`, undefined, 'left')}</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+                    <QuestaoImpressa key={q.id} questao={q} indice={i} valor={valores[q.id] ?? 0} />
                   ))}
                 </div>
 
-                <div className="cartao-resposta">
-                  <div className="cartao-titulo">Cartão resposta</div>
-                  <div className="cartao-grid">
-                    {questoes.map((q, i) => (
-                      <div className="cartao-item" key={q.id}>
-                        <span className="cartao-num">{i + 1}.</span>
-                        <div className="cartao-bolhas">
-                          {LETRAS.slice(0, q.alternatives.length).map((letra) => (
-                            <span className="bolha" key={letra}>{letra}</span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                {/* Só as objetivas entram no cartão; a numeração continua sendo a da prova. */}
+                {questoes.some(entraNoCartaoResposta) && (
+                  <div className="cartao-resposta">
+                    <div className="cartao-titulo">Cartão resposta</div>
+                    <div className="cartao-grid">
+                      {questoes
+                        .map((q, i) => ({ q, numero: i + 1 }))
+                        .filter(({ q }) => entraNoCartaoResposta(q))
+                        .map(({ q, numero }) => (
+                          <div className="cartao-item" key={q.id}>
+                            <span className="cartao-num">{numero}.</span>
+                            <div className="cartao-bolhas">
+                              {LETRAS.slice(0, q.alternatives.length).map((letra) => (
+                                <span className="bolha" key={letra}>{letra}</span>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
           )}

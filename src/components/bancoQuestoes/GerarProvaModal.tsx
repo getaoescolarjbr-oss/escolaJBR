@@ -1,8 +1,8 @@
 import { useRef, useState } from 'react';
 import { Printer, X } from 'lucide-react';
 import type { Question } from '../../types/bancoQuestoes';
-import { renderLightMarkup } from '../../lib/questionMarkup';
-import { PROVA_QUESTOES_CSS, printProva } from '../../utils/printProva';
+import { PROVA_QUESTOES_CSS, entraNoCartaoResposta, printProva } from '../../utils/printProva';
+import { QuestaoImpressa } from './QuestaoImpressa';
 
 interface Props {
   questoes: Question[];
@@ -10,15 +10,6 @@ interface Props {
 }
 
 const LETRAS = ['A', 'B', 'C', 'D', 'E'] as const;
-
-function textoLimpo(texto: string) {
-  return texto.replace(/\[\[[^\]]*\]\]|<[^>]+>/g, '').trim();
-}
-
-function alternativasCabemNaLinha(q: Question) {
-  const total = q.alternatives.reduce((soma, a) => soma + textoLimpo(a.text).length, 0);
-  return total <= 60;
-}
 
 const inputClass =
   'w-full px-3 py-2 bg-ms-dark border border-gray-800 rounded-lg text-ms-main text-sm outline-none focus:ring-2 focus:ring-ms-blue';
@@ -45,13 +36,17 @@ export function GerarProvaModal({ questoes, onClose }: Props) {
     printProva(previewRef.current, titulo || 'Prova');
   }
 
-  const cartaoResposta = (
+  // Dissertativa/redação não tem bolha pra marcar, mas a numeração do cartão
+  // continua sendo a da prova (por isso o número vem do índice original).
+  const itensCartao = questoes.map((q, i) => ({ q, numero: i + 1 })).filter(({ q }) => entraNoCartaoResposta(q));
+
+  const cartaoResposta = itensCartao.length === 0 ? null : (
     <div className="cartao-resposta">
       <div className="cartao-titulo">Cartão resposta</div>
       <div className="cartao-grid">
-        {questoes.map((q, i) => (
+        {itensCartao.map(({ q, numero }) => (
           <div className="cartao-item" key={q.id}>
-            <span className="cartao-num">{i + 1}.</span>
+            <span className="cartao-num">{numero}.</span>
             <div className="cartao-bolhas">
               {LETRAS.slice(0, q.alternatives.length).map((letra) => (
                 <span className="bolha" key={letra}>{letra}</span>
@@ -145,20 +140,7 @@ export function GerarProvaModal({ questoes, onClose }: Props) {
 
               <div className={`questoes-coluna${colunas === 2 ? ' duas-colunas' : ''}`}>
                 {questoes.map((q, i) => (
-                  <div className="questao" key={q.id}>
-                    <div className="questao-enunciado">
-                      {renderLightMarkup(q.statement, `p-${q.id}`, <span className="questao-num">{i + 1}. </span>)}
-                    </div>
-                    {q.image_url && <img src={q.image_url} alt="" className="questao-img" />}
-                    <div className={alternativasCabemNaLinha(q) ? 'alternativas-linha' : 'alternativas-coluna'}>
-                      {q.alternatives.map((a) => (
-                        <div className="alternativa" key={a.letter}>
-                          <b>{a.letter})</b>
-                          <div className="alternativa-texto">{renderLightMarkup(a.text, `p-${q.id}-${a.letter}`, undefined, 'left')}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+                  <QuestaoImpressa key={q.id} questao={q} indice={i} />
                 ))}
               </div>
 

@@ -1,8 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, Copy, Eye, Loader2, Pencil, Printer, Send, Square, Trash2, Users } from 'lucide-react';
+import { Check, ClipboardCheck, Copy, Eye, Loader2, Pencil, Printer, Send, Square, Trash2, Users } from 'lucide-react';
 import type { Avaliacao, StatusAvaliacao } from '../../../types/avaliacoes';
-import { atualizarStatusAvaliacao, excluirAvaliacao, linkPublicoSimulado, listarMinhasAvaliacoes } from '../../../services/avaliacoesService';
+import {
+  atualizarStatusAvaliacao,
+  excluirAvaliacao,
+  linkPublicoSimulado,
+  listarMinhasAvaliacoes,
+  obterProvasComCorrecaoPendente,
+} from '../../../services/avaliacoesService';
 import { AvaliacaoResultadosModal } from './AvaliacaoResultadosModal';
+import { CorrigirDissertativasModal } from './CorrigirDissertativasModal';
 import { EditarAvaliacaoModal } from './EditarAvaliacaoModal';
 import { PreviewAvaliacaoAlunoModal } from './PreviewAvaliacaoAlunoModal';
 import { ReimprimirAvaliacaoModal } from './ReimprimirAvaliacaoModal';
@@ -28,6 +35,9 @@ export function MinhasAvaliacoesTab() {
   const [resultadosDe, setResultadosDe] = useState<Avaliacao | null>(null);
   const [reimprimirDe, setReimprimirDe] = useState<Avaliacao | null>(null);
   const [previewDe, setPreviewDe] = useState<Avaliacao | null>(null);
+  const [corrigindoDe, setCorrigindoDe] = useState<Avaliacao | null>(null);
+  // Ids das provas com resposta escrita ainda sem nota — decide se o botão "Corrigir" aparece.
+  const [comCorrecaoPendente, setComCorrecaoPendente] = useState<Set<string>>(new Set());
   const [editandoDe, setEditandoDe] = useState<Avaliacao | null>(null);
   const [processando, setProcessando] = useState<string | null>(null);
   const [linkCopiadoId, setLinkCopiadoId] = useState<string | null>(null);
@@ -42,7 +52,9 @@ export function MinhasAvaliacoesTab() {
     setLoading(true);
     setErro(null);
     try {
-      setAvaliacoes(await listarMinhasAvaliacoes());
+      const [lista, pendentes] = await Promise.all([listarMinhasAvaliacoes(), obterProvasComCorrecaoPendente()]);
+      setAvaliacoes(lista);
+      setComCorrecaoPendente(pendentes);
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível carregar as avaliações.');
     } finally {
@@ -170,6 +182,14 @@ export function MinhasAvaliacoesTab() {
                       <Printer className="w-3.5 h-3.5" /> Reimprimir
                     </button>
                   )}
+                  {comCorrecaoPendente.has(a.id) && (
+                    <button
+                      onClick={() => setCorrigindoDe(a)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-gold/20 border border-ms-gold/50 text-ms-gold rounded-lg text-xs font-bold hover:bg-ms-gold/30"
+                    >
+                      <ClipboardCheck className="w-3.5 h-3.5" /> Corrigir dissertativas
+                    </button>
+                  )}
                   {(a.modo === 'ONLINE' || a.modo === 'AMBAS') && a.status !== 'RASCUNHO' && (
                     <button
                       onClick={() => setResultadosDe(a)}
@@ -195,6 +215,16 @@ export function MinhasAvaliacoesTab() {
       {resultadosDe && <AvaliacaoResultadosModal avaliacao={resultadosDe} onClose={() => setResultadosDe(null)} />}
       {reimprimirDe && <ReimprimirAvaliacaoModal avaliacao={reimprimirDe} onClose={() => setReimprimirDe(null)} />}
       {previewDe && <PreviewAvaliacaoAlunoModal avaliacao={previewDe} onClose={() => setPreviewDe(null)} />}
+      {corrigindoDe && (
+        <CorrigirDissertativasModal
+          avaliacao={corrigindoDe}
+          onClose={() => setCorrigindoDe(null)}
+          onCorrigido={() => {
+            setCorrigindoDe(null);
+            carregar();
+          }}
+        />
+      )}
       {editandoDe && (
         <EditarAvaliacaoModal
           avaliacao={editandoDe}

@@ -3,6 +3,14 @@
 // aparecer no papel tem que estar no <style> daqui. O ?inline traz o CSS do
 // KaTeX como string pro bundle; sem ele as fórmulas [[EQ:]] saem embaralhadas.
 import katexCss from 'katex/dist/katex.min.css?inline';
+import type { Question } from '../types/bancoQuestoes';
+import { ehQuestaoEscrita } from '../types/bancoQuestoes';
+
+// Só questão objetiva entra no cartão resposta — dissertativa e redação são
+// escritas na própria folha, nas linhas pautadas.
+export function entraNoCartaoResposta(q: Question) {
+  return !ehQuestaoEscrita(q.tipo) && q.alternatives.length > 0;
+}
 
 // Regras que precisam valer IGUAIS no preview da tela e no papel. Ficam aqui pra
 // os modais de prova importarem — quando estavam copiadas em cada modal, o CSS
@@ -22,6 +30,23 @@ export const PROVA_QUESTOES_CSS = `
   .questao-num { font-weight: 900; color: #002677; }
   .questao-enunciado { margin: 3px 0 5px; line-height: 1.35; text-align: justify; }
   .questao-img { max-width: 100%; margin: 4px 0; }
+
+  /* Linhas pautadas das questões dissertativas/redação, no lugar das alternativas.
+     São border-bottom — regra de verdade, não background: o navegador imprime
+     bordas mesmo com "gráficos de fundo" desligado, que é o padrão de muitos, e um
+     div com background-color sairia em branco no papel. */
+  .linhas-resposta { margin: 5px 0 2px; }
+  .linha-resposta { height: 7mm; border-bottom: 1px solid #555; }
+
+  /* Uma redação (30 linhas ≈ 21cm) não cabe numa coluna: nesse caso a questão
+     ocupa a largura inteira e pode continuar na página seguinte — mas o enunciado
+     nunca se separa do início das linhas. */
+  .questao.questao-longa {
+    break-inside: auto;
+    page-break-inside: auto;
+    column-span: all;
+  }
+  .questao.questao-longa .questao-enunciado { break-after: avoid; page-break-after: avoid; }
 
   /* Rede de segurança: qualquer imagem fica presa na largura da coluna. As
      figuras vindas de [[IMG:]] só têm classe Tailwind, que não existe na janela

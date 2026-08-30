@@ -1,6 +1,13 @@
 import { useRef, useState } from 'react';
 import { Loader2, Plus, Trash2, X } from 'lucide-react';
-import type { Alternative, Question } from '../../types/bancoQuestoes';
+import type { Alternative, Question, TipoQuestao } from '../../types/bancoQuestoes';
+import {
+  LINHAS_RESPOSTA_PADRAO,
+  TIPOS_QUESTAO,
+  TIPO_QUESTAO_LABEL,
+  ehQuestaoEscrita,
+  normalizarTipoQuestao,
+} from '../../types/bancoQuestoes';
 import { atualizarQuestao, criarQuestao, salvarTextoApoio } from '../../services/bancoQuestoesService';
 import { MarkupToolbar } from './MarkupToolbar';
 
@@ -62,6 +69,9 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
   const [ano, setAno] = useState(questao?.ano ? String(questao.ano) : '');
   const [difficulty, setDifficulty] = useState(questao?.difficulty ?? '');
   const [assunto, setAssunto] = useState(questao?.assunto ?? '');
+  const [tipo, setTipo] = useState<TipoQuestao>(normalizarTipoQuestao(questao?.tipo));
+  const [criteriosCorrecao, setCriteriosCorrecao] = useState(questao?.criterios_correcao ?? '');
+  const [linhasResposta, setLinhasResposta] = useState(questao?.linhas_resposta ? String(questao.linhas_resposta) : '');
   const [statement, setStatement] = useState(questao?.statement ?? '');
   const [textoApoio, setTextoApoio] = useState(questao?.support_texts?.content ?? '');
   const [alternatives, setAlternatives] = useState<Alternative[]>(
@@ -71,6 +81,8 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
   const [explanation, setExplanation] = useState(questao?.explanation ?? '');
   const [salvando, setSalvando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
+
+  const escrita = ehQuestaoEscrita(tipo);
 
   function atualizarAlternativa(idx: number, texto: string) {
     setAlternatives((prev) => prev.map((a, i) => (i === idx ? { ...a, text: texto } : a)));
@@ -86,8 +98,16 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
   }
 
   async function handleSalvar() {
-    if (!discipline.trim() || !statement.trim() || alternatives.some((a) => !a.text.trim())) {
-      setErro('Preencha disciplina, enunciado e todas as alternativas.');
+    if (!discipline.trim() || !statement.trim()) {
+      setErro('Preencha disciplina e enunciado.');
+      return;
+    }
+    if (!escrita && alternatives.some((a) => !a.text.trim())) {
+      setErro('Preencha todas as alternativas.');
+      return;
+    }
+    if (escrita && linhasResposta && Number(linhasResposta) < 1) {
+      setErro('O número de linhas da resposta precisa ser maior que zero.');
       return;
     }
     setSalvando(true);
@@ -111,8 +131,13 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
         difficulty: difficulty.trim() || null,
         assunto: assunto.trim() || null,
         statement: statement.trim(),
-        alternatives,
-        correct_letter: correctLetter,
+        tipo,
+        // O banco tem CHECK: dissertativa/redação exigem alternatives = [] e
+        // correct_letter nulo; objetiva exige o contrário.
+        alternatives: escrita ? [] : alternatives,
+        correct_letter: escrita ? null : correctLetter,
+        criterios_correcao: escrita ? criteriosCorrecao.trim() || null : null,
+        linhas_resposta: escrita && linhasResposta ? Number(linhasResposta) : null,
         explanation: explanation.trim() || null,
         support_text_id: supportTextId,
         active: true,
@@ -142,6 +167,32 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
           </button>
         </div>
 
+        <div>
+          <p className="mb-1 text-xs font-black uppercase tracking-wider text-ms-main">Tipo da questão</p>
+          <div className="flex flex-wrap gap-2">
+            {TIPOS_QUESTAO.map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTipo(t)}
+                aria-pressed={tipo === t}
+                className={`px-4 py-2 rounded-xl border text-sm font-bold transition-colors ${
+                  tipo === t
+                    ? 'bg-ms-blue border-ms-blueText text-white'
+                    : 'border-gray-800 text-ms-muted hover:text-ms-main hover:border-ms-blueText'
+                }`}
+              >
+                {TIPO_QUESTAO_LABEL[t]}
+              </button>
+            ))}
+          </div>
+          {escrita && (
+            <p className="mt-1 text-xs text-ms-muted">
+              Sem alternativas e sem gabarito: o aluno responde por escrito e a nota vem da correção do professor.
+            </p>
+          )}
+        </div>
+
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
           <input placeholder="Disciplina *" value={discipline} onChange={(e) => setDiscipline(e.target.value)} className={inputClass} />
           <input placeholder="Nível" value={level} onChange={(e) => setLevel(e.target.value)} className={inputClass} />
@@ -167,9 +218,42 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
 
         <div>
           <p className="mb-1 text-xs font-black uppercase tracking-wider text-ms-main">Enunciado *</p>
-          <CampoComMarcacao value={statement} onChange={setStatement} placeholder="Enunciado *" rows={4} onErro={setErro} />
+          <CampoComMarcacao value={statement} onChange={setStatement} placeholder="Enunciado *" rows={8} onErro={setErro} />
         </div>
 
+        {escrita ? (
+          <div className="space-y-4">
+            <div>
+              <p className="mb-1 text-xs font-black uppercase tracking-wider text-ms-main">
+                {tipo === 'REDACAO' ? 'Competências avaliadas' : 'Resposta esperada / critérios de correção'}
+              </p>
+              <CampoComMarcacao
+                value={criteriosCorrecao}
+                onChange={setCriteriosCorrecao}
+                placeholder={
+                  tipo === 'REDACAO'
+                    ? 'Ex.: domínio da norma culta, coerência, proposta de intervenção...'
+                    : 'O que a resposta do aluno precisa conter para valer a pontuação'
+                }
+                rows={4}
+                onErro={setErro}
+              />
+            </div>
+            <div className="max-w-xs">
+              <p className="mb-1 text-xs font-black uppercase tracking-wider text-ms-main">Linhas para a resposta</p>
+              <input
+                inputMode="numeric"
+                placeholder={`Padrão: ${LINHAS_RESPOSTA_PADRAO[tipo]} linhas`}
+                value={linhasResposta}
+                onChange={(e) => setLinhasResposta(e.target.value.replace(/\D/g, ''))}
+                className={inputClass}
+              />
+              <p className="mt-1 text-xs text-ms-muted">
+                Quantas linhas pautadas sair na prova impressa. Em branco usa o padrão ({LINHAS_RESPOSTA_PADRAO[tipo]}).
+              </p>
+            </div>
+          </div>
+        ) : (
         <div className="space-y-2">
           <p className="text-xs font-black uppercase tracking-wider text-ms-main">Alternativas</p>
           {alternatives.map((alt, idx) => (
@@ -202,9 +286,12 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
             </button>
           )}
         </div>
+        )}
 
         <div>
-          <p className="mb-1 text-xs font-black uppercase tracking-wider text-ms-main">Explicação do gabarito (opcional)</p>
+          <p className="mb-1 text-xs font-black uppercase tracking-wider text-ms-main">
+            {escrita ? 'Observações para o professor (opcional)' : 'Explicação do gabarito (opcional)'}
+          </p>
           <CampoComMarcacao value={explanation} onChange={setExplanation} placeholder="Explicação do gabarito (opcional)" rows={3} onErro={setErro} />
         </div>
 

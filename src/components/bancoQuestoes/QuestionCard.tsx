@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { BookOpen, Check, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import type { Question } from '../../types/bancoQuestoes';
+import { TIPO_QUESTAO_LABEL, ehQuestaoEscrita, linhasParaResposta, normalizarTipoQuestao } from '../../types/bancoQuestoes';
 import { buildFonte, renderLightMarkup } from '../../lib/questionMarkup';
 
 interface Props {
@@ -13,12 +14,15 @@ interface Props {
 export function QuestionCard({ question: q, selecionada, onToggleSelecionar, onEditar }: Props) {
   const [mostrarGabarito, setMostrarGabarito] = useState(false);
   const [mostrarTexto, setMostrarTexto] = useState(false);
+  const tipo = normalizarTipoQuestao(q.tipo);
+  const escrita = ehQuestaoEscrita(tipo);
 
   return (
     <div className="bg-ms-card border border-ms-border rounded-2xl p-6 space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-wrap gap-2 text-xs font-bold">
           <span className="px-2.5 py-1 rounded-full bg-ms-blue/20 text-ms-blueText">{q.discipline}</span>
+          {escrita && <span className="px-2.5 py-1 rounded-full bg-ms-gold/20 text-ms-gold">{TIPO_QUESTAO_LABEL[tipo]}</span>}
           {q.assunto && <span className="px-2.5 py-1 rounded-full bg-ms-border/40 text-ms-muted">{q.assunto}</span>}
           {q.difficulty && <span className="px-2.5 py-1 rounded-full bg-ms-border/40 text-ms-muted">{q.difficulty}</span>}
         </div>
@@ -80,21 +84,29 @@ export function QuestionCard({ question: q, selecionada, onToggleSelecionar, onE
       <div className="text-sm text-ms-main space-y-2">{renderLightMarkup(q.statement, `q-${q.id}`)}</div>
       {q.image_url && <img src={q.image_url} alt="" className="max-h-[280px] rounded-lg border border-ms-border" />}
 
-      <div className="space-y-2">
-        {q.alternatives.map((alt) => (
-          <div
-            key={alt.letter}
-            className={`flex gap-3 px-4 py-2.5 rounded-xl border text-sm ${
-              mostrarGabarito && alt.letter === q.correct_letter
-                ? 'border-ms-green bg-ms-green/10 text-ms-main'
-                : 'border-ms-border text-ms-main'
-            }`}
-          >
-            <span className="font-bold">{alt.letter})</span>
-            <div className="flex-1">{renderLightMarkup(alt.text, `${q.id}-${alt.letter}`, undefined, 'left')}</div>
-          </div>
-        ))}
-      </div>
+      {/* Dissertativa/redação não tem alternativas (`alternatives` vem `[]`): no lugar
+          delas mostramos quantas linhas pautadas a questão ocupa quando impressa. */}
+      {escrita ? (
+        <div className="rounded-xl border border-dashed border-ms-border px-4 py-3 text-sm text-ms-muted">
+          Resposta escrita pelo aluno · {linhasParaResposta(tipo, q.linhas_resposta)} linhas pautadas na impressão
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {q.alternatives.map((alt) => (
+            <div
+              key={alt.letter}
+              className={`flex gap-3 px-4 py-2.5 rounded-xl border text-sm ${
+                mostrarGabarito && alt.letter === q.correct_letter
+                  ? 'border-ms-green bg-ms-green/10 text-ms-main'
+                  : 'border-ms-border text-ms-main'
+              }`}
+            >
+              <span className="font-bold">{alt.letter})</span>
+              <div className="flex-1">{renderLightMarkup(alt.text, `${q.id}-${alt.letter}`, undefined, 'left')}</div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="flex items-center justify-between text-xs text-ms-muted">
         <span>{buildFonte(q)}</span>
@@ -102,13 +114,36 @@ export function QuestionCard({ question: q, selecionada, onToggleSelecionar, onE
           onClick={() => setMostrarGabarito((v) => !v)}
           className="flex items-center gap-1 font-bold text-ms-blueText hover:underline"
         >
-          {mostrarGabarito ? 'Ocultar gabarito' : 'Ver gabarito'}
+          {escrita
+            ? mostrarGabarito
+              ? 'Ocultar critérios'
+              : 'Ver critérios de correção'
+            : mostrarGabarito
+            ? 'Ocultar gabarito'
+            : 'Ver gabarito'}
           {mostrarGabarito ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
       </div>
 
-      {mostrarGabarito && q.explanation && (
-        <div className="text-sm text-ms-muted bg-ms-dark/50 rounded-xl p-4">{renderLightMarkup(q.explanation, `exp-${q.id}`)}</div>
+      {mostrarGabarito && (q.criterios_correcao || q.explanation) && (
+        <div className="text-sm text-ms-muted bg-ms-dark/50 rounded-xl p-4 space-y-3">
+          {q.criterios_correcao && (
+            <div className="space-y-1">
+              <p className="text-xs font-black uppercase tracking-wider text-ms-gold">
+                {tipo === 'REDACAO' ? 'Competências avaliadas' : 'Resposta esperada'}
+              </p>
+              {renderLightMarkup(q.criterios_correcao, `crit-${q.id}`)}
+            </div>
+          )}
+          {q.explanation && (
+            <div className="space-y-1">
+              {q.criterios_correcao && (
+                <p className="text-xs font-black uppercase tracking-wider text-ms-muted">Explicação</p>
+              )}
+              {renderLightMarkup(q.explanation, `exp-${q.id}`)}
+            </div>
+          )}
+        </div>
       )}
     </div>
   );

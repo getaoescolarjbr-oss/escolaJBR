@@ -50,6 +50,7 @@ export async function listarQuestoes(filtro: FiltroQuestoes): Promise<ListaQuest
   if (filtro.ano) query = query.eq('ano', filtro.ano);
   if (filtro.difficulty) query = query.eq('difficulty', filtro.difficulty);
   if (filtro.assunto) query = query.eq('assunto', filtro.assunto);
+  if (filtro.tipo) query = query.eq('tipo', filtro.tipo);
   if (filtro.busca) query = query.ilike('statement', `%${filtro.busca}%`);
   if (filtro.apenasMinhas) query = query.eq('criado_por', filtro.apenasMinhas);
 

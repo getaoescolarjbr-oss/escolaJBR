@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Plus, Search } from 'lucide-react';
-import type { FilterOptions, FiltroQuestoes, Question } from '../../types/bancoQuestoes';
+import type { FilterOptions, FiltroQuestoes, Question, TipoQuestao } from '../../types/bancoQuestoes';
+import { TIPOS_QUESTAO, TIPO_QUESTAO_LABEL } from '../../types/bancoQuestoes';
 import { buscarAssuntosPorDisciplina, buscarFilterOptions, listarQuestoes } from '../../services/bancoQuestoesService';
 import { QuestionCard } from './QuestionCard';
 import { QuestionEditorDialog } from './QuestionEditorDialog';
@@ -102,6 +103,15 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar }
           >
             <option value="">Disciplina...</option>
             {opcoes?.disciplines.map((d) => <option key={d} value={d}>{d}</option>)}
+          </select>
+          {/* Enum fixo do banco (questions.tipo) — não vem de question_bank_filter_options(). */}
+          <select
+            className={selectClass}
+            value={filtro.tipo ?? ''}
+            onChange={(e) => atualizarFiltro({ tipo: (e.target.value || undefined) as TipoQuestao | undefined })}
+          >
+            <option value="">Tipo...</option>
+            {TIPOS_QUESTAO.map((t) => <option key={t} value={t}>{TIPO_QUESTAO_LABEL[t]}</option>)}
           </select>
           <select className={selectClass} value={filtro.assunto ?? ''} onChange={(e) => atualizarFiltro({ assunto: e.target.value || undefined })}>
             <option value="">{filtro.discipline ? 'Assunto...' : 'Assunto (escolha a disciplina)'}</option>

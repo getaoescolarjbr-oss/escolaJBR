@@ -1,3 +1,5 @@
+import type { TipoQuestao } from './bancoQuestoes';
+
 export type ModoAvaliacao = 'IMPRESSA' | 'ONLINE' | 'AMBAS';
 export type StatusAvaliacao = 'RASCUNHO' | 'PUBLICADA' | 'ENCERRADA';
 // AVALIACAO gera nota em "Notas e Avaliações" (sincronizarNotasDaProva); SIMULADO nunca
@@ -68,23 +70,54 @@ export interface QuestaoParaAluno {
   valor: number;
   statement: string;
   image_url: string | null;
+  tipo: TipoQuestao;
+  /** `[]` em dissertativa/redação. */
   alternatives: { letter: string; text: string; image_url?: string | null }[];
+  linhas_resposta: number | null;
   support_text_content: string | null;
   support_text_image_url: string | null;
   ja_respondida: boolean;
   letra_marcada: string | null;
+  /** Resposta escrita já enviada (dissertativa/redação). */
+  resposta_texto?: string | null;
 }
 
+// Um item do payload de rpc_submeter_resposta_avaliacao: `letra` para objetiva,
+// `texto` para dissertativa/redação — nunca os dois.
 export interface RespostaEnvio {
   question_id: string;
-  letra: string;
+  letra?: string;
+  texto?: string;
+}
+
+// prova_respostas.status_correcao: AUTOMATICA quando a prova só tem objetivas;
+// PENDENTE enquanto houver item escrito sem nota; CORRIGIDA depois de todos.
+export type StatusCorrecao = 'AUTOMATICA' | 'PENDENTE' | 'CORRIGIDA';
+
+// Vem de rpc_itens_pendentes_correcao(p_prova_id) — uma linha por resposta escrita
+// de aluno que o professor precisa pontuar.
+export interface ItemPendenteCorrecao {
+  item_id: string;
+  aluno_id: string;
+  aluno_nome: string;
+  turma_nome: string | null;
+  question_id: string;
+  ordem: number;
+  valor: number;
+  tipo: TipoQuestao;
+  statement: string;
+  criterios_correcao: string | null;
+  resposta_texto: string | null;
+  corrigido: boolean;
+  valor_obtido: number | null;
+  observacao_professor: string | null;
 }
 
 // Vem de rpc_submeter_resposta_avaliacao.
 export interface ItemResultadoSubmissao {
   question_id: string;
   letra_marcada: string | null;
-  correct_letter: string;
+  correct_letter: string | null;
   correta: boolean;
   valor_obtido: number;
   nota_final: number;

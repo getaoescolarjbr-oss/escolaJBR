@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Send, X } from 'lucide-react';
-import type { AvaliacaoAluno, ItemResultadoSubmissao, QuestaoParaAluno } from '../../types/avaliacoes';
+import type { AvaliacaoAluno, ItemResultadoSubmissao, QuestaoParaAluno, RespostaEnvio } from '../../types/avaliacoes';
+import { ehQuestaoEscrita } from '../../types/bancoQuestoes';
 import { obterQuestoesAvaliacaoAluno, submeterRespostasAvaliacao } from '../../services/avaliacoesService';
 import { QuestaoAlunoView } from './QuestaoAlunoView';
 
@@ -11,11 +12,13 @@ interface Props {
 }
 
 // Busca as questões sem gabarito (rpc_questoes_avaliacao_aluno), deixa o aluno responder e
-// envia via rpc_submeter_resposta_avaliacao — a correção é 100% server-side, o gabarito só
-// chega ao client na resposta dessa submissão (feedback imediato).
+// envia via rpc_submeter_resposta_avaliacao — a correção das objetivas é 100% server-side, o
+// gabarito só chega ao client na resposta dessa submissão (feedback imediato). Dissertativa e
+// redação viajam como texto e ficam pendentes de correção manual do professor.
 export function RealizarAvaliacaoModal({ avaliacao, onClose, onEnviada }: Props) {
   const [questoes, setQuestoes] = useState<QuestaoParaAluno[] | null>(null);
   const [respostas, setRespostas] = useState<Record<string, string>>({});
+  const [textos, setTextos] = useState<Record<string, string>>({});
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<ItemResultadoSubmissao[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -27,16 +30,39 @@ export function RealizarAvaliacaoModal({ avaliacao, onClose, onEnviada }: Props)
       .then((qs) => {
         setQuestoes(qs);
         setRespostas(Object.fromEntries(qs.filter((q) => q.letra_marcada).map((q) => [q.question_id, q.letra_marcada as string])));
+        setTextos(Object.fromEntries(qs.filter((q) => q.resposta_texto).map((q) => [q.question_id, q.resposta_texto as string])));
       })
       .catch((e) => setErro(e instanceof Error ? e.message : 'Não foi possível carregar as questões.'));
   }, [avaliacao.avaliacao_id]);
 
-  const respondidas = useMemo(() => Object.keys(respostas).length, [respostas]);
+  // Uma dissertativa/redação só conta como respondida se tiver texto de fato — espaço
+  // em branco não vale. Este mesmo array é o payload enviado à RPC.
+  const itensEnvio = useMemo<RespostaEnvio[]>(() => {
+    if (!questoes) return [];
+    return questoes.flatMap<RespostaEnvio>((q) => {
+      if (ehQuestaoEscrita(q.tipo)) {
+        const texto = (textos[q.question_id] ?? '').trim();
+        return texto ? [{ question_id: q.question_id, texto }] : [];
+      }
+      const letra = respostas[q.question_id];
+      return letra ? [{ question_id: q.question_id, letra }] : [];
+    });
+  }, [questoes, respostas, textos]);
+
+  const respondidas = itensEnvio.length;
+  const totalEscritas = useMemo(() => (questoes ?? []).filter((q) => ehQuestaoEscrita(q.tipo)).length, [questoes]);
   const resultadoPorQuestao = useMemo(() => new Map((resultado ?? []).map((r) => [r.question_id, r])), [resultado]);
 
+  const bloqueado = jaEnviada || !!resultado;
+
   function marcar(questionId: string, letra: string) {
-    if (jaEnviada || resultado) return;
+    if (bloqueado) return;
     setRespostas((prev) => ({ ...prev, [questionId]: letra }));
+  }
+
+  function escrever(questionId: string, texto: string) {
+    if (bloqueado) return;
+    setTextos((prev) => ({ ...prev, [questionId]: texto }));
   }
 
   async function enviar() {
@@ -45,10 +71,7 @@ export function RealizarAvaliacaoModal({ avaliacao, onClose, onEnviada }: Props)
     setEnviando(true);
     setErro(null);
     try {
-      const itens = await submeterRespostasAvaliacao(
-        avaliacao.avaliacao_id,
-        Object.entries(respostas).map(([question_id, letra]) => ({ question_id, letra }))
-      );
+      const itens = await submeterRespostasAvaliacao(avaliacao.avaliacao_id, itensEnvio);
       setResultado(itens);
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível enviar a avaliação.');
@@ -74,9 +97,18 @@ export function RealizarAvaliacaoModal({ avaliacao, onClose, onEnviada }: Props)
           {!questoes && !erro && <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" />}
 
           {notaFinal !== null && (
-            <div className="bg-emerald-900/20 border border-emerald-700/40 rounded-xl px-5 py-4 text-center">
+            <div className="bg-emerald-900/20 border border-emerald-700/40 rounded-xl px-5 py-4 text-center space-y-1">
               <p className="text-sm text-ms-muted">Avaliação enviada!</p>
-              <p className="text-2xl font-bold text-emerald-300">Nota: {notaFinal.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-emerald-300">
+                {totalEscritas > 0 ? 'Nota parcial: ' : 'Nota: '}
+                {notaFinal.toFixed(2)}
+              </p>
+              {totalEscritas > 0 && (
+                <p className="text-xs text-ms-gold font-bold">
+                  {totalEscritas} questão(ões) dissertativa(s)/redação ainda serão corrigidas pelo professor. A nota
+                  acima conta só as objetivas e vai mudar depois dessa correção.
+                </p>
+              )}
             </div>
           )}
 
@@ -86,20 +118,31 @@ export function RealizarAvaliacaoModal({ avaliacao, onClose, onEnviada }: Props)
             </div>
           )}
 
+          {questoes && !bloqueado && totalEscritas > 0 && (
+            <div className="bg-ms-gold/10 border border-ms-gold/40 rounded-xl px-5 py-3">
+              <p className="text-xs text-ms-gold font-bold">
+                Esta avaliação tem {totalEscritas} questão(ões) dissertativa(s)/redação. Elas são corrigidas pelo
+                professor, então a nota só fica completa depois dessa correção.
+              </p>
+            </div>
+          )}
+
           {questoes?.map((q, i) => (
             <QuestaoAlunoView
               key={q.question_id}
               questao={q}
               indice={i}
               letraMarcada={respostas[q.question_id] ?? null}
+              textoResposta={textos[q.question_id] ?? ''}
               resultado={resultadoPorQuestao.get(q.question_id)}
-              somenteLeitura={jaEnviada || !!resultado}
+              somenteLeitura={bloqueado}
               onMarcar={(letra) => marcar(q.question_id, letra)}
+              onEscrever={(texto) => escrever(q.question_id, texto)}
             />
           ))}
         </div>
 
-        {questoes && !jaEnviada && !resultado && (
+        {questoes && !bloqueado && (
           <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-gray-800">
             <p className="text-sm text-ms-muted">{respondidas} de {questoes.length} respondida(s)</p>
             <button
