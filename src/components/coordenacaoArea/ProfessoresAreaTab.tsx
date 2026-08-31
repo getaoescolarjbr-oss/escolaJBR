@@ -45,44 +45,35 @@ export function ProfessoresAreaTab({ area, theme }: Props) {
     (async () => {
       setLoading(true);
       try {
-        // 1. Busca professores via RPC (SECURITY DEFINER, inclui normalização de área)
+        // 1. Busca professores + alocações via RPC (SECURITY DEFINER)
         const { data: profsData, error: profsError } = await supabase
           .rpc('rpc_listar_professores_area', { p_area_conhecimento: area });
 
         if (profsError) {
-          console.error('[ProfessoresAreaTab] Erro ao buscar professores:', profsError);
-        }
-        console.log('[ProfessoresAreaTab] área:', area, '| professores encontrados:', profsData?.length ?? 0);
+          console.error('[ProfessoresAreaTab] Erro ao buscar professores via RPC:', profsError);
+          // Fallback caso a RPC ainda não esteja criada no banco
+          const { data: fallbackData } = await supabase
+            .from('professores')
+            .select('id, nome, email, area_conhecimento, config_visto_valor_total')
+            .ilike('area_conhecimento', `%${area.replace('Ciências ', '')}%`)
+            .order('nome');
 
-        // 2. Para cada professor, busca as alocações
-        const lista: ProfessorDaArea[] = [];
-        for (const prof of profsData || []) {
-          const { data: allocData } = await supabase
-            .from('turma_disciplina_professor')
-            .select(`
-              id,
-              turma_id,
-              turmas (id, nome),
-              disciplina_id,
-              disciplinas (id, nome)
-            `)
-            .eq('professor_id', prof.id);
-
-          lista.push({
-            id: prof.id,
-            nome: prof.nome,
-            email: prof.email,
-            area_conhecimento: prof.area_conhecimento,
-            config_visto_valor_total: prof.config_visto_valor_total,
-            alocacoes: (allocData || []).map((row: any) => ({
-              id: row.id,
-              turma_id: row.turma_id,
-              turma_nome: row.turmas?.nome || '',
-              disciplina_id: row.disciplina_id,
-              disciplina_nome: row.disciplinas?.nome || '',
-            })),
-          });
+          if (!cancelled && fallbackData) {
+            setProfessores(fallbackData.map(p => ({ ...p, alocacoes: [] })));
+          }
+          return;
         }
+
+        const lista: ProfessorDaArea[] = Array.isArray(profsData)
+          ? profsData.map((p: any) => ({
+              id: p.id,
+              nome: p.nome,
+              email: p.email,
+              area_conhecimento: p.area_conhecimento,
+              config_visto_valor_total: p.config_visto_valor_total,
+              alocacoes: Array.isArray(p.alocacoes) ? p.alocacoes : [],
+            }))
+          : [];
 
         if (!cancelled) {
           setProfessores(lista);

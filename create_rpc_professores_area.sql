@@ -1,23 +1,19 @@
 -- ====================================================================================
--- RPC: Lista professores da área de conhecimento para o Coordenador de Área
--- SECURITY DEFINER garante acesso mesmo com RLS restritivo na tabela professores
+-- RPC COMPLETA: Lista professores da área + suas alocações (turmas/disciplinas)
+-- SECURITY DEFINER = ignora RLS de professores E turma_disciplina_professor
 -- Execute no SQL Editor do Supabase
 -- ====================================================================================
 
+DROP FUNCTION IF EXISTS public.rpc_listar_professores_area(TEXT);
 CREATE OR REPLACE FUNCTION public.rpc_listar_professores_area(p_area_conhecimento TEXT)
-RETURNS TABLE (
-  id                       UUID,
-  nome                     TEXT,
-  email                    TEXT,
-  area_conhecimento        TEXT,
-  config_visto_valor_total NUMERIC
-)
+RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
+DECLARE
+  v_result JSONB;
 BEGIN
-  -- Apenas coordenadores de área, coordenação geral ou gestão podem ver a lista
   IF NOT (
     public.usuario_tem_papel('COORDENACAO_AREA')
     OR public.usuario_tem_papel('COORDENACAO')
@@ -26,26 +22,39 @@ BEGIN
     RAISE EXCEPTION 'Sem permissão para listar professores da área.' USING ERRCODE = '42501';
   END IF;
 
-  RETURN QUERY
-  SELECT
-    pr.id,
-    pr.nome,
-    pr.email,
-    pr.area_conhecimento,
-    pr.config_visto_valor_total
+  SELECT jsonb_agg(
+    jsonb_build_object(
+      'id',                       pr.id,
+      'nome',                     pr.nome,
+      'email',                    pr.email,
+      'area_conhecimento',        pr.area_conhecimento,
+      'config_visto_valor_total', pr.config_visto_valor_total,
+      'alocacoes', COALESCE((
+        SELECT jsonb_agg(jsonb_build_object(
+          'id',              tdp.id,
+          'turma_id',        tdp.turma_id,
+          'turma_nome',      t.nome,
+          'disciplina_id',   tdp.disciplina_id,
+          'disciplina_nome', d.nome
+        ))
+        FROM turma_disciplina_professor tdp
+        JOIN turmas t ON t.id = tdp.turma_id
+        JOIN disciplinas d ON d.id = tdp.disciplina_id
+        WHERE tdp.professor_id = pr.id
+      ), '[]'::jsonb)
+    )
+    ORDER BY pr.nome
+  )
+  INTO v_result
   FROM professores pr
-  WHERE pr.area_conhecimento = p_area_conhecimento
-     OR (
-       -- Normalização: 'Humanas' = 'Ciências Humanas'
-       p_area_conhecimento = 'Ciências Humanas'
-       AND pr.area_conhecimento IN ('Humanas', 'Ciências Humanas', 'Educação Especial')
-     )
-     OR (
-       -- Normalização: 'Linguagens' inclui 'Educação Profissional'
-       p_area_conhecimento = 'Linguagens'
-       AND pr.area_conhecimento IN ('Linguagens', 'Educação Profissional')
-     )
-  ORDER BY pr.nome;
+  WHERE
+    pr.area_conhecimento = p_area_conhecimento
+    OR (p_area_conhecimento = 'Ciências Humanas'
+        AND pr.area_conhecimento IN ('Humanas', 'Ciências Humanas', 'Educação Especial'))
+    OR (p_area_conhecimento = 'Linguagens'
+        AND pr.area_conhecimento IN ('Linguagens', 'Educação Profissional'));
+
+  RETURN COALESCE(v_result, '[]'::jsonb);
 END;
 $$;
 

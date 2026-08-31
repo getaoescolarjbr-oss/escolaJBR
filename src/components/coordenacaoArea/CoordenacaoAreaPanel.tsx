@@ -73,10 +73,16 @@ export function CoordenacaoAreaPanel({ professor, theme }: Props) {
               key={a.id}
               onClick={() => setAbaAtiva(a.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
-                ativa
-                  ? 'bg-ms-blue text-white border-ms-blue shadow-md'
-                  : 'bg-white dark:bg-ms-card text-gray-900 dark:text-gray-50 border-gray-400 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-700'
+                ativa ? 'border-blue-700 shadow-md' : 'border-gray-300 dark:border-gray-700'
               }`}
+              style={
+                ativa
+                  ? { backgroundColor: '#003366', color: '#ffffff' }
+                  : {
+                      backgroundColor: theme === 'dark' ? '#1f2937' : '#ffffff',
+                      color: theme === 'dark' ? '#f9fafb' : '#0f172a',
+                    }
+              }
             >
               <Icon className="w-4 h-4" />
               {a.label}
