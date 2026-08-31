@@ -28,10 +28,14 @@ export const TODOS_PAPEIS: Papel[] = [
 ];
 
 export interface UsuarioPapel {
-  usuario_id: string;
+  usuario_id: string | null;
   pessoa_nome: string;
   email: string | null;
   // null quando o usuário ainda não tem nenhum papel atribuído (LEFT JOIN na RPC).
   papel: Papel | null;
   ativo: boolean;
+  // Presentes somente para servidores não vinculados (vinculado = false)
+  servidor_id: string | null;
+  vinculado: boolean;
 }
+

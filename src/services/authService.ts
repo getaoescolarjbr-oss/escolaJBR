@@ -70,3 +70,18 @@ export async function listarUsuariosPapeis(): Promise<UsuarioPapel[]> {
   if (error) throw error;
   return (data ?? []) as UsuarioPapel[];
 }
+
+export async function vincularServidor(servidorId: string, usuarioId: string): Promise<void> {
+  const { error } = await supabase.rpc('rpc_vincular_servidor_usuario', {
+    p_servidor_id: servidorId,
+    p_usuario_id: usuarioId,
+  });
+  if (error) throw error;
+}
+
+export async function listarUsuariosSemServidor(): Promise<{ usuario_id: string; nome: string; email: string }[]> {
+  const { data, error } = await supabase.rpc('rpc_listar_usuarios_sem_servidor');
+  if (error) throw error;
+  return (data ?? []) as { usuario_id: string; nome: string; email: string }[];
+}
+

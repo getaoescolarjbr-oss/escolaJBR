@@ -96,6 +96,8 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
   const defaultCargos = [
     'Professor',
     'Coordenador',
+    'Coordenador de Área (PCA)',
+    'PCPI (Recursos e Agendamento)',
     'Diretor',
     'Vice-Diretor',
     'Inspetor',
@@ -109,6 +111,7 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
     'Administrativo (Cozinha)',
     'Administrativo (Manutenção)',
   ];
+
 
   const availableCargos = Array.from(new Set([...defaultCargos, ...customCargos, ...professors.map(p => p.cargo).filter(Boolean)]));
   const uniqueCargos = Array.from(new Set(professors.map(p => p.cargo).filter(Boolean)));
