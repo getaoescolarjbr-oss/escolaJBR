@@ -16,11 +16,13 @@ export const DISCIPLINAS_POR_AREA: Record<AreaConhecimento, string[]> = {
 
 export function normalizarArea(area?: string | null): AreaConhecimento {
   if (!area) return 'Ciências da Natureza';
-  const a = area.toLowerCase();
-  if (a.includes('natureza') || a.includes('ciência') || a.includes('biolog') || a.includes('físic') || a.includes('químic')) return 'Ciências da Natureza';
-  if (a.includes('humana') || a.includes('histór') || a.includes('geograf') || a.includes('filosof') || a.includes('sociolog')) return 'Ciências Humanas';
-  if (a.includes('matemát')) return 'Matemática';
-  if (a.includes('linguag') || a.includes('portugu') || a.includes('ingl') || a.includes('arte') || a.includes('educação física')) return 'Linguagens';
+  const a = area.toLowerCase().trim();
+  if (a.includes('natureza') || a.includes('biolog') || a.includes('físic') || a.includes('físic') || a.includes('químic')) return 'Ciências da Natureza';
+  // 'Humanas', 'Ciências Humanas', 'Educação Especial' → Ciências Humanas
+  if (a === 'humanas' || a.includes('humana') || a.includes('histór') || a.includes('geograf') || a.includes('filosof') || a.includes('sociolog') || a.includes('educação especial') || a.includes('especial')) return 'Ciências Humanas';
+  if (a.includes('matemát') || a.includes('matemat')) return 'Matemática';
+  // 'Educação Profissional' → Linguagens (ou tratar separado)
+  if (a.includes('linguag') || a.includes('portugu') || a.includes('ingl') || a.includes('arte') || a.includes('educação física') || a.includes('profissional')) return 'Linguagens';
   return 'Ciências da Natureza';
 }
 

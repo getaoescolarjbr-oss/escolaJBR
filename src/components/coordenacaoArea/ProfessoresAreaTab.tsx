@@ -45,21 +45,14 @@ export function ProfessoresAreaTab({ area, theme }: Props) {
     (async () => {
       setLoading(true);
       try {
-        // 1. Busca TODOS os professores com area_conhecimento correspondente
+        // 1. Busca professores via RPC (SECURITY DEFINER, inclui normalização de área)
         const { data: profsData, error: profsError } = await supabase
-          .from('professores')
-          .select('id, nome, email, area_conhecimento, config_visto_valor_total')
-          .eq('area_conhecimento', area)
-          .order('nome');
+          .rpc('rpc_listar_professores_area', { p_area_conhecimento: area });
 
         if (profsError) {
           console.error('[ProfessoresAreaTab] Erro ao buscar professores:', profsError);
         }
-        console.log('[ProfessoresAreaTab] área:', area, '| professores encontrados:', profsData?.length ?? 0, profsData);
-
-        if (profsError) {
-          console.error('Erro ao buscar professores:', profsError);
-        }
+        console.log('[ProfessoresAreaTab] área:', area, '| professores encontrados:', profsData?.length ?? 0);
 
         // 2. Para cada professor, busca as alocações
         const lista: ProfessorDaArea[] = [];
