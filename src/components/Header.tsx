@@ -99,7 +99,7 @@ export function Header({
                       {contexto || (professor ? professor.cargo : 'Administrador')}
                     </span>
                     {professor?.area_conhecimento && (
-                      <span className="text-[10px] bg-ms-blue/20 text-blue-300 px-1.5 py-0.5 rounded-full font-medium mt-0.5 border border-blue-800">
+                      <span className="text-[10px] bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded-full font-bold mt-0.5 border border-emerald-600 shadow-sm">
                         {professor.area_conhecimento}
                       </span>
                     )}

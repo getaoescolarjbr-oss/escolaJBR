@@ -37,7 +37,7 @@ export function CoordenacaoAreaPanel({ professor, theme }: Props) {
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-black text-ms-main">Coordenação de Área</h1>
-            <span className="px-3 py-1 bg-blue-100 text-blue-900 dark:bg-ms-blue/20 dark:text-blue-300 border border-blue-300 dark:border-blue-800/80 rounded-full text-xs font-bold">
+            <span className="px-3 py-1 bg-emerald-100 text-emerald-950 dark:bg-emerald-950/80 dark:text-emerald-200 border border-emerald-400 dark:border-emerald-700 rounded-full text-xs font-black shadow-sm">
               {areaSelecionada}
             </span>
           </div>

@@ -31,16 +31,16 @@ BEGIN
       'config_visto_valor_total', pr.config_visto_valor_total,
       'alocacoes', COALESCE((
         SELECT jsonb_agg(jsonb_build_object(
-          'id',              tdp.id,
-          'turma_id',        tdp.turma_id,
+          'id',              al.id,
+          'turma_id',        al.turma_id,
           'turma_nome',      t.nome,
-          'disciplina_id',   tdp.disciplina_id,
+          'disciplina_id',   al.disciplina_id,
           'disciplina_nome', d.nome
         ))
-        FROM turma_disciplina_professor tdp
-        JOIN turmas t ON t.id = tdp.turma_id
-        JOIN disciplinas d ON d.id = tdp.disciplina_id
-        WHERE tdp.professor_id = pr.id
+        FROM alocacoes_v2 al
+        JOIN turmas t ON t.id = al.turma_id
+        JOIN disciplinas d ON d.id = al.disciplina_id
+        WHERE al.professor_id = pr.id
       ), '[]'::jsonb)
     )
     ORDER BY pr.nome

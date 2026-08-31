@@ -49,7 +49,7 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada }: Props) {
 
         // Carregar professores e disciplinas da área
         const { data: allocData } = await supabase
-          .from('turma_disciplina_professor')
+          .from('alocacoes_v2')
           .select('professor_id, professores(id, nome, area_conhecimento), disciplina_id, disciplinas(id, nome)');
 
         const mapaProfDisc = new Map<string, ProfessorDisciplina>();
