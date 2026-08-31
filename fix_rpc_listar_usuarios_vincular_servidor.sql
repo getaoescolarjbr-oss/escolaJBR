@@ -1,15 +1,17 @@
 -- ====================================================================================
 -- FIX: Corrige rpc_listar_usuarios_papeis para incluir servidores NÃO vinculados
---      e adiciona rpc_vincular_servidor_usuario para criar o vínculo na interface.
+--      e adiciona RPCs de vinculação usando a estrutura real do banco.
+--
+-- Estrutura real:
+--   professores.user_id  →  auth.users.id  =  usuarios.id
+--   usuarios.id          =  auth.users.id  (PRIMARY KEY é o próprio auth.uid())
+--   usuarios.pessoa_id   →  pessoas.id
 --
 -- EXECUTE NO SQL EDITOR DO SUPABASE
 -- ====================================================================================
 
 -- ------------------------------------------------------------------------------------
--- 1. Corrige a RPC de listagem para incluir também professores sem conta vinculada
---    Agora retorna:
---      - Todos os usuários com vínculo a pessoa (como antes)
---      - Mais: servidores da tabela `professores` que ainda não têm usuario_id
+-- 1. Corrige a RPC de listagem para incluir também professores sem vínculo (user_id IS NULL)
 -- ------------------------------------------------------------------------------------
 DROP FUNCTION IF EXISTS public.rpc_listar_usuarios_papeis();
 CREATE OR REPLACE FUNCTION public.rpc_listar_usuarios_papeis()
@@ -19,9 +21,8 @@ RETURNS TABLE (
   email          TEXT,
   papel          papel_usuario,
   ativo          BOOLEAN,
-  -- Campos extras para servidores não vinculados
-  servidor_id    UUID,   -- ID da tabela professores (se vier de lá)
-  vinculado      BOOLEAN -- true = tem conta de acesso; false = não tem
+  servidor_id    UUID,
+  vinculado      BOOLEAN
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -32,7 +33,7 @@ BEGIN
     RAISE EXCEPTION 'Apenas usuários com papel GESTAO podem listar usuários e papéis.' USING ERRCODE = '42501';
   END IF;
 
-  -- Usuários com vínculo (conta criada e ligada a uma pessoa)
+  -- Usuários com conta vinculada (usuarios.id = auth.users.id)
   RETURN QUERY
   SELECT
     u.id           AS usuario_id,
@@ -40,25 +41,26 @@ BEGIN
     pe.email       AS email,
     up.papel       AS papel,
     u.ativo        AS ativo,
-    NULL::UUID     AS servidor_id,
+    pr.id          AS servidor_id,
     TRUE           AS vinculado
   FROM usuarios u
   JOIN pessoas pe ON pe.id = u.pessoa_id
   LEFT JOIN usuario_papeis up ON up.usuario_id = u.id
+  LEFT JOIN professores pr ON pr.user_id = u.id
 
   UNION ALL
 
-  -- Servidores cadastrados na tabela professores mas SEM vínculo (usuario_id IS NULL)
+  -- Servidores cadastrados em professores mas SEM conta (user_id IS NULL)
   SELECT
-    NULL::UUID     AS usuario_id,
-    pr.nome        AS pessoa_nome,
-    pr.email       AS email,
+    NULL::UUID         AS usuario_id,
+    pr.nome            AS pessoa_nome,
+    pr.email           AS email,
     NULL::papel_usuario AS papel,
-    FALSE          AS ativo,
-    pr.id          AS servidor_id,
-    FALSE          AS vinculado
+    FALSE              AS ativo,
+    pr.id              AS servidor_id,
+    FALSE              AS vinculado
   FROM professores pr
-  WHERE pr.usuario_id IS NULL
+  WHERE pr.user_id IS NULL
 
   ORDER BY pessoa_nome;
 END;
@@ -68,35 +70,28 @@ REVOKE ALL ON FUNCTION public.rpc_listar_usuarios_papeis() FROM public;
 GRANT EXECUTE ON FUNCTION public.rpc_listar_usuarios_papeis() TO authenticated;
 
 -- ------------------------------------------------------------------------------------
--- 2. RPC para vincular um servidor (professores.id) a um usuário já existente
---    Uso: gestão busca o e-mail no auth, obtém o usuario_id e vincula ao servidor.
+-- 2. RPC para vincular um servidor (professores.id) a um usuário existente
+--    Ao atualizar professores.user_id, o trigger fn_professor_criar_usuario
+--    cria automaticamente o registro em usuarios.
 -- ------------------------------------------------------------------------------------
 DROP FUNCTION IF EXISTS public.rpc_vincular_servidor_usuario(UUID, UUID);
 CREATE OR REPLACE FUNCTION public.rpc_vincular_servidor_usuario(
   p_servidor_id UUID,  -- ID da tabela professores
-  p_usuario_id  UUID   -- ID da tabela usuarios (não auth.users)
+  p_usuario_id  UUID   -- ID do auth.users (= usuarios.id)
 )
 RETURNS jsonb
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-DECLARE
-  v_email TEXT;
 BEGIN
   IF NOT public.usuario_tem_papel('GESTAO') THEN
     RAISE EXCEPTION 'Sem permissão para vincular servidores.' USING ERRCODE = '42501';
   END IF;
 
-  -- Obtém e-mail do usuário para sincronizar no servidor
-  SELECT pe.email INTO v_email
-  FROM usuarios u
-  JOIN pessoas pe ON pe.id = u.pessoa_id
-  WHERE u.id = p_usuario_id;
-
-  -- Atualiza o servidor com o usuario_id
+  -- Atualiza professores.user_id — o trigger cuida de criar o registro em usuarios
   UPDATE professores
-  SET usuario_id = p_usuario_id
+  SET user_id = p_usuario_id
   WHERE id = p_servidor_id;
 
   RETURN jsonb_build_object('sucesso', true, 'servidor_id', p_servidor_id, 'usuario_id', p_usuario_id);
@@ -107,8 +102,8 @@ REVOKE ALL ON FUNCTION public.rpc_vincular_servidor_usuario(UUID, UUID) FROM pub
 GRANT EXECUTE ON FUNCTION public.rpc_vincular_servidor_usuario(UUID, UUID) TO authenticated;
 
 -- ------------------------------------------------------------------------------------
--- 3. RPC auxiliar: lista usuários com conta mas sem vínculo a nenhum servidor
---    (útil para o dropdown de "vincular conta" na interface)
+-- 3. RPC auxiliar: usuários com conta no auth mas sem professor vinculado
+--    (para o dropdown de "qual conta vincular ao servidor")
 -- ------------------------------------------------------------------------------------
 DROP FUNCTION IF EXISTS public.rpc_listar_usuarios_sem_servidor();
 CREATE OR REPLACE FUNCTION public.rpc_listar_usuarios_sem_servidor()
@@ -123,11 +118,11 @@ BEGIN
   END IF;
 
   RETURN QUERY
-  SELECT u.id, pe.nome, pe.email
+  SELECT u.id AS usuario_id, pe.nome, pe.email
   FROM usuarios u
   JOIN pessoas pe ON pe.id = u.pessoa_id
   WHERE u.id NOT IN (
-    SELECT pr.usuario_id FROM professores pr WHERE pr.usuario_id IS NOT NULL
+    SELECT pr.user_id FROM professores pr WHERE pr.user_id IS NOT NULL
   )
   ORDER BY pe.nome;
 END;

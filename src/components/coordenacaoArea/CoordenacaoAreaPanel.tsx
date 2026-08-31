@@ -75,7 +75,7 @@ export function CoordenacaoAreaPanel({ professor, theme }: Props) {
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
                 ativa
                   ? 'bg-ms-blue text-white border-ms-blue shadow-md'
-                  : 'bg-white dark:bg-ms-card text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 border-gray-300 dark:border-gray-800'
+                  : 'bg-white dark:bg-ms-card text-gray-800 dark:text-gray-100 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-700 border-gray-300 dark:border-gray-600'
               }`}
             >
               <Icon className="w-4 h-4" />

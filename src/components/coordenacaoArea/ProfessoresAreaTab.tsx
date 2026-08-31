@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { BookOpen, Calendar, Loader2, Search, Users, Eye } from 'lucide-react';
+import { BookOpen, Loader2, Search, Users, Eye } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Professor, Turma } from '../../types';
 import type { AreaConhecimento } from '../../utils/areasConhecimento';
-import { disciplinaPertenceAArea } from '../../utils/areasConhecimento';
+import { disciplinaPertenceAArea, normalizarArea } from '../../utils/areasConhecimento';
 import { TeacherDiaryModal } from '../TeacherDiaryModal';
 import { getCurrentBimestre } from '../../utils/academicUtils';
 
@@ -23,8 +23,15 @@ interface AlocacaoArea {
   config_visto_valor_total?: number;
 }
 
+interface ProfSemAlocacao {
+  id: string;
+  nome: string;
+  area_conhecimento: string | null;
+}
+
 export function ProfessoresAreaTab({ area, theme }: Props) {
   const [alocacoes, setAlocacoes] = useState<AlocacaoArea[]>([]);
+  const [profsSemAlocacao, setProfsSemAlocacao] = useState<ProfSemAlocacao[]>([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
   const [selectedDiary, setSelectedDiary] = useState<AlocacaoArea | null>(null);
@@ -33,6 +40,7 @@ export function ProfessoresAreaTab({ area, theme }: Props) {
     (async () => {
       setLoading(true);
       try {
+        // 1. Busca alocações com professores
         const { data: allocData } = await supabase
           .from('turma_disciplina_professor')
           .select(`
@@ -46,12 +54,15 @@ export function ProfessoresAreaTab({ area, theme }: Props) {
           `);
 
         const filtradas: AlocacaoArea[] = [];
+        const professoresComAlocacao = new Set<string>();
+
         (allocData || []).forEach((row: any) => {
           const prof = row.professores;
           const disc = row.disciplinas;
           const turma = row.turmas;
           if (prof && disc && turma) {
-            if (disciplinaPertenceAArea(disc.nome, area) || prof.area_conhecimento === area) {
+            const profArea = normalizarArea(prof.area_conhecimento);
+            if (disciplinaPertenceAArea(disc.nome, area) || profArea === area) {
               filtradas.push({
                 id: row.id,
                 professor_id: prof.id,
@@ -62,22 +73,36 @@ export function ProfessoresAreaTab({ area, theme }: Props) {
                 turma_nome: turma.nome,
                 config_visto_valor_total: prof.config_visto_valor_total,
               });
+              professoresComAlocacao.add(prof.id);
             }
           }
         });
 
-        // Ordenar por professor e turma
         filtradas.sort((a, b) => a.professor_nome.localeCompare(b.professor_nome) || a.turma_nome.localeCompare(b.turma_nome));
         setAlocacoes(filtradas);
+
+        // 2. Busca professores da área sem nenhuma alocação
+        const { data: profsData } = await supabase
+          .from('professores')
+          .select('id, nome, area_conhecimento')
+          .not('id', 'in', professoresComAlocacao.size > 0
+            ? `(${Array.from(professoresComAlocacao).map((id) => `'${id}'`).join(',')})`
+            : '(null)'
+          );
+
+        const semAlocacao: ProfSemAlocacao[] = (profsData || []).filter(
+          (p: any) => normalizarArea(p.area_conhecimento) === area
+        );
+        setProfsSemAlocacao(semAlocacao);
       } catch (e) {
-        console.error('Erro ao carregar alocações da área:', e);
+        console.error('Erro ao carregar professores da área:', e);
       } finally {
         setLoading(false);
       }
     })();
   }, [area]);
 
-  // Agrupar por professor
+  // Agrupar por professor (com alocações)
   const professoresAgrupados = useMemo(() => {
     const map = new Map<string, { nome: string; alocacoes: AlocacaoArea[] }>();
     alocacoes.forEach((aloc) => {
@@ -103,6 +128,14 @@ export function ProfessoresAreaTab({ area, theme }: Props) {
     return lista;
   }, [alocacoes, busca]);
 
+  const profsSemAlocacaoFiltrados = useMemo(() => {
+    if (!busca.trim()) return profsSemAlocacao;
+    const b = busca.toLowerCase();
+    return profsSemAlocacao.filter((p) => p.nome.toLowerCase().includes(b));
+  }, [profsSemAlocacao, busca]);
+
+  const totalProfessores = professoresAgrupados.length + profsSemAlocacaoFiltrados.length;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -120,7 +153,7 @@ export function ProfessoresAreaTab({ area, theme }: Props) {
             placeholder="Buscar docente, turma ou matéria..."
             value={busca}
             onChange={(e) => setBusca(e.target.value)}
-            className="w-full pl-9 pr-3 py-1.5 bg-ms-dark border border-gray-800 rounded-xl text-xs text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
+            className="w-full pl-9 pr-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-xs text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
           />
         </div>
       </div>
@@ -129,46 +162,82 @@ export function ProfessoresAreaTab({ area, theme }: Props) {
         <div className="py-12 text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" />
         </div>
-      ) : professoresAgrupados.length === 0 ? (
-        <div className="text-center py-12 bg-ms-card border border-gray-800 rounded-2xl p-6">
+      ) : totalProfessores === 0 ? (
+        <div className="text-center py-12 bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6">
           <Users className="w-12 h-12 text-ms-muted mx-auto mb-2 opacity-50" />
-          <p className="text-ms-main font-bold text-sm">Nenhum professor encontrado para esta área.</p>
-          <p className="text-xs text-ms-muted mt-1">Verifique as atribuições de turmas e disciplinas da escola.</p>
+          <p className="text-ms-main font-bold text-sm">Nenhum professor encontrado para {area}.</p>
+          <p className="text-xs text-ms-muted mt-1">
+            Verifique se os professores estão cadastrados com a área de conhecimento correta no painel de Servidores.
+          </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {professoresAgrupados.map((prof) => (
-            <div key={prof.id} className="bg-ms-card border border-gray-800 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-ms-main">{prof.nome}</h3>
-                  <span className="text-[11px] text-blue-400 font-medium">
-                    {prof.alocacoes.length} turma(s)/disciplina(s) atribuída(s)
-                  </span>
-                </div>
-              </div>
-
-              <div className="space-y-2 pt-1 border-t border-gray-800/80">
-                {prof.alocacoes.map((a) => (
-                  <div
-                    key={a.id}
-                    className="flex items-center justify-between p-2.5 bg-ms-dark/60 hover:bg-ms-dark rounded-lg border border-gray-800/80 text-xs transition-colors"
-                  >
-                    <div>
-                      <span className="font-bold text-ms-main">{a.turma_nome}</span>
-                      <span className="text-ms-muted ml-2">· {a.disciplina_nome}</span>
+        <div className="space-y-6">
+          {/* Professores com alocações */}
+          {professoresAgrupados.length > 0 && (
+            <div className="space-y-3">
+              {profsSemAlocacaoFiltrados.length > 0 && (
+                <p className="text-xs font-black uppercase tracking-wider text-gray-500">
+                  Com turmas atribuídas ({professoresAgrupados.length})
+                </p>
+              )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {professoresAgrupados.map((prof) => (
+                  <div key={prof.id} className="bg-ms-card border border-gray-200 dark:border-gray-800 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h3 className="text-sm font-bold text-ms-main">{prof.nome}</h3>
+                        <span className="text-[11px] text-blue-600 dark:text-blue-400 font-medium">
+                          {prof.alocacoes.length} turma(s)/disciplina(s) atribuída(s)
+                        </span>
+                      </div>
                     </div>
-                    <button
-                      onClick={() => setSelectedDiary(a)}
-                      className="flex items-center gap-1.5 px-2.5 py-1 bg-ms-blue/20 text-ms-blueText hover:bg-ms-blue/30 rounded-md font-bold text-[11px] transition-colors border border-ms-blueText/30"
-                    >
-                      <Eye className="w-3.5 h-3.5" /> Ver Diário
-                    </button>
+
+                    <div className="space-y-2 pt-1 border-t border-gray-200 dark:border-gray-800">
+                      {prof.alocacoes.map((a) => (
+                        <div
+                          key={a.id}
+                          className="flex items-center justify-between p-2.5 bg-gray-50 dark:bg-ms-dark/60 hover:bg-gray-100 dark:hover:bg-ms-dark rounded-lg border border-gray-200 dark:border-gray-800 text-xs transition-colors"
+                        >
+                          <div>
+                            <span className="font-bold text-ms-main">{a.turma_nome}</span>
+                            <span className="text-ms-muted ml-2">· {a.disciplina_nome}</span>
+                          </div>
+                          <button
+                            onClick={() => setSelectedDiary(a)}
+                            className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-100 dark:bg-ms-blue/20 text-blue-800 dark:text-ms-blueText hover:bg-blue-200 dark:hover:bg-ms-blue/30 rounded-md font-bold text-[11px] transition-colors border border-blue-300 dark:border-ms-blueText/30"
+                          >
+                            <Eye className="w-3.5 h-3.5" /> Ver Diário
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
-          ))}
+          )}
+
+          {/* Professores sem alocação mas da área */}
+          {profsSemAlocacaoFiltrados.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs font-black uppercase tracking-wider text-gray-500">
+                Sem turmas atribuídas ({profsSemAlocacaoFiltrados.length})
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {profsSemAlocacaoFiltrados.map((prof) => (
+                  <div key={prof.id} className="bg-ms-card border border-gray-200 dark:border-gray-800 rounded-xl p-4 flex items-center gap-3">
+                    <div className="w-9 h-9 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-sm font-black text-gray-700 dark:text-gray-200 flex-shrink-0">
+                      {prof.nome.charAt(0)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-ms-main">{prof.nome}</p>
+                      <p className="text-[11px] text-amber-600 dark:text-amber-400">Sem turma atribuída</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
