@@ -46,17 +46,16 @@ export function ProfessoresAreaTab({ area, theme }: Props) {
       setLoading(true);
       try {
         // 1. Busca TODOS os professores com area_conhecimento correspondente
-        //    Compara a string exata E variações sem acento via ILIKE
         const { data: profsData, error: profsError } = await supabase
           .from('professores')
           .select('id, nome, email, area_conhecimento, config_visto_valor_total')
-          .or(
-            AREAS_CONHECIMENTO
-              .filter((a) => a === area)
-              .map((a) => `area_conhecimento.eq.${a}`)
-              .join(',') || `area_conhecimento.eq.${area}`
-          )
+          .eq('area_conhecimento', area)
           .order('nome');
+
+        if (profsError) {
+          console.error('[ProfessoresAreaTab] Erro ao buscar professores:', profsError);
+        }
+        console.log('[ProfessoresAreaTab] área:', area, '| professores encontrados:', profsData?.length ?? 0, profsData);
 
         if (profsError) {
           console.error('Erro ao buscar professores:', profsError);
