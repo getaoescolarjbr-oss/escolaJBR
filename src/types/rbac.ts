@@ -5,6 +5,7 @@ export type Papel =
   | 'SECRETARIA'
   | 'COORDENACAO'
   | 'PROFESSOR'
+  | 'PCPI'
   | 'NUTRICAO'
   | 'BIBLIOTECA'
   | 'RESPONSAVEL'
@@ -16,6 +17,7 @@ export const TODOS_PAPEIS: Papel[] = [
   'SECRETARIA',
   'COORDENACAO',
   'PROFESSOR',
+  'PCPI',
   'NUTRICAO',
   'BIBLIOTECA',
   'RESPONSAVEL',

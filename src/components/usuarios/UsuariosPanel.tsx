@@ -17,6 +17,7 @@ const ROTULOS_PAPEL: Record<Papel, string> = {
   SECRETARIA: 'Secretaria',
   COORDENACAO: 'Coordenação',
   PROFESSOR: 'Professor',
+  PCPI: 'PCPI (Recursos e Agendamento)',
   NUTRICAO: 'Nutrição',
   BIBLIOTECA: 'Biblioteca',
   RESPONSAVEL: 'Responsável',

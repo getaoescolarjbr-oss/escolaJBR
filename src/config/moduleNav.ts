@@ -18,8 +18,8 @@ export const MODULOS_NAV: ModuloNavItem[] = [
   { id: 'pessoas', label: 'Cadastro de Pessoas', icon: Users, roles: ['GESTAO', 'SECRETARIA'] },
   { id: 'secretaria', label: 'Secretaria', icon: FolderClock, roles: ['GESTAO', 'SECRETARIA'] },
   { id: 'cozinha', label: 'Cozinha', icon: ChefHat, roles: ['GESTAO', 'NUTRICAO'] },
-  // Etapa 4: fluxo de reserva completo — PROFESSOR já reserva para si mesmo.
-  { id: 'agendamento', label: 'Agendamento', icon: CalendarClock, roles: ['PROFESSOR', 'COORDENACAO', 'GESTAO'] },
+  // Etapa 4: fluxo de reserva completo — PROFESSOR já reserva para si mesmo; PCPI gerencia.
+  { id: 'agendamento', label: 'Agendamento', icon: CalendarClock, roles: ['PROFESSOR', 'COORDENACAO', 'GESTAO', 'PCPI'] },
   // Fase 2: acervo. Papel ALUNO entra no menu a partir da Fase 4 (home do aluno).
   // COORDENACAO entrou na Fase 7: tem poder de moderação (denúncias/resenhas) desde
   // a Fase 1, mas só ganhou uma aba pra usar isso agora (ver ModeracaoTab). PROFESSOR

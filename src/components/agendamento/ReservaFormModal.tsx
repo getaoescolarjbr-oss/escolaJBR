@@ -27,8 +27,8 @@ const PERIODO_PERSONALIZADO = 'PERSONALIZADO';
 
 export function ReservaFormModal({ recursoIdInicial, onClose, onCriada }: ReservaFormModalProps) {
   const { usuarioId, hasAnyRole } = useAuth();
-  const podeReservar = hasAnyRole(['PROFESSOR', 'COORDENACAO', 'GESTAO']);
-  const ehStaff = hasAnyRole(['COORDENACAO', 'GESTAO']);
+  const podeReservar = hasAnyRole(['PROFESSOR', 'COORDENACAO', 'GESTAO', 'PCPI']);
+  const ehStaff = hasAnyRole(['COORDENACAO', 'GESTAO', 'PCPI']);
 
   const [recursos, setRecursos] = useState<Recurso[]>([]);
   const [turmas, setTurmas] = useState<{ id: string; nome: string }[]>([]);

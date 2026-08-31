@@ -29,7 +29,7 @@ type Aba =
 // (Etapa 5), CRUD de recursos/bloqueios (Etapa 2) e relatórios (Etapa 6).
 export function AgendamentoPanel() {
   const { hasAnyRole } = useAuth();
-  const ehStaff = hasAnyRole(['COORDENACAO', 'GESTAO']);
+  const ehStaff = hasAnyRole(['COORDENACAO', 'GESTAO', 'PCPI']);
 
   // Link direto vindo da home pública (?modulo=agendamento&recurso=<id>), já
   // autenticado — abre direto em "Minhas Reservas" com o formulário pré-preenchido.

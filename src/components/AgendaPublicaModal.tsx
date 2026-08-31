@@ -181,7 +181,7 @@ export function AgendaPublicaModal({ recurso, onClose, onRequireLogin }: AgendaP
             >
               <Lock className="w-4 h-4" /> Entrar para reservar
             </button>
-          ) : !hasAnyRole(['PROFESSOR', 'COORDENACAO', 'GESTAO']) ? (
+          ) : !hasAnyRole(['PROFESSOR', 'COORDENACAO', 'GESTAO', 'PCPI']) ? (
             <div className="flex items-center gap-2 py-3 px-4 bg-gray-100 text-gray-600 rounded-xl text-sm">
               <ShieldAlert className="w-4 h-4 shrink-0" /> Seu perfil não tem permissão para reservar recursos.
             </div>
