@@ -15,6 +15,8 @@ import type {
   SimuladoPublicoIniciarResposta,
   SimuladoPublicoSubmeterResposta,
   StatusAvaliacao,
+  AvaliacaoArea,
+  NovaAvaliacaoAreaInput,
 } from '../types/avaliacoes';
 import { QUESTION_SELECT_FIELDS, type Question } from '../types/bancoQuestoes';
 
@@ -525,4 +527,52 @@ export async function submeterSimuladoPublico(token: string, codigoSgde: string,
   });
   if (error) throw error;
   return data as SimuladoPublicoSubmeterResposta;
+}
+
+// ---- Avaliações Colaborativas de Área (PCA) ----
+
+export async function criarAvaliacaoArea(dados: NovaAvaliacaoAreaInput): Promise<string> {
+  const { data, error } = await supabase.rpc('rpc_criar_avaliacao_area', {
+    p_titulo: dados.titulo,
+    p_area_conhecimento: dados.area_conhecimento,
+    p_bimestre_id: dados.bimestre_id,
+    p_valor_total: dados.valor_total,
+    p_modo: dados.modo,
+    p_tipo: dados.tipo,
+    p_data_aplicacao: dados.data_aplicacao || null,
+    p_prazo_entrega: dados.prazo_entrega || null,
+    p_instrucoes: dados.instrucoes || null,
+    p_turma_ids: dados.turma_ids,
+    p_cotas: dados.cotas,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function listarAvaliacoesArea(areaConhecimento?: string): Promise<AvaliacaoArea[]> {
+  const { data, error } = await supabase.rpc('rpc_listar_avaliacoes_area', {
+    p_area_conhecimento: areaConhecimento || null,
+  });
+  if (error) throw error;
+  return (data ?? []) as AvaliacaoArea[];
+}
+
+export async function inserirQuestoesCotaArea(
+  provaId: string,
+  disciplinaId: string,
+  questoes: { question_id: string; valor: number }[]
+): Promise<void> {
+  const { error } = await supabase.rpc('rpc_inserir_questoes_cota_area', {
+    p_prova_id: provaId,
+    p_disciplina_id: disciplinaId,
+    p_questoes: questoes,
+  });
+  if (error) throw error;
+}
+
+export async function publicarAvaliacaoArea(provaId: string): Promise<void> {
+  const { error } = await supabase.rpc('rpc_publicar_avaliacao_area', {
+    p_prova_id: provaId,
+  });
+  if (error) throw error;
 }

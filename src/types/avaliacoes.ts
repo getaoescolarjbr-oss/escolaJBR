@@ -212,3 +212,54 @@ export interface SimuladoPublicoSubmeterResposta {
   nota_final: number;
   itens: SimuladoPublicoItemResultado[];
 }
+
+// ---- Avaliações Colaborativas de Área (PCA) ----
+
+export interface ProvaAreaCota {
+  id?: string;
+  professor_id: string;
+  professor_nome?: string;
+  disciplina_id: string;
+  disciplina_nome?: string;
+  qtd_questoes: number;
+  qtd_inserida: number;
+}
+
+export interface CotaProfessorInput {
+  professor_id: string;
+  disciplina_id: string;
+  qtd_questoes: number;
+}
+
+export interface NovaAvaliacaoAreaInput {
+  titulo: string;
+  area_conhecimento: string;
+  bimestre_id: number;
+  valor_total: number;
+  modo: ModoAvaliacao;
+  tipo: TipoAvaliacao;
+  data_aplicacao?: string | null;
+  prazo_entrega?: string | null;
+  instrucoes?: string | null;
+  turma_ids: string[];
+  cotas: CotaProfessorInput[];
+}
+
+export interface AvaliacaoArea {
+  id: string;
+  titulo: string;
+  area_conhecimento: string;
+  bimestre_id: number;
+  valor_total: number;
+  modo: ModoAvaliacao;
+  tipo: TipoAvaliacao;
+  status: StatusAvaliacao;
+  status_colaboracao: 'EM_ELABORACAO' | 'PRONTA_PARA_PUBLICAR' | 'PUBLICADA';
+  data_aplicacao: string | null;
+  prazo_entrega: string | null;
+  instrucoes: string | null;
+  created_at: string;
+  total_questoes: number;
+  turma_nomes?: string[];
+  cotas?: ProvaAreaCota[];
+}

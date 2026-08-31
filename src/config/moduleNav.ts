@@ -38,7 +38,9 @@ export const MODULOS_NAV: ModuloNavItem[] = [
   // Reaproveita o CoordinatorDashboard existente como está — só ganhou uma porta de
   // entrada via card (antes era a landing forçada de qualquer cargo Coordenador/
   // Diretor/Vice-Diretor). Ver App.tsx: view === 'coordenacao'.
-  { id: 'coordenacao', label: 'Visão Coordenação', icon: Presentation, roles: ['GESTAO', 'COORDENACAO'] },
+  { id: 'coordenacao', label: 'Visão Coordenação Geral', icon: Presentation, roles: ['GESTAO', 'COORDENACAO'] },
+  // Coordenação de Área (PCA) — gestão pedagógica da área de conhecimento.
+  { id: 'coordenacao-area', label: 'Coordenação de Área', icon: Presentation, roles: ['GESTAO', 'COORDENACAO', 'COORDENACAO_AREA'] },
   // Mesmo padrão: reaproveita o InspetorDashboard existente como está, só ganhou
   // porta de entrada via card (antes era a landing forçada de quem tinha cargo
   // Portaria/Inspetor/Auxiliar de Secretaria/Secretário(a)/Administrativo*).

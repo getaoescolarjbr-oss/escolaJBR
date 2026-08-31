@@ -12,20 +12,32 @@ interface HeaderProps {
   theme: 'dark' | 'light';
   onToggleTheme: () => void;
   isAdmin?: boolean;
-  // Rótulo de contexto (módulo/rota atual), calculado no App.tsx a partir de papel e
-  // não de professor.cargo — evita mostrar um cargo de banco (ex.: "Coordenador")
-  // como se fosse o nível de acesso de quem está logado. Opcional só para não
-  // quebrar quem ainda não passa essa prop; cai de volta no cargo se ausente.
   contexto?: string;
+  onNavegarView?: (view: string) => void;
+  viewAtual?: string;
+  podeAcessarCoordenacaoArea?: boolean;
 }
 
-export function Header({ professor, onLogout, onUpdateProfessor, theme, onToggleTheme, isAdmin, contexto }: HeaderProps) {
+export function Header({
+  professor,
+  onLogout,
+  onUpdateProfessor,
+  theme,
+  onToggleTheme,
+  isAdmin,
+  contexto,
+  onNavegarView,
+  viewAtual,
+  podeAcessarCoordenacaoArea,
+}: HeaderProps) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     onLogout();
   };
+
+  const estaNaCoordenacaoArea = viewAtual === 'coordenacao-area';
 
   return (
     <>
@@ -43,6 +55,8 @@ export function Header({ professor, onLogout, onUpdateProfessor, theme, onToggle
                 <h1 className="text-xl font-bold text-white hidden sm:block">
                   {isAdmin
                     ? 'Portal do Administrador'
+                    : estaNaCoordenacaoArea
+                    ? 'Coordenação de Área'
                     : professor?.cargo?.toLowerCase() === 'coordenador'
                     ? 'Portal do Coordenador'
                     : professor?.cargo?.toLowerCase() === 'diretor'
@@ -60,9 +74,23 @@ export function Header({ professor, onLogout, onUpdateProfessor, theme, onToggle
             </div>
 
             {/* Right actions */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3 sm:gap-4">
+              {podeAcessarCoordenacaoArea && onNavegarView && (
+                <button
+                  onClick={() => onNavegarView(estaNaCoordenacaoArea ? 'dashboard' : 'coordenacao-area')}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-sm border ${
+                    estaNaCoordenacaoArea
+                      ? 'bg-gray-800 text-gray-200 border-gray-700 hover:bg-gray-700'
+                      : 'bg-ms-blue text-white border-blue-500 hover:bg-blue-600 shadow-blue-900/30'
+                  }`}
+                  title={estaNaCoordenacaoArea ? 'Voltar para suas turmas e diários' : 'Acessar a Coordenação de Área'}
+                >
+                  <span>{estaNaCoordenacaoArea ? '← Ver Minhas Turmas' : 'Coordenação de Área'}</span>
+                </button>
+              )}
+
               {(professor || isAdmin) && (
-                <div className="hidden sm:flex flex-col items-end mr-4">
+                <div className="hidden sm:flex flex-col items-end mr-2">
                   <span className="text-sm font-semibold text-white">
                     {professor ? professor.nome : 'Administrador JBR'}
                   </span>

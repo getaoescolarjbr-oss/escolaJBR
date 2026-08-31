@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, ClipboardCheck, Copy, Eye, Loader2, Pencil, Printer, Send, Square, Trash2, Users } from 'lucide-react';
-import type { Avaliacao, StatusAvaliacao } from '../../../types/avaliacoes';
+import { Check, ClipboardCheck, Copy, Eye, Loader2, Pencil, Printer, Send, Square, Trash2, Users, Layers } from 'lucide-react';
+import type { Avaliacao, AvaliacaoArea, ProvaAreaCota, StatusAvaliacao } from '../../../types/avaliacoes';
 import {
   atualizarStatusAvaliacao,
   excluirAvaliacao,
   linkPublicoSimulado,
+  listarAvaliacoesArea,
   listarMinhasAvaliacoes,
   obterProvasComCorrecaoPendente,
 } from '../../../services/avaliacoesService';
@@ -13,6 +14,8 @@ import { CorrigirDissertativasModal } from './CorrigirDissertativasModal';
 import { EditarAvaliacaoModal } from './EditarAvaliacaoModal';
 import { PreviewAvaliacaoAlunoModal } from './PreviewAvaliacaoAlunoModal';
 import { ReimprimirAvaliacaoModal } from './ReimprimirAvaliacaoModal';
+import { InserirQuestoesAreaModal } from '../../coordenacaoArea/InserirQuestoesAreaModal';
+import { useAuth } from '../../../hooks/useAuth';
 
 const STATUS_LABEL: Record<StatusAvaliacao, string> = {
   RASCUNHO: 'Rascunho',
@@ -29,13 +32,16 @@ const STATUS_CLASS: Record<StatusAvaliacao, string> = {
 const MODO_LABEL = { IMPRESSA: 'Impressa', ONLINE: 'Online', AMBAS: 'Impressa e online' };
 
 export function MinhasAvaliacoesTab() {
+  const { usuarioId } = useAuth();
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
+  const [avaliacoesArea, setAvaliacoesArea] = useState<AvaliacaoArea[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [resultadosDe, setResultadosDe] = useState<Avaliacao | null>(null);
   const [reimprimirDe, setReimprimirDe] = useState<Avaliacao | null>(null);
   const [previewDe, setPreviewDe] = useState<Avaliacao | null>(null);
   const [corrigindoDe, setCorrigindoDe] = useState<Avaliacao | null>(null);
+  const [inserindoCota, setInserindoCota] = useState<{ avaliacao: AvaliacaoArea; cota: ProvaAreaCota } | null>(null);
   // Ids das provas com resposta escrita ainda sem nota — decide se o botão "Corrigir" aparece.
   const [comCorrecaoPendente, setComCorrecaoPendente] = useState<Set<string>>(new Set());
   const [editandoDe, setEditandoDe] = useState<Avaliacao | null>(null);
@@ -52,9 +58,14 @@ export function MinhasAvaliacoesTab() {
     setLoading(true);
     setErro(null);
     try {
-      const [lista, pendentes] = await Promise.all([listarMinhasAvaliacoes(), obterProvasComCorrecaoPendente()]);
+      const [lista, pendentes, listaArea] = await Promise.all([
+        listarMinhasAvaliacoes(),
+        obterProvasComCorrecaoPendente(),
+        listarAvaliacoesArea().catch(() => []),
+      ]);
       setAvaliacoes(lista);
       setComCorrecaoPendente(pendentes);
+      setAvaliacoesArea(listaArea.filter((av) => av.status !== 'PUBLICADA' || av.cotas?.some((c) => c.qtd_questoes > 0)));
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível carregar as avaliações.');
     } finally {
@@ -212,9 +223,89 @@ export function MinhasAvaliacoesTab() {
         </div>
       )}
 
+      {/* Seção: Avaliações da Minha Área em Elaboração (Colaborativas) */}
+      {avaliacoesArea.length > 0 && (
+        <div className="bg-gradient-to-r from-blue-950/40 to-indigo-950/40 border border-blue-800/60 rounded-2xl p-5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Layers className="w-5 h-5 text-blue-400" />
+            <div>
+              <h3 className="text-sm font-bold text-ms-main">Avaliações da Sua Área em Elaboração</h3>
+              <p className="text-xs text-ms-muted">
+                O coordenador de área disponibilizou cotas de questões para você inserir na prova colaborativa.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {avaliacoesArea.map((av) => (
+              <div key={av.id} className="bg-ms-dark/80 border border-gray-800 rounded-xl p-4 space-y-3">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <h4 className="text-sm font-bold text-ms-main">{av.titulo}</h4>
+                    <p className="text-xs text-ms-muted">
+                      Área: {av.area_conhecimento} · {av.bimestre_id}º Bimestre · {av.turma_nomes?.join(', ') || 'Todas as turmas'}
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold px-2.5 py-1 bg-amber-950/80 text-amber-300 border border-amber-800/80 rounded-full">
+                    {av.status_colaboracao === 'PUBLICADA' ? 'Publicada' : 'Em Elaboração'}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                  {(av.cotas || []).map((cota) => {
+                    const preenchida = cota.qtd_inserida >= cota.qtd_questoes;
+                    return (
+                      <div
+                        key={`${cota.professor_id}-${cota.disciplina_id}`}
+                        className="flex items-center justify-between p-2.5 bg-ms-card rounded-lg border border-gray-800 text-xs"
+                      >
+                        <div>
+                          <p className="font-bold text-ms-main">{cota.disciplina_nome || 'Disciplina'}</p>
+                          <p className="text-[11px] text-ms-muted">{cota.professor_nome}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
+                              preenchida
+                                ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                                : 'bg-amber-950 text-amber-300 border border-amber-800'
+                            }`}
+                          >
+                            {cota.qtd_inserida}/{cota.qtd_questoes} q.
+                          </span>
+                          {av.status !== 'PUBLICADA' && (
+                            <button
+                              onClick={() => setInserindoCota({ avaliacao: av, cota })}
+                              className="px-2.5 py-1 bg-ms-blue text-white hover:bg-blue-600 rounded font-bold text-[10px] shadow"
+                            >
+                              Inserir Questões
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {resultadosDe && <AvaliacaoResultadosModal avaliacao={resultadosDe} onClose={() => setResultadosDe(null)} />}
       {reimprimirDe && <ReimprimirAvaliacaoModal avaliacao={reimprimirDe} onClose={() => setReimprimirDe(null)} />}
       {previewDe && <PreviewAvaliacaoAlunoModal avaliacao={previewDe} onClose={() => setPreviewDe(null)} />}
+      {inserindoCota && (
+        <InserirQuestoesAreaModal
+          avaliacao={inserindoCota.avaliacao}
+          cota={inserindoCota.cota}
+          onClose={() => setInserindoCota(null)}
+          onSalvo={() => {
+            setInserindoCota(null);
+            carregar();
+          }}
+        />
+      )}
       {corrigindoDe && (
         <CorrigirDissertativasModal
           avaliacao={corrigindoDe}

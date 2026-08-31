@@ -16,6 +16,7 @@ interface QuestionPickerProps {
   selecionadas: Map<string, Question>;
   onToggleSelecionar: (q: Question) => void;
   onContinuar?: () => void;
+  disciplinaPadrao?: string;
 }
 
 // Filtros + lista + seleção do banco de questões — extraído de QuestoesTab.tsx pra ser
@@ -23,12 +24,15 @@ interface QuestionPickerProps {
 // O contador de selecionadas fica com quem usa este componente (selecionadas.size), pra cada
 // tela decidir onde/como mostrar. Criar/editar questão também fica autocontido aqui — a
 // questão criada/editada entra no banco compartilhado, visível para todos.
-export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar }: QuestionPickerProps) {
+export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar, disciplinaPadrao }: QuestionPickerProps) {
   const { hasAnyRole, usuarioId } = useAuth();
   const podeEditar = hasAnyRole(['GESTAO', 'PROFESSOR']);
   const [opcoes, setOpcoes] = useState<FilterOptions | null>(null);
   const [assuntosDisciplina, setAssuntosDisciplina] = useState<string[] | null>(null);
-  const [filtro, setFiltro] = useState<FiltroQuestoes>({ page: 0 });
+  const [filtro, setFiltro] = useState<FiltroQuestoes>(() => ({
+    page: 0,
+    discipline: disciplinaPadrao || undefined,
+  }));
   const [busca, setBusca] = useState('');
   const [questoes, setQuestoes] = useState<Question[]>([]);
   const [total, setTotal] = useState(0);

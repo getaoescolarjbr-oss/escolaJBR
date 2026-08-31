@@ -25,10 +25,23 @@ import { BancoQuestoesPanel } from './components/bancoQuestoes/BancoQuestoesPane
 import { AlunoHome } from './components/aluno/AlunoHome';
 import { CadastroPendenteScreen } from './components/aluno/CadastroPendenteScreen';
 import { GestaoEscolarPanel } from './components/gestaoEscolar/GestaoEscolarPanel';
+import { CoordenacaoAreaPanel } from './components/coordenacaoArea/CoordenacaoAreaPanel';
 import { SimuladoPublicoPage } from './components/simulado/SimuladoPublicoPage';
 import { MODULOS_NAV, modulosVisiveis } from './config/moduleNav';
 
-const MODULOS_COM_SHELL = ['pessoas', 'secretaria', 'cozinha', 'agendamento', 'biblioteca', 'banco-questoes', 'gestao', 'lgpd', 'usuarios', 'perfil'] as const;
+const MODULOS_COM_SHELL = [
+  'pessoas',
+  'secretaria',
+  'cozinha',
+  'agendamento',
+  'biblioteca',
+  'banco-questoes',
+  'gestao',
+  'coordenacao-area',
+  'lgpd',
+  'usuarios',
+  'perfil',
+] as const;
 type ModuloComShell = (typeof MODULOS_COM_SHELL)[number];
 
 const TITULOS_MODULO: Record<ModuloComShell, { titulo: string; subtitulo?: string }> = {
@@ -39,6 +52,7 @@ const TITULOS_MODULO: Record<ModuloComShell, { titulo: string; subtitulo?: strin
   biblioteca: { titulo: 'Biblioteca', subtitulo: 'Acervo, empréstimos e clube de leitura' },
   'banco-questoes': { titulo: 'Banco de Questões', subtitulo: 'Consulte e monte provas com questões organizadas por disciplina' },
   gestao: { titulo: 'Gestão Escolar', subtitulo: 'Indicadores, Almoxarifado e demais sub-módulos administrativos' },
+  'coordenacao-area': { titulo: 'Coordenação de Área', subtitulo: 'Gestão pedagógica, acompanhamento docente e avaliações colaborativas' },
   lgpd: { titulo: 'LGPD — Exportar e Excluir Dados', subtitulo: 'Solicitações de titulares de dados' },
   usuarios: { titulo: 'Usuários e Funções', subtitulo: 'Controle de acesso (RBAC)' },
   perfil: { titulo: 'Minha Conta', subtitulo: 'Seus dados e senha' },
@@ -329,6 +343,9 @@ function App() {
         professor={professor}
         isAdmin={isAdmin}
         contexto={contextoAtual()}
+        viewAtual={view}
+        onNavegarView={navegarPara}
+        podeAcessarCoordenacaoArea={hasAnyRole(['COORDENACAO_AREA', 'COORDENACAO', 'GESTAO']) || Boolean(professor?.area_conhecimento && professor?.cargo?.toLowerCase()?.includes('coordenador'))}
         onLogout={() => {
           setShowLogin(false);
           setView('dashboard');
@@ -382,6 +399,7 @@ function App() {
                   {modulo === 'biblioteca' && (hasAnyRole(['BIBLIOTECA', 'GESTAO', 'COORDENACAO']) ? <BibliotecaPanel /> : <ProfessorBibliotecaTab />)}
                   {modulo === 'banco-questoes' && <BancoQuestoesPanel />}
                   {modulo === 'gestao' && <GestaoEscolarPanel />}
+                  {modulo === 'coordenacao-area' && professor && <CoordenacaoAreaPanel professor={professor} theme={theme} />}
                   {modulo === 'perfil' && <PerfilPanel />}
                 </ModuleShell>
               );
