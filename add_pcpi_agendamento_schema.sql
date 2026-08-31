@@ -154,8 +154,129 @@ BEGIN
 END $$;
 
 -- ------------------------------------------------------------------------------------
--- 5. RPCs DE APROVAÇÃO / RECUSA (Etapa 5)
+-- 5. RPCs DE TRANSAÇÃO (Etapa 1 & 4)
 -- ------------------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.rpc_criar_reserva(UUID, DATE, TIME, TIME, TEXT, UUID, JSONB);
+CREATE OR REPLACE FUNCTION public.rpc_criar_reserva(
+  p_recurso_id UUID,
+  p_data DATE,
+  p_hora_inicio TIME,
+  p_hora_fim TIME,
+  p_finalidade TEXT DEFAULT NULL,
+  p_turma_id UUID DEFAULT NULL,
+  p_dados_personalizados JSONB DEFAULT '{}'::jsonb
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path TO 'public'
+AS $$
+DECLARE
+  v_usuario_id UUID := auth.uid();
+  v_professor_id UUID;
+  v_recurso RECORD;
+  v_reserva_id UUID;
+  v_status_inicial TEXT;
+  v_bloqueio RECORD;
+  v_conflito RECORD;
+  v_eh_staff BOOLEAN;
+BEGIN
+  v_eh_staff := (
+    public.usuario_tem_papel('COORDENACAO')
+    OR public.usuario_tem_papel('GESTAO')
+    OR public.usuario_tem_papel('PCPI')
+  );
+
+  SELECT id INTO v_professor_id FROM professores WHERE user_id = v_usuario_id;
+  IF v_professor_id IS NULL AND NOT v_eh_staff THEN
+    RAISE EXCEPTION 'Usuário autenticado não possui perfil de professor ou equipe gestora vinculado.'
+      USING ERRCODE = '42501';
+  END IF;
+
+  SELECT * INTO v_recurso FROM recursos WHERE id = p_recurso_id AND ativo = true;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Recurso não encontrado ou inativo.' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_hora_inicio >= p_hora_fim THEN
+    RAISE EXCEPTION 'Horário de início deve ser anterior ao horário de término.' USING ERRCODE = '22023';
+  END IF;
+
+  IF p_data < CURRENT_DATE THEN
+    RAISE EXCEPTION 'Não é permitido criar reservas para datas passadas.' USING ERRCODE = '22023';
+  END IF;
+
+  SELECT * INTO v_bloqueio
+  FROM bloqueios_recurso
+  WHERE recurso_id = p_recurso_id
+    AND p_data BETWEEN data_inicio AND data_fim
+    AND (
+      (hora_inicio IS NULL AND hora_fim IS NULL)
+      OR (p_hora_inicio < hora_fim AND p_hora_fim > hora_inicio)
+    )
+  LIMIT 1;
+
+  IF FOUND THEN
+    RAISE EXCEPTION 'Recurso bloqueado para a data/horário informado: %', v_bloqueio.motivo
+      USING ERRCODE = '23505';
+  END IF;
+
+  SELECT * INTO v_conflito
+  FROM reservas
+  WHERE recurso_id = p_recurso_id
+    AND data = p_data
+    AND status IN ('CONFIRMADA', 'PENDENTE')
+    AND (p_hora_inicio < hora_fim AND p_hora_fim > hora_inicio)
+  LIMIT 1;
+
+  IF FOUND THEN
+    RAISE EXCEPTION 'Conflito de horário com reserva existente (status: %).' , v_conflito.status
+      USING ERRCODE = '23505';
+  END IF;
+
+  IF v_eh_staff OR NOT v_recurso.requer_aprovacao THEN
+    v_status_inicial := 'CONFIRMADA';
+  ELSE
+    v_status_inicial := 'PENDENTE';
+  END IF;
+
+  INSERT INTO reservas (
+    recurso_id,
+    professor_id,
+    turma_id,
+    data,
+    hora_inicio,
+    hora_fim,
+    finalidade,
+    status,
+    dados_personalizados,
+    aprovado_por,
+    aprovado_em
+  ) VALUES (
+    p_recurso_id,
+    v_professor_id,
+    p_turma_id,
+    p_data,
+    p_hora_inicio,
+    p_hora_fim,
+    p_finalidade,
+    v_status_inicial,
+    COALESCE(p_dados_personalizados, '{}'::jsonb),
+    CASE WHEN v_status_inicial = 'CONFIRMADA' AND v_eh_staff THEN v_usuario_id ELSE NULL END,
+    CASE WHEN v_status_inicial = 'CONFIRMADA' THEN now() ELSE NULL END
+  )
+  RETURNING id INTO v_reserva_id;
+
+  RETURN jsonb_build_object(
+    'sucesso', true,
+    'id', v_reserva_id,
+    'status', v_status_inicial,
+    'requer_aprovacao', (v_status_inicial = 'PENDENTE')
+  );
+END;
+$$;
+
+DROP FUNCTION IF EXISTS public.rpc_aprovar_reserva(UUID);
 CREATE OR REPLACE FUNCTION public.rpc_aprovar_reserva(p_reserva_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -198,6 +319,7 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.rpc_recusar_reserva(UUID, TEXT);
 CREATE OR REPLACE FUNCTION public.rpc_recusar_reserva(p_reserva_id UUID, p_motivo TEXT DEFAULT NULL)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -248,6 +370,7 @@ $$;
 -- ------------------------------------------------------------------------------------
 -- 6. RPCs DE RELATÓRIO E DASHBOARD (Etapa 2)
 -- ------------------------------------------------------------------------------------
+DROP FUNCTION IF EXISTS public.rpc_relatorio_agendamento(date, date);
 CREATE OR REPLACE FUNCTION public.rpc_relatorio_agendamento(p_data_inicio date, p_data_fim date)
 RETURNS jsonb
 LANGUAGE plpgsql
@@ -350,6 +473,7 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.rpc_dashboard_dia(date);
 CREATE OR REPLACE FUNCTION public.rpc_dashboard_dia(p_data date DEFAULT CURRENT_DATE)
 RETURNS jsonb
 LANGUAGE plpgsql
