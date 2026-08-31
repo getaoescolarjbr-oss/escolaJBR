@@ -94,10 +94,12 @@ export const PROVA_QUESTOES_CSS = `
   .prova-nota-box { display: flex; flex-direction: column; width: 74px; min-width: 74px; flex-shrink: 0; border: 1.5px solid #002677; border-radius: 6px; overflow: hidden; }
   .prova-nota-label { font-size: 0.72em; font-weight: 900; color: #002677; text-align: center; text-transform: uppercase; letter-spacing: 0.4px; padding: 3px 0; border-bottom: 1.5px solid #002677; background: #f0f4ff; }
   .alternativas-linha { display: flex; flex-wrap: wrap; gap: 4px 14px; }
+  .alternativas-grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 16px; row-gap: 6px; align-items: start; }
   .alternativas-coluna { display: flex; flex-direction: column; gap: 3px; }
-  .alternativa { display: flex; gap: 4px; align-items: flex-start; }
-  .alternativa b { flex-shrink: 0; }
-  .alternativa-texto { flex: 1; text-align: justify; }
+  .alternativa { display: flex; gap: 5px; align-items: flex-start; min-width: 0; }
+  .alternativa b { flex-shrink: 0; line-height: 1.25; }
+  .alternativa-texto { flex: 1; min-width: 0; text-align: justify; }
+  .alternativas-grid-2 .alternativa-texto { text-align: left; }
 `;
 
 export function printProva(ref: HTMLElement | null, tituloDocumento: string) {

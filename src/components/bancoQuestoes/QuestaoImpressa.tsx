@@ -18,9 +18,28 @@ function textoLimpo(texto: string) {
   return texto.replace(/\[\[[^\]]*\]\]|<[^>]+>/g, '').trim();
 }
 
-function alternativasCabemNaLinha(q: Question) {
-  const total = q.alternatives.reduce((soma, a) => soma + textoLimpo(a.text).length, 0);
-  return total <= 60;
+function temImagemAlternativas(q: Question) {
+  return q.alternatives.some((a) => a.text.includes('[[IMG:') || a.text.includes('<img') || Boolean(a.image_url));
+}
+
+function obterClasseLayoutAlternativas(q: Question): string {
+  if (temImagemAlternativas(q)) {
+    return 'alternativas-grid-2';
+  }
+  const comprimentos = q.alternatives.map((a) => textoLimpo(a.text).length);
+  const total = comprimentos.reduce((soma, comp) => soma + comp, 0);
+  const maxComp = Math.max(...comprimentos, 0);
+
+  // Se todas forem extremamente curtas (ex: números "1", "2") e couberem em 1 só linha
+  if (total <= 35 && maxComp <= 8) {
+    return 'alternativas-linha';
+  }
+  // Se forem de tamanho pequeno/médio, distribui em grid simétrico de 2 colunas
+  if (maxComp <= 42 && total <= 130) {
+    return 'alternativas-grid-2';
+  }
+  // Texto longo: uma por linha
+  return 'alternativas-coluna';
 }
 
 interface Props {
@@ -56,7 +75,7 @@ export function QuestaoImpressa({ questao: q, indice, valor }: Props) {
           ))}
         </div>
       ) : (
-        <div className={alternativasCabemNaLinha(q) ? 'alternativas-linha' : 'alternativas-coluna'}>
+        <div className={obterClasseLayoutAlternativas(q)}>
           {q.alternatives.map((a) => (
             <div className="alternativa" key={a.letter}>
               <b>{a.letter})</b>
