@@ -287,15 +287,23 @@ export async function atualizarStatusAvaliacao(id: string, status: StatusAvaliac
 // sincronizarNotasDaProva), apaga também as notas lançadas e a avaliação em "Notas e
 // Avaliações" — pra nunca sobrar um boletim com uma coluna de nota "órfã" de uma prova
 // que não existe mais. A confirmação (com o aviso sobre isso) fica na tela que chama
-// esta função (MinhasAvaliacoesTab.tsx).
 export async function excluirAvaliacao(id: string): Promise<void> {
+  // Limpar cotas de área colaborativa
+  await supabase.from('prova_area_cotas').delete().eq('prova_id', id);
+
+  // Limpar notas sincronizadas no diário
   const { data: vinculos } = await supabase.from('prova_avaliacao_notas').select('avaliacao_id').eq('prova_id', id);
   const notasIds = (vinculos ?? []).map((v) => v.avaliacao_id as string);
 
   if (notasIds.length > 0) {
     await supabase.from('notas_avaliacoes').delete().in('avaliacao_id', notasIds);
     await supabase.from('avaliacoes').delete().in('id', notasIds);
+    await supabase.from('prova_avaliacao_notas').delete().eq('prova_id', id);
   }
+
+  // Limpar questões e turmas vinculadas à prova
+  await supabase.from('prova_questoes').delete().eq('prova_id', id);
+  await supabase.from('prova_turmas').delete().eq('prova_id', id);
 
   const { error } = await supabase.from('provas').delete().eq('id', id);
   if (error) throw error;

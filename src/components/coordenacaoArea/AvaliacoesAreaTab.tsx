@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText } from 'lucide-react';
 import type { AvaliacaoArea, ProvaAreaCota } from '../../types/avaliacoes';
 import type { AreaConhecimento } from '../../utils/areasConhecimento';
-import { listarAvaliacoesArea, publicarAvaliacaoArea } from '../../services/avaliacoesService';
+import { listarAvaliacoesArea, publicarAvaliacaoArea, excluirAvaliacao } from '../../services/avaliacoesService';
 import { NovaAvaliacaoAreaModal } from './NovaAvaliacaoAreaModal';
 import { InserirQuestoesAreaModal } from './InserirQuestoesAreaModal';
 import { ReimprimirAvaliacaoModal } from '../bancoQuestoes/avaliacoes/ReimprimirAvaliacaoModal';
@@ -21,6 +21,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
   const [reimprimirDe, setReimprimirDe] = useState<AvaliacaoArea | null>(null);
   const [resultadosDe, setResultadosDe] = useState<AvaliacaoArea | null>(null);
   const [publicandoId, setPublicandoId] = useState<string | null>(null);
+  const [excluindoId, setExcluindoId] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -51,6 +52,24 @@ export function AvaliacoesAreaTab({ area }: Props) {
       alert(e.message || 'Erro ao publicar avaliação.');
     } finally {
       setPublicandoId(null);
+    }
+  }
+
+  async function handleExcluir(av: AvaliacaoArea) {
+    const msg = av.status === 'PUBLICADA'
+      ? `A avaliação "${av.titulo}" já está PUBLICADA. Excluí-la irá remover as notas sincronizadas nos diários dos professores. Deseja realmente excluir definitivamente?`
+      : `Deseja realmente excluir a avaliação da área "${av.titulo}"? Esta ação não pode ser desfeita.`;
+
+    if (!confirm(msg)) return;
+
+    setExcluindoId(av.id);
+    try {
+      await excluirAvaliacao(av.id);
+      await carregar();
+    } catch (e: any) {
+      alert(e.message || 'Erro ao excluir avaliação de área.');
+    } finally {
+      setExcluindoId(null);
     }
   }
 
@@ -144,6 +163,15 @@ export function AvaliacoesAreaTab({ area }: Props) {
                         <Users className="w-3.5 h-3.5" /> Resultados
                       </button>
                     )}
+                    <button
+                      onClick={() => handleExcluir(av)}
+                      disabled={excluindoId === av.id || publicandoId === av.id}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-950/60 border border-red-300 dark:border-red-900/50 text-red-800 dark:text-red-300 rounded-lg text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/40 shadow-sm transition-colors disabled:opacity-40"
+                      title="Excluir esta avaliação da área"
+                    >
+                      {excluindoId === av.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
+                      Excluir
+                    </button>
                   </div>
                 </div>
 
