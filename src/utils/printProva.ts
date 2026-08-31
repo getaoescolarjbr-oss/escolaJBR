@@ -22,13 +22,16 @@ export const PROVA_QUESTOES_CSS = `
     margin-bottom: 10px;
     padding-bottom: 8px;
     border-bottom: 1px dashed #ddd;
-    /* Sem isto a questão racha entre as colunas (ou entre páginas) e o enunciado
-       fica separado das alternativas. */
-    break-inside: avoid;
-    page-break-inside: avoid;
+    /* Permitimos que a questão quebre entre colunas para evitar grandes espaços
+       vazios. Apenas o cabeçalho (enunciado) fica vinculado às alternativas via
+       break-after no próprio .questao-enunciado. */
+    break-inside: auto;
+    page-break-inside: auto;
   }
+  /* Impede que o enunciado fique sozinho no fim de uma coluna, separado das
+     alternativas que continuam na próxima. */
+  .questao-enunciado { margin: 3px 0 5px; line-height: 1.35; text-align: justify; break-after: avoid; page-break-after: avoid; }
   .questao-num { font-weight: 900; color: #002677; }
-  .questao-enunciado { margin: 3px 0 5px; line-height: 1.35; text-align: justify; }
   .questao-img { max-width: 100%; margin: 4px 0; }
 
   /* Linhas pautadas das questões dissertativas/redação, no lugar das alternativas.
@@ -56,11 +59,16 @@ export const PROVA_QUESTOES_CSS = `
 
   .qm-img-group { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: 8px; margin: 4px 0; }
 
-  /* Teto em mm porque o que importa é quanto da folha a figura ocupa: em duas
-     colunas cada coluna tem ~90mm, então 65mm mantém a figura legível sem
-     empurrar as alternativas pra página seguinte. */
-  .qm-img { max-width: 100%; max-height: 65mm; width: auto; height: auto; object-fit: contain; }
-  .questoes-coluna:not(.duas-colunas) .qm-img { max-height: 95mm; }
+  /* Teto em mm: em duas colunas cada coluna tem ~90mm. Imagens no enunciado podem
+     ser um pouco maiores; imagens dentro de alternativas (.alt-img) devem ser bem
+     menores para não ocupar meia página por alternativa. */
+  .qm-img { max-width: 100%; max-height: 55mm; width: auto; height: auto; object-fit: contain; }
+  .questoes-coluna:not(.duas-colunas) .qm-img { max-height: 80mm; }
+
+  /* Imagens dentro de alternativas: altura máxima bem reduzida para não estourar
+     a coluna. Em duas colunas (~90mm) limitamos a 35mm; em coluna única, 50mm. */
+  .alternativa .qm-img { max-height: 35mm; max-width: 80%; }
+  .questoes-coluna:not(.duas-colunas) .alternativa .qm-img { max-height: 50mm; }
 
   .qm-ref { text-align: right; font-size: 0.8em; font-style: italic; color: #666; margin-top: 2px; }
   .qm-table-wrap { overflow-x: auto; }

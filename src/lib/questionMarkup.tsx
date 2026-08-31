@@ -138,7 +138,7 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
                 src={url}
                 alt=""
                 style={width ? { width: `${width}px` } : undefined}
-                className={`qm-img block w-auto max-w-full rounded-lg border border-ms-border object-contain ${width ? '' : 'max-h-[240px]'}`}
+                className={`qm-img block w-auto max-w-full rounded-lg border border-ms-border object-contain ${width ? '' : 'max-h-[160px]'}`}
               />
             );
           })}
