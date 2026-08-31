@@ -33,11 +33,11 @@ export function CoordenacaoAreaPanel({ professor, theme }: Props) {
   return (
     <div className="space-y-6">
       {/* Header do Painel com Seletor de Área */}
-      <div className="bg-ms-card border border-gray-800 rounded-2xl p-5 shadow-lg flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <div className="bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-lg flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 flex-wrap">
             <h1 className="text-xl font-black text-ms-main">Coordenação de Área</h1>
-            <span className="px-3 py-1 bg-ms-blue/20 text-blue-300 border border-blue-800/80 rounded-full text-xs font-bold">
+            <span className="px-3 py-1 bg-blue-100 text-blue-900 dark:bg-ms-blue/20 dark:text-blue-300 border border-blue-300 dark:border-blue-800/80 rounded-full text-xs font-bold">
               {areaSelecionada}
             </span>
           </div>
@@ -52,7 +52,7 @@ export function CoordenacaoAreaPanel({ professor, theme }: Props) {
           <select
             value={areaSelecionada}
             onChange={(e) => setAreaSelecionada(e.target.value as AreaConhecimento)}
-            className="px-3 py-1.5 bg-ms-dark border border-gray-800 rounded-xl text-xs font-bold text-ms-main outline-none focus:ring-2 focus:ring-ms-blue cursor-pointer"
+            className="px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-xs font-bold text-ms-main outline-none focus:ring-2 focus:ring-ms-blue cursor-pointer"
           >
             {AREAS_CONHECIMENTO.map((a) => (
               <option key={a} value={a}>
@@ -74,8 +74,8 @@ export function CoordenacaoAreaPanel({ professor, theme }: Props) {
               onClick={() => setAbaAtiva(a.id)}
               className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
                 ativa
-                  ? 'bg-ms-blue text-white border-ms-blue shadow-lg shadow-blue-900/30'
-                  : 'bg-ms-card text-gray-400 hover:text-gray-200 border-gray-800'
+                  ? 'bg-ms-blue text-white border-ms-blue shadow-md'
+                  : 'bg-white dark:bg-ms-card text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-gray-800 border-gray-300 dark:border-gray-800'
               }`}
             >
               <Icon className="w-4 h-4" />

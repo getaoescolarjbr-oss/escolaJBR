@@ -24,9 +24,9 @@ const STATUS_LABEL: Record<StatusAvaliacao, string> = {
 };
 
 const STATUS_CLASS: Record<StatusAvaliacao, string> = {
-  RASCUNHO: 'bg-gray-700/40 text-gray-300',
-  PUBLICADA: 'bg-emerald-700/30 text-emerald-300',
-  ENCERRADA: 'bg-amber-700/30 text-amber-300',
+  RASCUNHO: 'bg-gray-100 text-gray-800 border border-gray-300 dark:bg-gray-800 dark:text-gray-200 dark:border-gray-700',
+  PUBLICADA: 'bg-emerald-100 text-emerald-900 border border-emerald-300 font-bold dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800',
+  ENCERRADA: 'bg-amber-100 text-amber-900 border border-amber-300 font-bold dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800',
 };
 
 const MODO_LABEL = { IMPRESSA: 'Impressa', ONLINE: 'Online', AMBAS: 'Impressa e online' };
@@ -77,29 +77,25 @@ export function MinhasAvaliacoesTab() {
     carregar();
   }, [carregar]);
 
-  async function mudarStatus(id: string, status: StatusAvaliacao) {
+  async function mudarStatus(id: string, novoStatus: StatusAvaliacao) {
     setProcessando(id);
     try {
-      await atualizarStatusAvaliacao(id, status);
+      await atualizarStatusAvaliacao(id, novoStatus);
       await carregar();
     } catch (e) {
-      setErro(e instanceof Error ? e.message : 'Não foi possível atualizar a avaliação.');
+      setErro(e instanceof Error ? e.message : 'Não foi possível atualizar o status da avaliação.');
     } finally {
       setProcessando(null);
     }
   }
 
   async function excluir(a: Avaliacao) {
-    const aviso = a.status === 'RASCUNHO'
-      ? 'Excluir esta avaliação? Essa ação não pode ser desfeita.'
-      : a.tipo === 'SIMULADO'
-      ? 'Excluir este simulado publicado? O link público deixa de funcionar e as respostas já enviadas pelos alunos serão apagadas. Essa ação não pode ser desfeita.'
-      : 'Excluir esta avaliação publicada? A coluna de nota correspondente em "Notas e Avaliações", as notas já lançadas e as respostas dos alunos serão apagadas junto. Essa ação não pode ser desfeita.';
-    if (!confirm(aviso)) return;
-    const id = a.id;
-    setProcessando(id);
+    if (!confirm(`Tem certeza de que deseja excluir a avaliação "${a.titulo}"? Esta ação não pode ser desfeita.`)) {
+      return;
+    }
+    setProcessando(a.id);
     try {
-      await excluirAvaliacao(id);
+      await excluirAvaliacao(a.id);
       await carregar();
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível excluir a avaliação.');
@@ -110,23 +106,26 @@ export function MinhasAvaliacoesTab() {
 
   if (loading) return <div className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
 
+  const btnSecondary =
+    'flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors';
+
   return (
     <div className="space-y-4">
-      {erro && <p className="text-sm text-red-400 font-bold">{erro}</p>}
+      {erro && <p className="text-sm text-red-600 dark:text-red-400 font-bold">{erro}</p>}
 
       {avaliacoes.length === 0 ? (
         <p className="text-center text-ms-muted py-12">Nenhuma avaliação criada ainda. Use a aba "Nova Avaliação" para montar a primeira.</p>
       ) : (
         <div className="space-y-3">
           {avaliacoes.map((a) => (
-            <div key={a.id} className="bg-ms-card border border-gray-800 rounded-xl px-5 py-4 space-y-2">
+            <div key={a.id} className="bg-ms-card border border-gray-200 dark:border-gray-800 rounded-xl px-5 py-4 space-y-2 shadow-sm">
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-sm font-bold text-ms-main">{a.titulo}</h3>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${STATUS_CLASS[a.status]}`}>{STATUS_LABEL[a.status]}</span>
+                    <span className={`text-xs px-2.5 py-0.5 rounded-full ${STATUS_CLASS[a.status]}`}>{STATUS_LABEL[a.status]}</span>
                     {a.tipo === 'SIMULADO' && (
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-700/30 text-purple-300">Simulado · sem nota</span>
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-300 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800">Simulado · sem nota</span>
                     )}
                   </div>
                   <p className="text-xs text-ms-muted mt-1">
@@ -142,7 +141,7 @@ export function MinhasAvaliacoesTab() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={() => setEditandoDe(a)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-xs font-bold hover:bg-gray-800"
+                    className={btnSecondary}
                   >
                     <Pencil className="w-3.5 h-3.5" /> Editar
                   </button>
@@ -150,7 +149,7 @@ export function MinhasAvaliacoesTab() {
                     <button
                       disabled={processando === a.id}
                       onClick={() => mudarStatus(a.id, 'PUBLICADA')}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-blue text-white rounded-lg text-xs font-bold hover:bg-blue-600 disabled:opacity-40"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold disabled:opacity-40 shadow-sm transition-colors"
                     >
                       <Send className="w-3.5 h-3.5" /> Publicar
                     </button>
@@ -159,7 +158,7 @@ export function MinhasAvaliacoesTab() {
                     <button
                       disabled={processando === a.id}
                       onClick={() => mudarStatus(a.id, 'ENCERRADA')}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-xs font-bold hover:bg-gray-800 disabled:opacity-40"
+                      className={btnSecondary}
                     >
                       <Square className="w-3.5 h-3.5" /> Encerrar
                     </button>
@@ -167,20 +166,16 @@ export function MinhasAvaliacoesTab() {
                   {a.tipo === 'SIMULADO' && a.status !== 'RASCUNHO' && (
                     <button
                       onClick={() => copiarLinkSimulado(a)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-xs font-bold hover:bg-gray-800"
+                      className={btnSecondary}
                     >
-                      {linkCopiadoId === a.id ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                      {linkCopiadoId === a.id ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
                       {linkCopiadoId === a.id ? 'Copiado!' : 'Copiar link'}
                     </button>
                   )}
-                  {/* Conferir a avaliação com os olhos do aluno antes de os alunos
-                      abrirem. Faz sentido em qualquer modo: mesmo numa prova só
-                      impressa, é a forma mais rápida de revisar figura e fórmula
-                      questão a questão. */}
                   {(a.total_questoes ?? 0) > 0 && (
                     <button
                       onClick={() => setPreviewDe(a)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-xs font-bold hover:bg-gray-800"
+                      className={btnSecondary}
                     >
                       <Eye className="w-3.5 h-3.5" /> Ver como aluno
                     </button>
@@ -188,7 +183,7 @@ export function MinhasAvaliacoesTab() {
                   {(a.modo === 'IMPRESSA' || a.modo === 'AMBAS' || a.tipo === 'SIMULADO') && (
                     <button
                       onClick={() => setReimprimirDe(a)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-xs font-bold hover:bg-gray-800"
+                      className={btnSecondary}
                     >
                       <Printer className="w-3.5 h-3.5" /> Reimprimir
                     </button>
@@ -196,7 +191,7 @@ export function MinhasAvaliacoesTab() {
                   {comCorrecaoPendente.has(a.id) && (
                     <button
                       onClick={() => setCorrigindoDe(a)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-gold/20 border border-ms-gold/50 text-ms-gold rounded-lg text-xs font-bold hover:bg-ms-gold/30"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-100 dark:bg-ms-gold/20 border border-amber-400 dark:border-ms-gold/50 text-amber-900 dark:text-ms-gold rounded-lg text-xs font-bold hover:bg-amber-200 dark:hover:bg-ms-gold/30 shadow-sm transition-colors"
                     >
                       <ClipboardCheck className="w-3.5 h-3.5" /> Corrigir dissertativas
                     </button>
@@ -204,7 +199,7 @@ export function MinhasAvaliacoesTab() {
                   {(a.modo === 'ONLINE' || a.modo === 'AMBAS') && a.status !== 'RASCUNHO' && (
                     <button
                       onClick={() => setResultadosDe(a)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-xs font-bold hover:bg-gray-800"
+                      className={btnSecondary}
                     >
                       <Users className="w-3.5 h-3.5" /> Resultados
                     </button>
@@ -212,7 +207,7 @@ export function MinhasAvaliacoesTab() {
                   <button
                     disabled={processando === a.id}
                     onClick={() => excluir(a)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-900/30 border border-red-800 text-red-300 rounded-lg text-xs font-bold hover:bg-red-900/50 disabled:opacity-40"
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-950/60 border border-red-300 dark:border-red-800 text-red-800 dark:text-red-300 rounded-lg text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/80 disabled:opacity-40 shadow-sm transition-colors"
                   >
                     <Trash2 className="w-3.5 h-3.5" /> Excluir
                   </button>

@@ -99,14 +99,14 @@ export function AvaliacoesAreaTab({ area }: Props) {
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-sm font-bold text-ms-main">{av.titulo}</h3>
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-900/30 text-blue-300 border border-blue-800">
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
                         {av.bimestre_id}º Bimestre
                       </span>
                       <span
-                        className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        className={`text-xs font-bold px-2.5 py-0.5 rounded-full ${
                           av.status === 'PUBLICADA'
-                            ? 'bg-emerald-700/30 text-emerald-300 border border-emerald-800'
-                            : 'bg-amber-700/30 text-amber-300 border border-amber-800'
+                            ? 'bg-emerald-100 text-emerald-900 border border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
+                            : 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
                         }`}
                       >
                         {av.status === 'PUBLICADA' ? 'Publicada' : 'Em Elaboração'}
@@ -124,7 +124,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                         onClick={() => handlePublicar(av.id)}
                         disabled={publicandoId === av.id || !todasPreenchidas}
                         title={!todasPreenchidas ? 'Aguardando preenchimento das cotas de questões' : undefined}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-bold hover:bg-emerald-500 disabled:opacity-40"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold disabled:opacity-40 shadow-sm transition-colors"
                       >
                         {publicandoId === av.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                         Publicar e Sincronizar Notas
@@ -132,14 +132,14 @@ export function AvaliacoesAreaTab({ area }: Props) {
                     )}
                     <button
                       onClick={() => setReimprimirDe(av)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-xs font-bold hover:bg-gray-800"
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors"
                     >
                       <Eye className="w-3.5 h-3.5" /> Ver Prova Impressa
                     </button>
                     {av.status === 'PUBLICADA' && (
                       <button
                         onClick={() => setResultadosDe(av)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-dark border border-gray-800 text-ms-main rounded-lg text-xs font-bold hover:bg-gray-800"
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors"
                       >
                         <Users className="w-3.5 h-3.5" /> Resultados
                       </button>
