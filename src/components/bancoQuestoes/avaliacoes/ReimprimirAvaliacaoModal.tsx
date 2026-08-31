@@ -3,7 +3,11 @@ import { Loader2, Printer, X } from 'lucide-react';
 import type { Question } from '../../../types/bancoQuestoes';
 import type { Avaliacao } from '../../../types/avaliacoes';
 import { PROVA_QUESTOES_CSS, entraNoCartaoResposta, printProva } from '../../../utils/printProva';
-import { obterQuestoesDaAvaliacao } from '../../../services/avaliacoesService';
+import {
+  obterQuestoesAvaliacaoPreview,
+  obterQuestoesCompletasDaAvaliacao,
+  obterQuestoesDaAvaliacao,
+} from '../../../services/avaliacoesService';
 import { buscarQuestoesPorIds } from '../../../services/bancoQuestoesService';
 import { QuestaoImpressa } from '../QuestaoImpressa';
 
@@ -25,21 +29,82 @@ export function ReimprimirAvaliacaoModal({ avaliacao, onClose }: Props) {
   useEffect(() => {
     (async () => {
       try {
-        const itens = await obterQuestoesDaAvaliacao(avaliacao.id);
-        const questoesBanco = await buscarQuestoesPorIds(itens.map((i) => i.question_id));
-        const porId = new Map(questoesBanco.map((q) => [q.id, q]));
-        const ordenadas = itens
-          .slice()
-          .sort((a, b) => a.ordem - b.ordem)
-          .map((i) => porId.get(i.question_id))
-          .filter((q): q is Question => !!q);
-        setQuestoes(ordenadas);
-        setValores(Object.fromEntries(itens.map((i) => [i.question_id, i.valor])));
-      } catch (e) {
-        setErro(e instanceof Error ? e.message : 'Não foi possível carregar as questões desta avaliação.');
+        setErro(null);
+        // Tentativa 1: obterQuestoesCompletasDaAvaliacao (join direto de prova_questoes com questions)
+        try {
+          const { questoes: qCompletas, valoresPorQuestao } = await obterQuestoesCompletasDaAvaliacao(avaliacao.id);
+          if (qCompletas && qCompletas.length > 0) {
+            setQuestoes(qCompletas);
+            setValores(valoresPorQuestao);
+            return;
+          }
+        } catch {
+          // segue para a próxima tentativa
+        }
+
+        // Tentativa 2: obterQuestoesDaAvaliacao + buscarQuestoesPorIds
+        try {
+          const itens = await obterQuestoesDaAvaliacao(avaliacao.id);
+          if (itens && itens.length > 0) {
+            const questoesBanco = await buscarQuestoesPorIds(itens.map((i) => i.question_id));
+            const porId = new Map(questoesBanco.map((q) => [q.id, q]));
+            const ordenadas = itens
+              .slice()
+              .sort((a, b) => a.ordem - b.ordem)
+              .map((i) => porId.get(i.question_id))
+              .filter((q): q is Question => !!q);
+            if (ordenadas.length > 0) {
+              setQuestoes(ordenadas);
+              setValores(Object.fromEntries(itens.map((i) => [i.question_id, i.valor])));
+              return;
+            }
+          }
+        } catch {
+          // segue para a tentativa via RPC
+        }
+
+        // Tentativa 3: fallback com RPC SECURITY DEFINER rpc_questoes_avaliacao_preview
+        const previewItens = await obterQuestoesAvaliacaoPreview(avaliacao.id);
+        if (previewItens && previewItens.length > 0) {
+          const adaptadas: Question[] = previewItens.map((p) => ({
+            id: p.question_id,
+            discipline: avaliacao.disciplina || '',
+            area: null,
+            level: null,
+            banca: null,
+            orgao: null,
+            cargo: null,
+            ano: null,
+            difficulty: null,
+            assunto: null,
+            statement: p.statement,
+            image_url: p.image_url,
+            tipo: p.tipo,
+            alternatives: (p.alternatives || []) as Question['alternatives'],
+            correct_letter: null,
+            criterios_correcao: null,
+            linhas_resposta: p.linhas_resposta,
+            explanation: null,
+            support_text_id: null,
+            support_texts: p.support_text_content
+              ? { id: '', discipline: '', content: p.support_text_content, image_url: p.support_text_image_url }
+              : null,
+            active: true,
+            criado_por: null,
+          }));
+          setQuestoes(adaptadas);
+          setValores(Object.fromEntries(previewItens.map((p) => [p.question_id, p.valor])));
+          return;
+        }
+
+        setQuestoes([]);
+      } catch (e: unknown) {
+        const errObj = e as { message?: string };
+        const msg = errObj?.message || (typeof e === 'string' ? e : 'Não foi possível carregar as questões desta avaliação.');
+        setErro(msg);
       }
     })();
-  }, [avaliacao.id]);
+  }, [avaliacao.id, avaliacao.disciplina]);
 
   function imprimir() {
     printProva(previewRef.current, avaliacao.titulo || 'Avaliação');

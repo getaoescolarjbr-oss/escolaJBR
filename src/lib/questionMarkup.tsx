@@ -78,6 +78,7 @@ function renderWithBreaks(text: string, keyPrefix: string): ReactNode[] {
 
 function normalizeHtmlArtifacts(content: string): string {
   return content
+    .replace(/<img[^>]+src=["']([^"']+)["'][^>]*>/gi, '[[IMG:$1]]')
     .replace(/<p[^>]*>/gi, '')
     .replace(/<\/p>/gi, '\n\n')
     .replace(/<b>/gi, '<strong>')
@@ -88,6 +89,7 @@ function normalizeHtmlArtifacts(content: string): string {
 
 export function renderLightMarkup(content: string, keyPrefix: string, leadingPrefix?: ReactNode, imageAlign: 'center' | 'left' = 'center') {
   content = normalizeHtmlArtifacts(content);
+  const isAlt = imageAlign === 'left';
   const blocks: { type: 'text' | 'ref' | 'img' | 'table'; content: string }[] = [];
   let lastIndex = 0;
   let match: RegExpExecArray | null;
@@ -129,7 +131,7 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
         // Tailwind, e precisa de um seletor estável pra limitar a imagem. Sem
         // isso a figura sai no tamanho natural e estoura a margem. Ver
         // printProva.ts.
-        <div key={key} className={`qm-img-group flex flex-wrap items-start gap-4 ${imageAlign === 'left' ? 'justify-start' : 'justify-center'}`}>
+        <div key={key} className={`qm-img-group flex flex-wrap items-start gap-2.5 ${isAlt ? 'justify-start my-1' : 'justify-center my-2'}`}>
           {block.images!.map((raw, imgIdx) => {
             const { url, width } = parseImageEntry(raw);
             return (
@@ -137,8 +139,14 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
                 key={`${key}-${imgIdx}`}
                 src={url}
                 alt=""
-                style={width ? { width: `${width}px` } : undefined}
-                className={`qm-img block w-auto max-w-full rounded-lg border border-ms-border object-contain ${width ? '' : 'max-h-[160px]'}`}
+                style={!isAlt && width ? { width: `${Math.min(width, 500)}px` } : undefined}
+                className={`qm-img block w-auto max-w-full rounded-lg border border-ms-border object-contain ${
+                  isAlt
+                    ? 'max-h-[85px] max-w-[200px] sm:max-h-[95px] sm:max-w-[240px]'
+                    : width
+                    ? 'max-h-[260px]'
+                    : 'max-h-[160px]'
+                }`}
               />
             );
           })}

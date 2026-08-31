@@ -60,15 +60,28 @@ export const PROVA_QUESTOES_CSS = `
   .qm-img-group { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: 8px; margin: 4px 0; }
 
   /* Teto em mm: em duas colunas cada coluna tem ~90mm. Imagens no enunciado podem
-     ser um pouco maiores; imagens dentro de alternativas (.alt-img) devem ser bem
-     menores para não ocupar meia página por alternativa. */
-  .qm-img { max-width: 100%; max-height: 55mm; width: auto; height: auto; object-fit: contain; }
-  .questoes-coluna:not(.duas-colunas) .qm-img { max-height: 80mm; }
+     ser um pouco maiores; imagens dentro de alternativas (.alternativa .qm-img) devem
+     ser bem compactas para não ocupar espaço desnecessário no papel. */
+  .qm-img { max-width: 100%; max-height: 50mm; width: auto; height: auto; object-fit: contain; }
+  .questoes-coluna:not(.duas-colunas) .qm-img { max-height: 75mm; }
 
   /* Imagens dentro de alternativas: altura máxima bem reduzida para não estourar
-     a coluna. Em duas colunas (~90mm) limitamos a 35mm; em coluna única, 50mm. */
-  .alternativa .qm-img { max-height: 35mm; max-width: 80%; }
-  .questoes-coluna:not(.duas-colunas) .alternativa .qm-img { max-height: 50mm; }
+     a coluna. Em duas colunas (~90mm) limitamos a 24mm; em coluna única, 32mm. */
+  .alternativa .qm-img,
+  .alternativa img {
+    max-height: 24mm !important;
+    max-width: 65mm !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+    display: inline-block !important;
+    margin: 2px 0 !important;
+  }
+  .questoes-coluna:not(.duas-colunas) .alternativa .qm-img,
+  .questoes-coluna:not(.duas-colunas) .alternativa img {
+    max-height: 32mm !important;
+    max-width: 80mm !important;
+  }
 
   .qm-ref { text-align: right; font-size: 0.8em; font-style: italic; color: #666; margin-top: 2px; }
   .qm-table-wrap { overflow-x: auto; }
