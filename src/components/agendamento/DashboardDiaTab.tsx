@@ -13,25 +13,40 @@ export function DashboardDiaTab() {
     setLoading(true);
     setErro(null);
     try {
-      setLinhas(await obterDashboardDia(data));
+      const res = await obterDashboardDia(data);
+      setLinhas(Array.isArray(res) ? res : []);
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Erro ao carregar agendamentos do dia.');
+      setLinhas([]);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    const timeout = setTimeout(carregar, 0);
-    return () => clearTimeout(timeout);
+    carregar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data]);
 
   const porRecurso = new Map<string, { nome: string; reservas: DashboardDiaLinha[] }>();
-  for (const linha of linhas) {
-    if (!porRecurso.has(linha.recurso_id)) porRecurso.set(linha.recurso_id, { nome: linha.recurso_nome, reservas: [] });
-    if (linha.reserva_id) porRecurso.get(linha.recurso_id)!.reservas.push(linha);
+  if (Array.isArray(linhas)) {
+    for (const linha of linhas) {
+      if (!linha || !linha.recurso_id) continue;
+      if (!porRecurso.has(linha.recurso_id)) {
+        porRecurso.set(linha.recurso_id, {
+          nome: linha.recurso_nome || 'Recurso',
+          reservas: [],
+        });
+      }
+      if (linha.reserva_id) {
+        porRecurso.get(linha.recurso_id)?.reservas.push(linha);
+      }
+    }
   }
+
+  const entradas = Array.from(porRecurso.entries());
+  const ocupados = entradas.filter(([, val]) => (val?.reservas?.length ?? 0) > 0);
+  const livres = entradas.length - ocupados.length;
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -74,66 +89,59 @@ export function DashboardDiaTab() {
         </div>
       ) : !erro && porRecurso.size === 0 ? (
         <p className="text-sm text-gray-500">Nenhum recurso ativo cadastrado.</p>
-      ) : !erro && (() => {
-        // Só lista quem tem reserva no dia — recurso livre só entra na contagem do
-        // resumo abaixo, não ocupa um card inteiro pra dizer "Livre o dia todo".
-        const entradas = Array.from(porRecurso.entries());
-        const ocupados = entradas.filter(([, { reservas }]) => reservas.length > 0);
-        const livres = entradas.length - ocupados.length;
-
-        if (ocupados.length === 0) {
-          return (
+      ) : !erro && (
+        <div className="space-y-3">
+          {ocupados.length === 0 ? (
             <p className="text-sm text-green-500 font-bold text-center py-4">
               Todos os recursos livres neste dia. 🎉
             </p>
-          );
-        }
-
-        return (
-          <div className="space-y-2">
-            {ocupados.map(([recursoId, { nome, reservas }]) => (
-              <div key={recursoId} className="bg-ms-card border border-gray-800 rounded-2xl p-4 space-y-1.5">
-                <p className="text-sm font-black text-ms-main">{nome}</p>
-                <div className="space-y-1.5">
-                  {reservas.map((r) => (
-                    <div
-                      key={r.reserva_id}
-                      className={`flex items-start justify-between px-3 py-2 rounded-lg border text-sm gap-2 ${
-                        r.status === 'PENDENTE' ? 'bg-amber-950/10 border-amber-700/40' : 'bg-ms-dark border-gray-800'
-                      }`}
-                    >
-                      <div className="min-w-0">
-                        <span className="text-ms-main font-bold">
-                          {r.hora_inicio?.slice(0, 5)}–{r.hora_fim?.slice(0, 5)}
-                        </span>
-                        <span className="ml-2 text-gray-400">{r.professor_nome ?? '—'}</span>
-                        {r.turma_nome && <span className="ml-2 text-gray-500">({r.turma_nome})</span>}
-                        {(r.finalidade || r.tema) && (
-                          <p className="text-[10px] text-gray-500 mt-0.5 truncate">
-                            {[r.finalidade, r.tema].filter(Boolean).join(' · ')}
-                          </p>
-                        )}
-                      </div>
-                      <span
-                        className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-black shrink-0 ${
-                          r.status === 'PENDENTE' ? 'bg-amber-500/10 text-amber-500' : 'bg-green-500/10 text-green-500'
+          ) : (
+            <div className="space-y-2">
+              {ocupados.map(([recursoId, item]) => (
+                <div key={recursoId} className="bg-ms-card border border-gray-800 rounded-2xl p-4 space-y-1.5">
+                  <p className="text-sm font-black text-ms-main">{item.nome}</p>
+                  <div className="space-y-1.5">
+                    {item.reservas.map((r, idx) => (
+                      <div
+                        key={r.reserva_id || `${recursoId}-${idx}`}
+                        className={`flex items-start justify-between px-3 py-2 rounded-lg border text-sm gap-2 ${
+                          r.status === 'PENDENTE' ? 'bg-amber-950/10 border-amber-700/40' : 'bg-ms-dark border-gray-800'
                         }`}
                       >
-                        {r.status}
-                      </span>
-                    </div>
-                  ))}
+                        <div className="min-w-0">
+                          <span className="text-ms-main font-bold">
+                            {(r.hora_inicio ? String(r.hora_inicio).slice(0, 5) : '00:00')}–{(r.hora_fim ? String(r.hora_fim).slice(0, 5) : '00:00')}
+                          </span>
+                          <span className="ml-2 text-gray-400">{r.professor_nome ?? '—'}</span>
+                          {r.turma_nome && <span className="ml-2 text-gray-500">({r.turma_nome})</span>}
+                          {(r.finalidade || r.tema) && (
+                            <p className="text-[10px] text-gray-500 mt-0.5 truncate">
+                              {[r.finalidade, r.tema].filter(Boolean).join(' · ')}
+                            </p>
+                          )}
+                        </div>
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-black shrink-0 ${
+                            r.status === 'PENDENTE' ? 'bg-amber-500/10 text-amber-500' : 'bg-green-500/10 text-green-500'
+                          }`}
+                        >
+                          {r.status ?? 'CONFIRMADA'}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
-            {livres > 0 && (
-              <p className="text-xs text-green-500 font-bold text-center pt-1">
-                + {livres} recurso{livres > 1 ? 's' : ''} livre{livres > 1 ? 's' : ''} neste dia
-              </p>
-            )}
-          </div>
-        );
-      })()}
+              ))}
+              {livres > 0 && (
+                <p className="text-xs text-green-500 font-bold text-center pt-1">
+                  + {livres} recurso{livres > 1 ? 's' : ''} livre{livres > 1 ? 's' : ''} neste dia
+                </p>
+              )}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
+

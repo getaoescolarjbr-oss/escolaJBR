@@ -253,52 +253,67 @@ export async function obterRelatorioAgendamento(dataInicio: string, dataFim: str
 }
 
 // --- Dashboard do dia (Coordenação/Gestão) ---
-// Tenta a RPC; se não existir (42883) ou falhar, faz fallback com query direta.
 export async function obterDashboardDia(data: string): Promise<DashboardDiaLinha[]> {
-  const { data: linhas, error } = await supabase.rpc('rpc_dashboard_dia', { p_data: data });
-  if (!error) return (linhas ?? []) as DashboardDiaLinha[];
+  try {
+    const { data: linhas, error } = await supabase.rpc('rpc_dashboard_dia', { p_data: data });
+    if (!error && Array.isArray(linhas)) return linhas as DashboardDiaLinha[];
+  } catch {
+    // Continua para o fallback
+  }
 
-  // Fallback: busca recursos ativos + reservas do dia diretamente das tabelas
-  const { data: recursos, error: errRecursos } = await supabase
-    .from('recursos')
-    .select('id, nome')
-    .eq('ativo', true)
-    .order('ordem');
-  if (errRecursos) throw errRecursos;
+  // Fallback seguro: busca recursos ativos e reservas do dia
+  try {
+    const [resRecursos, resReservas] = await Promise.all([
+      supabase.from('recursos').select('id, nome').eq('ativo', true).order('ordem'),
+      supabase
+        .from('reservas')
+        .select('id, recurso_id, hora_inicio, hora_fim, status, finalidade, tema, turmas(nome), professores(nome)')
+        .eq('data', data)
+        .neq('status', 'CANCELADA'),
+    ]);
 
-  const { data: reservas, error: errReservas } = await supabase
-    .from('reservas')
-    .select('id, recurso_id, hora_inicio, hora_fim, status, finalidade, tema, turmas(nome), profiles(nome_completo)')
-    .eq('data', data)
-    .not('status', 'eq', 'CANCELADA');
-  if (errReservas) throw errReservas;
+    const recursos = resRecursos.data ?? [];
+    const reservas = resReservas.data ?? [];
 
-  // Monta linhas no mesmo formato que a RPC retornaria
-  const resultado: DashboardDiaLinha[] = [];
-  for (const r of recursos ?? []) {
-    const reservasDoRecurso = (reservas ?? []).filter((rv) => rv.recurso_id === r.id);
-    if (reservasDoRecurso.length === 0) {
-      // Recurso livre no dia — linha sem reserva
-      resultado.push({ recurso_id: r.id, recurso_nome: r.nome, reserva_id: null, hora_inicio: null, hora_fim: null, status: null, professor_nome: null, turma_nome: null, finalidade: null, tema: null });
-    } else {
-      for (const rv of reservasDoRecurso) {
-        const raw = rv as unknown as { turmas: { nome: string } | null; profiles: { nome_completo: string } | null };
+    const resultado: DashboardDiaLinha[] = [];
+    for (const r of recursos) {
+      const reservasDoRecurso = reservas.filter((rv) => rv.recurso_id === r.id);
+      if (reservasDoRecurso.length === 0) {
         resultado.push({
           recurso_id: r.id,
-          recurso_nome: r.nome,
-          reserva_id: rv.id,
-          hora_inicio: rv.hora_inicio,
-          hora_fim: rv.hora_fim,
-          status: rv.status as StatusReserva,
-          professor_nome: raw.profiles?.nome_completo ?? null,
-          turma_nome: raw.turmas?.nome ?? null,
-          finalidade: rv.finalidade ?? null,
-          tema: rv.tema ?? null,
+          recurso_nome: r.nome ?? 'Sem nome',
+          reserva_id: null,
+          hora_inicio: null,
+          hora_fim: null,
+          status: null,
+          professor_nome: null,
+          turma_nome: null,
+          finalidade: null,
+          tema: null,
         });
+      } else {
+        for (const rv of reservasDoRecurso) {
+          const raw = rv as unknown as { turmas?: { nome?: string } | null; professores?: { nome?: string } | null };
+          resultado.push({
+            recurso_id: r.id,
+            recurso_nome: r.nome ?? 'Sem nome',
+            reserva_id: rv.id,
+            hora_inicio: rv.hora_inicio ?? null,
+            hora_fim: rv.hora_fim ?? null,
+            status: (rv.status as StatusReserva) ?? 'CONFIRMADA',
+            professor_nome: raw.professores?.nome ?? null,
+            turma_nome: raw.turmas?.nome ?? null,
+            finalidade: rv.finalidade ?? null,
+            tema: rv.tema ?? null,
+          });
+        }
       }
     }
+    return resultado;
+  } catch (err) {
+    console.error('Erro ao obter agendamentos do dia:', err);
+    throw err;
   }
-  return resultado;
 }
 
 // --- Aulas fixas recorrentes (séries) ---
