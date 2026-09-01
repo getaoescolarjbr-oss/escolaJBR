@@ -32,6 +32,20 @@ export const PROVA_QUESTOES_CSS = `
      alternativas que continuam na próxima. */
   .questao-enunciado { margin: 3px 0 5px; line-height: 1.35; text-align: justify; break-after: avoid; page-break-after: avoid; }
   .questao-num { font-weight: 900; color: #002677; }
+
+  /* Texto-base compartilhado entre questões (support_texts). Filete à esquerda e
+     recuo para o aluno distinguir de relance o que é o texto e o que é o comando
+     da questão — na tela o texto fica recolhido atrás de um botão, no papel não
+     há como recolher. */
+  .texto-apoio {
+    margin: 2px 0 6px;
+    padding: 3px 0 3px 8px;
+    border-left: 2px solid #002677;
+    line-height: 1.3;
+    text-align: justify;
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
   .questao-img { max-width: 100%; margin: 4px 0; }
 
   /* Linhas pautadas das questões dissertativas/redação, no lugar das alternativas.

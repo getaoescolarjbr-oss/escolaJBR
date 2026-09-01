@@ -51,9 +51,9 @@ export function DashboardDiaTab() {
   return (
     <div className="space-y-6 max-w-3xl">
       {/* Cabeçalho com descrição */}
-      <div className="bg-ms-card border border-gray-800 rounded-2xl p-4">
-        <p className="text-sm font-bold text-ms-main mb-1">📅 Agendamentos do Dia</p>
-        <p className="text-xs text-gray-400">
+      <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-5 shadow-sm">
+        <p className="text-sm font-bold text-gray-900 dark:text-ms-main mb-1">📅 Agendamentos do Dia</p>
+        <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
           Visão geral de todos os recursos cadastrados para uma data específica — quais estão ocupados, quem fez a
           reserva, em que horário e para qual turma/finalidade. Ideal para a coordenação acompanhar a ocupação dos
           espaços em tempo real.
@@ -61,22 +61,22 @@ export function DashboardDiaTab() {
       </div>
 
       <div className="flex items-center gap-3">
-        <CalendarDays className="w-4 h-4 text-gray-500" />
+        <CalendarDays className="w-5 h-5 text-gray-500 flex-shrink-0" />
         <input
           type="date"
           value={data}
           onChange={(e) => setData(e.target.value)}
-          className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
+          className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue shadow-sm font-medium text-sm"
         />
       </div>
 
       {erro && (
-        <div className="bg-red-950/20 border border-red-700/40 rounded-xl p-4 space-y-2">
-          <p className="text-sm text-red-400 font-bold">Erro ao carregar</p>
-          <p className="text-xs text-red-400/80">{erro}</p>
+        <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-700/40 rounded-xl p-4 space-y-2">
+          <p className="text-sm text-red-700 dark:text-red-400 font-bold">Erro ao carregar</p>
+          <p className="text-xs text-red-600 dark:text-red-400/80">{erro}</p>
           <button
             onClick={carregar}
-            className="text-xs px-4 py-1.5 bg-red-600 hover:bg-red-500 text-white rounded-lg font-bold transition-all"
+            className="text-xs px-4 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition-all shadow-sm"
           >
             Tentar novamente
           </button>
@@ -92,37 +92,43 @@ export function DashboardDiaTab() {
       ) : !erro && (
         <div className="space-y-3">
           {ocupados.length === 0 ? (
-            <p className="text-sm text-green-500 font-bold text-center py-4">
-              Todos os recursos livres neste dia. 🎉
-            </p>
+            <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-8 text-center shadow-sm">
+              <p className="text-sm text-emerald-600 dark:text-green-400 font-bold">
+                Todos os recursos livres neste dia. 🎉
+              </p>
+            </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-3">
               {ocupados.map(([recursoId, item]) => (
-                <div key={recursoId} className="bg-ms-card border border-gray-800 rounded-2xl p-4 space-y-1.5">
-                  <p className="text-sm font-black text-ms-main">{item.nome}</p>
+                <div key={recursoId} className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-4 space-y-2 shadow-sm">
+                  <p className="text-sm font-black text-gray-900 dark:text-ms-main">{item.nome}</p>
                   <div className="space-y-1.5">
                     {item.reservas.map((r, idx) => (
                       <div
                         key={r.reserva_id || `${recursoId}-${idx}`}
-                        className={`flex items-start justify-between px-3 py-2 rounded-lg border text-sm gap-2 ${
-                          r.status === 'PENDENTE' ? 'bg-amber-950/10 border-amber-700/40' : 'bg-ms-dark border-gray-800'
+                        className={`flex items-start justify-between px-3.5 py-2.5 rounded-xl border text-sm gap-2 ${
+                          r.status === 'PENDENTE'
+                            ? 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-700/40 text-amber-900 dark:text-amber-200'
+                            : 'bg-gray-50 dark:bg-ms-dark border-gray-200 dark:border-gray-800 text-gray-800 dark:text-gray-200'
                         }`}
                       >
                         <div className="min-w-0">
-                          <span className="text-ms-main font-bold">
+                          <span className="font-bold text-gray-900 dark:text-ms-main">
                             {(r.hora_inicio ? String(r.hora_inicio).slice(0, 5) : '00:00')}–{(r.hora_fim ? String(r.hora_fim).slice(0, 5) : '00:00')}
                           </span>
-                          <span className="ml-2 text-gray-400">{r.professor_nome ?? '—'}</span>
-                          {r.turma_nome && <span className="ml-2 text-gray-500">({r.turma_nome})</span>}
+                          <span className="ml-2 text-gray-700 dark:text-gray-300 font-medium">{r.professor_nome ?? '—'}</span>
+                          {r.turma_nome && <span className="ml-2 text-gray-500 dark:text-gray-400">({r.turma_nome})</span>}
                           {(r.finalidade || r.tema) && (
-                            <p className="text-[10px] text-gray-500 mt-0.5 truncate">
+                            <p className="text-[11px] text-gray-600 dark:text-gray-400 mt-0.5 truncate">
                               {[r.finalidade, r.tema].filter(Boolean).join(' · ')}
                             </p>
                           )}
                         </div>
                         <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-black shrink-0 ${
-                            r.status === 'PENDENTE' ? 'bg-amber-500/10 text-amber-500' : 'bg-green-500/10 text-green-500'
+                          className={`text-[10px] px-2.5 py-0.5 rounded-full uppercase font-black shrink-0 border ${
+                            r.status === 'PENDENTE'
+                              ? 'bg-amber-100 dark:bg-amber-500/10 text-amber-800 dark:text-amber-400 border-amber-300 dark:border-amber-500/20'
+                              : 'bg-green-100 dark:bg-green-500/10 text-green-800 dark:text-green-400 border-green-300 dark:border-green-500/20'
                           }`}
                         >
                           {r.status ?? 'CONFIRMADA'}
@@ -133,7 +139,7 @@ export function DashboardDiaTab() {
                 </div>
               ))}
               {livres > 0 && (
-                <p className="text-xs text-green-500 font-bold text-center pt-1">
+                <p className="text-xs text-emerald-600 dark:text-green-400 font-bold text-center pt-1">
                   + {livres} recurso{livres > 1 ? 's' : ''} livre{livres > 1 ? 's' : ''} neste dia
                 </p>
               )}

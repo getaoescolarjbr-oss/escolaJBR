@@ -29,16 +29,16 @@ export function DisponibilidadeTab() {
         <button
           key={r.id}
           onClick={() => setRecursoAberto(r)}
-          className="w-full flex items-center justify-between px-4 py-3 bg-ms-card border border-gray-800 rounded-xl hover:border-ms-blueText/50 transition-all text-left"
+          className="w-full flex items-center justify-between px-4 py-3.5 bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl hover:border-ms-blue/50 dark:hover:border-ms-blueText/50 shadow-sm transition-all text-left group"
         >
           <div className="flex items-center gap-3">
-            <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: r.cor ?? '#2563eb' }} />
+            <span className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: r.cor ?? '#2563eb' }} />
             <div>
-              <p className="text-sm font-bold text-ms-main">{r.nome}</p>
-              <p className="text-[10px] text-gray-500">{r.local || 'sem local definido'}</p>
+              <p className="text-sm font-bold text-gray-900 dark:text-ms-main group-hover:text-ms-blue dark:group-hover:text-ms-blueText transition-colors">{r.nome}</p>
+              <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{r.local || 'Sem local definido'}</p>
             </div>
           </div>
-          <CalendarClock className="w-4 h-4 text-gray-500" />
+          <CalendarClock className="w-5 h-5 text-gray-400 group-hover:text-ms-blue dark:group-hover:text-ms-blueText transition-colors" />
         </button>
       ))}
 

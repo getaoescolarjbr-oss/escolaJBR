@@ -61,30 +61,36 @@ export function AgendaTurmaTab() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <select value={turmaId} onChange={(e) => setTurmaId(e.target.value)} className="w-full px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue">
+      <select
+        value={turmaId}
+        onChange={(e) => setTurmaId(e.target.value)}
+        className="w-full px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm font-medium shadow-sm"
+      >
         <option value="">Selecione a turma...</option>
         {turmas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
       </select>
 
       {turmaId && (
         <>
-          <p className="flex items-center gap-1.5 text-[11px] text-gray-500">
-            <Wifi className="w-3.5 h-3.5 text-emerald-500" /> Atualiza ao vivo — próximos 30 dias
+          <p className="flex items-center gap-1.5 text-xs text-gray-600 dark:text-gray-400 font-medium">
+            <Wifi className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" /> Atualiza ao vivo — próximos 30 dias
           </p>
           <div className="space-y-2">
             {reservas.length === 0 ? (
-              <p className="text-sm text-gray-500">Nenhuma reserva para esta turma no período.</p>
+              <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6 text-center shadow-sm">
+                <p className="text-sm text-gray-500">Nenhuma reserva para esta turma no período.</p>
+              </div>
             ) : (
               reservas.map((r) => (
-                <div key={r.id} className="flex items-center justify-between px-4 py-3 bg-ms-card border border-gray-800 rounded-xl">
+                <div key={r.id} className="flex items-center justify-between px-4 py-3.5 bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm hover:border-gray-300 dark:hover:border-gray-700 transition-all">
                   <div>
-                    <p className="text-sm font-bold text-ms-main">{r.recurso_nome}</p>
-                    <p className="text-xs text-gray-500">
+                    <p className="text-sm font-bold text-gray-900 dark:text-ms-main">{r.recurso_nome}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                       {new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR')} · {r.hora_inicio.slice(0, 5)}–{r.hora_fim.slice(0, 5)} · {r.professor_nome}
                     </p>
-                    {r.tema && <p className="text-xs text-ms-blueText">{r.tema}</p>}
+                    {r.tema && <p className="text-xs text-ms-blue dark:text-ms-blueText font-bold mt-0.5">{r.tema}</p>}
                   </div>
-                  <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-black ${r.status === 'PENDENTE' ? 'bg-amber-500/10 text-amber-500' : 'bg-green-500/10 text-green-500'}`}>
+                  <span className={`text-[10px] px-2.5 py-0.5 rounded-full uppercase font-black border ${r.status === 'PENDENTE' ? 'bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20' : 'bg-green-50 text-green-800 border-green-300 dark:bg-green-500/10 dark:text-green-400 dark:border-green-500/20'}`}>
                     {r.status}
                   </span>
                 </div>

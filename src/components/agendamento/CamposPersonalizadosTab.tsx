@@ -69,49 +69,89 @@ export function CamposPersonalizadosTab() {
 
   return (
     <div className="space-y-6 max-w-2xl">
-      <p className="text-xs text-gray-500">Campos extras que aparecem no formulário de reserva — gerais (todas as agendas) ou específicos de um recurso.</p>
+      <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
+        Campos extras que aparecem no formulário de reserva — gerais (todas as agendas) ou específicos de um recurso.
+      </p>
 
-      {erro && <div className="p-3 bg-red-950/20 border border-red-900/50 rounded-lg text-sm text-red-400">{erro}</div>}
+      {erro && <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl text-sm text-red-700 dark:text-red-400 font-medium">{erro}</div>}
 
-      <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-3">
-        <p className="text-xs font-black uppercase tracking-wider text-ms-main">Novo campo personalizado</p>
+      <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-3 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-wider text-gray-800 dark:text-ms-main">Novo campo personalizado</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <select value={form.recurso_id} onChange={(e) => setForm({ ...form, recurso_id: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue">
+          <select
+            value={form.recurso_id}
+            onChange={(e) => setForm({ ...form, recurso_id: e.target.value })}
+            className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
+          >
             <option value="">Todas as agendas</option>
             {recursos.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
           </select>
-          <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value as TipoCampoPersonalizado })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue">
+          <select
+            value={form.tipo}
+            onChange={(e) => setForm({ ...form, tipo: e.target.value as TipoCampoPersonalizado })}
+            className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
+          >
             {Object.entries(ROTULOS_TIPO).map(([v, r]) => <option key={v} value={v}>{r}</option>)}
           </select>
         </div>
-        <input placeholder="Nome do campo (ex.: Nº de participantes)" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="w-full px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
+        <input
+          placeholder="Nome do campo (ex.: Nº de participantes)"
+          value={form.nome}
+          onChange={(e) => setForm({ ...form, nome: e.target.value })}
+          className="w-full px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
+        />
         {form.tipo === 'SELECAO' && (
-          <input placeholder="Opções separadas por vírgula" value={form.opcoes} onChange={(e) => setForm({ ...form, opcoes: e.target.value })} className="w-full px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
+          <input
+            placeholder="Opções separadas por vírgula"
+            value={form.opcoes}
+            onChange={(e) => setForm({ ...form, opcoes: e.target.value })}
+            className="w-full px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
+          />
         )}
-        <label className="flex items-center gap-2 text-sm text-ms-main">
-          <input type="checkbox" checked={form.obrigatorio} onChange={(e) => setForm({ ...form, obrigatorio: e.target.checked })} />
+        <label className="flex items-center gap-2 text-sm text-gray-800 dark:text-ms-main font-medium">
+          <input
+            type="checkbox"
+            checked={form.obrigatorio}
+            onChange={(e) => setForm({ ...form, obrigatorio: e.target.checked })}
+            className="rounded text-ms-blue focus:ring-ms-blue"
+          />
           Obrigatório
         </label>
-        <button onClick={handleCriar} className="flex items-center gap-2 px-6 py-2.5 bg-ms-blue text-white rounded-xl font-bold hover:bg-blue-600 transition-all">
+        <button
+          onClick={handleCriar}
+          className="flex items-center gap-2 px-6 py-2.5 bg-ms-blue text-white rounded-xl font-bold hover:bg-blue-700 transition-all shadow-sm"
+        >
           <Plus className="w-4 h-4" /> Criar campo
         </button>
       </div>
 
       <div className="space-y-2">
         {campos.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhum campo personalizado cadastrado.</p>
+          <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6 text-center shadow-sm">
+            <p className="text-sm text-gray-500">Nenhum campo personalizado cadastrado.</p>
+          </div>
         ) : (
           campos.map((c) => (
-            <div key={c.id} className="flex items-center justify-between px-4 py-3 bg-ms-card border border-gray-800 rounded-xl">
+            <div key={c.id} className="flex items-center justify-between px-4 py-3.5 bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl shadow-sm hover:border-gray-300 dark:hover:border-gray-700 transition-all">
               <div>
-                <p className="text-sm font-bold text-ms-main">
+                <p className="text-sm font-bold text-gray-900 dark:text-ms-main flex items-center gap-2">
                   {c.nome}
-                  {c.obrigatorio && <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-amber-500/10 text-amber-500 border border-amber-500/20 uppercase font-black">Obrigatório</span>}
+                  {c.obrigatorio && (
+                    <span className="text-[10px] px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-800 border border-amber-300 dark:bg-amber-500/10 dark:text-amber-400 dark:border-amber-500/20 uppercase font-black">
+                      Obrigatório
+                    </span>
+                  )}
                 </p>
-                <p className="text-[10px] text-gray-500">{ROTULOS_TIPO[c.tipo]} · {nomeRecurso(c.recurso_id)}</p>
+                <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">{ROTULOS_TIPO[c.tipo]} · {nomeRecurso(c.recurso_id)}</p>
               </div>
-              <label className="flex items-center gap-2 text-xs text-gray-400">
-                <input type="checkbox" checked={c.ativo} onChange={() => handleToggleAtivo(c)} /> Ativo
+              <label className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 font-medium px-2 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={c.ativo}
+                  onChange={() => handleToggleAtivo(c)}
+                  className="rounded text-ms-blue focus:ring-ms-blue"
+                />
+                Ativo
               </label>
             </div>
           ))

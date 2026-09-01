@@ -80,37 +80,63 @@ export function ImportacaoCSVTab() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <div className="p-3 bg-blue-950/20 border border-blue-900/40 rounded-lg text-xs text-blue-300">
+      <div className="p-4 bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/40 rounded-2xl text-xs text-blue-900 dark:text-blue-300 leading-relaxed shadow-sm">
         A pré-visualização (dry-run) roda no servidor e nunca grava nada — recusa linhas inválidas/duplicadas antes de
         importar de verdade. A importação real revalida cada linha novamente (não confia só na pré-visualização).
       </div>
 
       <div className="flex gap-2">
-        <button onClick={() => { setTipo('RECURSOS'); resetar(); }} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${tipo === 'RECURSOS' ? 'bg-ms-blue text-white' : 'bg-ms-card text-gray-400 border border-gray-800'}`}>Recursos</button>
-        <button onClick={() => { setTipo('SERIES'); resetar(); }} className={`px-4 py-2 rounded-lg text-sm font-bold transition-all ${tipo === 'SERIES' ? 'bg-ms-blue text-white' : 'bg-ms-card text-gray-400 border border-gray-800'}`}>Aulas fixas (séries)</button>
+        <button
+          onClick={() => { setTipo('RECURSOS'); resetar(); }}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+            tipo === 'RECURSOS'
+              ? 'bg-ms-blue text-white shadow-md'
+              : 'bg-white dark:bg-ms-card text-gray-700 dark:text-gray-300 hover:text-ms-blue dark:hover:text-white border border-gray-300 dark:border-gray-700 shadow-sm'
+          }`}
+        >
+          Recursos
+        </button>
+        <button
+          onClick={() => { setTipo('SERIES'); resetar(); }}
+          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+            tipo === 'SERIES'
+              ? 'bg-ms-blue text-white shadow-md'
+              : 'bg-white dark:bg-ms-card text-gray-700 dark:text-gray-300 hover:text-ms-blue dark:hover:text-white border border-gray-300 dark:border-gray-700 shadow-sm'
+          }`}
+        >
+          Aulas fixas (séries)
+        </button>
       </div>
 
-      <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-3">
-        <p className="text-xs font-black uppercase tracking-wider text-ms-main">Colunas esperadas</p>
+      <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-4 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-wider text-gray-800 dark:text-ms-main">Colunas esperadas</p>
         {tipo === 'RECURSOS' ? (
-          <p className="text-xs text-gray-400 font-mono">nome, tipo (LABORATORIO/SALA/QUADRA/EQUIPAMENTO/OUTRO), descricao, capacidade, local, requer_aprovacao (true/false)</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 font-mono bg-gray-50 dark:bg-ms-dark p-3 rounded-xl border border-gray-200 dark:border-gray-800">
+            nome, tipo (LABORATORIO/SALA/QUADRA/EQUIPAMENTO/OUTRO), descricao, capacidade, local, requer_aprovacao (true/false)
+          </p>
         ) : (
-          <p className="text-xs text-gray-400 font-mono">recurso_nome, professor_nome, turma_nome (opcional), dia_semana (0=domingo..6=sábado), hora_inicio, hora_fim, vigencia_inicio, vigencia_fim, finalidade</p>
+          <p className="text-xs text-gray-600 dark:text-gray-400 font-mono bg-gray-50 dark:bg-ms-dark p-3 rounded-xl border border-gray-200 dark:border-gray-800">
+            recurso_nome, professor_nome, turma_nome (opcional), dia_semana (0=domingo..6=sábado), hora_inicio, hora_fim, vigencia_inicio, vigencia_fim, finalidade
+          </p>
         )}
 
-        <label className="flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-gray-200 cursor-pointer w-fit">
+        <label className="flex items-center gap-2 text-xs font-bold text-gray-700 hover:text-ms-blue dark:text-gray-300 dark:hover:text-white cursor-pointer px-4 py-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl w-fit transition-colors shadow-sm">
           <FileUp className="w-4 h-4" /> {nomeArquivo || 'Escolher arquivo CSV...'}
           <input type="file" accept=".csv,text/csv" className="hidden" onChange={handleArquivo} />
         </label>
 
         {linhasCsv.length > 0 && (
-          <p className="text-xs text-gray-500">{linhasCsv.length} linha(s) lida(s) do arquivo.</p>
+          <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">{linhasCsv.length} linha(s) lida(s) do arquivo.</p>
         )}
 
-        {erro && <p className="text-xs text-red-400">{erro}</p>}
+        {erro && <p className="text-xs text-red-500 font-medium">{erro}</p>}
 
         {linhasCsv.length > 0 && !dryRunPronto && (
-          <button onClick={handlePreVisualizar} disabled={validandoOuImportando} className="flex items-center gap-2 px-6 py-2.5 bg-ms-blue text-white rounded-xl font-bold hover:bg-blue-600 transition-all disabled:opacity-50">
+          <button
+            onClick={handlePreVisualizar}
+            disabled={validandoOuImportando}
+            className="flex items-center gap-2 px-6 py-2.5 bg-ms-blue text-white rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50 shadow-sm"
+          >
             {validandoOuImportando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
             Pré-visualizar (dry-run)
           </button>
@@ -118,43 +144,77 @@ export function ImportacaoCSVTab() {
       </div>
 
       {tipo === 'RECURSOS' && dryRunRecursos && (
-        <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-2">
-          <p className="text-xs font-black uppercase tracking-wider text-ms-main">Pré-visualização — {dryRunRecursos.filter((l) => l.valido).length} válida(s) de {dryRunRecursos.length}</p>
-          {dryRunRecursos.map((l) => (
-            <div key={l.linha} className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs ${l.valido ? 'bg-green-950/10 text-green-400' : 'bg-red-950/10 text-red-400'}`}>
-              <span>Linha {l.linha}: {l.nome || '(sem nome)'}</span>
-              <span className="flex items-center gap-1">
-                {l.valido ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-                {l.valido ? 'OK' : l.motivo}
-              </span>
-            </div>
-          ))}
+        <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-3 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wider text-gray-800 dark:text-ms-main">
+            Pré-visualização — {dryRunRecursos.filter((l) => l.valido).length} válida(s) de {dryRunRecursos.length}
+          </p>
+          <div className="space-y-1.5">
+            {dryRunRecursos.map((l) => (
+              <div
+                key={l.linha}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs border ${
+                  l.valido
+                    ? 'bg-green-50 text-green-800 border-green-200 dark:bg-green-950/10 dark:text-green-400 dark:border-green-900/30'
+                    : 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/10 dark:text-red-400 dark:border-red-900/30'
+                }`}
+              >
+                <span className="font-medium">Linha {l.linha}: {l.nome || '(sem nome)'}</span>
+                <span className="flex items-center gap-1 font-semibold">
+                  {l.valido ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                  {l.valido ? 'OK' : l.motivo}
+                </span>
+              </div>
+            ))}
+          </div>
           {!resultadoRecursos && temLinhaValida && (
-            <button onClick={handleImportar} disabled={validandoOuImportando} className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all disabled:opacity-50 mt-2">
+            <button
+              onClick={handleImportar}
+              disabled={validandoOuImportando}
+              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all disabled:opacity-50 mt-2 shadow-sm"
+            >
               {validandoOuImportando ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
               Importar linhas válidas
             </button>
           )}
           {resultadoRecursos && (
-            <p className="text-xs text-green-400 font-bold pt-2">{resultadoRecursos.filter((l) => l.sucesso).length} recurso(s) importado(s) com sucesso.</p>
+            <p className="text-xs text-emerald-600 dark:text-green-400 font-bold pt-2">
+              {resultadoRecursos.filter((l) => l.sucesso).length} recurso(s) importado(s) com sucesso.
+            </p>
           )}
         </div>
       )}
 
       {tipo === 'SERIES' && dryRunSeries && (
-        <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-2">
-          <p className="text-xs font-black uppercase tracking-wider text-ms-main">Pré-visualização — {dryRunSeries.filter((l) => l.valido).length} válida(s) de {dryRunSeries.length}</p>
-          {dryRunSeries.map((l) => (
-            <div key={l.linha} className={`flex items-center justify-between px-3 py-2 rounded-lg text-xs ${l.valido ? (l.conflitos_previstos > 0 ? 'bg-amber-950/10 text-amber-500' : 'bg-green-950/10 text-green-400') : 'bg-red-950/10 text-red-400'}`}>
-              <span>Linha {l.linha}: {l.recurso_nome ?? '?'} — {l.professor_nome ?? '?'}</span>
-              <span className="flex items-center gap-1">
-                {l.valido ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
-                {l.valido ? (l.conflitos_previstos > 0 ? `OK (${l.conflitos_previstos} conflito(s) previsto(s))` : 'OK') : l.motivo}
-              </span>
-            </div>
-          ))}
+        <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-3 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wider text-gray-800 dark:text-ms-main">
+            Pré-visualização — {dryRunSeries.filter((l) => l.valido).length} válida(s) de {dryRunSeries.length}
+          </p>
+          <div className="space-y-1.5">
+            {dryRunSeries.map((l) => (
+              <div
+                key={l.linha}
+                className={`flex items-center justify-between px-3 py-2 rounded-xl text-xs border ${
+                  l.valido
+                    ? l.conflitos_previstos > 0
+                      ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/10 dark:text-amber-500 dark:border-amber-900/30'
+                      : 'bg-green-50 text-green-800 border-green-200 dark:bg-green-950/10 dark:text-green-400 dark:border-green-900/30'
+                    : 'bg-red-50 text-red-800 border-red-200 dark:bg-red-950/10 dark:text-red-400 dark:border-red-900/30'
+                }`}
+              >
+                <span className="font-medium">Linha {l.linha}: {l.recurso_nome ?? '?'} — {l.professor_nome ?? '?'}</span>
+                <span className="flex items-center gap-1 font-semibold">
+                  {l.valido ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                  {l.valido ? (l.conflitos_previstos > 0 ? `OK (${l.conflitos_previstos} conflito(s) previsto(s))` : 'OK') : l.motivo}
+                </span>
+              </div>
+            ))}
+          </div>
           {!resultadoSeries && temLinhaValida && (
-            <button onClick={handleImportar} disabled={validandoOuImportando} className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all disabled:opacity-50 mt-2">
+            <button
+              onClick={handleImportar}
+              disabled={validandoOuImportando}
+              className="flex items-center gap-2 px-6 py-2.5 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition-all disabled:opacity-50 mt-2 shadow-sm"
+            >
               {validandoOuImportando ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
               Importar séries válidas
             </button>
@@ -162,7 +222,7 @@ export function ImportacaoCSVTab() {
           {resultadoSeries && (
             <div className="pt-2 space-y-1">
               {resultadoSeries.map((r) => (
-                <p key={r.linha} className="text-xs text-gray-400">
+                <p key={r.linha} className="text-xs text-gray-700 dark:text-gray-400">
                   Linha {r.linha}: {r.sucesso ? `${r.ocorrencias_criadas} ocorrência(s) criada(s)${r.ocorrencias_com_conflito ? `, ${r.ocorrencias_com_conflito} conflito(s)` : ''}` : r.motivo}
                 </p>
               ))}

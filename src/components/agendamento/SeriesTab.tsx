@@ -110,50 +110,96 @@ export function SeriesTab() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      <p className="text-xs text-gray-500">
+      <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">
         Gera uma reserva por semana dentro do período de vigência. Cada ocorrência passa pela mesma checagem de
         conflito de uma reserva avulsa — um conflito numa data específica é reportado abaixo, sem cancelar as demais.
       </p>
 
-      {erro && <div className="p-3 bg-red-950/20 border border-red-900/50 rounded-lg text-sm text-red-400">{erro}</div>}
+      {erro && <div className="p-3 bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/50 rounded-xl text-sm text-red-700 dark:text-red-400 font-medium">{erro}</div>}
 
-      <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-3">
-        <p className="text-xs font-black uppercase tracking-wider text-ms-main">Nova aula fixa recorrente</p>
+      <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-3 shadow-sm">
+        <p className="text-xs font-black uppercase tracking-wider text-gray-800 dark:text-ms-main">Nova aula fixa recorrente</p>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <select value={form.recurso_id} onChange={(e) => setForm({ ...form, recurso_id: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue">
+          <select
+            value={form.recurso_id}
+            onChange={(e) => setForm({ ...form, recurso_id: e.target.value })}
+            className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
+          >
             <option value="">Recurso...</option>
             {recursos.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
           </select>
-          <select value={form.professor_id} onChange={(e) => setForm({ ...form, professor_id: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue">
+          <select
+            value={form.professor_id}
+            onChange={(e) => setForm({ ...form, professor_id: e.target.value })}
+            className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
+          >
             <option value="">Professor...</option>
             {professores.map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
           </select>
-          <select value={form.dia_semana} onChange={(e) => setForm({ ...form, dia_semana: Number(e.target.value) })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue">
+          <select
+            value={form.dia_semana}
+            onChange={(e) => setForm({ ...form, dia_semana: Number(e.target.value) })}
+            className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
+          >
             {DIAS_SEMANA.map((d, i) => <option key={i} value={i}>{d}</option>)}
           </select>
-          <select value={form.turma_id} onChange={(e) => setForm({ ...form, turma_id: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue">
+          <select
+            value={form.turma_id}
+            onChange={(e) => setForm({ ...form, turma_id: e.target.value })}
+            className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
+          >
             <option value="">Turma (opcional)...</option>
             {turmas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
           </select>
-          <input type="time" value={form.hora_inicio} onChange={(e) => setForm({ ...form, hora_inicio: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
-          <input type="time" value={form.hora_fim} onChange={(e) => setForm({ ...form, hora_fim: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
-          <input type="date" value={form.vigencia_inicio} onChange={(e) => setForm({ ...form, vigencia_inicio: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
-          <input type="date" placeholder="Vigência até" value={form.vigencia_fim} onChange={(e) => setForm({ ...form, vigencia_fim: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
+          <input
+            type="time"
+            value={form.hora_inicio}
+            onChange={(e) => setForm({ ...form, hora_inicio: e.target.value })}
+            className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
+          />
+          <input
+            type="time"
+            value={form.hora_fim}
+            onChange={(e) => setForm({ ...form, hora_fim: e.target.value })}
+            className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
+          />
+          <input
+            type="date"
+            value={form.vigencia_inicio}
+            onChange={(e) => setForm({ ...form, vigencia_inicio: e.target.value })}
+            className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
+          />
+          <input
+            type="date"
+            placeholder="Vigência até"
+            value={form.vigencia_fim}
+            onChange={(e) => setForm({ ...form, vigencia_fim: e.target.value })}
+            className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
+          />
         </div>
-        <input placeholder="Finalidade (opcional)" value={form.finalidade} onChange={(e) => setForm({ ...form, finalidade: e.target.value })} className="w-full px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
-        <button onClick={handleCriar} disabled={salvando || !usuarioId} className="flex items-center gap-2 px-6 py-2.5 bg-ms-blue text-white rounded-xl font-bold hover:bg-blue-600 transition-all disabled:opacity-50">
+        <input
+          placeholder="Finalidade (opcional)"
+          value={form.finalidade}
+          onChange={(e) => setForm({ ...form, finalidade: e.target.value })}
+          className="w-full px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
+        />
+        <button
+          onClick={handleCriar}
+          disabled={salvando || !usuarioId}
+          className="flex items-center gap-2 px-6 py-2.5 bg-ms-blue text-white rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50 shadow-sm"
+        >
           {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
           Criar série
         </button>
 
         {resultado && (
-          <div className="space-y-1.5 pt-2 border-t border-gray-800">
+          <div className="space-y-1.5 pt-2 border-t border-gray-200 dark:border-gray-800">
             <p className="text-[11px] font-black uppercase tracking-wider text-gray-500">Resultado por ocorrência</p>
             {resultado.map((r, i) => (
-              <div key={i} className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-xs ${r.sucesso ? 'bg-green-950/10 text-green-400' : 'bg-amber-950/10 text-amber-500'}`}>
+              <div key={i} className={`flex items-center justify-between px-3 py-1.5 rounded-lg text-xs border ${r.sucesso ? 'bg-green-50 text-green-800 border-green-200 dark:bg-green-950/10 dark:text-green-400 dark:border-green-900/30' : 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/10 dark:text-amber-500 dark:border-amber-900/30'}`}>
                 <span>{new Date(r.data + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
-                <span className="flex items-center gap-1">
-                  {r.sucesso ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertTriangle className="w-3.5 h-3.5" />}
+                <span className="flex items-center gap-1 font-semibold">
+                  {r.sucesso ? <CheckCircle2 className="w-3.5 h-3.5 text-green-600 dark:text-green-400" /> : <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />}
                   {r.sucesso ? 'Criada' : r.motivo}
                 </span>
               </div>
@@ -164,38 +210,40 @@ export function SeriesTab() {
 
       <div className="space-y-2">
         {series.length === 0 ? (
-          <p className="text-sm text-gray-500">Nenhuma série cadastrada.</p>
+          <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6 text-center shadow-sm">
+            <p className="text-sm text-gray-500">Nenhuma série cadastrada.</p>
+          </div>
         ) : (
           series.map((s) => {
             const expandida = serieExpandida === s.id;
             return (
-              <div key={s.id} className="bg-ms-card border border-gray-800 rounded-2xl overflow-hidden">
-                <button onClick={() => handleExpandir(s.id)} className="w-full px-5 py-4 flex items-center justify-between hover:bg-white/5 transition-colors">
+              <div key={s.id} className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm hover:border-gray-300 dark:hover:border-gray-700 transition-all">
+                <button onClick={() => handleExpandir(s.id)} className="w-full px-5 py-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
                   <div className="text-left">
-                    <p className="text-sm font-black text-ms-main flex items-center gap-2">
+                    <p className="text-sm font-black text-gray-900 dark:text-ms-main flex items-center gap-2">
                       {nomeRecurso(s.recurso_id)} — {nomeProfessor(s.professor_id)}
-                      <span className={`text-[10px] px-2 py-0.5 rounded-full uppercase font-black border ${s.status === 'ATIVA' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-gray-800 text-gray-500 border-gray-700'}`}>
+                      <span className={`text-[10px] px-2.5 py-0.5 rounded-full uppercase font-black border ${s.status === 'ATIVA' ? 'bg-green-50 text-green-800 border-green-300 dark:bg-green-500/10 dark:text-green-500 dark:border-green-500/20' : 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-800 dark:text-gray-500 dark:border-gray-700'}`}>
                         {s.status === 'ATIVA' ? 'Ativa' : 'Cancelada'}
                       </span>
                     </p>
-                    <p className="text-[11px] text-gray-500">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
                       {DIAS_SEMANA[s.dia_semana]}, {s.hora_inicio.slice(0, 5)}–{s.hora_fim.slice(0, 5)} · {new Date(s.vigencia_inicio + 'T12:00:00').toLocaleDateString('pt-BR')} a {new Date(s.vigencia_fim + 'T12:00:00').toLocaleDateString('pt-BR')}
                     </p>
                   </div>
                   {expandida ? <ChevronUp className="w-4 h-4 text-gray-500" /> : <ChevronDown className="w-4 h-4 text-gray-500" />}
                 </button>
                 {expandida && (
-                  <div className="px-5 pb-5 space-y-2 border-t border-gray-800 pt-4">
+                  <div className="px-5 pb-5 space-y-2 border-t border-gray-200 dark:border-gray-800 pt-4 bg-gray-50/50 dark:bg-transparent">
                     {s.status === 'ATIVA' && (
-                      <button onClick={() => handleCancelarSerie(s.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/10 text-red-400 border border-red-500/20 rounded-lg text-xs font-black hover:bg-red-500/20">
+                      <button onClick={() => handleCancelarSerie(s.id)} className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs font-bold hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20">
                         <XCircle className="w-3.5 h-3.5" /> Cancelar série (a partir de hoje)
                       </button>
                     )}
                     <div className="space-y-1">
                       {(ocorrenciasPorSerie[s.id] ?? []).map((o) => (
-                        <div key={o.id} className="flex items-center justify-between text-xs px-3 py-1.5 bg-ms-dark rounded-lg border border-gray-800">
-                          <span className="text-gray-300">{new Date(o.data + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
-                          <span className={o.status === 'CANCELADA' ? 'text-gray-600 line-through' : 'text-gray-400'}>{o.status}</span>
+                        <div key={o.id} className="flex items-center justify-between text-xs px-3 py-2 bg-white dark:bg-ms-dark rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+                          <span className="text-gray-800 dark:text-gray-300 font-medium">{new Date(o.data + 'T12:00:00').toLocaleDateString('pt-BR')}</span>
+                          <span className={o.status === 'CANCELADA' ? 'text-gray-400 line-through' : 'text-gray-600 dark:text-gray-400'}>{o.status}</span>
                         </div>
                       ))}
                     </div>

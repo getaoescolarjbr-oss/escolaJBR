@@ -143,23 +143,66 @@ export function RecursosTab() {
 
       {/* Formulário de criação */}
       {mostrarForm && (
-        <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-3">
+        <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6 space-y-3 shadow-sm">
+          <p className="text-xs font-black uppercase tracking-wider text-gray-700 dark:text-ms-main">Novo Recurso</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <input placeholder="Nome" value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
-            <select value={form.tipo} onChange={(e) => setForm({ ...form, tipo: e.target.value as TipoRecurso })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue">
+            <input
+              placeholder="Nome"
+              value={form.nome}
+              onChange={(e) => setForm({ ...form, nome: e.target.value })}
+              className="px-4 py-3 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue"
+            />
+            <select
+              value={form.tipo}
+              onChange={(e) => setForm({ ...form, tipo: e.target.value as TipoRecurso })}
+              className="px-4 py-3 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue"
+            >
               {Object.entries(ROTULOS_TIPO).map(([v, r]) => <option key={v} value={v}>{r}</option>)}
             </select>
-            <input placeholder="Local (ex.: Bloco A)" value={form.local} onChange={(e) => setForm({ ...form, local: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
-            <input type="number" placeholder="Capacidade" value={form.capacidade} onChange={(e) => setForm({ ...form, capacidade: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
-            <input type="color" value={form.cor} onChange={(e) => setForm({ ...form, cor: e.target.value })} className="h-12 px-2 bg-ms-dark border border-gray-800 rounded-xl" />
+            <input
+              placeholder="Local (ex.: Bloco A)"
+              value={form.local}
+              onChange={(e) => setForm({ ...form, local: e.target.value })}
+              className="px-4 py-3 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue"
+            />
+            <input
+              type="number"
+              placeholder="Capacidade"
+              value={form.capacidade}
+              onChange={(e) => setForm({ ...form, capacidade: e.target.value })}
+              className="px-4 py-3 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue"
+            />
+            <div className="flex items-center gap-3">
+              <input
+                type="color"
+                value={form.cor}
+                onChange={(e) => setForm({ ...form, cor: e.target.value })}
+                className="h-12 w-16 px-1 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl cursor-pointer"
+              />
+              <span className="text-xs text-gray-600 dark:text-gray-400">Cor do recurso</span>
+            </div>
           </div>
-          <input placeholder="Descrição" value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} className="w-full px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
-          <label className="flex items-center gap-2 text-sm text-ms-main">
-            <input type="checkbox" checked={form.requer_aprovacao} onChange={(e) => setForm({ ...form, requer_aprovacao: e.target.checked })} />
+          <input
+            placeholder="Descrição"
+            value={form.descricao}
+            onChange={(e) => setForm({ ...form, descricao: e.target.value })}
+            className="w-full px-4 py-3 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue"
+          />
+          <label className="flex items-center gap-2 text-sm text-gray-800 dark:text-ms-main font-medium">
+            <input
+              type="checkbox"
+              checked={form.requer_aprovacao}
+              onChange={(e) => setForm({ ...form, requer_aprovacao: e.target.checked })}
+              className="rounded text-ms-blue focus:ring-ms-blue"
+            />
             Reserva requer aprovação da Coordenação/Gestão
           </label>
-          {erro && <p className="text-xs text-red-400">{erro}</p>}
-          <button onClick={handleCriar} disabled={salvando} className="flex items-center gap-2 px-6 py-2.5 bg-ms-blue text-white rounded-xl font-bold hover:bg-blue-600 transition-all disabled:opacity-50">
+          {erro && <p className="text-xs text-red-500 font-medium">{erro}</p>}
+          <button
+            onClick={handleCriar}
+            disabled={salvando}
+            className="flex items-center gap-2 px-6 py-2.5 bg-ms-blue text-white rounded-xl font-bold hover:bg-blue-700 transition-all disabled:opacity-50 shadow-sm"
+          >
             {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Salvar'}
           </button>
         </div>
@@ -171,21 +214,21 @@ export function RecursosTab() {
           <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : (
           recursos.map((r) => (
-            <div key={r.id} className="bg-ms-card border border-gray-800 rounded-xl overflow-hidden">
+            <div key={r.id} className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden shadow-sm hover:border-gray-300 dark:hover:border-gray-700 transition-all">
               {/* Linha principal */}
-              <div className="flex items-center justify-between px-4 py-3 gap-3 flex-wrap">
+              <div className="flex items-center justify-between px-4 py-3.5 gap-3 flex-wrap">
                 <div className="flex items-center gap-3">
-                  <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: r.cor ?? '#2563eb' }} />
+                  <span className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm" style={{ backgroundColor: r.cor ?? '#2563eb' }} />
                   <div>
-                    <p className="text-sm font-bold text-ms-main">
+                    <p className="text-sm font-bold text-gray-900 dark:text-ms-main flex items-center gap-2">
                       {r.nome}
                       {r.requer_aprovacao && (
-                        <span className="ml-2 text-[10px] px-2 py-0.5 rounded-full bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 uppercase font-black">
+                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-50 dark:bg-yellow-500/10 text-amber-800 dark:text-yellow-400 border border-amber-300 dark:border-yellow-500/20 uppercase font-black">
                           Requer aprovação
                         </span>
                       )}
                     </p>
-                    <p className="text-[10px] text-gray-500">
+                    <p className="text-xs text-gray-600 dark:text-gray-400">
                       {ROTULOS_TIPO[r.tipo]} · {r.local || 'sem local'} {r.capacidade ? `· capacidade ${r.capacidade}` : ''}
                     </p>
                   </div>
@@ -193,19 +236,29 @@ export function RecursosTab() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
                     onClick={() => handleToggle(r, 'em_manutencao')}
-                    className={`flex items-center gap-1.5 text-xs px-2 py-1 rounded-full border font-bold ${r.em_manutencao ? 'bg-red-500/10 text-red-500 border-red-500/20' : 'bg-gray-800 text-gray-400 border-gray-700'}`}
+                    className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border font-bold transition-colors ${
+                      r.em_manutencao
+                        ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
+                        : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
+                    }`}
                   >
                     <Wrench className="w-3.5 h-3.5" /> {r.em_manutencao ? 'Em manutenção' : 'Operacional'}
                   </button>
-                  <label className="flex items-center gap-2 text-xs text-gray-400">
-                    <input type="checkbox" checked={r.ativo} onChange={() => handleToggle(r, 'ativo')} /> Ativo
+                  <label className="flex items-center gap-1.5 text-xs text-gray-700 dark:text-gray-300 font-medium px-2 py-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={r.ativo}
+                      onChange={() => handleToggle(r, 'ativo')}
+                      className="rounded text-ms-blue focus:ring-ms-blue"
+                    />
+                    Ativo
                   </label>
                   <button
                     onClick={() => editandoId === r.id ? cancelarEdicao() : abrirEdicao(r)}
                     className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border font-bold transition-all ${
                       editandoId === r.id
-                        ? 'bg-gray-700 text-gray-300 border-gray-600'
-                        : 'bg-ms-blue/10 text-ms-blue border-ms-blue/30 hover:bg-ms-blue/20'
+                        ? 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600'
+                        : 'bg-blue-50 text-ms-blue border-blue-200 hover:bg-blue-100 dark:bg-ms-blue/10 dark:text-ms-blue dark:border-ms-blue/30'
                     }`}
                   >
                     {editandoId === r.id
@@ -218,19 +271,19 @@ export function RecursosTab() {
 
               {/* Formulário de edição inline */}
               {editandoId === r.id && (
-                <div className="border-t border-gray-800 px-4 py-4 space-y-3 bg-ms-dark/60">
-                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Editar recurso</p>
+                <div className="border-t border-gray-200 dark:border-gray-800 px-5 py-4 space-y-3 bg-gray-50/80 dark:bg-ms-dark/60">
+                  <p className="text-xs font-bold text-gray-700 dark:text-gray-400 uppercase tracking-wider">Editar recurso</p>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <input
                       placeholder="Nome"
                       value={editForm.nome}
                       onChange={(e) => setEditForm({ ...editForm, nome: e.target.value })}
-                      className="px-4 py-3 bg-ms-dark border border-gray-700 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue text-sm"
+                      className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
                     />
                     <select
                       value={editForm.tipo}
                       onChange={(e) => setEditForm({ ...editForm, tipo: e.target.value as TipoRecurso })}
-                      className="px-4 py-3 bg-ms-dark border border-gray-700 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue text-sm"
+                      className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
                     >
                       {Object.entries(ROTULOS_TIPO).map(([v, label]) => <option key={v} value={v}>{label}</option>)}
                     </select>
@@ -238,45 +291,46 @@ export function RecursosTab() {
                       placeholder="Local (ex.: Bloco A)"
                       value={editForm.local}
                       onChange={(e) => setEditForm({ ...editForm, local: e.target.value })}
-                      className="px-4 py-3 bg-ms-dark border border-gray-700 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue text-sm"
+                      className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
                     />
                     <input
                       type="number"
                       placeholder="Capacidade"
                       value={editForm.capacidade}
                       onChange={(e) => setEditForm({ ...editForm, capacidade: e.target.value })}
-                      className="px-4 py-3 bg-ms-dark border border-gray-700 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue text-sm"
+                      className="px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
                     />
                     <div className="flex items-center gap-3">
                       <input
                         type="color"
                         value={editForm.cor}
                         onChange={(e) => setEditForm({ ...editForm, cor: e.target.value })}
-                        className="h-12 w-16 px-2 bg-ms-dark border border-gray-700 rounded-xl cursor-pointer"
+                        className="h-10 w-16 px-1 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl cursor-pointer"
                       />
-                      <span className="text-xs text-gray-500">Cor do recurso</span>
+                      <span className="text-xs text-gray-600 dark:text-gray-400">Cor do recurso</span>
                     </div>
                   </div>
                   <input
                     placeholder="Descrição"
                     value={editForm.descricao}
                     onChange={(e) => setEditForm({ ...editForm, descricao: e.target.value })}
-                    className="w-full px-4 py-3 bg-ms-dark border border-gray-700 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue text-sm"
+                    className="w-full px-4 py-2.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-xl text-gray-900 dark:text-ms-main outline-none focus:ring-2 focus:ring-ms-blue/20 focus:border-ms-blue text-sm"
                   />
-                  <label className="flex items-center gap-2 text-sm text-ms-main">
+                  <label className="flex items-center gap-2 text-sm text-gray-800 dark:text-ms-main font-medium">
                     <input
                       type="checkbox"
                       checked={editForm.requer_aprovacao}
                       onChange={(e) => setEditForm({ ...editForm, requer_aprovacao: e.target.checked })}
+                      className="rounded text-ms-blue focus:ring-ms-blue"
                     />
                     Reserva requer aprovação da Coordenação/Gestão
                   </label>
-                  {erroEdit && <p className="text-xs text-red-400">{erroEdit}</p>}
-                  <div className="flex gap-2">
+                  {erroEdit && <p className="text-xs text-red-500 font-medium">{erroEdit}</p>}
+                  <div className="flex gap-2 pt-1">
                     <button
                       onClick={handleSalvarEdicao}
                       disabled={salvandoEdit}
-                      className="flex items-center gap-2 px-5 py-2 bg-ms-blue text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-all disabled:opacity-50"
+                      className="flex items-center gap-2 px-5 py-2 bg-ms-blue text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all disabled:opacity-50 shadow-sm"
                     >
                       {salvandoEdit
                         ? <Loader2 className="w-4 h-4 animate-spin" />
@@ -285,7 +339,7 @@ export function RecursosTab() {
                     </button>
                     <button
                       onClick={cancelarEdicao}
-                      className="px-5 py-2 bg-gray-800 text-gray-300 rounded-xl text-sm font-bold hover:bg-gray-700 transition-all"
+                      className="px-5 py-2 bg-gray-100 text-gray-700 border border-gray-300 rounded-xl text-sm font-bold hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700 transition-all"
                     >
                       Cancelar
                     </button>
