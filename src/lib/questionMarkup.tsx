@@ -140,17 +140,18 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
                 src={url}
                 alt=""
                 style={!isAlt && width ? { width: `${Math.min(width, 900)}px` } : undefined}
-                // Medido nas 926 figuras de enunciado da UNESP: altura mediana
-                // 350px, p75 468px, p90 618px. O teto de 160px original encolhia
-                // 92% delas e deixava o gráfico ilegível; 700px deixava a figura
-                // dominar a tela. 420px é o meio-termo: a figura mediana sai
-                // inteira e só as bem altas são reduzidas.
+                // O teto é RELATIVO À JANELA (vh), não fixo em px. Valor fixo não
+                // sabe o tamanho da tela: 420px cabe num monitor grande mas obriga
+                // a rolar num notebook, onde a área útil do card tem ~390px. Com
+                // 42vh a figura sempre cabe na dobra, em qualquer resolução, e
+                // ainda sobra espaço para o enunciado.
+                // (Medido nas 926 figuras da UNESP: altura mediana 350px, p75 468px.)
                 className={`qm-img block w-auto max-w-full rounded-lg border border-ms-border object-contain ${
                   isAlt
-                    ? 'max-h-[110px] max-w-[260px] sm:max-h-[125px] sm:max-w-[310px]'
+                    ? 'max-h-[14vh] max-w-[260px] sm:max-h-[16vh] sm:max-w-[310px]'
                     : width
-                    ? 'max-h-[420px]'
-                    : 'max-h-[420px]'
+                    ? 'max-h-[42vh]'
+                    : 'max-h-[42vh]'
                 }`}
               />
             );
