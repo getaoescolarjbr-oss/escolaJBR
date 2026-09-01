@@ -80,14 +80,14 @@ export const PROVA_QUESTOES_CSS = `
      max-width: 100% já cuida disso. O teto de altura serve só para uma figura
      muito alta não ocupar a página inteira; apertá-lo demais encolhia a figura
      abaixo do tamanho natural e tornava o gráfico ilegível. */
-  .qm-img { max-width: 100%; max-height: 130mm; width: auto; height: auto; object-fit: contain; }
-  .questoes-coluna:not(.duas-colunas) .qm-img { max-height: 190mm; }
+  .qm-img { max-width: 100%; max-height: 78mm; width: auto; height: auto; object-fit: contain; }
+  .questoes-coluna:not(.duas-colunas) .qm-img { max-height: 114mm; }
 
   /* Imagens dentro de alternativas. Em duas colunas (~90mm) o teto é 48mm; em
      coluna única, 64mm. */
   .alternativa .qm-img,
   .alternativa img {
-    max-height: 48mm !important;
+    max-height: 30mm !important;
     max-width: 65mm !important;
     width: auto !important;
     height: auto !important;
@@ -97,7 +97,7 @@ export const PROVA_QUESTOES_CSS = `
   }
   .questoes-coluna:not(.duas-colunas) .alternativa .qm-img,
   .questoes-coluna:not(.duas-colunas) .alternativa img {
-    max-height: 64mm !important;
+    max-height: 40mm !important;
     max-width: 80mm !important;
   }
 
