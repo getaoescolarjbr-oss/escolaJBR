@@ -139,13 +139,19 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
                 key={`${key}-${imgIdx}`}
                 src={url}
                 alt=""
-                style={!isAlt && width ? { width: `${Math.min(width, 500)}px` } : undefined}
+                style={!isAlt && width ? { width: `${Math.min(width, 900)}px` } : undefined}
+                // O teto de altura só existe para uma figura anormalmente alta não
+                // dominar a tela — NÃO para redimensionar figura normal. Medido nas
+                // 926 figuras da UNESP: altura mediana 350px, p90 618px. Com o teto
+                // antigo de 160px, 92% saíam ENCOLHIDAS (uma figura de 513x468 era
+                // exibida a 175x160) e o gráfico ficava ilegível. Com 700px, só 5%
+                // encolhem — o resto aparece no tamanho real.
                 className={`qm-img block w-auto max-w-full rounded-lg border border-ms-border object-contain ${
                   isAlt
-                    ? 'max-h-[85px] max-w-[200px] sm:max-h-[95px] sm:max-w-[240px]'
+                    ? 'max-h-[170px] max-w-[400px] sm:max-h-[190px] sm:max-w-[480px]'
                     : width
-                    ? 'max-h-[260px]'
-                    : 'max-h-[160px]'
+                    ? 'max-h-[700px]'
+                    : 'max-h-[700px]'
                 }`}
               />
             );

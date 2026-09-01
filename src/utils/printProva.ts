@@ -75,15 +75,19 @@ export const PROVA_QUESTOES_CSS = `
 
   /* Teto em mm: em duas colunas cada coluna tem ~90mm. Imagens no enunciado podem
      ser um pouco maiores; imagens dentro de alternativas (.alternativa .qm-img) devem
-     ser bem compactas para não ocupar espaço desnecessário no papel. */
-  .qm-img { max-width: 100%; max-height: 50mm; width: auto; height: auto; object-fit: contain; }
-  .questoes-coluna:not(.duas-colunas) .qm-img { max-height: 75mm; }
+     ser bem compactas para não ocupar espaço desnecessário no papel.
+     No papel o limitador REAL é a largura da coluna (~90mm em duas colunas), e o
+     max-width: 100% já cuida disso. O teto de altura serve só para uma figura
+     muito alta não ocupar a página inteira; apertá-lo demais encolhia a figura
+     abaixo do tamanho natural e tornava o gráfico ilegível. */
+  .qm-img { max-width: 100%; max-height: 130mm; width: auto; height: auto; object-fit: contain; }
+  .questoes-coluna:not(.duas-colunas) .qm-img { max-height: 190mm; }
 
-  /* Imagens dentro de alternativas: altura máxima bem reduzida para não estourar
-     a coluna. Em duas colunas (~90mm) limitamos a 24mm; em coluna única, 32mm. */
+  /* Imagens dentro de alternativas. Em duas colunas (~90mm) o teto é 48mm; em
+     coluna única, 64mm. */
   .alternativa .qm-img,
   .alternativa img {
-    max-height: 24mm !important;
+    max-height: 48mm !important;
     max-width: 65mm !important;
     width: auto !important;
     height: auto !important;
@@ -93,7 +97,7 @@ export const PROVA_QUESTOES_CSS = `
   }
   .questoes-coluna:not(.duas-colunas) .alternativa .qm-img,
   .questoes-coluna:not(.duas-colunas) .alternativa img {
-    max-height: 32mm !important;
+    max-height: 64mm !important;
     max-width: 80mm !important;
   }
 
