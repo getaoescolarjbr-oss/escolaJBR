@@ -146,8 +146,10 @@ export function MinhasReservasTab({ recursoIdInicial }: MinhasReservasTabProps) 
         {loading ? (
           <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : reservasFiltradas.length === 0 ? (
-          <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6 text-center shadow-sm">
-            <p className="text-sm text-gray-500">{filtro ? 'Nenhuma reserva corresponde ao filtro.' : 'Você ainda não tem reservas cadastradas.'}</p>
+          <div className="bg-white dark:bg-ms-card border border-[#002677]/20 dark:border-gray-800 rounded-2xl p-6 text-center shadow-sm">
+            <p className="text-sm text-[#002677] dark:text-ms-main font-bold">
+              {filtro ? 'Nenhuma reserva corresponde ao filtro.' : 'Você ainda não tem reservas cadastradas.'}
+            </p>
           </div>
         ) : (
           reservasFiltradas.map((r) => (

@@ -239,12 +239,16 @@ export function RecursosTab() {
                     className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border font-bold transition-colors ${
                       r.em_manutencao
                         ? 'bg-red-50 text-red-700 border-red-300 hover:bg-red-100 dark:bg-red-500/10 dark:text-red-400 dark:border-red-500/20'
-                        : 'bg-blue-50 text-ms-blue border-ms-blue/30 hover:bg-blue-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
+                        : 'bg-blue-50 text-[#002677] border-[#002677]/30 hover:bg-blue-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20'
                     }`}
+                    style={!r.em_manutencao ? { color: '#002677' } : undefined}
                   >
                     <Wrench className="w-3.5 h-3.5" /> {r.em_manutencao ? 'Em manutenção' : 'Operacional'}
                   </button>
-                  <label className="flex items-center gap-1.5 text-xs text-ms-blue dark:text-gray-300 font-bold px-2 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-800 cursor-pointer">
+                  <label
+                    className="flex items-center gap-1.5 text-xs text-[#002677] dark:text-gray-300 font-bold px-2 py-1 rounded-lg hover:bg-blue-50 dark:hover:bg-gray-800 cursor-pointer"
+                    style={{ color: '#002677' }}
+                  >
                     <input
                       type="checkbox"
                       checked={r.ativo}
@@ -258,8 +262,9 @@ export function RecursosTab() {
                     className={`flex items-center gap-1.5 text-xs px-3 py-1 rounded-full border font-bold transition-all ${
                       editandoId === r.id
                         ? 'bg-gray-100 text-gray-700 border-gray-300 dark:bg-gray-700 dark:text-gray-300 dark:border-gray-600'
-                        : 'bg-blue-50 text-ms-blue border-ms-blue/30 hover:bg-blue-100 dark:bg-ms-blue/10 dark:text-ms-blue dark:border-ms-blue/30'
+                        : 'bg-blue-50 text-[#002677] border-[#002677]/30 hover:bg-blue-100 dark:bg-ms-blue/10 dark:text-ms-blue dark:border-ms-blue/30'
                     }`}
+                    style={editandoId !== r.id ? { color: '#002677' } : undefined}
                   >
                     {editandoId === r.id
                       ? <><X className="w-3.5 h-3.5" /> Cancelar</>

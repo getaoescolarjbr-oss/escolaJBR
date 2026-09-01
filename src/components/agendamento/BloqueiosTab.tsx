@@ -114,8 +114,8 @@ export function BloqueiosTab() {
         {loading ? (
           <div className="py-6 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>
         ) : bloqueios.length === 0 ? (
-          <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6 text-center shadow-sm">
-            <p className="text-sm text-gray-500">Nenhum bloqueio registrado no momento.</p>
+          <div className="bg-white dark:bg-ms-card border border-[#002677]/20 dark:border-gray-800 rounded-2xl p-6 text-center shadow-sm">
+            <p className="text-sm text-[#002677] dark:text-ms-main font-bold">Nenhum bloqueio registrado no momento.</p>
           </div>
         ) : (
           bloqueios.map((b) => (

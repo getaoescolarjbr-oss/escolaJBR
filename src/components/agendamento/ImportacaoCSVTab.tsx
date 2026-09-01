@@ -88,21 +88,23 @@ export function ImportacaoCSVTab() {
       <div className="flex gap-2">
         <button
           onClick={() => { setTipo('RECURSOS'); resetar(); }}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+          className={`px-4 py-2 rounded-xl text-sm font-black transition-all ${
             tipo === 'RECURSOS'
               ? 'bg-ms-blue text-white shadow-md'
-              : 'bg-white dark:bg-ms-card text-ms-blue dark:text-gray-300 hover:bg-ms-blue/10 hover:text-ms-blue border border-ms-blue/30 dark:border-gray-700 shadow-sm'
+              : 'bg-white dark:bg-ms-card text-[#002677] dark:text-gray-300 hover:bg-ms-blue/10 border border-[#002677]/30 dark:border-gray-700 shadow-sm'
           }`}
+          style={tipo !== 'RECURSOS' ? { color: '#002677' } : undefined}
         >
           Recursos
         </button>
         <button
           onClick={() => { setTipo('SERIES'); resetar(); }}
-          className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+          className={`px-4 py-2 rounded-xl text-sm font-black transition-all ${
             tipo === 'SERIES'
               ? 'bg-ms-blue text-white shadow-md'
-              : 'bg-white dark:bg-ms-card text-ms-blue dark:text-gray-300 hover:bg-ms-blue/10 hover:text-ms-blue border border-ms-blue/30 dark:border-gray-700 shadow-sm'
+              : 'bg-white dark:bg-ms-card text-[#002677] dark:text-gray-300 hover:bg-ms-blue/10 border border-[#002677]/30 dark:border-gray-700 shadow-sm'
           }`}
+          style={tipo !== 'SERIES' ? { color: '#002677' } : undefined}
         >
           Aulas fixas (séries)
         </button>

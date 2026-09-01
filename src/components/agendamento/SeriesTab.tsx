@@ -210,8 +210,8 @@ export function SeriesTab() {
 
       <div className="space-y-2">
         {series.length === 0 ? (
-          <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6 text-center shadow-sm">
-            <p className="text-sm text-gray-500">Nenhuma série cadastrada.</p>
+          <div className="bg-white dark:bg-ms-card border border-[#002677]/20 dark:border-gray-800 rounded-2xl p-6 text-center shadow-sm">
+            <p className="text-sm text-[#002677] dark:text-ms-main font-bold">Nenhuma série cadastrada.</p>
           </div>
         ) : (
           series.map((s) => {

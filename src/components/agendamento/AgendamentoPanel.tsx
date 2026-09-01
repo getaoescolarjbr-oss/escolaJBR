@@ -61,11 +61,12 @@ export function AgendamentoPanel() {
               key={a.id}
               onClick={() => setAba(a.id)}
               aria-current={aba === a.id ? 'page' : undefined}
-              className={`px-4 py-2 rounded-xl text-sm font-bold transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ms-blue ${
+              className={`px-4 py-2 rounded-xl text-sm font-black transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ms-blue ${
                 aba === a.id
                   ? 'bg-ms-blue text-white shadow-md shadow-blue-900/20'
-                  : 'bg-white dark:bg-ms-card text-ms-blue dark:text-gray-300 hover:bg-ms-blue/10 hover:text-ms-blue border border-ms-blue/30 dark:border-gray-700 shadow-sm'
+                  : 'bg-white dark:bg-ms-card text-[#002677] dark:text-gray-300 hover:bg-ms-blue/10 border border-[#002677]/30 dark:border-gray-700 shadow-sm'
               }`}
+              style={aba !== a.id ? { color: '#002677' } : undefined}
             >
               {a.label}
             </button>

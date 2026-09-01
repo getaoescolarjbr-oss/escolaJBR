@@ -88,12 +88,14 @@ export function DashboardDiaTab() {
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" />
         </div>
       ) : !erro && porRecurso.size === 0 ? (
-        <p className="text-sm text-gray-500">Nenhum recurso ativo cadastrado.</p>
+        <div className="bg-white dark:bg-ms-card border border-[#002677]/20 dark:border-gray-800 rounded-2xl p-6 text-center shadow-sm">
+          <p className="text-sm text-[#002677] dark:text-ms-main font-bold">Nenhum recurso ativo cadastrado.</p>
+        </div>
       ) : !erro && (
         <div className="space-y-3">
           {ocupados.length === 0 ? (
-            <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-8 text-center shadow-sm">
-              <p className="text-sm text-emerald-600 dark:text-green-400 font-bold">
+            <div className="bg-white dark:bg-ms-card border border-[#002677]/20 dark:border-gray-800 rounded-2xl p-8 text-center shadow-sm">
+              <p className="text-sm text-[#002677] dark:text-green-400 font-bold">
                 Todos os recursos livres neste dia. 🎉
               </p>
             </div>

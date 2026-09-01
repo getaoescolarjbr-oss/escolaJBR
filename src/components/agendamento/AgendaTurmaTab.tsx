@@ -77,8 +77,8 @@ export function AgendaTurmaTab() {
           </p>
           <div className="space-y-2">
             {reservas.length === 0 ? (
-              <div className="bg-white dark:bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-6 text-center shadow-sm">
-                <p className="text-sm text-gray-500">Nenhuma reserva para esta turma no período.</p>
+              <div className="bg-white dark:bg-ms-card border border-[#002677]/20 dark:border-gray-800 rounded-2xl p-6 text-center shadow-sm">
+                <p className="text-sm text-[#002677] dark:text-ms-main font-bold">Nenhuma reserva para esta turma no período.</p>
               </div>
             ) : (
               reservas.map((r) => (
