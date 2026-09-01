@@ -45,7 +45,7 @@ export function AgendamentoPanel() {
     { id: 'recursos', label: 'Recursos', somenteStaff: true },
     { id: 'bloqueios', label: 'Bloqueios/Liberação', somenteStaff: true },
     { id: 'series', label: 'Aulas Fixas', somenteStaff: true },
-    { id: 'dashboard-dia', label: 'Dashboard do Dia', somenteStaff: true },
+    { id: 'dashboard-dia', label: 'Agendamentos do Dia', somenteStaff: true },
     { id: 'relatorios', label: 'Relatórios', somenteStaff: true },
     { id: 'importacao', label: 'Importar CSV', somenteStaff: true },
     { id: 'campos-personalizados', label: 'Campos Personalizados', somenteStaff: true },
