@@ -91,7 +91,7 @@ export function ImportacaoCSVTab() {
           className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
             tipo === 'RECURSOS'
               ? 'bg-ms-blue text-white shadow-md'
-              : 'bg-white dark:bg-ms-card text-gray-700 dark:text-gray-300 hover:text-ms-blue dark:hover:text-white border border-gray-300 dark:border-gray-700 shadow-sm'
+              : 'bg-white dark:bg-ms-card text-ms-blue dark:text-gray-300 hover:bg-ms-blue/10 hover:text-ms-blue border border-ms-blue/30 dark:border-gray-700 shadow-sm'
           }`}
         >
           Recursos
@@ -101,7 +101,7 @@ export function ImportacaoCSVTab() {
           className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
             tipo === 'SERIES'
               ? 'bg-ms-blue text-white shadow-md'
-              : 'bg-white dark:bg-ms-card text-gray-700 dark:text-gray-300 hover:text-ms-blue dark:hover:text-white border border-gray-300 dark:border-gray-700 shadow-sm'
+              : 'bg-white dark:bg-ms-card text-ms-blue dark:text-gray-300 hover:bg-ms-blue/10 hover:text-ms-blue border border-ms-blue/30 dark:border-gray-700 shadow-sm'
           }`}
         >
           Aulas fixas (séries)
