@@ -20,12 +20,22 @@ import { CartaoRespostaFolha } from './CartaoRespostaFolha';
 // buscas na lista de alunos — que é exatamente o trabalho que este módulo existe para
 // eliminar.
 
+// Acima deste tanto de questões objetivas, o cartão sempre vai para uma página própria
+// em colunas (estilo ENEM) — abaixo, ele tenta caber no fim da própria prova, e só cai
+// para a página seguinte se realmente não couber (ver cartaoEmFolhaPropria mais abaixo).
+// 30 = folga confortável acima do 1º patamar de calcularGeometria (12 linhas x 1 bloco);
+// com mais que isso o cartão já teria pelo menos 2 colunas e fica alto demais para
+// emendar com o fim da prova sem ficar apertado.
+const LIMITE_QUESTOES_CARTAO_PROPRIO = 30;
+
 // Só o que a impressão em lote acrescenta ao CSS de prova que já existe.
 const CSS_LOTE = `
   ${CARTAO_CSS}
 
   /* Cada bloco começa numa folha nova, menos o primeiro — assim não sobra uma página
-     em branco no fim da pilha. */
+     em branco no fim da pilha. Só funciona porque renderFolhas() achata os blocos de
+     todos os alunos num único array de irmãos diretos: o combinador "+" do CSS não
+     atravessa um <div> de agrupamento por aluno (ver comentário lá). */
   .pagina + .pagina { break-before: page; page-break-before: always; }
 
   .cartao-omr-folha { break-inside: avoid; }
@@ -140,12 +150,30 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
     ? new Date(avaliacao.data_aplicacao + 'T00:00:00').toLocaleDateString('pt-BR')
     : '____/____/______';
 
+  // Cada .pagina precisa ser irmã direta das outras — não dá pra embrulhar os blocos de
+  // um aluno num <div> por aluno, porque isso quebra o combinador ".pagina + .pagina" do
+  // CSS_LOTE bem na fronteira entre um aluno e o próximo, que é justamente onde a quebra
+  // de página é mais crítica (bug relatado: prova de um aluno emendando com a folha do
+  // seguinte). Por isso flatMap em vez de map: o retorno de cada aluno já é achatado no
+  // array final, todos no mesmo nível.
   function renderFolhas(lista: AlocacaoProva[]) {
-    return lista.map((aloc) => {
+    return lista.flatMap((aloc) => {
       const daVersao = aplicarVersao(questoesPorId, aloc.ordem_questoes, aloc.mapa_alternativas);
       const itens = itensCartaoDaVersao(daVersao);
       const geom = calcularGeometria(itens);
       const qr = qrs[aloc.codigo];
+
+      // Muitas questões: o cartão já sai em colunas (calcularGeometria), mas fica alto
+      // demais para emendar com o fim da prova — força página própria independente da
+      // preferência da avaliação. Calculado aqui (antes do embutido) porque os dois
+      // pontos abaixo que usam cartaoEmFolhaPropria/cartaoGrande precisam do mesmo
+      // valor: senão uma prova grande com cartao_separado=false sairia com o cartão
+      // duplicado (embutido no topo da prova E na página própria). SO_PROVA nunca
+      // força página de cartão, mesmo com muitas questões — nesse modo não há cartão.
+      const cartaoGrande = itens.length > LIMITE_QUESTOES_CARTAO_PROPRIO;
+      const cartaoEmFolhaPropria =
+        conteudo === 'SO_CARTAO' ||
+        (conteudo === 'PROVA_E_CARTAO' && (cartaoGrande || avaliacao.cartao_separado));
 
       const cartao = itens.length === 0 || !qr ? null : (
         <CartaoRespostaFolha
@@ -191,8 +219,10 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
             {avaliacao.instrucoes && <div className="prova-instrucoes">{avaliacao.instrucoes}</div>}
 
             {/* Cartão embutido: sai antes das questões para não acabar sozinho no fim de
-                uma página, longe da prova a que pertence. */}
-            {conteudo === 'PROVA_E_CARTAO' && !avaliacao.cartao_separado && cartao}
+                uma página, longe da prova a que pertence. Só quando NÃO vai para página
+                própria — senão duplicaria (ver cartaoEmFolhaPropria acima) — e só no modo
+                que inclui cartão (SO_PROVA nunca mostra cartão nenhum). */}
+            {conteudo === 'PROVA_E_CARTAO' && !cartaoEmFolhaPropria && cartao}
 
             <div className={`questoes-coluna${colunas === 2 ? ' duas-colunas' : ''}`}>
               {daVersao.map((q, i) => (
@@ -203,14 +233,11 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
         );
       }
 
-      const cartaoEmFolhaPropria =
-        conteudo === 'SO_CARTAO' || (conteudo === 'PROVA_E_CARTAO' && avaliacao.cartao_separado);
-
       if (cartaoEmFolhaPropria && cartao) {
         blocos.push(<div className="pagina" key={`c-${aloc.codigo}`}>{cartao}</div>);
       }
 
-      return <div key={aloc.codigo}>{blocos}</div>;
+      return blocos;
     });
   }
 

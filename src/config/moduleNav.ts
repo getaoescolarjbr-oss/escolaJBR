@@ -28,8 +28,10 @@ export const MODULOS_NAV: ModuloNavItem[] = [
   // autoatendimento conforme o papel (ver ProfessorBibliotecaTab).
   { id: 'biblioteca', label: 'Biblioteca', icon: BookOpen, roles: ['BIBLIOTECA', 'COORDENACAO', 'GESTAO', 'PROFESSOR'] },
   // v1: consulta + montagem de prova (reaproveita as ~12k questões já organizadas no
-  // aprova-prime-51-main, ver create_banco_questoes_schema.sql). Escrita é GESTAO-only.
-  { id: 'banco-questoes', label: 'Avaliações', icon: Library, roles: ['PROFESSOR', 'COORDENACAO'] },
+  // aprova-prime-51-main, ver create_banco_questoes_schema.sql). Escrita é GESTAO/PROFESSOR;
+  // COORDENACAO_AREA entra só pra achar e excluir questões duplicadas (ver
+  // permitir_coordenacao_area_excluir_questoes.sql) — sem acesso a criar/editar.
+  { id: 'banco-questoes', label: 'Avaliações', icon: Library, roles: ['PROFESSOR', 'COORDENACAO', 'COORDENACAO_AREA'] },
   // Fase 1: painel de indicadores (só leitura, só GESTAO). A partir dos sub-módulos
   // administrativos (Almoxarifado etc.) o módulo abriu pra todo servidor — a aba de
   // Indicadores continua restrita a GESTAO dentro do próprio painel
