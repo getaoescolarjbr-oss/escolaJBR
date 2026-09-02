@@ -41,11 +41,28 @@ const PRIVADAS = [
 /** O que a LandingPage lê sem sessão — tem de continuar funcionando. */
 const PUBLICAS = ['landing_avisos', 'landing_eventos', 'landing_noticias', 'calendario_eventos'];
 
+/** As migrações de segurança, na ordem em que foram aplicadas em produção. */
+const MIGRACOES = [
+  'fechar_exposicao_anon.sql',
+  'endurecer_professores_e_funcoes.sql',
+];
+
+/** As únicas RPCs que a internet pode chamar sem login. */
+const RPC_PUBLICAS = [
+  'rpc_simulado_publico_iniciar',
+  'rpc_simulado_publico_submeter',
+  'rpc_email_de_professor_existe',
+  'rpc_resolver_username',
+  'rpc_buscar_alunos_matricula',
+];
+
 const ROLLBACK = Symbol('rollback');
 
 async function rodar(tx) {
   if (!soAtual) {
-    await tx.unsafe(fs.readFileSync(path.join(root, 'fechar_exposicao_anon.sql'), 'utf8'));
+    for (const arquivo of MIGRACOES) {
+      await tx.unsafe(fs.readFileSync(path.join(root, arquivo), 'utf8'));
+    }
   }
 
   // ---- anon: privilégio de tabela ------------------------------------------------
@@ -159,6 +176,79 @@ async function rodar(tx) {
   const [rpcAnon] = await tx`
     SELECT has_function_privilege('anon', 'public.rpc_email_de_professor_existe(text)', 'EXECUTE') pode`;
   checar('anon pode chamar a RPC do primeiro acesso', rpcAnon.pode === true);
+
+  // ---- funções: só as cinco públicas sobram para o anônimo ------------------------
+  const fnAnon = await tx`
+    SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND has_function_privilege('anon', p.oid, 'EXECUTE')
+      AND pg_catalog.format_type(p.prorettype, NULL) <> 'trigger'
+      AND NOT EXISTS (
+        SELECT 1 FROM pg_depend d JOIN pg_extension e ON e.oid = d.refobjid
+        WHERE d.objid = p.oid AND d.deptype = 'e')
+    ORDER BY p.proname`;
+  const sobrando = fnAnon.map((f) => f.proname).filter((n) => !RPC_PUBLICAS.includes(n));
+  checar(
+    'anon só chama as cinco RPCs públicas',
+    sobrando.length === 0,
+    sobrando.length ? `ainda chamáveis: ${sobrando.slice(0, 8).join(', ')}${sobrando.length > 8 ? ` (+${sobrando.length - 8})` : ''}`
+                    : `${fnAnon.length} funções`
+  );
+
+  const faltando = RPC_PUBLICAS.filter((n) => !fnAnon.some((f) => f.proname === n));
+  checar(
+    'e as cinco continuam chamáveis',
+    faltando.length === 0,
+    faltando.length ? `perdeu: ${faltando.join(', ')}` : RPC_PUBLICAS.length + ' RPCs'
+  );
+
+  // ---- professores: escrita deixa de ser livre -------------------------------------
+  const polProf = await tx`
+    SELECT policyname, cmd, qual, with_check FROM pg_policies
+    WHERE tablename = 'professores' AND cmd IN ('UPDATE', 'INSERT', 'ALL')`;
+  // INSERT guarda a condição em with_check e deixa qual nulo; UPDATE usa os dois. Ler
+  // só `qual` fazia toda política de INSERT parecer irrestrita.
+  const livres = polProf.filter((p) => {
+    const cond = p.cmd === 'INSERT' ? p.with_check : (p.qual ?? p.with_check);
+    return !cond || cond === 'true';
+  });
+  checar(
+    'nenhuma política deixa qualquer conta logada escrever em professores',
+    livres.length === 0,
+    livres.map((p) => `"${p.policyname}"`).join(', ')
+  );
+
+  // O professor tem de continuar editando a PRÓPRIA ficha (App.tsx e SettingsModal).
+  // Um professor SEM o papel GESTAO, e escolhido de forma determinística: quem tem
+  // GESTAO pode editar todo mundo por definição, e um LIMIT 1 sem ORDER BY às vezes
+  // trazia justamente a conta de gestão — o teste passava ou falhava conforme a ordem
+  // física das linhas, que muda a cada UPDATE.
+  const [prof] = await tx`
+    SELECT p.id, p.user_id, p.email
+    FROM professores p
+    WHERE p.user_id IS NOT NULL
+      AND NOT EXISTS (
+        SELECT 1 FROM usuario_papeis up
+        WHERE up.usuario_id = p.user_id AND up.papel = 'GESTAO'
+      )
+    ORDER BY p.id
+    LIMIT 1`;
+  if (prof) {
+    await tx`SELECT set_config('request.jwt.claims', ${JSON.stringify({ sub: prof.user_id, email: prof.email, role: 'authenticated' })}, true)`;
+    await tx`SET LOCAL ROLE authenticated`;
+    const proprio = await tx`
+      WITH t AS (UPDATE professores SET nome = nome WHERE user_id = ${prof.user_id} RETURNING 1)
+      SELECT count(*)::int n FROM t`;
+    const alheio = await tx`
+      WITH t AS (UPDATE professores SET nome = nome WHERE user_id <> ${prof.user_id} RETURNING 1)
+      SELECT count(*)::int n FROM t`;
+    await tx`RESET ROLE`;
+    checar(
+      'professor sem GESTAO edita a própria ficha e não a dos outros',
+      proprio[0].n === 1 && alheio[0].n === 0,
+      `${prof.email} — própria: ${proprio[0].n} linha, alheias: ${alheio[0].n} linhas`
+    );
+  }
 
   const [algum] = await tx`SELECT email FROM professores WHERE email IS NOT NULL LIMIT 1`;
   const [existe] = await tx`SELECT public.rpc_email_de_professor_existe(${algum.email}) v`;
