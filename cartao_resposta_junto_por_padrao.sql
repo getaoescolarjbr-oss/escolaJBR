@@ -8,9 +8,19 @@
 -- uma resma a cada poucas avaliações. A leitura funciona igual nos dois formatos, desde
 -- que o cartão saia inteiro numa página só (garantido no CSS por break-inside: avoid).
 --
--- Só o DEFAULT muda. As provas já criadas ficam como estão: mexer nelas trocaria o layout
--- de avaliações possivelmente já impressas, e o professor pode alternar a qualquer momento
--- na própria tela de impressão.
+-- Além do DEFAULT, as provas criadas ANTES desta mudança também são normalizadas. O
+-- valor true nelas nunca foi uma escolha: era o default antigo, e a interface o
+-- apresentava como uma caixa já marcada. Deixá-las como estavam fazia a tela de
+-- impressão continuar abrindo em "folha separada" mesmo depois de o padrão virar, que
+-- foi exatamente o que o professor relatou ao imprimir.
+--
+-- O recorte por data é o que torna isto seguro de reaplicar: uma prova criada depois,
+-- em que o professor escolheu "separado" de propósito, não é tocada.
 -- ====================================================================================
 
 ALTER TABLE public.provas ALTER COLUMN cartao_separado SET DEFAULT false;
+
+UPDATE public.provas
+   SET cartao_separado = false
+ WHERE cartao_separado
+   AND created_at < DATE '2026-09-02';
