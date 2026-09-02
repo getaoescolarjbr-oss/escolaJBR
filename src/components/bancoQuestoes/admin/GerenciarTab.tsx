@@ -11,7 +11,13 @@ const selectClass =
 
 // Aqui só cria e exclui questões — a edição fica na aba Consultar, onde dá pra filtrar
 // por disciplina antes de abrir o editor (ver QuestoesTab.tsx).
-export function GerenciarTab() {
+// podeCriar=false (COORDENACAO_AREA): esconde "Nova questão" — RLS só libera DELETE pra esse
+// papel (ver permitir_coordenacao_area_excluir_questoes.sql), então criar falharia mesmo assim.
+interface GerenciarTabProps {
+  podeCriar?: boolean;
+}
+
+export function GerenciarTab({ podeCriar = true }: GerenciarTabProps) {
   const [opcoes, setOpcoes] = useState<FilterOptions | null>(null);
   const [assuntosDisciplina, setAssuntosDisciplina] = useState<string[] | null>(null);
   const [filtro, setFiltro] = useState<FiltroQuestoes>({ page: 0 });
@@ -71,12 +77,14 @@ export function GerenciarTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-ms-muted">{total} questões cadastradas</p>
-        <button
-          onClick={() => setCriando(true)}
-          className="flex items-center gap-2 px-5 py-2.5 bg-ms-blue text-white rounded-xl font-bold text-sm hover:bg-blue-600"
-        >
-          <Plus className="w-4 h-4" /> Nova questão
-        </button>
+        {podeCriar && (
+          <button
+            onClick={() => setCriando(true)}
+            className="flex items-center gap-2 px-5 py-2.5 bg-ms-blue text-white rounded-xl font-bold text-sm hover:bg-blue-600"
+          >
+            <Plus className="w-4 h-4" /> Nova questão
+          </button>
+        )}
       </div>
 
       <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-4">
@@ -170,7 +178,7 @@ export function GerenciarTab() {
         </>
       )}
 
-      {criando && (
+      {podeCriar && criando && (
         <QuestionEditorDialog
           questao={null}
           onClose={() => setCriando(false)}

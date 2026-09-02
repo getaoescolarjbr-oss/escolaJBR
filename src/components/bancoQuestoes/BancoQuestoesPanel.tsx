@@ -11,18 +11,21 @@ type Aba = 'nova-avaliacao' | 'minhas-avaliacoes' | 'consultar' | 'gerenciar' | 
 // Gerador de avaliações: o banco de questões (Consultar/Gerenciar/Categorias) vive dentro
 // deste módulo, junto com o fluxo de montar e publicar avaliações (Nova Avaliação/Minhas
 // Avaliações). Criar avaliação liberado para PROFESSOR/GESTAO/COORDENACAO (já dá acesso às
-// questões via seleção); Consultar/Gerenciar/Categorias (banco de questões bruto) restritos a GESTAO.
+// questões via seleção); Consultar/Categorias (banco de questões bruto) restritos a GESTAO.
+// Gerenciar Questões também abre pra COORDENACAO_AREA, mas só pra excluir duplicata — não cria
+// questão (RLS só libera DELETE pra esse papel, ver permitir_coordenacao_area_excluir_questoes.sql).
 export function BancoQuestoesPanel() {
   const { hasAnyRole } = useAuth();
   const isGestao = hasAnyRole(['GESTAO']);
   const podeCriarAvaliacao = hasAnyRole(['GESTAO', 'PROFESSOR', 'COORDENACAO']);
-  const [aba, setAba] = useState<Aba>(podeCriarAvaliacao ? 'nova-avaliacao' : isGestao ? 'consultar' : 'nova-avaliacao');
+  const podeGerenciarQuestoes = hasAnyRole(['GESTAO', 'COORDENACAO_AREA']);
+  const [aba, setAba] = useState<Aba>(podeCriarAvaliacao ? 'nova-avaliacao' : isGestao ? 'consultar' : podeGerenciarQuestoes ? 'gerenciar' : 'nova-avaliacao');
 
   const abas: { id: Aba; label: string }[] = [
     ...(podeCriarAvaliacao ? [{ id: 'nova-avaliacao' as const, label: 'Nova Avaliação' }] : []),
     ...(podeCriarAvaliacao ? [{ id: 'minhas-avaliacoes' as const, label: 'Minhas Avaliações' }] : []),
     ...(isGestao ? [{ id: 'consultar' as const, label: 'Consultar' }] : []),
-    ...(isGestao ? [{ id: 'gerenciar' as const, label: 'Gerenciar Questões' }] : []),
+    ...(podeGerenciarQuestoes ? [{ id: 'gerenciar' as const, label: 'Gerenciar Questões' }] : []),
     ...(isGestao ? [{ id: 'categorias' as const, label: 'Categorias' }] : []),
   ];
 
@@ -48,7 +51,7 @@ export function BancoQuestoesPanel() {
       {aba === 'nova-avaliacao' && podeCriarAvaliacao && <NovaAvaliacaoTab onAvaliacaoSalva={() => setAba('minhas-avaliacoes')} />}
       {aba === 'minhas-avaliacoes' && podeCriarAvaliacao && <MinhasAvaliacoesTab />}
       {aba === 'consultar' && isGestao && <QuestoesTab />}
-      {aba === 'gerenciar' && isGestao && <GerenciarTab />}
+      {aba === 'gerenciar' && podeGerenciarQuestoes && <GerenciarTab podeCriar={isGestao} />}
       {aba === 'categorias' && isGestao && <CategoriasTab />}
     </div>
   );
