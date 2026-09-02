@@ -45,6 +45,7 @@ const PUBLICAS = ['landing_avisos', 'landing_eventos', 'landing_noticias', 'cale
 const MIGRACOES = [
   'fechar_exposicao_anon.sql',
   'endurecer_professores_e_funcoes.sql',
+  'restringir_professor_as_proprias_turmas.sql',
 ];
 
 /** As únicas RPCs que a internet pode chamar sem login. */
@@ -237,10 +238,10 @@ async function rodar(tx) {
     await tx`SELECT set_config('request.jwt.claims', ${JSON.stringify({ sub: prof.user_id, email: prof.email, role: 'authenticated' })}, true)`;
     await tx`SET LOCAL ROLE authenticated`;
     const proprio = await tx`
-      WITH t AS (UPDATE professores SET nome = nome WHERE user_id = ${prof.user_id} RETURNING 1)
+      WITH t AS (UPDATE professores SET nome = nome WHERE user_id = ${prof.user_id}::uuid RETURNING 1)
       SELECT count(*)::int n FROM t`;
     const alheio = await tx`
-      WITH t AS (UPDATE professores SET nome = nome WHERE user_id <> ${prof.user_id} RETURNING 1)
+      WITH t AS (UPDATE professores SET nome = nome WHERE user_id <> ${prof.user_id}::uuid RETURNING 1)
       SELECT count(*)::int n FROM t`;
     await tx`RESET ROLE`;
     checar(
@@ -248,6 +249,77 @@ async function rodar(tx) {
       proprio[0].n === 1 && alheio[0].n === 0,
       `${prof.email} — própria: ${proprio[0].n} linha, alheias: ${alheio[0].n} linhas`
     );
+  }
+
+  // ---- compartimentacao: professor ve so as proprias turmas -----------------------
+  //
+  // Cada papel e testado com uma conta REAL do banco. Apertar o professor e a parte
+  // facil; o que quebra portal e apertar demais e alguem descobrir na segunda-feira que
+  // a tela dele esvaziou. Por isso cada papel largo tem sua propria asseracao.
+  const [{ n: total_alunos }] = await tx`SELECT count(*)::int n FROM alunos`;
+
+  const comoUsuario = async (userId, fn) => {
+    await tx`SELECT set_config('request.jwt.claims', ${JSON.stringify({ sub: userId, role: 'authenticated' })}, true)`;
+    await tx`SET LOCAL ROLE authenticated`;
+    try { return await fn(); } finally { await tx`RESET ROLE`; }
+  };
+
+  const [profRestrito] = await tx`
+    SELECT p.id, p.user_id, p.nome
+    FROM professores p
+    JOIN usuario_papeis up ON up.usuario_id = p.user_id AND up.papel = 'PROFESSOR'
+    WHERE p.user_id IS NOT NULL
+      AND EXISTS (SELECT 1 FROM alocacoes_v2 a WHERE a.professor_id = p.id)
+      AND NOT EXISTS (
+        SELECT 1 FROM usuario_papeis u2
+        WHERE u2.usuario_id = p.user_id
+          AND u2.papel <> 'PROFESSOR'::papel_usuario)
+    ORDER BY p.id
+    LIMIT 1`;
+
+  if (profRestrito) {
+    const [esperado] = await tx`
+      SELECT count(*)::int n FROM alunos al
+      WHERE al.turma_id IN (SELECT turma_id FROM alocacoes_v2 WHERE professor_id = ${profRestrito.id}::uuid)`;
+    const [total] = await tx`SELECT count(*)::int n FROM alunos`;
+
+    const visto = await comoUsuario(profRestrito.user_id, async () => {
+      const [a] = await tx`SELECT count(*)::int n FROM alunos`;
+      const [nt] = await tx`SELECT count(*)::int n FROM notas_avaliacoes`;
+      const [vs] = await tx`SELECT count(*)::int n FROM vistos_v2`;
+      const [bib] = await tx`SELECT count(*)::int n FROM public.rpc_buscar_alunos_biblioteca('an')`;
+      return { alunos: a.n, notas: nt.n, vistos: vs.n, biblioteca: bib.n };
+    });
+
+    checar(
+      'professor ve exatamente os alunos das turmas dele',
+      visto.alunos === esperado.n && esperado.n < total.n,
+      `${profRestrito.nome}: ve ${visto.alunos} de ${total.n} (esperado ${esperado.n})`
+    );
+    checar(
+      'e nao ve as notas e vistos da escola inteira',
+      visto.notas < 16000 && visto.vistos < 4000,
+      `notas ${visto.notas}, vistos ${visto.vistos}`
+    );
+    checar(
+      'mas a busca da biblioteca continua achando qualquer aluno',
+      visto.biblioteca > 0,
+      `${visto.biblioteca} resultado(s) para "an"`
+    );
+  } else {
+    console.log('  (pulado) nenhum professor com alocacao e sem outro papel');
+  }
+
+  // Papeis largos: cada um tem de continuar vendo a escola toda.
+  for (const papel of ['GESTAO', 'COORDENACAO', 'COORDENACAO_AREA', 'INSPETOR', 'NUTRICAO', 'PCPI']) {
+    const [conta] = await tx`
+      SELECT usuario_id FROM usuario_papeis WHERE papel = ${papel}::papel_usuario ORDER BY usuario_id LIMIT 1`;
+    if (!conta) { console.log(`  (pulado) nenhuma conta com papel ${papel}`); continue; }
+    const n = await comoUsuario(conta.usuario_id, async () => {
+      const [a] = await tx`SELECT count(*)::int n FROM alunos`;
+      return a.n;
+    });
+    checar(`${papel} continua vendo a escola inteira`, n === Number(total_alunos), `${n} alunos`);
   }
 
   const [algum] = await tx`SELECT email FROM professores WHERE email IS NOT NULL LIMIT 1`;
