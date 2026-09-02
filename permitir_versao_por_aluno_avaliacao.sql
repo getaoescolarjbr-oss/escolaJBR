@@ -1,3 +1,7 @@
+-- Depende de create_correcao_omr.sql e SUBSTITUI parte dele: redefine
+-- rpc_gerar_versoes_prova e solta os CHECKs de qtd_versoes e de rotulo. É este o
+-- arquivo que vale a partir de agora — sempre o último da dupla a ser aplicado.
+--
 -- A pedido: opção "uma versão por aluno da turma" no gerador de provas, além do já
 -- existente "1 a 4 versões". Três ajustes:
 --

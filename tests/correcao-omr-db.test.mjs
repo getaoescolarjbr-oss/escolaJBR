@@ -39,12 +39,25 @@ const checar = (nome, ok, detalhe = '') => {
 
 const ROLLBACK = Symbol('rollback');
 
+/** Migrações do módulo, na ordem em que foram aplicadas em produção. */
+const MIGRACOES = [
+  'create_correcao_omr.sql',
+  'permitir_versao_por_aluno_avaliacao.sql',
+];
+
 try {
   await sql.begin(async (tx) => {
-    // O DDL entra na MESMA transação do teste: assim o teste roda contra a versão do
-    // arquivo que está em disco agora, e o rollback leva as funções embora junto com os
+    // O DDL entra na MESMA transação do teste: assim o teste roda contra a versão dos
+    // arquivos que está em disco agora, e o rollback leva as funções embora junto com os
     // dados de teste. O banco de produção fica exatamente como estava.
-    await tx.unsafe(fs.readFileSync(path.join(root, 'create_correcao_omr.sql'), 'utf8'));
+    //
+    // A ORDEM importa e a lista precisa estar completa: permitir_versao_por_aluno
+    // redefine rpc_gerar_versoes_prova e solta os CHECKs de qtd_versoes e de rotulo.
+    // Aplicar só o primeiro arquivo faria o teste exercitar uma versão da função que
+    // não é mais a de produção — e passar, dando uma garantia falsa.
+    for (const arquivo of MIGRACOES) {
+      await tx.unsafe(fs.readFileSync(path.join(root, arquivo), 'utf8'));
+    }
 
     // ---- Dados de apoio, todos vindos do banco real -------------------------------
     const [dono] = await tx`SELECT criado_por FROM provas WHERE criado_por IS NOT NULL LIMIT 1`;
@@ -94,6 +107,12 @@ try {
 
     // ---- 1. Sorteio das versões ---------------------------------------------------
     const versoes = await tx`SELECT * FROM rpc_gerar_versoes_prova(${prova.id})`;
+    const [rot] = await tx`SELECT string_agg(public.rotulo_versao_prova(i), ',' ORDER BY i) r FROM generate_series(25,28) i`;
+    checar(
+      'rótulo de versão não estoura o alfabeto acima de 26',
+      rot.r === 'Y,Z,AA,AB',
+      `versões 25..28 => ${rot.r}`
+    );
     checar(
       'sorteia 3 versões e distribui os alunos',
       versoes.length === 3 && versoes.every((v) => Number(v.alunos) > 0),

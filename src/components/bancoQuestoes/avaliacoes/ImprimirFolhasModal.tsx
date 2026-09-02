@@ -20,14 +20,6 @@ import { CartaoRespostaFolha } from './CartaoRespostaFolha';
 // buscas na lista de alunos — que é exatamente o trabalho que este módulo existe para
 // eliminar.
 
-// Acima deste tanto de questões objetivas, o cartão sempre vai para uma página própria
-// em colunas (estilo ENEM) — abaixo, ele tenta caber no fim da própria prova, e só cai
-// para a página seguinte se realmente não couber (ver cartaoEmFolhaPropria mais abaixo).
-// 30 = folga confortável acima do 1º patamar de calcularGeometria (12 linhas x 1 bloco);
-// com mais que isso o cartão já teria pelo menos 2 colunas e fica alto demais para
-// emendar com o fim da prova sem ficar apertado.
-const LIMITE_QUESTOES_CARTAO_PROPRIO = 30;
-
 // Só o que a impressão em lote acrescenta ao CSS de prova que já existe.
 const CSS_LOTE = `
   ${CARTAO_CSS}
@@ -39,6 +31,18 @@ const CSS_LOTE = `
   .pagina + .pagina { break-before: page; page-break-before: always; }
 
   .cartao-omr-folha { break-inside: avoid; }
+
+  /* O cartão no fim da prova: não pode partir ao meio nem se separar do que veio antes
+     sem necessidade. Sem o avoid, uma metade das bolhas cairia na página seguinte e a
+     folha ficaria impossível de ler pela câmera — as quatro marcas de referência
+     precisam estar todas na mesma página. */
+  .cartao-ao-fim {
+    break-inside: avoid;
+    page-break-inside: avoid;
+    margin-top: 6mm;
+    padding-top: 4mm;
+    border-top: 1px dashed #999;
+  }
 `;
 
 interface Props {
@@ -67,6 +71,9 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
   const [versaoFiltro, setVersaoFiltro] = useState('');
   const [conteudo, setConteudo] = useState<Conteudo>('PROVA_E_CARTAO');
   const [colunas, setColunas] = useState<1 | 2>(2);
+  // Vem da configuração da avaliação, mas é ajustável aqui: reimprimir de outro jeito não
+  // deveria obrigar o professor a voltar e editar a avaliação inteira.
+  const [cartaoSeparado, setCartaoSeparado] = useState(avaliacao.cartao_separado);
 
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -163,17 +170,13 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
       const geom = calcularGeometria(itens);
       const qr = qrs[aloc.codigo];
 
-      // Muitas questões: o cartão já sai em colunas (calcularGeometria), mas fica alto
-      // demais para emendar com o fim da prova — força página própria independente da
-      // preferência da avaliação. Calculado aqui (antes do embutido) porque os dois
-      // pontos abaixo que usam cartaoEmFolhaPropria/cartaoGrande precisam do mesmo
-      // valor: senão uma prova grande com cartao_separado=false sairia com o cartão
-      // duplicado (embutido no topo da prova E na página própria). SO_PROVA nunca
-      // força página de cartão, mesmo com muitas questões — nesse modo não há cartão.
-      const cartaoGrande = itens.length > LIMITE_QUESTOES_CARTAO_PROPRIO;
-      const cartaoEmFolhaPropria =
-        conteudo === 'SO_CARTAO' ||
-        (conteudo === 'PROVA_E_CARTAO' && (cartaoGrande || avaliacao.cartao_separado));
+      // Quem decide é o professor, e só ele. Antes havia um teto de questões que forçava
+      // página própria por conta própria: era necessário quando o cartão saía ANTES das
+      // questões (um cartão alto empurrava a prova inteira para baixo), mas com ele no
+      // fim isso deixou de existir — se não couber na sobra da página, o
+      // break-inside: avoid o leva inteiro para a folha seguinte, que é a mesma coisa que
+      // o teto fazia, só que sem contrariar a escolha em provas que caberiam.
+      const cartaoEmFolhaPropria = conteudo === 'SO_CARTAO' || (conteudo === 'PROVA_E_CARTAO' && cartaoSeparado);
 
       const cartao = itens.length === 0 || !qr ? null : (
         <CartaoRespostaFolha
@@ -218,17 +221,20 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
 
             {avaliacao.instrucoes && <div className="prova-instrucoes">{avaliacao.instrucoes}</div>}
 
-            {/* Cartão embutido: sai antes das questões para não acabar sozinho no fim de
-                uma página, longe da prova a que pertence. Só quando NÃO vai para página
-                própria — senão duplicaria (ver cartaoEmFolhaPropria acima) — e só no modo
-                que inclui cartão (SO_PROVA nunca mostra cartão nenhum). */}
-            {conteudo === 'PROVA_E_CARTAO' && !cartaoEmFolhaPropria && cartao}
-
             <div className={`questoes-coluna${colunas === 2 ? ' duas-colunas' : ''}`}>
               {daVersao.map((q, i) => (
                 <QuestaoImpressa key={q.id} questao={q} indice={i} valor={valores[q.id] ?? 0} />
               ))}
             </div>
+
+            {/* Cartão junto: DEPOIS da última questão, fluindo na sobra da página. Ficava
+                antes das questões, e o resultado no papel era a folha terminando vazia com
+                o cartão sozinho na página seguinte — desperdício que o professor via na
+                pilha impressa. Só aparece aqui quando não vai para página própria (senão
+                sairia duplicado) e no modo que inclui cartão. */}
+            {conteudo === 'PROVA_E_CARTAO' && !cartaoEmFolhaPropria && (
+              <div className="cartao-ao-fim">{cartao}</div>
+            )}
           </div>
         );
       }
@@ -286,7 +292,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
                 <Campo label="Turma">
                   <select value={turmaFiltro} onChange={(e) => setTurmaFiltro(e.target.value)} className={SELECT_CLS}>
                     <option value="">Todas</option>
@@ -312,6 +318,16 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                     <option value={2}>2 colunas</option>
                   </select>
                 </Campo>
+                <Campo label="Cartão-resposta">
+                  <select
+                    value={cartaoSeparado ? 'SEPARADO' : 'JUNTO'}
+                    onChange={(e) => setCartaoSeparado(e.target.value === 'SEPARADO')}
+                    className={SELECT_CLS}
+                  >
+                    <option value="JUNTO">Junto, no fim da prova</option>
+                    <option value="SEPARADO">Em folha separada</option>
+                  </select>
+                </Campo>
               </div>
 
               <div className="flex flex-wrap items-center gap-3 text-xs">
@@ -332,6 +348,14 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                   Sortear de novo
                 </button>
               </div>
+
+              {!cartaoSeparado && (
+                <p className="text-xs text-ms-muted">
+                  O cartão sai logo depois da última questão, aproveitando a sobra da página. Se não
+                  couber, vai inteiro para a folha seguinte — nunca partido, porque a câmera precisa
+                  das quatro marcas dos cantos na mesma página.
+                </p>
+              )}
 
               {(alocacoes ?? []).some((a) => a.ja_corrigido) && (
                 <p className="text-xs text-amber-400 font-medium">
