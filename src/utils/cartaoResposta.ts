@@ -32,8 +32,19 @@ export const BOLHA_MM = 5;
 /** Distância entre centros de bolhas vizinhas, na horizontal. */
 export const PASSO_BOLHA_MM = 7.5;
 
-/** Distância entre centros de linhas vizinhas. */
+/** Distância entre centros de linhas vizinhas, quando há espaço de sobra. */
 export const PASSO_LINHA_MM = 8;
+
+/**
+ * Até onde o passo entre linhas pode encolher para uma prova longa caber na A4.
+ *
+ * Com a bolha de 5mm, 6,5mm de passo deixa 1,5mm de folga entre uma linha e a seguinte.
+ * O leitor amostra só o miolo da bolha (60% do raio, ou seja 1,5mm), então a área
+ * medida continua bem longe da linha vizinha. Abaixo disso a folha começa a ficar
+ * apertada para o aluno pintar sem invadir a linha de baixo, que é o limite prático —
+ * não o do algoritmo.
+ */
+export const PASSO_LINHA_MINIMO_MM = 6.5;
 
 /** Espaço reservado à esquerda de cada bloco para o número da questão. */
 export const ROTULO_MM = 11;
@@ -48,20 +59,30 @@ export const ENTRE_BLOCOS_MM = 6;
 export const MAX_ALTERNATIVAS = 5;
 
 /**
- * Quantas linhas cada bloco tenta ter antes de o cartão abrir mais uma coluna.
- *
- * O número existe para manter o cartão com proporção de retângulo, não de tira. Uma
- * coluna única de 20 linhas dá uma área de 66x178mm: some espaço na A4, é chata de ler
- * e — o que importa mais aqui — obriga a câmera a enquadrar um retângulo muito alongado,
- * em que as marcas dos cantos ficam pequenas em relação ao quadro e a leitura piora.
- */
-export const LINHAS_ALVO_POR_BLOCO = 12;
-
-/**
  * Teto de blocos lado a lado. Quatro não cabem: 4 x 48,5mm + 3 x 6mm de intervalo dá
  * 230mm, contra os ~190mm úteis de uma A4 retrato.
  */
 export const MAX_BLOCOS = 3;
+
+/**
+ * Altura máxima que a folha do cartão (cabeçalho + grade) pode ocupar numa A4 retrato,
+ * descontadas as margens de impressão de printProva.ts.
+ */
+export const ALTURA_MAXIMA_MM = 265;
+
+/**
+ * Altura aproximada do bloco de cabeçalho do cartão (QR, dados do aluno, caixa da versão
+ * e o aviso de preenchimento), medida no layout de CartaoRespostaFolha.
+ *
+ * Serve para a moldura da tela de correção enquadrar a FOLHA, não só a grade de bolhas:
+ * o QR fica no cabeçalho e é ele que dá a orientação do cartão ao leitor.
+ */
+export const CABECALHO_MM = 32;
+
+/** Proporção (largura/altura) da região que a câmera precisa enquadrar. */
+export function aspectoParaEnquadrar(geom: CartaoGeom): number {
+  return (geom.larguraMm + MARCA_MM) / (geom.alturaMm + MARCA_MM + CABECALHO_MM);
+}
 
 export interface BolhaGeom {
   /** 1-based, na ordem do cartão. Casa com `linha` de rpc_gabarito_versao. */
@@ -92,6 +113,8 @@ export interface CartaoGeom {
   alturaMm: number;
   blocos: number;
   linhasPorBloco: number;
+  /** Passo vertical efetivo: encolhe abaixo de PASSO_LINHA_MM em provas longas. */
+  passoLinha: number;
   linhas: LinhaGeom[];
   /** Centros das quatro marcas, na ordem TL, TR, BR, BL. */
   marcas: { x: number; y: number }[];
@@ -110,17 +133,64 @@ export interface ItemCartao {
  * versão. O leitor chama isto com a mesma lista (vinda de rpc_gabarito_versao) para
  * saber onde procurar cada bolha.
  */
+/** Dimensões da folha para um dado número de colunas, sem montar a geometria inteira. */
+function medirComBlocos(total: number, blocos: number) {
+  const linhasPorBloco = Math.max(1, Math.ceil(total / blocos));
+  const larguraBloco = ROTULO_MM + MAX_ALTERNATIVAS * PASSO_BOLHA_MM;
+  const larguraMm = blocos * larguraBloco + (blocos - 1) * ENTRE_BLOCOS_MM + 2 * MARGEM_INTERNA_MM;
+
+  // Passo entre linhas: o confortável, a menos que a prova seja longa demais para caber
+  // na página — aí encolhe até o piso. Uma folha de cartão que vaza para uma segunda
+  // página é inútil, porque as quatro marcas de referência deixam de delimitar uma
+  // região só e a leitura por câmera para de funcionar por completo.
+  const alturaDisponivel = ALTURA_MAXIMA_MM - CABECALHO_MM - MARCA_MM - 2 * MARGEM_INTERNA_MM;
+  const passoLinha = Math.max(
+    PASSO_LINHA_MINIMO_MM,
+    Math.min(PASSO_LINHA_MM, alturaDisponivel / linhasPorBloco)
+  );
+
+  const alturaMm = linhasPorBloco * passoLinha + 2 * MARGEM_INTERNA_MM;
+  return {
+    linhasPorBloco,
+    passoLinha,
+    larguraMm,
+    alturaMm,
+    // O que a câmera precisa enquadrar: a grade, as marcas e o cabeçalho com o QR.
+    folhaLargura: larguraMm + MARCA_MM,
+    folhaAltura: alturaMm + MARCA_MM + CABECALHO_MM,
+  };
+}
+
+/**
+ * Em quantas colunas dividir as questões.
+ *
+ * O critério é deixar a FOLHA o mais perto possível de quadrada, e não um número fixo de
+ * linhas por coluna. Isso porque a forma da folha é o que a câmera tem de enquadrar: uma
+ * tira alta e estreita (10 questões numa coluna só davam 67x98mm de grade, ou seja
+ * 75x137mm de folha) obriga o professor a aproximar demais ou a virar o aparelho, e as
+ * marcas dos cantos ficam pequenas em relação ao quadro. Com o mesmo cartão em duas
+ * colunas de cinco, a folha vai a 129x97mm e cabe confortavelmente no visor.
+ *
+ * Restrição dura antes do gosto: a folha tem de caber na altura da A4.
+ */
+function escolherBlocos(total: number): number {
+  const opcoes = [];
+  for (let b = 1; b <= MAX_BLOCOS; b++) {
+    const m = medirComBlocos(total, b);
+    opcoes.push({ b, cabe: m.folhaAltura <= ALTURA_MAXIMA_MM, desvio: Math.abs(Math.log(m.folhaLargura / m.folhaAltura)) });
+  }
+  const cabem = opcoes.filter((o) => o.cabe);
+  // Nada cabe (prova enorme): fica com o máximo de colunas, que é o mais baixo possível.
+  if (cabem.length === 0) return MAX_BLOCOS;
+  return cabem.reduce((melhor, o) => (o.desvio < melhor.desvio ? o : melhor)).b;
+}
+
 export function calcularGeometria(itens: ItemCartao[]): CartaoGeom {
   const total = itens.length;
-  const blocos = Math.max(1, Math.min(MAX_BLOCOS, Math.ceil(total / LINHAS_ALVO_POR_BLOCO)));
-  const linhasPorBloco = Math.ceil(total / blocos);
+  const blocos = escolherBlocos(total);
+  const { linhasPorBloco, passoLinha, larguraMm, alturaMm } = medirComBlocos(total, blocos);
 
   const larguraBloco = ROTULO_MM + MAX_ALTERNATIVAS * PASSO_BOLHA_MM;
-  const gradeLargura = blocos * larguraBloco + (blocos - 1) * ENTRE_BLOCOS_MM;
-  const gradeAltura = Math.max(1, linhasPorBloco) * PASSO_LINHA_MM;
-
-  const larguraMm = gradeLargura + 2 * MARGEM_INTERNA_MM;
-  const alturaMm = gradeAltura + 2 * MARGEM_INTERNA_MM;
 
   const linhas: LinhaGeom[] = itens.map((item, i) => {
     const bloco = Math.floor(i / linhasPorBloco);
@@ -128,7 +198,7 @@ export function calcularGeometria(itens: ItemCartao[]): CartaoGeom {
 
     const baseX = MARGEM_INTERNA_MM + bloco * (larguraBloco + ENTRE_BLOCOS_MM);
     // +metade do passo para o centro da bolha cair no meio da faixa da linha.
-    const centroY = MARGEM_INTERNA_MM + linhaNoBloco * PASSO_LINHA_MM + PASSO_LINHA_MM / 2;
+    const centroY = MARGEM_INTERNA_MM + linhaNoBloco * passoLinha + passoLinha / 2;
 
     const qtd = Math.max(0, Math.min(MAX_ALTERNATIVAS, item.qtdAlternativas));
     const bolhas: BolhaGeom[] = Array.from({ length: qtd }, (_, idx) => ({
@@ -154,6 +224,7 @@ export function calcularGeometria(itens: ItemCartao[]): CartaoGeom {
     alturaMm,
     blocos,
     linhasPorBloco,
+    passoLinha,
     linhas,
     marcas: [
       { x: 0, y: 0 },

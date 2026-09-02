@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AlertTriangle, Camera, CameraOff, Check, Keyboard, Loader2, X } from 'lucide-react';
 import type { CartaoGeom } from '../../utils/cartaoResposta';
-import { calcularGeometria } from '../../utils/cartaoResposta';
+import { aspectoParaEnquadrar, calcularGeometria } from '../../utils/cartaoResposta';
 import { lerCartao, lerQrCode, type LeituraCartao } from '../../lib/omr';
 import type { FolhaIdentificada, LinhaGabarito, ResultadoCorrecaoOmr } from '../../types/correcaoOmr';
 import {
@@ -35,7 +35,7 @@ const LARGURA_PROC = 900;
 /** Intervalo entre processamentos. ~6 leituras/s é mais que suficiente para folha parada. */
 const INTERVALO_MS = 160;
 
-type Fase = 'PROCURANDO_QR' | 'LENDO_CARTAO' | 'ENVIANDO' | 'PRONTO';
+type Fase = 'PROCURANDO_QR' | 'LENDO_CARTAO' | 'CONFIRMAR_BRANCO' | 'ENVIANDO' | 'PRONTO';
 
 interface Props {
   /** Quando informado, avisa se o cartão lido é de outra prova. */
@@ -58,6 +58,10 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
   const [resultado, setResultado] = useState<ResultadoCorrecaoOmr | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [manual, setManual] = useState(false);
+  // Proporção do cartão desta versão, para a moldura da tela ter a MESMA forma da folha.
+  // Sem isto a moldura fica 4:3 deitada, o cartão sai em pé, e o professor acaba virando
+  // o celular — que é a posição em que a orientação é mais difícil de resolver.
+  const [aspectoCartao, setAspectoCartao] = useState<number | null>(null);
 
   // Refs, não estado: o laço de processamento lê isto a cada quadro e re-render a 6Hz
   // para atualizar variável de controle jogaria fora quadros por nada.
@@ -83,6 +87,7 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
     setResultado(null);
     setErro(null);
     setManual(false);
+    setAspectoCartao(null);
     mudarFase('PROCURANDO_QR');
   }, [mudarFase]);
 
@@ -130,7 +135,7 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas || video.readyState < 2 || ocupadoRef.current) return;
-    if (faseRef.current === 'ENVIANDO' || faseRef.current === 'PRONTO') return;
+    if (faseRef.current === 'ENVIANDO' || faseRef.current === 'PRONTO' || faseRef.current === 'CONFIRMAR_BRANCO') return;
 
     ocupadoRef.current = true;
     // Marca se chegamos a enviar: no erro isso decide entre "mostra o resultado da
@@ -146,11 +151,15 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
       ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
       const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
 
-      if (faseRef.current === 'PROCURANDO_QR') {
-        const codigo = await lerQrCode(img);
-        if (!codigo) return;
+      // O QR é lido em TODO quadro, não só na fase de procura. Ele serve a duas coisas
+      // além de identificar: dá a âncora de orientação (sem ela o cartão deitado não
+      // pode ser lido com segurança) e denuncia a troca de folha no meio da leitura.
+      const qr = await lerQrCode(img);
 
-        const identificada = await identificarFolha(codigo);
+      if (faseRef.current === 'PROCURANDO_QR' || (qr && qr.valor !== folhaRef.current?.codigo)) {
+        if (!qr) return;
+
+        const identificada = await identificarFolha(qr.valor);
         const chave = `${identificada.prova_id}:${identificada.versao}`;
 
         let cache = cacheGeomRef.current.get(chave);
@@ -167,8 +176,12 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
 
         folhaRef.current = identificada;
         geomRef.current = cache.geom;
+        // Folha nova: a leitura anterior não vale mais como confirmação.
+        ultimaLeituraRef.current = null;
         setFolha(identificada);
         setGabarito(cache.gabarito);
+        setAspectoCartao(aspectoParaEnquadrar(cache.geom));
+        setLeitura(null);
         setErro(null);
         void bipe('identificado');
         mudarFase('LENDO_CARTAO');
@@ -180,7 +193,7 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
       const alvo = folhaRef.current;
       if (!geom || !alvo) return;
 
-      const lida = lerCartao(img, geom);
+      const lida = lerCartao(img, geom, qr?.centro);
       if (!lida) return;
       setLeitura(lida);
 
@@ -188,6 +201,14 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
       if (ultimaLeituraRef.current !== assinatura) {
         // Primeiro quadro com este resultado: guarda e espera o próximo confirmar.
         ultimaLeituraRef.current = assinatura;
+        return;
+      }
+
+      // Folha inteiramente em branco é a assinatura de um erro de leitura, não de um
+      // aluno que não respondeu nada — e gravar zero em silêncio é o pior desfecho aqui.
+      // O caso legítimo existe, então não é bloqueio: é um toque a mais.
+      if (lida.marcacoes.every((m) => m === '')) {
+        mudarFase('CONFIRMAR_BRANCO');
         return;
       }
 
@@ -214,6 +235,24 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
     const id = setInterval(() => { void processarQuadro(); }, INTERVALO_MS);
     return () => clearInterval(id);
   }, [camAtiva, processarQuadro]);
+
+  async function enviarLeituraAtual() {
+    const alvo = folhaRef.current;
+    const lida = leitura;
+    if (!alvo || !lida) return;
+    mudarFase('ENVIANDO');
+    try {
+      const r = await corrigirPorOmr(alvo.codigo, lida.marcacoes, 'CAMERA');
+      setResultado(r);
+      onCorrigido?.(r);
+      void bipe('sucesso');
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e));
+      void bipe('erro');
+    } finally {
+      mudarFase('PRONTO');
+    }
+  }
 
   const provaDiferente =
     !!provaEsperadaId && !!folha && folha.prova_id !== provaEsperadaId;
@@ -253,12 +292,25 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
         {/* Moldura: dá ao professor uma referência de enquadramento. A leitura não
             depende dela — quem define a área é a homografia das quatro marcas. */}
         {!erroCam && !manual && (
-          <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-6">
-            <div className={`w-full max-w-2xl aspect-[4/3] rounded-2xl border-4 transition-colors ${
-              fase === 'PRONTO' ? 'border-green-400'
-                : fase === 'LENDO_CARTAO' ? 'border-amber-300'
-                : 'border-white/40'
-            }`} />
+          <div className="absolute inset-0 pointer-events-none flex items-center justify-center p-4">
+            <div
+              className={`rounded-2xl border-4 transition-colors ${
+                fase === 'PRONTO' ? 'border-green-400'
+                  : fase === 'CONFIRMAR_BRANCO' ? 'border-amber-500'
+                  : fase === 'LENDO_CARTAO' ? 'border-amber-300'
+                  : 'border-white/40'
+              }`}
+              style={{
+                // A moldura toma a forma da folha desta versão — cartão de 10 questões é
+                // uma coluna em pé, o de 45 são três colunas quase quadradas. Enquanto o
+                // QR não foi lido ainda não se sabe qual é, e 3:4 é o palpite melhor que
+                // 4:3, porque a folha é impressa em A4 retrato.
+                aspectRatio: aspectoCartao ? String(aspectoCartao) : '3 / 4',
+                width: '100%',
+                maxWidth: '100%',
+                maxHeight: '100%',
+              }}
+            />
           </div>
         )}
 
@@ -316,6 +368,28 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
               <p className="text-xs text-amber-300 font-medium">
                 {leitura ? 'Segure firme para confirmar a leitura...' : 'Enquadre o cartão inteiro, com os quatro cantos pretos visíveis.'}
               </p>
+            )}
+            {fase === 'CONFIRMAR_BRANCO' && (
+              <div className="flex items-center justify-between gap-3 bg-amber-950/50 border border-amber-900 rounded-lg px-3 py-2">
+                <p className="text-xs text-amber-200 font-medium">
+                  Nenhuma marcação foi detectada. Confira se a folha está bem enquadrada e iluminada —
+                  ou confirme, se o aluno entregou o cartão em branco mesmo.
+                </p>
+                <div className="flex gap-2 shrink-0">
+                  <button
+                    onClick={() => { ultimaLeituraRef.current = null; mudarFase('LENDO_CARTAO'); }}
+                    className="px-3 py-1.5 rounded-lg border border-gray-700 text-ms-main text-xs font-bold"
+                  >
+                    Ler de novo
+                  </button>
+                  <button
+                    onClick={() => void enviarLeituraAtual()}
+                    className="px-3 py-1.5 bg-amber-600 text-white rounded-lg text-xs font-bold"
+                  >
+                    Está em branco
+                  </button>
+                </div>
+              </div>
             )}
             {fase === 'ENVIANDO' && (
               <p className="flex items-center gap-1.5 text-xs text-ms-muted"><Loader2 className="w-3 h-3 animate-spin" /> Gravando...</p>

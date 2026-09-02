@@ -166,7 +166,13 @@ function componentes(bin: Uint8Array, width: number, height: number): Componente
  * retângulo, contra ~0,95 de uma marca sólida) e o quadradinho central é pequeno demais
  * para sobreviver ao corte por área relativa.
  */
-function acharMarcas(comps: Componente[], width: number, height: number, aspectoAlvo: number): Ponto[] | null {
+function acharMarcas(
+  comps: Componente[],
+  width: number,
+  height: number,
+  aspectoAlvo: number,
+  ancoraQr?: Ponto | null
+): Ponto[] | null {
   const areaImagem = width * height;
 
   const candidatos = comps.filter((c) => {
@@ -234,10 +240,10 @@ function acharMarcas(comps: Componente[], width: number, height: number, aspecto
   const areas = quad.map((p) => p.area);
   if (Math.max(...areas) / Math.min(...areas) > 2.2) return null;
 
-  return ordenarCantos(quad.map(({ x, y }) => ({ x, y })), aspectoAlvo);
+  return ordenarCantos(quad.map(({ x, y }) => ({ x, y })), aspectoAlvo, ancoraQr);
 }
 
-function ordenarCantos(pontos: Ponto[], aspectoAlvo: number): Ponto[] | null {
+function ordenarCantos(pontos: Ponto[], aspectoAlvo: number, ancoraQr?: Ponto | null): Ponto[] | null {
   const cx = pontos.reduce((s, p) => s + p.x, 0) / 4;
   const cy = pontos.reduce((s, p) => s + p.y, 0) / 4;
 
@@ -264,11 +270,31 @@ function ordenarCantos(pontos: Ponto[], aspectoAlvo: number): Ponto[] | null {
   // — exatamente o defeito que ninguém percebe. Melhor não ler.
   if (candidatos[0].erro > TOLERANCIA_ASPECTO) return null;
 
-  // Os dois melhores são a mesma orientação e a de 180 graus; fica a que não está de
-  // cabeça para baixo.
   const [primeiro, segundo] = candidatos;
   if (!segundo) return primeiro.q;
+
+  // Sobram dois candidatos: a orientação certa e ela girada 180 graus. Escolher errado
+  // aqui não produz erro visível — produz uma folha lida ao contrário, em que as bolhas
+  // caem nos vãos entre as linhas e TUDO sai em branco. O servidor aceitaria isso como
+  // "o aluno não respondeu nada" e gravaria zero.
+  //
+  // O QR resolve sem ambiguidade: ele é impresso acima e à esquerda da grade, então o
+  // canto superior esquerdo do cartão é o que está mais perto dele.
+  if (ancoraQr) {
+    const distTL = (c: typeof primeiro) => Math.hypot(c.q[0].x - ancoraQr.x, c.q[0].y - ancoraQr.y);
+    return distTL(primeiro) <= distTL(segundo) ? primeiro.q : segundo.q;
+  }
+
+  // Sem o QR no quadro, resta supor que ninguém fotografa o cartão de cabeça para baixo
+  // e ficar com a borda mais alta na imagem. Isso só vale com a folha aproximadamente
+  // em pé: com o celular deitado as duas ficam empatadas, e chutar ali é justamente
+  // como se grava um zero indevido. Nesse caso é melhor não ler — a tela continua
+  // tentando no quadro seguinte, e uma leitura que demora é infinitamente melhor que
+  // uma leitura errada.
   const alturaDe = (c: typeof primeiro) => c.q[0].y + c.q[1].y;
+  const diagonal = Math.hypot(primeiro.q[0].x - primeiro.q[2].x, primeiro.q[0].y - primeiro.q[2].y);
+  if (Math.abs(alturaDe(primeiro) - alturaDe(segundo)) < diagonal * 0.5) return null;
+
   return alturaDe(primeiro) <= alturaDe(segundo) ? primeiro.q : segundo.q;
 }
 
@@ -359,9 +385,26 @@ function escuridao(cinza: Uint8ClampedArray, width: number, height: number, cent
 // API
 // ------------------------------------------------------------------------------------
 
-/** Lê o QR do quadro. Usa a API nativa quando existe (bem mais rápida) e cai no jsQR. */
-export async function lerQrCode(img: ImageData): Promise<string | null> {
-  type Detector = { detect(fonte: ImageData): Promise<{ rawValue: string }[]> };
+export interface QrLido {
+  valor: string;
+  /** Centro do QR na imagem. É a âncora de orientação do cartão — ver ordenarCantos. */
+  centro: Ponto;
+}
+
+function media(pontos: Ponto[]): Ponto {
+  return {
+    x: pontos.reduce((s, p) => s + p.x, 0) / pontos.length,
+    y: pontos.reduce((s, p) => s + p.y, 0) / pontos.length,
+  };
+}
+
+/**
+ * Lê o QR do quadro e devolve o conteúdo E a posição dele. Usa a API nativa quando
+ * existe (bem mais rápida) e cai no jsQR.
+ */
+export async function lerQrCode(img: ImageData): Promise<QrLido | null> {
+  type Achado = { rawValue: string; cornerPoints?: Ponto[]; boundingBox?: DOMRectReadOnly };
+  type Detector = { detect(fonte: ImageData): Promise<Achado[]> };
   const ctor = (globalThis as unknown as {
     BarcodeDetector?: new (o: { formats: string[] }) => Detector;
   }).BarcodeDetector;
@@ -369,26 +412,45 @@ export async function lerQrCode(img: ImageData): Promise<string | null> {
   if (ctor) {
     try {
       const detector = new ctor({ formats: ['qr_code'] });
-      const achados = await detector.detect(img);
-      if (achados.length > 0 && achados[0].rawValue) return achados[0].rawValue;
+      const [achado] = await detector.detect(img);
+      if (achado?.rawValue) {
+        const cantos = achado.cornerPoints;
+        const centro = cantos && cantos.length > 0
+          ? media(cantos)
+          : achado.boundingBox
+            ? { x: achado.boundingBox.x + achado.boundingBox.width / 2, y: achado.boundingBox.y + achado.boundingBox.height / 2 }
+            : null;
+        if (centro) return { valor: achado.rawValue, centro };
+      }
     } catch {
       // Alguns navegadores expõem o construtor mas falham em detect(); segue no jsQR.
     }
   }
 
   const r = jsQR(img.data, img.width, img.height, { inversionAttempts: 'dontInvert' });
-  return r?.data ?? null;
+  if (!r?.data) return null;
+  const l = r.location;
+  return {
+    valor: r.data,
+    centro: media([l.topLeftCorner, l.topRightCorner, l.bottomRightCorner, l.bottomLeftCorner]),
+  };
 }
 
 /**
- * Lê as marcações do cartão. Devolve null quando não conseguiu localizar as quatro
- * marcas — a tela trata isso como "ainda procurando a folha", não como erro.
+ * Lê as marcações do cartão.
+ *
+ * `ancoraQr` é o centro do QR Code no mesmo quadro; passá-lo é o que permite ler com o
+ * celular em qualquer inclinação, inclusive deitado. Sem ele a leitura ainda funciona,
+ * mas só com a folha aproximadamente em pé.
+ *
+ * Devolve null quando não conseguiu localizar as quatro marcas COM CERTEZA — a tela
+ * trata isso como "ainda procurando a folha", não como erro.
  */
-export function lerCartao(img: ImageData, geom: CartaoGeom): LeituraCartao | null {
+export function lerCartao(img: ImageData, geom: CartaoGeom, ancoraQr?: Ponto | null): LeituraCartao | null {
   const { width, height } = img;
   const cinza = paraCinza(img);
   const bin = binarizar(cinza, width, height);
-  const marcas = acharMarcas(componentes(bin, width, height), width, height, geom.larguraMm / geom.alturaMm);
+  const marcas = acharMarcas(componentes(bin, width, height), width, height, geom.larguraMm / geom.alturaMm, ancoraQr);
   if (!marcas) return null;
 
   const cantosPapel: Ponto[] = [

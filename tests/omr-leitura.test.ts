@@ -111,6 +111,16 @@ interface OpcoesDesenho {
   tomMarcacao?: number;
 }
 
+/**
+ * Onde o QR aparece na imagem. No papel ele fica acima e à esquerda da grade de bolhas
+ * (ver CartaoRespostaFolha), então em coordenadas do cartão ele está em y negativo. É
+ * essa posição que o app repassa a lerCartao como âncora de orientação — decodificar o
+ * QR em si é trabalho do jsQR, não deste teste.
+ */
+function posicaoQr(geom: ReturnType<typeof calcularGeometria>, h: number[]): Ponto {
+  return projetar(h, 9, -14);
+}
+
 function desenharCartao(itens: ItemCartao[], respostas: string[], cantos: Ponto[], op: OpcoesDesenho = {}) {
   const geom = calcularGeometria(itens);
   const h = homografia(
@@ -134,7 +144,7 @@ function desenharCartao(itens: ItemCartao[], respostas: string[], cantos: Ponto[
       tela.circulo(h, bolha.x, bolha.y, BOLHA_MM / 2, pintada ? (op.tomMarcacao ?? 70) : 30, pintada);
     }
   }
-  return { tela, geom };
+  return { tela, geom, qr: posicaoQr(geom, h) };
 }
 
 // ------------------------------------------------------------------------------------
@@ -190,12 +200,12 @@ function cenario(
   nome: string,
   itens: ItemCartao[],
   respostas: string[],
-  opcoes: { ocupacao?: number; giroGraus?: number; inclinacao?: number } & OpcoesDesenho = {}
+  opcoes: { ocupacao?: number; giroGraus?: number; inclinacao?: number; semQr?: boolean } & OpcoesDesenho = {}
 ) {
   const geomRef = calcularGeometria(itens);
   const cantos = enquadrar(geomRef.larguraMm, geomRef.alturaMm, opcoes);
-  const { tela, geom } = desenharCartao(itens, respostas, cantos, opcoes);
-  const lida = lerCartao(tela.imageData(), geom);
+  const { tela, geom, qr } = desenharCartao(itens, respostas, cantos, opcoes);
+  const lida = lerCartao(tela.imageData(), geom, opcoes.semQr ? null : qr);
 
   const dim = `${geom.larguraMm.toFixed(0)}x${geom.alturaMm.toFixed(0)}mm, ${geom.blocos} bloco(s)`;
 
@@ -246,6 +256,36 @@ cenario('20 questões, girada 20 graus', itens20, respostas20, { giroGraus: 20 }
 cenario('sombra da mão sobre a folha', itens20, respostas20, { sombra: 0.45, giroGraus: 5 });
 cenario('marcação fraca a lápis', itens20, respostas20, { tomMarcacao: 150 });
 cenario('lápis fraco com sombra e giro', itens20, respostas20, { tomMarcacao: 145, sombra: 0.35, giroGraus: -8 });
+
+// Celular deitado / cartão de lado: é assim que se corrige quando a moldura da tela não
+// tem a proporção do cartão. A leitura tem de sair CERTA ou não sair — o que não pode é
+// sair invertida, porque aí cada resposta vira outra e ninguém percebe.
+cenario('celular deitado (cartão a 90 graus)', itens20, respostas20, { giroGraus: 90 });
+cenario('celular deitado para o outro lado (270 graus)', itens20, respostas20, { giroGraus: -90 });
+cenario('cartão de cabeça para baixo (180 graus)', itens20, respostas20, { giroGraus: 180 });
+cenario('quase deitado (80 graus)', itens20, respostas20, { giroGraus: 80 });
+
+// Prova longa: o passo entre linhas encolhe para a folha caber na A4. Se a compressão
+// prejudicasse a leitura, seria aqui que apareceria — e uma folha comprimida que nao le
+// e' pior que uma prova sem cartao.
+const itens90: ItemCartao[] = Array.from({ length: 90 }, (_, i) => ({ numeroNaProva: i + 1, qtdAlternativas: 5 }));
+cenario('90 questões (linhas comprimidas)', itens90, respostasDe(itens90), { giroGraus: 4 });
+
+// Sem o QR no quadro (recorte apertado, QR borrado na fotocópia) o leitor perde a
+// âncora de orientação. Com a folha em pé ele ainda resolve pela geometria; deitada,
+// tem de RECUSAR em vez de chutar — chutar errado grava zero num aluno que respondeu.
+cenario('sem QR, folha em pé: ainda lê', itens20, respostas20, { semQr: true, giroGraus: 6 });
+{
+  const geomRef = calcularGeometria(itens20);
+  const cantos = enquadrar(geomRef.larguraMm, geomRef.alturaMm, { giroGraus: 90 });
+  const { tela, geom } = desenharCartao(itens20, respostas20, cantos);
+  const lida = lerCartao(tela.imageData(), geom, null);
+  checar(
+    'sem QR e deitado: recusa em vez de chutar a orientação',
+    lida === null,
+    lida === null ? 'nenhuma leitura, como esperado' : `chutou: ${lida.marcacoes.join('|')}`
+  );
+}
 
 // Um canto fora do quadro tem que virar "não li", nunca uma leitura completa e errada:
 // sem esta garantia, uma folha mal enquadrada gravaria nota de um cartão que ninguém
