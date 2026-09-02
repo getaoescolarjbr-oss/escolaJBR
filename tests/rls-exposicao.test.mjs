@@ -280,7 +280,11 @@ async function rodar(tx) {
   if (profRestrito) {
     const [esperado] = await tx`
       SELECT count(*)::int n FROM alunos al
-      WHERE al.turma_id IN (SELECT turma_id FROM alocacoes_v2 WHERE professor_id = ${profRestrito.id}::uuid)`;
+      WHERE al.turma_id IN (
+        SELECT turma_id FROM alocacoes_v2 WHERE professor_id = ${profRestrito.id}::uuid
+        UNION
+        SELECT turma_id FROM "atividades_diárias"
+         WHERE professor_id = ${profRestrito.id}::uuid AND turma_id IS NOT NULL)`;
     const [total] = await tx`SELECT count(*)::int n FROM alunos`;
 
     const visto = await comoUsuario(profRestrito.user_id, async () => {
@@ -308,6 +312,27 @@ async function rodar(tx) {
     );
   } else {
     console.log('  (pulado) nenhum professor com alocacao e sem outro papel');
+  }
+
+  // Rede de proteção: professor sem nenhuma alocação, mas com atividades lançadas, não
+  // pode acabar vendo zero alunos — foi o caso encontrado ao aplicar em produção.
+  const [semAloc] = await tx`
+    SELECT p.id, p.user_id, p.nome FROM professores p
+    JOIN usuario_papeis up ON up.usuario_id = p.user_id AND up.papel = 'PROFESSOR'
+    WHERE p.user_id IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM alocacoes_v2 a WHERE a.professor_id = p.id)
+      AND EXISTS (SELECT 1 FROM "atividades_diárias" ad WHERE ad.professor_id = p.id)
+    ORDER BY p.id LIMIT 1`;
+  if (semAloc) {
+    const n = await comoUsuario(semAloc.user_id, async () => {
+      const [a] = await tx`SELECT count(*)::int n FROM alunos`;
+      return a.n;
+    });
+    checar(
+      'professor sem alocação cadastrada nao fica vendo zero alunos',
+      n > 0 && n < total_alunos,
+      `${semAloc.nome}: ${n} de ${total_alunos}`
+    );
   }
 
   // Papeis largos: cada um tem de continuar vendo a escola toda.

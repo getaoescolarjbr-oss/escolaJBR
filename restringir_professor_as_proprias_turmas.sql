@@ -90,11 +90,22 @@ REVOKE ALL ON FUNCTION public.enxerga_escola_inteira() FROM anon;
 GRANT EXECUTE ON FUNCTION public.enxerga_escola_inteira() TO authenticated;
 
 /**
- * As turmas em que a conta logada tem alocação. Devolve array (e não uma tabela) para
- * o `= ANY (...)` da política resolver com uma única leitura.
+ * As turmas da conta logada, por duas fontes.
  *
- * Inclui alocação de espelho — a que cobre um professor de atestado. Quem está
- * substituindo precisa ver a turma que assumiu, senão a substituição não funciona.
+ * A primeira é alocacoes_v2, que é o registro oficial — e inclui a alocação de espelho,
+ * a que cobre professor de atestado: quem substitui precisa ver a turma que assumiu.
+ *
+ * A segunda é o histórico de atividades lançadas por ele. Existe como rede de proteção,
+ * não como atalho: ao aplicar esta migração, uma professora ativa (55 atividades em 4
+ * turmas, cargo Professor, status Convocado) tinha ZERO linhas em alocacoes_v2 e teria
+ * passado a ver zero alunos — sem erro na tela, só listas vazias. É lacuna de cadastro,
+ * não de regra, mas o modo de falha importa: "vê algumas turmas a mais" é recuperável,
+ * "vê nada e não sabe por quê" tira o professor do ar no meio do bimestre.
+ *
+ * Ela não substitui o cadastro. A alocação continua sendo o que deve ser corrigido —
+ * isto só evita que a falta dela vire uma tela vazia.
+ *
+ * Devolve array (e não tabela) para as políticas resolverem com uma leitura só.
  */
 CREATE OR REPLACE FUNCTION public.minhas_turmas_de_professor()
 RETURNS uuid[]
@@ -103,9 +114,17 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT COALESCE(array_agg(DISTINCT a.turma_id), ARRAY[]::uuid[])
-  FROM alocacoes_v2 a
-  WHERE a.professor_id = (SELECT public.meu_professor_id());
+  SELECT COALESCE(array_agg(DISTINCT turma_id), ARRAY[]::uuid[])
+  FROM (
+    SELECT a.turma_id
+    FROM alocacoes_v2 a
+    WHERE a.professor_id = (SELECT public.meu_professor_id())
+    UNION
+    SELECT ad.turma_id
+    FROM "atividades_diárias" ad
+    WHERE ad.professor_id = (SELECT public.meu_professor_id())
+      AND ad.turma_id IS NOT NULL
+  ) t;
 $$;
 
 REVOKE ALL ON FUNCTION public.minhas_turmas_de_professor() FROM public;
