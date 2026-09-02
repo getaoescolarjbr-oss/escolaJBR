@@ -4,7 +4,7 @@ import type { Avaliacao, NovaAvaliacaoInput } from '../../../types/avaliacoes';
 import type { Question } from '../../../types/bancoQuestoes';
 import { QuestionPicker } from '../QuestionPicker';
 import { ConfigAvaliacaoForm } from './ConfigAvaliacaoForm';
-import { atualizarAvaliacao, contarRespostasEnviadas, obterQuestoesCompletasDaAvaliacao } from '../../../services/avaliacoesService';
+import { atualizarAvaliacao, contarFolhasGeradas, contarRespostasEnviadas, obterQuestoesCompletasDaAvaliacao } from '../../../services/avaliacoesService';
 
 type Passo = 'questoes' | 'config';
 
@@ -27,6 +27,7 @@ export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo }: Props) {
   const [selecionadas, setSelecionadas] = useState<Map<string, Question>>(new Map());
   const [valoresIniciais, setValoresIniciais] = useState<Record<string, number>>({});
   const [respostasEnviadas, setRespostasEnviadas] = useState(0);
+  const [folhasGeradas, setFolhasGeradas] = useState(0);
   const [salvando, setSalvando] = useState(false);
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
 
@@ -34,11 +35,13 @@ export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo }: Props) {
     Promise.all([
       obterQuestoesCompletasDaAvaliacao(avaliacao.id),
       contarRespostasEnviadas(avaliacao.id),
+      contarFolhasGeradas(avaliacao.id),
     ])
-      .then(([{ questoes, valoresPorQuestao }, respostas]) => {
+      .then(([{ questoes, valoresPorQuestao }, respostas, folhas]) => {
         setSelecionadas(new Map(questoes.map((q) => [q.id, q])));
         setValoresIniciais(valoresPorQuestao);
         setRespostasEnviadas(respostas);
+        setFolhasGeradas(folhas);
       })
       .catch((e) => setErro(e instanceof Error ? e.message : 'Não foi possível carregar a avaliação.'))
       .finally(() => setCarregando(false));
@@ -61,6 +64,14 @@ export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo }: Props) {
       const ok = confirm(
         `${respostasEnviadas} aluno(s) já enviaram resposta para este(a) ${rotulo}. ` +
         'Alterar as questões, a ordem, o gabarito ou os valores agora pode deixar os resultados já registrados fora de sincronia com a nova versão. Deseja salvar mesmo assim?'
+      );
+      if (!ok) return;
+    }
+    if (folhasGeradas > 0 && respostasEnviadas === 0) {
+      const ok = confirm(
+        `Já existem ${folhasGeradas} folha(s) com QR Code geradas para este(a) ${rotulo}. ` +
+        'Salvar descarta as versões sorteadas: quem já tiver a folha impressa em mãos vai precisar de uma nova, ' +
+        'porque a ordem das questões e o código do QR mudam. Continuar?'
       );
       if (!ok) return;
     }
@@ -139,6 +150,12 @@ export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo }: Props) {
                   dataAplicacao: avaliacao.data_aplicacao,
                   prazoEntrega: avaliacao.prazo_entrega,
                   turmaIds: avaliacao.turma_ids ?? [],
+                  embaralhar: avaliacao.embaralhar,
+                  qtdVersoes: avaliacao.qtd_versoes,
+                  cartaoSeparado: avaliacao.cartao_separado,
+                  modoNota: avaliacao.modo_nota,
+                  ponderadaEscopo: avaliacao.ponderada_escopo,
+                  lancarNoBoletim: avaliacao.lancar_no_boletim,
                 }}
                 salvando={salvando}
                 textoBotaoContinuar="Salvar alterações"

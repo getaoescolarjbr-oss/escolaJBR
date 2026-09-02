@@ -1,4 +1,5 @@
 import type { TipoQuestao } from './bancoQuestoes';
+import type { ModoEmbaralhar, ModoNota, PonderadaEscopo } from './correcaoOmr';
 
 export type ModoAvaliacao = 'IMPRESSA' | 'ONLINE' | 'AMBAS';
 export type StatusAvaliacao = 'RASCUNHO' | 'PUBLICADA' | 'ENCERRADA';
@@ -24,6 +25,15 @@ export interface Avaliacao {
   criado_por: string;
   created_at: string;
   updated_at: string;
+
+  // Aplicação impressa com correção óptica — ver create_correcao_omr.sql.
+  embaralhar: ModoEmbaralhar;
+  qtd_versoes: number;
+  cartao_separado: boolean;
+  modo_nota: ModoNota;
+  ponderada_escopo: PonderadaEscopo;
+  lancar_no_boletim: boolean;
+
   turma_ids?: string[];
   turma_nomes?: string[];
   total_questoes?: number;
@@ -48,6 +58,12 @@ export interface NovaAvaliacaoInput {
   prazoEntrega: string | null;
   turmaIds: string[];
   questoes: AvaliacaoQuestaoInput[];
+  embaralhar: ModoEmbaralhar;
+  qtdVersoes: number;
+  cartaoSeparado: boolean;
+  modoNota: ModoNota;
+  ponderadaEscopo: PonderadaEscopo;
+  lancarNoBoletim: boolean;
 }
 
 // Vem de rpc_minhas_avaliacoes_aluno — nunca contém gabarito.
@@ -151,7 +167,15 @@ export interface ResultadoAlunoDetalhado {
   aluno_nome: string;
   codigo_sgde?: string | null;
   turma_nome: string | null;
+  /**
+   * A nota que vale para esta prova. Numa prova PONDERADA já vem convertida: o relatório
+   * inteiro (tabelas, médias, XLSX, impressão) lê este campo, então normalizar na entrada
+   * evita ter que lembrar de aplicar a regra em cada um dos seis lugares que a usam.
+   */
   nota: number | null;
+  /** A soma crua dos acertos, preservada quando `nota` foi substituída pela ponderada. */
+  nota_bruta?: number | null;
+  nota_ponderada?: number | null;
   finalizado_em: string | null;
   respostas: Record<string, RespostaItemAluno>;
   total_acertos: number;

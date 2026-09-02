@@ -27,6 +27,7 @@ import { CadastroPendenteScreen } from './components/aluno/CadastroPendenteScree
 import { GestaoEscolarPanel } from './components/gestaoEscolar/GestaoEscolarPanel';
 import { CoordenacaoAreaPanel } from './components/coordenacaoArea/CoordenacaoAreaPanel';
 import { SimuladoPublicoPage } from './components/simulado/SimuladoPublicoPage';
+import { ModoCorrecaoPage } from './components/correcao/ModoCorrecaoPage';
 import { MODULOS_NAV, modulosVisiveis } from './config/moduleNav';
 
 const MODULOS_COM_SHELL = [
@@ -85,6 +86,11 @@ function App() {
   }
   const [forceLanding, setForceLanding] = useState(() => new URLSearchParams(window.location.search).has('home'));
   const simuladoToken = useMemo(() => new URLSearchParams(window.location.search).get('simulado'), []);
+  // ?modulo=correcao[&prova=<id>] — atalho para o celular abrir o Modo Correção direto,
+  // sem navegar pelo portal com a pilha de cartões na mão. Ver correcaoOmrService.linkModoCorrecao.
+  const params = new URLSearchParams(window.location.search);
+  const modoCorrecao = params.get('modulo') === 'correcao';
+  const provaCorrecao = params.get('prova') ?? undefined;
 
   // Continuidade de link direto (ex.: home pública -> "Agendar" -> login):
   // o `view` só é lido da URL uma vez, no mount inicial (antes do login existir).
@@ -276,6 +282,9 @@ function App() {
     return <SimuladoPublicoPage token={simuladoToken} />;
   }
 
+  // O Modo Correção exige login (grava nota), então entra DEPOIS da checagem de sessão,
+  // mais abaixo — ao contrário do link público de simulado, que é anônimo por natureza.
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-ms-dark">
@@ -307,6 +316,20 @@ function App() {
       return <Login onLogin={() => setShowLogin(false)} onBack={() => setShowLogin(false)} modoInicial={loginModoAluno ? 'aluno' : 'servidor'} />;
     }
     return <LandingPage onEnterPortal={handleEnterPortal} />;
+  }
+
+  // Modo Correção em tela cheia: quem corrige é servidor, nunca aluno, então vem antes
+  // do desvio do BiblioClube e depois da checagem de sessão.
+  if (modoCorrecao && !hasRole('ALUNO')) {
+    return (
+      <ModoCorrecaoPage
+        provaEsperadaId={provaCorrecao}
+        onFechar={() => {
+          window.history.replaceState({}, '', '/?modulo=banco-questoes');
+          navegarPara('banco-questoes');
+        }}
+      />
+    );
   }
 
   // Aluno tem uma "app" própria (BiblioClube), sem Header/ModuleShell de servidor —

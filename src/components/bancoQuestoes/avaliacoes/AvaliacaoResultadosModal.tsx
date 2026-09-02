@@ -155,12 +155,27 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
 
   useEffect(() => {
     obterResultadosDetalhadosAvaliacao(avaliacao.id)
-      .then(setRelatorio)
+      // Numa prova ponderada, `nota` passa a ser a ponderada aqui na entrada. O relatório
+      // usa a nota em seis lugares (duas médias, a tabela, o XLSX, o CSV e a impressão);
+      // converter num só ponto é o que impede um deles de continuar mostrando a nota
+      // bruta e contradizer o boletim.
+      .then((r) => setRelatorio(
+        avaliacao.modo_nota !== 'PONDERADA'
+          ? r
+          : {
+              ...r,
+              alunos: r.alunos.map((al) => ({
+                ...al,
+                nota_bruta: al.nota,
+                nota: al.finalizado_em ? (al.nota_ponderada ?? 0) : null,
+              })),
+            }
+      ))
       .catch((e) => {
         const msg = e?.message || (e instanceof Error ? e.message : 'Não foi possível carregar os resultados.');
         setErro(msg);
       });
-  }, [avaliacao.id]);
+  }, [avaliacao.id, avaliacao.modo_nota]);
 
   const questoes = relatorio?.questoes ?? [];
   const alunos = relatorio?.alunos ?? [];
@@ -212,7 +227,14 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
   function imprimir() {
     printReport(tabelaRef.current, {
       title: `Resultados — ${avaliacao.titulo}`,
-      subtitle: avaliacao.tipo === 'SIMULADO' ? 'Simulado (não gera nota de boletim)' : avaliacao.disciplina ?? undefined,
+      subtitle: [
+        avaliacao.tipo === 'SIMULADO' ? 'Simulado' : avaliacao.disciplina ?? null,
+        avaliacao.modo_nota === 'PONDERADA'
+          ? `Nota ponderada — referencial: melhor ${avaliacao.ponderada_escopo === 'TURMA' ? 'de cada turma' : 'da avaliação'}`
+          : avaliacao.modo_nota === 'SEM_NOTA'
+            ? 'Sem nota de boletim'
+            : null,
+      ].filter(Boolean).join(' · ') || undefined,
       info: [
         { label: 'Total de Alunos', value: `${alunos.length}` },
         { label: 'Turmas', value: `${turmasOrdenadas.length}` },

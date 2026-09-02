@@ -120,7 +120,12 @@ export const PROVA_QUESTOES_CSS = `
   .alternativas-grid-2 .alternativa-texto { text-align: left; }
 `;
 
-export function printProva(ref: HTMLElement | null, tituloDocumento: string) {
+/**
+ * `cssExtra` entra depois das regras padrão. Existe para a impressão em lote por aluno
+ * (ImprimirFolhasModal) trazer o CSS do cartão-resposta em milímetros sem que as demais
+ * telas de impressão carreguem essas regras.
+ */
+export function printProva(ref: HTMLElement | null, tituloDocumento: string, cssExtra = '') {
   if (!ref) return;
 
   const clone = ref.cloneNode(true) as HTMLElement;
@@ -236,6 +241,8 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string) {
     }
 
     ${PROVA_QUESTOES_CSS}
+
+    ${cssExtra}
 
     .no-print, [class*="no-print"] { display: none !important; }
 
