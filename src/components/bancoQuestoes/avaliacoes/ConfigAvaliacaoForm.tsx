@@ -73,7 +73,10 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
   // turma), pra cada aluno da sala receber uma ordem de questões diferente.
   const [modoVersoes, setModoVersoes] = useState<'FIXO' | 'POR_ALUNO'>('FIXO');
   const [contandoAlunos, setContandoAlunos] = useState(false);
-  const [cartaoSeparado, setCartaoSeparado] = useState<boolean>(inicial?.cartaoSeparado ?? true);
+  // Padrão: cartão JUNTO com a prova. Separado gasta uma folha a mais por aluno — numa
+  // turma de 30, uma resma a cada poucas avaliações — e só compensa quando o professor
+  // quer recolher os cartões e devolver as provas.
+  const [cartaoSeparado, setCartaoSeparado] = useState<boolean>(inicial?.cartaoSeparado ?? false);
   const [modoNota, setModoNota] = useState<ModoNota>(
     inicial?.modoNota ?? ((inicial?.tipo ?? 'AVALIACAO') === 'SIMULADO' ? 'SEM_NOTA' : 'DIRETA')
   );
@@ -402,18 +405,23 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
               )}
             </div>
 
-            <div className="flex items-end">
-              <label className="flex items-center gap-2 px-3 py-2 bg-ms-dark border border-gray-800 rounded-lg text-sm text-ms-main cursor-pointer w-full">
-                <input type="checkbox" checked={cartaoSeparado} onChange={(e) => setCartaoSeparado(e.target.checked)} />
-                Cartão em folha separada
-              </label>
+            <div>
+              <label className="text-xs font-bold text-ms-muted">Cartão-resposta</label>
+              <select
+                className={inputClass}
+                value={cartaoSeparado ? 'SEPARADO' : 'JUNTO'}
+                onChange={(e) => setCartaoSeparado(e.target.value === 'SEPARADO')}
+              >
+                <option value="JUNTO">Junto, no fim da prova</option>
+                <option value="SEPARADO">Em folha separada</option>
+              </select>
             </div>
           </div>
 
           <p className="text-xs text-ms-muted leading-relaxed">
             {cartaoSeparado
-              ? 'O cartão sai numa folha só dele — é o formato que a câmera lê com mais segurança, porque a folha inteira é o alvo. Recolha os cartões e devolva as provas aos alunos.'
-              : 'O cartão sai no meio da prova. Gasta menos papel, mas a leitura exige enquadrar uma região no meio do texto e erra com mais frequência.'}
+              ? 'Uma folha só para o cartão, por aluno. Útil quando você quer recolher os cartões e devolver as provas — ao custo de uma folha a mais por aluno.'
+              : 'O cartão sai logo depois da última questão, aproveitando a sobra da página. Se não couber ali, vai inteiro para a folha seguinte — nunca partido ao meio.'}
             {embaralhar !== 'NENHUM' && ' A versão A nunca é embaralhada: ela é a sua cópia de referência.'}
           </p>
         </div>

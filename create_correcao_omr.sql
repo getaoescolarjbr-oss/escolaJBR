@@ -1,6 +1,14 @@
 -- ====================================================================================
 -- CORREÇÃO ÓPTICA (OMR) DE PROVA IMPRESSA + VERSÕES EMBARALHADAS + MODOS DE NOTA
 --
+-- ATENÇÃO — PARCIALMENTE SUBSTITUÍDO. Se for reaplicar este arquivo, rode
+-- permitir_versao_por_aluno_avaliacao.sql LOGO EM SEGUIDA. Aquele arquivo redefine
+-- rpc_gerar_versoes_prova e solta dois limites que nasceram aqui:
+--   * provas_qtd_versoes_check subiu de 4 para 60;
+--   * prova_versoes_rotulo_check deixou de ser IN ('A','B','C','D') e virou '^[A-Z]{1,2}$'.
+-- Rodar só este arquivo devolve os limites antigos e quebra a opção "uma versão por
+-- aluno" — sem erro nenhum na hora, só na próxima vez que alguém sortear 5 versões.
+--
 -- PRÉ-REQUISITOS (nesta ordem, todos já aplicados em produção):
 --   fix_provas_table_collision.sql  -> provas / prova_*
 --   integrar_provas_com_notas.sql   -> prova_avaliacao_notas, provas.disciplina_id/bimestre_id
