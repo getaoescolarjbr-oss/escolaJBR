@@ -38,19 +38,20 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
       }
       
       else if (view === 'REGISTER') {
-        // 1. Verifica se o professor existe na tabela pelo email
-        const { data: profData, error: profError } = await supabase
-          .from('professores')
-          .select('id, email')
-          .eq('email', email)
-          .single();
+        // 1. Verifica se o professor existe na base da escola.
+        //
+        // Por RPC, e não por SELECT direto: a consulta acontece antes de existir sessão,
+        // entao ler `professores` aqui exigia deixar a tabela legivel sem login — e isso
+        // entregava os 67 e-mails da escola a quem pedisse. A RPC responde so sim ou nao
+        // (ver fechar_exposicao_anon.sql).
+        const { data: ehProfessor, error: profError } = await supabase
+          .rpc('rpc_email_de_professor_existe', { p_email: email });
+        if (profError) throw profError;
 
         const isAdminEmail = email === 'gestaoescolarjbr@gmail.com';
-        
-        if (!isAdminEmail) {
-          if (profError || !profData) {
-            throw new Error("E-mail não encontrado na base de professores da escola.");
-          }
+
+        if (!ehProfessor && !isAdminEmail) {
+          throw new Error("E-mail não encontrado na base de professores da escola.");
         }
 
         // 2. Cria o usuário no auth
@@ -59,11 +60,15 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
         if (authError) throw authError;
 
         if (authData.user) {
-          if (profData) {
+          if (ehProfessor) {
+            // Vincula pelo e-mail: sem o SELECT anterior nao ha mais o id em maos. A
+            // policy "Permitir auto-vinculacao no primeiro acesso" ja restringe a linha
+            // ao e-mail do proprio token, entao o filtro aqui e conveniencia, nao a
+            // barreira.
             const { error: updateError } = await supabase
               .from('professores')
               .update({ user_id: authData.user.id })
-              .eq('id', profData.id);
+              .eq('email', email);
 
             if (updateError) throw updateError;
           }
