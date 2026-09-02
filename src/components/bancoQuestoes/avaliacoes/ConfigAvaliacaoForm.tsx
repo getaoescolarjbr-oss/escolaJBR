@@ -6,6 +6,7 @@ import type { ModoEmbaralhar, ModoNota, PonderadaEscopo } from '../../../types/c
 import { MODO_EMBARALHAR_LABEL, MODO_NOTA_LABEL } from '../../../types/correcaoOmr';
 import { listarTurmas } from '../../../services/agendamentoService';
 import { listarDisciplinasCatalogo } from '../../../services/avaliacoesService';
+import { contarAlunosAtivosTurmas } from '../../../services/correcaoOmrService';
 import { getBimestreFromDate } from '../../../utils/academicUtils';
 
 const BIMESTRES = [1, 2, 3, 4] as const;
@@ -67,6 +68,11 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
   const [prazoEntrega, setPrazoEntrega] = useState(() => (inicial?.prazoEntrega ? new Date(inicial.prazoEntrega).toISOString().slice(0, 16) : ''));
   const [embaralhar, setEmbaralhar] = useState<ModoEmbaralhar>(inicial?.embaralhar ?? 'NENHUM');
   const [qtdVersoes, setQtdVersoes] = useState<number>(inicial?.qtdVersoes ?? 1);
+  // 'FIXO' = professor escolhe 1-4 no seletor de sempre. 'POR_ALUNO' = qtdVersoes vira a
+  // contagem de alunos ativos das turmas selecionadas (recalculada a cada mudança de
+  // turma), pra cada aluno da sala receber uma ordem de questões diferente.
+  const [modoVersoes, setModoVersoes] = useState<'FIXO' | 'POR_ALUNO'>('FIXO');
+  const [contandoAlunos, setContandoAlunos] = useState(false);
   const [cartaoSeparado, setCartaoSeparado] = useState<boolean>(inicial?.cartaoSeparado ?? true);
   const [modoNota, setModoNota] = useState<ModoNota>(
     inicial?.modoNota ?? ((inicial?.tipo ?? 'AVALIACAO') === 'SIMULADO' ? 'SEM_NOTA' : 'DIRETA')
@@ -137,6 +143,24 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
     [valoresPorQuestao]
   );
 
+  // "Uma versão por aluno": a contagem some sempre que a seleção de turmas muda, porque
+  // é dela que sai o qtdVersoes que vai pro banco. Sem shuffle (embaralhar='NENHUM') toda
+  // versão além da A sai idêntica à original (ver rpc_gerar_versoes_prova) — nesse modo
+  // não faz sentido nenhum, então empurra pra QUESTOES ao entrar, mas sem travar o
+  // seletor: o professor pode voltar pra NENHUM se quiser mesmo assim.
+  useEffect(() => {
+    if (modoVersoes !== 'POR_ALUNO') return;
+    if (embaralhar === 'NENHUM') setEmbaralhar('QUESTOES');
+    const ids = Array.from(turmaIds);
+    if (ids.length === 0) { setQtdVersoes(1); return; }
+    setContandoAlunos(true);
+    contarAlunosAtivosTurmas(ids)
+      .then((n) => setQtdVersoes(Math.max(1, n)))
+      .catch(() => {})
+      .finally(() => setContandoAlunos(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modoVersoes, turmaIds]);
+
   function toggleTurma(id: string) {
     setTurmaIds((prev) => {
       const next = new Set(prev);
@@ -146,7 +170,6 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
     });
   }
 
-  const ehSimulado = tipo === 'SIMULADO';
   // Simulado nasce online (link público, sem login — ver create_simulados_publico.sql),
   // mas desde create_correcao_omr.sql ele também pode ser impresso e corrigido pela
   // câmera, então o modo deixou de ser imposto pelo tipo.
@@ -354,15 +377,29 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
               <label className="text-xs font-bold text-ms-muted">Versões da prova</label>
               <select
                 className={inputClass}
-                value={versoesEfetivas}
-                onChange={(e) => setQtdVersoes(Number(e.target.value))}
+                value={modoVersoes === 'POR_ALUNO' ? 'POR_ALUNO' : versoesEfetivas}
+                onChange={(e) => {
+                  if (e.target.value === 'POR_ALUNO') { setModoVersoes('POR_ALUNO'); return; }
+                  setModoVersoes('FIXO');
+                  setQtdVersoes(Number(e.target.value));
+                }}
               >
                 {[1, 2, 3, 4].map((n) => (
                   <option key={n} value={n} disabled={embaralhar !== 'NENHUM' && n < 2}>
                     {n === 1 ? 'Versão única (A)' : `${n} versões (A–${String.fromCharCode(64 + n)})`}
                   </option>
                 ))}
+                <option value="POR_ALUNO">Uma versão por aluno da turma</option>
               </select>
+              {modoVersoes === 'POR_ALUNO' && (
+                <p className="text-xs text-ms-muted mt-1">
+                  {contandoAlunos
+                    ? 'Contando alunos ativos...'
+                    : turmaIds.size === 0
+                      ? 'Selecione a(s) turma(s) abaixo para calcular.'
+                      : `${qtdVersoes} versão(ões) — uma por aluno ativo (transferido/remanejado não conta).`}
+                </p>
+              )}
             </div>
 
             <div className="flex items-end">

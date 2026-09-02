@@ -48,6 +48,18 @@ export async function listarAlocacoes(provaId: string): Promise<AlocacaoProva[]>
   return (data ?? []) as AlocacaoProva[];
 }
 
+/**
+ * Quantos alunos ativos (exclui transferido/remanejado, mesmo critério de
+ * rpc_gerar_versoes_prova) as turmas dadas têm hoje. Usado para sugerir qtd_versoes
+ * quando o professor escolhe "uma versão por aluno" em vez de um número fixo.
+ */
+export async function contarAlunosAtivosTurmas(turmaIds: string[]): Promise<number> {
+  if (turmaIds.length === 0) return 0;
+  const { data, error } = await supabase.rpc('rpc_contar_alunos_ativos_turmas', { p_turma_ids: turmaIds });
+  if (error) throw error;
+  return (data ?? 0) as number;
+}
+
 /** Gabarito de uma versão, linha a linha, já com a bolha correta da folha impressa. */
 export async function obterGabaritoVersao(provaId: string, rotulo: string): Promise<LinhaGabarito[]> {
   const { data, error } = await supabase.rpc('rpc_gabarito_versao', { p_prova_id: provaId, p_rotulo: rotulo });
