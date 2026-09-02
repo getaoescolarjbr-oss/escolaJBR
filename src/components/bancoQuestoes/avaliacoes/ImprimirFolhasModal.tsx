@@ -4,7 +4,7 @@ import { AlertTriangle, Loader2, Printer, RefreshCw, X } from 'lucide-react';
 import type { Question } from '../../../types/bancoQuestoes';
 import type { Avaliacao } from '../../../types/avaliacoes';
 import type { AlocacaoProva } from '../../../types/correcaoOmr';
-import { PROVA_QUESTOES_CSS, printProva } from '../../../utils/printProva';
+import { PROVA_LAYOUT_CSS, PROVA_QUESTOES_CSS, printProva } from '../../../utils/printProva';
 import { CARTAO_CSS, calcularGeometria } from '../../../utils/cartaoResposta';
 import { aplicarVersao, itensCartaoDaVersao } from '../../../utils/versaoProva';
 import { gerarVersoes, listarAlocacoes } from '../../../services/correcaoOmrService';
@@ -365,6 +365,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
               )}
 
               <div className="border border-gray-800 rounded-xl bg-white overflow-x-auto">
+                <style>{PROVA_LAYOUT_CSS}</style>
                 <style>{PROVA_QUESTOES_CSS}</style>
                 <style>{CSS_LOTE}</style>
                 <div

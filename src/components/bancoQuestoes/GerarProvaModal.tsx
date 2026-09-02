@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 import { Printer, X } from 'lucide-react';
 import type { Question } from '../../types/bancoQuestoes';
-import { PROVA_QUESTOES_CSS, entraNoCartaoResposta, printProva } from '../../utils/printProva';
+import { PROVA_LAYOUT_CSS, PROVA_QUESTOES_CSS, entraNoCartaoResposta, printProva } from '../../utils/printProva';
 import { QuestaoImpressa } from './QuestaoImpressa';
 
 interface Props {
@@ -109,6 +109,7 @@ export function GerarProvaModal({ questoes, onClose }: Props) {
           <div className="border border-gray-800 rounded-xl p-4 bg-white overflow-x-auto">
             {/* Mesmo CSS da impressão, pra este preview mostrar o que de fato
                 sai no papel — inclusive o limite de tamanho das figuras. */}
+            <style>{PROVA_LAYOUT_CSS}</style>
             <style>{PROVA_QUESTOES_CSS}</style>
             <div ref={previewRef} style={{ color: '#1a1a2e', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '11pt' }}>
               <div className="prova-header" style={{ display: 'flex', alignItems: 'stretch', justifyContent: 'flex-start', gap: 12 }}>

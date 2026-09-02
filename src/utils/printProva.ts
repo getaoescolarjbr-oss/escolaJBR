@@ -12,6 +12,109 @@ export function entraNoCartaoResposta(q: Question) {
   return !ehQuestaoEscrita(q.tipo) && q.alternatives.length > 0;
 }
 
+/**
+ * Cabecalho da prova, identificacao do aluno, instrucoes e o cartao-resposta simples
+ * (aquele de bolhas com letra impressa, sem leitura optica — o cartao OMR tem CSS
+ * proprio em utils/cartaoResposta.ts).
+ *
+ * Vivia so dentro do <style> da janela de impressao, e o preco apareceu na tela: um
+ * preview que monta este mesmo HTML fora da janela renderizava sem regra nenhuma, e a
+ * logo da escola saia em tamanho natural, ocupando a tela inteira. Exportado, o preview
+ * e o papel passam a ler a mesma fonte.
+ *
+ * So entram regras presas a uma classe. As de `*` e `body` continuam na janela de
+ * impressao: aplicadas dentro do app, zerariam a margem de tudo e poriam uma borda azul
+ * em volta da pagina inteira.
+ */
+export const PROVA_LAYOUT_CSS = `
+.prova-header {
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 12px;
+  border-bottom: 3px solid #002677;
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.prova-logo { height: 100%; width: auto; max-width: 110px; object-fit: contain; flex-shrink: 0; }
+
+.prova-header-info { flex: 1; min-width: 0; }
+
+.prova-escola { font-size: 1.15em; font-weight: 900; color: #002677; text-transform: uppercase; letter-spacing: -0.2px; }
+
+.prova-titulo { font-size: 1.35em; font-weight: 900; color: #1a1a2e; margin-top: 2px; }
+
+.prova-meta { font-size: 0.85em; color: #666; font-weight: 600; margin-top: 2px; }
+
+.prova-aluno {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  font-size: 0.95em;
+  font-weight: 600;
+  border: 1px solid #c7d7f7;
+  background: #f0f4ff;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+}
+
+.prova-instrucoes {
+  font-size: 0.85em;
+  color: #444;
+  background: #fafafa;
+  border: 1px solid #e2e2e2;
+  border-radius: 6px;
+  padding: 6px 10px;
+  margin-bottom: 10px;
+  white-space: pre-wrap;
+}
+
+.cartao-resposta {
+  border: 1.5px solid #002677;
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  break-inside: avoid;
+}
+
+.cartao-titulo {
+  font-size: 0.95em;
+  font-weight: 900;
+  color: #002677;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 6px;
+}
+
+.cartao-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 4px 10px;
+}
+
+.cartao-item { display: flex; align-items: center; gap: 4px; font-size: 0.81em; }
+
+.cartao-num { font-weight: 900; width: 14px; flex-shrink: 0; }
+
+.cartao-bolhas { display: flex; gap: 3px; }
+
+.bolha {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.15em;
+  height: 1.15em;
+  border: 1.1px solid #002677;
+  border-radius: 50%;
+  font-size: 0.62em;
+  font-weight: 700;
+  color: #002677;
+  flex-shrink: 0;
+}
+`;
+
 // Regras que precisam valer IGUAIS no preview da tela e no papel. Ficam aqui pra
 // os modais de prova importarem — quando estavam copiadas em cada modal, o CSS
 // de impressão evoluiu sozinho e as figuras saíram estourando a margem.
@@ -153,92 +256,7 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
       border: 1.5px solid #002677;
     }
 
-    .prova-header {
-      display: flex;
-      align-items: stretch;
-      justify-content: flex-start;
-      gap: 12px;
-      border-bottom: 3px solid #002677;
-      padding-bottom: 8px;
-      margin-bottom: 8px;
-    }
-
-    .prova-logo { height: 100%; width: auto; max-width: 110px; object-fit: contain; flex-shrink: 0; }
-
-    .prova-header-info { flex: 1; min-width: 0; }
-
-    .prova-escola { font-size: 1.15em; font-weight: 900; color: #002677; text-transform: uppercase; letter-spacing: -0.2px; }
-
-    .prova-titulo { font-size: 1.35em; font-weight: 900; color: #1a1a2e; margin-top: 2px; }
-
-    .prova-meta { font-size: 0.85em; color: #666; font-weight: 600; margin-top: 2px; }
-
-    .prova-aluno {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 4px 18px;
-      font-size: 0.95em;
-      font-weight: 600;
-      border: 1px solid #c7d7f7;
-      background: #f0f4ff;
-      border-radius: 6px;
-      padding: 6px 10px;
-      margin-bottom: 10px;
-    }
-
-    .prova-instrucoes {
-      font-size: 0.85em;
-      color: #444;
-      background: #fafafa;
-      border: 1px solid #e2e2e2;
-      border-radius: 6px;
-      padding: 6px 10px;
-      margin-bottom: 10px;
-      white-space: pre-wrap;
-    }
-
-    .cartao-resposta {
-      border: 1.5px solid #002677;
-      border-radius: 8px;
-      padding: 8px 12px;
-      margin-bottom: 12px;
-      break-inside: avoid;
-    }
-
-    .cartao-titulo {
-      font-size: 0.95em;
-      font-weight: 900;
-      color: #002677;
-      text-transform: uppercase;
-      letter-spacing: 0.6px;
-      margin-bottom: 6px;
-    }
-
-    .cartao-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-      gap: 4px 10px;
-    }
-
-    .cartao-item { display: flex; align-items: center; gap: 4px; font-size: 0.81em; }
-
-    .cartao-num { font-weight: 900; width: 14px; flex-shrink: 0; }
-
-    .cartao-bolhas { display: flex; gap: 3px; }
-
-    .bolha {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 1.15em;
-      height: 1.15em;
-      border: 1.1px solid #002677;
-      border-radius: 50%;
-      font-size: 0.62em;
-      font-weight: 700;
-      color: #002677;
-      flex-shrink: 0;
-    }
+    ${PROVA_LAYOUT_CSS}
 
     ${PROVA_QUESTOES_CSS}
 

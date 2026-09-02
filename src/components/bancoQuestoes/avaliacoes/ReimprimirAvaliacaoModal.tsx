@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Loader2, Printer, X } from 'lucide-react';
 import type { Question } from '../../../types/bancoQuestoes';
 import type { Avaliacao } from '../../../types/avaliacoes';
-import { PROVA_QUESTOES_CSS, entraNoCartaoResposta, printProva } from '../../../utils/printProva';
+import { PROVA_LAYOUT_CSS, PROVA_QUESTOES_CSS, entraNoCartaoResposta, printProva } from '../../../utils/printProva';
 import {
   obterQuestoesAvaliacaoPreview,
   obterQuestoesCompletasDaAvaliacao,
@@ -131,7 +131,8 @@ export function ReimprimirAvaliacaoModal({ avaliacao, onClose }: Props) {
           {questoes && (
             <div className="border border-gray-800 rounded-xl p-4 bg-white overflow-x-auto">
               {/* Mesmo CSS da impressão — ver printProva.ts. */}
-              <style>{PROVA_QUESTOES_CSS}</style>
+              <style>{PROVA_LAYOUT_CSS}</style>
+                <style>{PROVA_QUESTOES_CSS}</style>
               <div ref={previewRef} style={{ color: '#1a1a2e', fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '11pt' }}>
                 <div className="prova-header" style={{ display: 'flex', alignItems: 'stretch', justifyContent: 'flex-start', gap: 12 }}>
                   <img
