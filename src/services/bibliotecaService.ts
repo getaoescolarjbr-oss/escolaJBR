@@ -93,20 +93,23 @@ export interface AlunoBusca {
   turma_nome: string | null;
 }
 
+/**
+ * Busca do balcão, por RPC em vez de SELECT direto.
+ *
+ * O módulo é aberto a PROFESSOR, e desde
+ * restringir_professor_as_proprias_turmas.sql o professor só enxerga alunos das
+ * turmas dele — um SELECT em `alunos` aqui simplesmente pararia de achar a maioria
+ * dos alunos, e o empréstimo quebraria sem mensagem de erro.
+ *
+ * A RPC devolve só id, nome e turma: o suficiente para identificar quem está no
+ * balcão, sem dar ao professor a ficha (foto, atestado, CID, código SGDE) de aluno
+ * que não é dele.
+ */
 export async function buscarAlunos(busca: string): Promise<AlunoBusca[]> {
-  if (!busca.trim()) return [];
-  const { data, error } = await supabase
-    .from('alunos')
-    .select('id, nome, turmas(nome)')
-    .ilike('nome', `%${busca.trim()}%`)
-    .eq('status', 'Ativo')
-    .limit(10);
+  if (busca.trim().length < 2) return [];
+  const { data, error } = await supabase.rpc('rpc_buscar_alunos_biblioteca', { p_busca: busca.trim() });
   if (error) throw error;
-  return (data ?? []).map((a) => ({
-    id: a.id,
-    nome: a.nome,
-    turma_nome: (a as unknown as { turmas: { nome: string } | null }).turmas?.nome ?? null,
-  }));
+  return (data ?? []) as AlunoBusca[];
 }
 
 export interface ProfessorBusca {
