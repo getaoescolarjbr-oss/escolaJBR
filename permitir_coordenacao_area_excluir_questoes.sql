@@ -3,6 +3,9 @@
 -- Só DELETE — criar/editar questão continua restrito a GESTAO/PROFESSOR (política existente em
 -- permitir_professor_editar_questoes.sql), pra não abrir escrita livre do banco compartilhado.
 
+-- Idempotente: sem o DROP, reaplicar o arquivo aborta com "policy already exists" e
+-- leva junto qualquer outro comando que esteja no mesmo lote.
+DROP POLICY IF EXISTS "Coordenação de área pode excluir questões" ON public.questions;
 CREATE POLICY "Coordenação de área pode excluir questões"
   ON public.questions FOR DELETE
   TO authenticated
