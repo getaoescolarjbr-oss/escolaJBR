@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Loader2 } from 'lucide-react';
 import type { Question } from '../../../types/bancoQuestoes';
 import type { ModoAvaliacao, NovaAvaliacaoInput, TipoAvaliacao } from '../../../types/avaliacoes';
+import type { ModoEmbaralhar, ModoNota, PonderadaEscopo } from '../../../types/correcaoOmr';
+import { MODO_EMBARALHAR_LABEL, MODO_NOTA_LABEL } from '../../../types/correcaoOmr';
 import { listarTurmas } from '../../../services/agendamentoService';
 import { listarDisciplinasCatalogo } from '../../../services/avaliacoesService';
 import { getBimestreFromDate } from '../../../utils/academicUtils';
@@ -23,6 +25,12 @@ export interface ConfigAvaliacaoInicial {
   dataAplicacao: string | null;
   prazoEntrega: string | null;
   turmaIds: string[];
+  embaralhar?: ModoEmbaralhar;
+  qtdVersoes?: number;
+  cartaoSeparado?: boolean;
+  modoNota?: ModoNota;
+  ponderadaEscopo?: PonderadaEscopo;
+  lancarNoBoletim?: boolean;
 }
 
 interface Props {
@@ -57,6 +65,16 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
   const [dataAplicacao, setDataAplicacao] = useState(() => inicial?.dataAplicacao?.slice(0, 10) ?? new Date().toISOString().slice(0, 10));
   const [bimestreId, setBimestreId] = useState<number>(() => inicial?.bimestreId ?? getBimestreFromDate(new Date().toISOString().slice(0, 10)) ?? 1);
   const [prazoEntrega, setPrazoEntrega] = useState(() => (inicial?.prazoEntrega ? new Date(inicial.prazoEntrega).toISOString().slice(0, 16) : ''));
+  const [embaralhar, setEmbaralhar] = useState<ModoEmbaralhar>(inicial?.embaralhar ?? 'NENHUM');
+  const [qtdVersoes, setQtdVersoes] = useState<number>(inicial?.qtdVersoes ?? 1);
+  const [cartaoSeparado, setCartaoSeparado] = useState<boolean>(inicial?.cartaoSeparado ?? true);
+  const [modoNota, setModoNota] = useState<ModoNota>(
+    inicial?.modoNota ?? ((inicial?.tipo ?? 'AVALIACAO') === 'SIMULADO' ? 'SEM_NOTA' : 'DIRETA')
+  );
+  const [ponderadaEscopo, setPonderadaEscopo] = useState<PonderadaEscopo>(inicial?.ponderadaEscopo ?? 'PROVA');
+  const [lancarNoBoletim, setLancarNoBoletim] = useState<boolean>(
+    inicial?.lancarNoBoletim ?? (inicial?.tipo ?? 'AVALIACAO') === 'AVALIACAO'
+  );
   const [turmas, setTurmas] = useState<{ id: string; nome: string }[]>([]);
   const [turmaIds, setTurmaIds] = useState<Set<string>>(new Set(inicial?.turmaIds ?? []));
   const [loadingTurmas, setLoadingTurmas] = useState(true);
@@ -129,16 +147,25 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
   }
 
   const ehSimulado = tipo === 'SIMULADO';
-  // Simulado é sempre respondido pelo link público (sem login) — não faz sentido no
-  // modo "impressa" nem exige disciplina/bimestre, já que nunca gera nota em "Notas e
-  // Avaliações" (ver create_simulados_publico.sql).
-  const modoEfetivo: ModoAvaliacao = ehSimulado ? 'ONLINE' : modo;
+  // Simulado nasce online (link público, sem login — ver create_simulados_publico.sql),
+  // mas desde create_correcao_omr.sql ele também pode ser impresso e corrigido pela
+  // câmera, então o modo deixou de ser imposto pelo tipo.
+  const modoEfetivo: ModoAvaliacao = modo;
   const precisaOnline = modoEfetivo === 'ONLINE' || modoEfetivo === 'AMBAS';
+  const ehImpressa = modoEfetivo === 'IMPRESSA' || modoEfetivo === 'AMBAS';
+
+  // Disciplina e bimestre só são obrigatórios quando a nota vai para o boletim: são eles
+  // que dizem em qual campo de "Notas e Avaliações" a nota entra.
+  const vaiParaBoletim = lancarNoBoletim && modoNota !== 'SEM_NOTA';
   const podeContinuar =
     titulo.trim().length > 0 &&
-    (ehSimulado || !!disciplinaId) &&
+    (!vaiParaBoletim || (!!disciplinaId && !!bimestreId)) &&
     turmaIds.size > 0 &&
     (!precisaOnline || prazoEntrega);
+
+  // Embaralhar com uma versão só não embaralha nada: a versão A é, por definição, a
+  // ordem original. Subir para 2 é o que o professor quis dizer ao pedir embaralhamento.
+  const versoesEfetivas = embaralhar === 'NENHUM' ? qtdVersoes : Math.max(2, qtdVersoes);
 
   function handleContinuar() {
     const turmaNomes = turmas.filter((t) => turmaIds.has(t.id)).map((t) => t.nome);
@@ -156,6 +183,12 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
         dataAplicacao: dataAplicacao || null,
         prazoEntrega: precisaOnline && prazoEntrega ? new Date(prazoEntrega).toISOString() : null,
         turmaIds: Array.from(turmaIds),
+        embaralhar,
+        qtdVersoes: versoesEfetivas,
+        cartaoSeparado,
+        modoNota,
+        ponderadaEscopo,
+        lancarNoBoletim,
       },
       valoresPorQuestao,
       turmaNomes,
@@ -194,13 +227,13 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
             <input className={inputClass} value={titulo} onChange={(e) => setTitulo(e.target.value)} placeholder="Avaliação / Prova / Simulado" />
           </div>
           <div>
-            <label className="text-xs font-bold text-ms-muted">Disciplina {ehSimulado ? '' : '*'}</label>
+            <label className="text-xs font-bold text-ms-muted">Disciplina {vaiParaBoletim ? '*' : ''}</label>
             <select className={inputClass} value={disciplinaId} onChange={(e) => setDisciplinaId(e.target.value)} disabled={loadingDisciplinas}>
               <option value="">{loadingDisciplinas ? 'Carregando...' : 'Selecione...'}</option>
               {disciplinas.map((d) => <option key={d.id} value={d.id}>{d.nome}</option>)}
             </select>
           </div>
-          {!ehSimulado && (
+          {vaiParaBoletim && (
             <div>
               <label className="text-xs font-bold text-ms-muted">Bimestre *</label>
               <select className={inputClass} value={bimestreId} onChange={(e) => setBimestreId(Number(e.target.value))}>
@@ -219,7 +252,7 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
               onChange={(e) => setValorTotal(Number(e.target.value) || 0)}
             />
           </div>
-          {!ehSimulado && (
+          {(
             <div>
               <label className="text-xs font-bold text-ms-muted">Modo de aplicação</label>
               <select className={inputClass} value={modo} onChange={(e) => setModo(e.target.value as ModoAvaliacao)}>
@@ -245,6 +278,109 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
           </div>
         </div>
       </div>
+
+      <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-4">
+        <p className="text-sm font-bold text-ms-main">Nota</p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div>
+            <label className="text-xs font-bold text-ms-muted">Como calcular a nota</label>
+            <select className={inputClass} value={modoNota} onChange={(e) => setModoNota(e.target.value as ModoNota)}>
+              {(Object.keys(MODO_NOTA_LABEL) as ModoNota[]).map((m) => (
+                <option key={m} value={m}>{MODO_NOTA_LABEL[m]}</option>
+              ))}
+            </select>
+          </div>
+
+          {modoNota === 'PONDERADA' && (
+            <div>
+              <label className="text-xs font-bold text-ms-muted">Referencial da ponderada</label>
+              <select className={inputClass} value={ponderadaEscopo} onChange={(e) => setPonderadaEscopo(e.target.value as PonderadaEscopo)}>
+                <option value="PROVA">O melhor de toda a avaliação</option>
+                <option value="TURMA">O melhor de cada turma</option>
+              </select>
+            </div>
+          )}
+
+          {modoNota !== 'SEM_NOTA' && (
+            <div className="flex items-end">
+              <label className="flex items-center gap-2 px-3 py-2 bg-ms-dark border border-gray-800 rounded-lg text-sm text-ms-main cursor-pointer w-full">
+                <input type="checkbox" checked={lancarNoBoletim} onChange={(e) => setLancarNoBoletim(e.target.checked)} />
+                Lançar em Notas e Avaliações
+              </label>
+            </div>
+          )}
+        </div>
+
+        {modoNota === 'PONDERADA' && (
+          <p className="text-xs text-ms-muted leading-relaxed">
+            O aluno de melhor desempenho {ponderadaEscopo === 'TURMA' ? 'em cada turma' : 'da avaliação'} recebe
+            o valor total ({valorTotal.toFixed(2)}) e os demais ficam proporcionais a ele. Quando todas as
+            questões valem o mesmo, isso equivale a comparar a quantidade de acertos; se você deu pesos
+            diferentes por questão, a comparação é pelos pontos, respeitando esses pesos.
+            {' '}Se ninguém pontuar, todos ficam com zero.
+          </p>
+        )}
+
+        {modoNota === 'SEM_NOTA' && (
+          <p className="text-xs text-ms-muted">
+            Nada vai para o boletim. A correção continua acontecendo normalmente e os relatórios de
+            acertos por questão, por aluno e por turma são gerados do mesmo jeito.
+          </p>
+        )}
+      </div>
+
+      {ehImpressa && (
+        <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-4">
+          <div>
+            <p className="text-sm font-bold text-ms-main">Aplicação impressa e correção pela câmera</p>
+            <p className="text-xs text-ms-muted mt-0.5">
+              Cada aluno recebe uma folha com o nome dele e um QR Code próprio. Na correção, o celular lê
+              o QR, identifica o aluno e a versão, e lê as respostas marcadas.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div>
+              <label className="text-xs font-bold text-ms-muted">Embaralhamento</label>
+              <select className={inputClass} value={embaralhar} onChange={(e) => setEmbaralhar(e.target.value as ModoEmbaralhar)}>
+                {(Object.keys(MODO_EMBARALHAR_LABEL) as ModoEmbaralhar[]).map((m) => (
+                  <option key={m} value={m}>{MODO_EMBARALHAR_LABEL[m]}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="text-xs font-bold text-ms-muted">Versões da prova</label>
+              <select
+                className={inputClass}
+                value={versoesEfetivas}
+                onChange={(e) => setQtdVersoes(Number(e.target.value))}
+              >
+                {[1, 2, 3, 4].map((n) => (
+                  <option key={n} value={n} disabled={embaralhar !== 'NENHUM' && n < 2}>
+                    {n === 1 ? 'Versão única (A)' : `${n} versões (A–${String.fromCharCode(64 + n)})`}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="flex items-end">
+              <label className="flex items-center gap-2 px-3 py-2 bg-ms-dark border border-gray-800 rounded-lg text-sm text-ms-main cursor-pointer w-full">
+                <input type="checkbox" checked={cartaoSeparado} onChange={(e) => setCartaoSeparado(e.target.checked)} />
+                Cartão em folha separada
+              </label>
+            </div>
+          </div>
+
+          <p className="text-xs text-ms-muted leading-relaxed">
+            {cartaoSeparado
+              ? 'O cartão sai numa folha só dele — é o formato que a câmera lê com mais segurança, porque a folha inteira é o alvo. Recolha os cartões e devolva as provas aos alunos.'
+              : 'O cartão sai no meio da prova. Gasta menos papel, mas a leitura exige enquadrar uma região no meio do texto e erra com mais frequência.'}
+            {embaralhar !== 'NENHUM' && ' A versão A nunca é embaralhada: ela é a sua cópia de referência.'}
+          </p>
+        </div>
+      )}
 
       <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-3">
         <div className="flex items-center justify-between">

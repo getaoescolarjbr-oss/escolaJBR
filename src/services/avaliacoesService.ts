@@ -20,7 +20,7 @@ import type {
 } from '../types/avaliacoes';
 import { QUESTION_SELECT_FIELDS, type Question } from '../types/bancoQuestoes';
 
-const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at';
+const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at, embaralhar, qtd_versoes, cartao_separado, modo_nota, ponderada_escopo, lancar_no_boletim';
 
 function mapAvaliacaoRow(row: Record<string, unknown>): Avaliacao {
   const turmas = (row.prova_turmas as { turmas: { id: string; nome: string } | null }[] | undefined) ?? [];
@@ -95,6 +95,12 @@ export async function criarAvaliacao(dados: NovaAvaliacaoInput, status: StatusAv
       prazo_entrega: dados.prazoEntrega || null,
       status,
       criado_por: userData.user.id,
+      embaralhar: dados.embaralhar,
+      qtd_versoes: dados.qtdVersoes,
+      cartao_separado: dados.cartaoSeparado,
+      modo_nota: dados.modoNota,
+      ponderada_escopo: dados.ponderadaEscopo,
+      lancar_no_boletim: dados.lancarNoBoletim,
     }])
     .select('id')
     .single();
@@ -115,8 +121,10 @@ export async function criarAvaliacao(dados: NovaAvaliacaoInput, status: StatusAv
     if (tErro) throw tErro;
   }
 
-  // Simulado nunca gera nota em "Notas e Avaliações" — ver create_simulados_publico.sql.
-  if (status === 'PUBLICADA' && dados.tipo === 'AVALIACAO') {
+  // Quem decide se existe campo de nota no boletim é a configuração da prova, não mais o
+  // tipo: desde create_correcao_omr.sql um SIMULADO pode valer nota (modo DIRETA ou
+  // PONDERADA) e uma AVALIACAO pode ser aplicada só como diagnóstico.
+  if (status === 'PUBLICADA' && dados.lancarNoBoletim && dados.modoNota !== 'SEM_NOTA') {
     await sincronizarNotasDaProva(avaliacaoId, {
       titulo: dados.titulo,
       valorTotal: dados.valorTotal,
@@ -228,6 +236,12 @@ export async function atualizarAvaliacao(id: string, dados: NovaAvaliacaoInput, 
       data_aplicacao: dados.dataAplicacao || null,
       prazo_entrega: dados.prazoEntrega || null,
       status,
+      embaralhar: dados.embaralhar,
+      qtd_versoes: dados.qtdVersoes,
+      cartao_separado: dados.cartaoSeparado,
+      modo_nota: dados.modoNota,
+      ponderada_escopo: dados.ponderadaEscopo,
+      lancar_no_boletim: dados.lancarNoBoletim,
     })
     .eq('id', id);
   if (avErro) throw avErro;
@@ -250,7 +264,14 @@ export async function atualizarAvaliacao(id: string, dados: NovaAvaliacaoInput, 
     if (tErro) throw tErro;
   }
 
-  if (status === 'PUBLICADA' && dados.tipo === 'AVALIACAO') {
+  // As versões guardam a ORDEM das questões e a permutação das alternativas; editar a
+  // lista de questões deixa esse registro apontando para uma prova que não existe mais.
+  // Descarta as versões para forçar um sorteio novo antes da próxima impressão — mas só
+  // quando nenhum cartão foi lido ainda, porque aí o embaralhamento já é fato histórico
+  // e apagá-lo tornaria as correções existentes inexplicáveis.
+  await descartarVersoesSeAindaNaoLidas(id);
+
+  if (status === 'PUBLICADA' && dados.lancarNoBoletim && dados.modoNota !== 'SEM_NOTA') {
     await sincronizarNotasDaProva(id, {
       titulo: dados.titulo,
       valorTotal: dados.valorTotal,
@@ -364,7 +385,7 @@ export async function obterResultadosDetalhadosAvaliacao(avaliacaoId: string): P
   // 4. Respostas enviadas
   const { data: respostasData, error: rErr } = await supabase
     .from('prova_respostas')
-    .select('id, aluno_id, nota, finalizado_em, alunos(id, nome, codigo_sgde, turmas(nome)), prova_respostas_itens(question_id, letra_marcada, correta, valor_obtido)')
+    .select('id, aluno_id, nota, nota_ponderada, finalizado_em, alunos(id, nome, codigo_sgde, turmas(nome)), prova_respostas_itens(question_id, letra_marcada, correta, valor_obtido)')
     .eq('prova_id', avaliacaoId);
   if (rErr) throw rErr;
 
@@ -401,6 +422,7 @@ export async function obterResultadosDetalhadosAvaliacao(avaliacaoId: string): P
       codigo_sgde: al.codigo_sgde,
       turma_nome: al.turma_nome,
       nota: resp?.finalizado_em ? Number(resp.nota) || 0 : null,
+      nota_ponderada: resp?.finalizado_em && resp.nota_ponderada != null ? Number(resp.nota_ponderada) : null,
       finalizado_em: (resp?.finalizado_em as string) ?? null,
       respostas: itensMap,
       total_acertos: totalAcertos,
@@ -434,6 +456,7 @@ export async function obterResultadosDetalhadosAvaliacao(avaliacaoId: string): P
         codigo_sgde: alObj?.codigo_sgde ?? null,
         turma_nome: alObj?.turmas?.nome ?? null,
         nota: resp.finalizado_em ? Number(resp.nota) || 0 : null,
+        nota_ponderada: resp.finalizado_em && resp.nota_ponderada != null ? Number(resp.nota_ponderada) : null,
         finalizado_em: (resp.finalizado_em as string) ?? null,
         respostas: itensMap,
         total_acertos: totalAcertos,
@@ -583,4 +606,28 @@ export async function publicarAvaliacaoArea(provaId: string): Promise<void> {
     p_prova_id: provaId,
   });
   if (error) throw error;
+}
+
+
+// Quantas folhas com QR já foram geradas para esta prova. A tela de edição usa isto para
+// avisar antes de invalidar impressões que já podem estar na mesa do professor.
+export async function contarFolhasGeradas(provaId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('prova_alocacoes')
+    .select('id', { count: 'exact', head: true })
+    .eq('prova_id', provaId);
+  if (error) throw error;
+  return count ?? 0;
+}
+
+async function descartarVersoesSeAindaNaoLidas(provaId: string): Promise<void> {
+  const { count, error } = await supabase
+    .from('prova_leituras')
+    .select('id', { count: 'exact', head: true })
+    .eq('prova_id', provaId);
+  // Falha ao consultar não pode derrubar o salvamento da prova; na dúvida, preserva as
+  // versões — o pior caso vira "sortear de novo na tela de impressão", não perda de dado.
+  if (error || (count ?? 0) > 0) return;
+
+  await supabase.from('prova_versoes').delete().eq('prova_id', provaId);
 }

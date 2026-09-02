@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Check, ClipboardCheck, Copy, Eye, Loader2, Pencil, Printer, Send, Square, Trash2, Users, Layers } from 'lucide-react';
+import { BookUp, Camera, Check, ClipboardCheck, Copy, Eye, Loader2, Pencil, Printer, QrCode, Send, Square, Trash2, Users, Layers } from 'lucide-react';
 import type { Avaliacao, AvaliacaoArea, ProvaAreaCota, StatusAvaliacao } from '../../../types/avaliacoes';
 import {
   atualizarStatusAvaliacao,
@@ -14,6 +14,9 @@ import { CorrigirDissertativasModal } from './CorrigirDissertativasModal';
 import { EditarAvaliacaoModal } from './EditarAvaliacaoModal';
 import { PreviewAvaliacaoAlunoModal } from './PreviewAvaliacaoAlunoModal';
 import { ReimprimirAvaliacaoModal } from './ReimprimirAvaliacaoModal';
+import { ImprimirFolhasModal } from './ImprimirFolhasModal';
+import { ModoCorrecaoPage } from '../../correcao/ModoCorrecaoPage';
+import { lancarNotasNoBoletim } from '../../../services/correcaoOmrService';
 import { InserirQuestoesAreaModal } from '../../coordenacaoArea/InserirQuestoesAreaModal';
 import { useAuth } from '../../../hooks/useAuth';
 
@@ -47,6 +50,9 @@ export function MinhasAvaliacoesTab() {
   const [editandoDe, setEditandoDe] = useState<Avaliacao | null>(null);
   const [processando, setProcessando] = useState<string | null>(null);
   const [linkCopiadoId, setLinkCopiadoId] = useState<string | null>(null);
+  const [folhasDe, setFolhasDe] = useState<Avaliacao | null>(null);
+  const [corrigindoCameraDe, setCorrigindoCameraDe] = useState<Avaliacao | null>(null);
+  const [notasLancadas, setNotasLancadas] = useState<string | null>(null);
 
   async function copiarLinkSimulado(a: Avaliacao) {
     await navigator.clipboard.writeText(linkPublicoSimulado(a.token_publico));
@@ -84,6 +90,26 @@ export function MinhasAvaliacoesTab() {
       await carregar();
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível atualizar o status da avaliação.');
+    } finally {
+      setProcessando(null);
+    }
+  }
+
+  // Lançamento explícito, não automático: o professor confere o relatório e só então
+  // manda para o boletim. Nota que aparece sozinha antes da conferência é pior que nota
+  // atrasada — ver rpc_lancar_notas_boletim em create_correcao_omr.sql.
+  async function lancarNotas(a: Avaliacao) {
+    setProcessando(a.id);
+    setErro(null);
+    try {
+      const quantas = await lancarNotasNoBoletim(a.id);
+      setNotasLancadas(a.id);
+      setTimeout(() => setNotasLancadas(null), 2500);
+      if (quantas === 0) {
+        setErro('Nenhuma nota foi lançada: ainda não há cartão corrigido nesta avaliação.');
+      }
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível lançar as notas.');
     } finally {
       setProcessando(null);
     }
@@ -188,6 +214,36 @@ export function MinhasAvaliacoesTab() {
                       <Printer className="w-3.5 h-3.5" /> Reimprimir
                     </button>
                   )}
+                  {(a.modo === 'IMPRESSA' || a.modo === 'AMBAS') && (a.total_questoes ?? 0) > 0 && (
+                    <button
+                      onClick={() => setFolhasDe(a)}
+                      className={btnSecondary}
+                      title="Uma prova por aluno, com QR Code no cartão-resposta"
+                    >
+                      <QrCode className="w-3.5 h-3.5" /> Folhas com QR
+                    </button>
+                  )}
+                  {(a.modo === 'IMPRESSA' || a.modo === 'AMBAS') && a.status !== 'RASCUNHO' && (
+                    <button
+                      onClick={() => setCorrigindoCameraDe(a)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-blue text-white rounded-lg text-xs font-bold hover:bg-blue-600 shadow-sm transition-colors"
+                    >
+                      <Camera className="w-3.5 h-3.5" /> Corrigir pela câmera
+                    </button>
+                  )}
+                  {a.modo_nota !== 'SEM_NOTA' && a.lancar_no_boletim && a.status !== 'RASCUNHO' && (
+                    <button
+                      disabled={processando === a.id}
+                      onClick={() => void lancarNotas(a)}
+                      className={btnSecondary}
+                      title="Copia as notas corrigidas para Notas e Avaliações"
+                    >
+                      {notasLancadas === a.id
+                        ? <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        : <BookUp className="w-3.5 h-3.5" />}
+                      {notasLancadas === a.id ? 'Lançadas!' : 'Lançar notas'}
+                    </button>
+                  )}
                   {comCorrecaoPendente.has(a.id) && (
                     <button
                       onClick={() => setCorrigindoDe(a)}
@@ -196,7 +252,7 @@ export function MinhasAvaliacoesTab() {
                       <ClipboardCheck className="w-3.5 h-3.5" /> Corrigir dissertativas
                     </button>
                   )}
-                  {(a.modo === 'ONLINE' || a.modo === 'AMBAS') && a.status !== 'RASCUNHO' && (
+                  {a.status !== 'RASCUNHO' && (
                     <button
                       onClick={() => setResultadosDe(a)}
                       className={btnSecondary}
@@ -289,6 +345,13 @@ export function MinhasAvaliacoesTab() {
 
       {resultadosDe && <AvaliacaoResultadosModal avaliacao={resultadosDe} onClose={() => setResultadosDe(null)} />}
       {reimprimirDe && <ReimprimirAvaliacaoModal avaliacao={reimprimirDe} onClose={() => setReimprimirDe(null)} />}
+      {folhasDe && <ImprimirFolhasModal avaliacao={folhasDe} onClose={() => setFolhasDe(null)} />}
+      {corrigindoCameraDe && (
+        <ModoCorrecaoPage
+          provaEsperadaId={corrigindoCameraDe.id}
+          onFechar={() => { setCorrigindoCameraDe(null); void carregar(); }}
+        />
+      )}
       {previewDe && <PreviewAvaliacaoAlunoModal avaliacao={previewDe} onClose={() => setPreviewDe(null)} />}
       {inserindoCota && (
         <InserirQuestoesAreaModal
