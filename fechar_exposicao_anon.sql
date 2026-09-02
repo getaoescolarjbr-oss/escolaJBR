@@ -51,6 +51,10 @@
 --   * 300 funções são executáveis por anon (default do Supabase). A maioria é função de
 --     gatilho, inofensiva por não ter contexto fora do trigger, mas a lista merece uma
 --     passada.
+--
+-- REEXECUTÁVEL: todo CREATE POLICY tem o DROP correspondente antes. Sem isso, rodar o
+-- arquivo uma segunda vez aborta em "policy already exists" e derruba junto tudo que
+-- viesse depois no mesmo lote — inclusive os REVOKE, que são a parte que protege.
 -- ====================================================================================
 
 
@@ -89,6 +93,7 @@ DROP POLICY IF EXISTS "Allow insert alunos" ON public.alunos;
 DROP POLICY IF EXISTS "Allow update alunos" ON public.alunos;
 DROP POLICY IF EXISTS "Allow delete alunos" ON public.alunos;
 
+DROP POLICY IF EXISTS "alunos_select_autenticado" ON public.alunos;
 CREATE POLICY "alunos_select_autenticado" ON public.alunos
   FOR SELECT TO authenticated USING (true);
 -- A escrita é liberada a "qualquer conta que não seja de aluno", e não a uma lista de
@@ -97,8 +102,10 @@ CREATE POLICY "alunos_select_autenticado" ON public.alunos
 -- alcançável por um papel diferente — esquecer um deles quebraria a tela em produção
 -- sem aviso. O que precisa sair daqui é o aluno (e o anônimo, já resolvido pelo GRANT);
 -- afinar por papel é trabalho da próxima etapa, com as telas na mão.
+DROP POLICY IF EXISTS "alunos_insert_servidor" ON public.alunos;
 CREATE POLICY "alunos_insert_servidor" ON public.alunos
   FOR INSERT TO authenticated WITH CHECK (NOT public.usuario_tem_papel('ALUNO'));
+DROP POLICY IF EXISTS "alunos_update_servidor" ON public.alunos;
 CREATE POLICY "alunos_update_servidor" ON public.alunos
   FOR UPDATE TO authenticated
   USING (NOT public.usuario_tem_papel('ALUNO'))
@@ -106,6 +113,7 @@ CREATE POLICY "alunos_update_servidor" ON public.alunos
 
 -- Excluir é a exceção que vale apertar agora: só o painel de gestão apaga aluno, e a
 -- exclusão leva notas e vistos junto por cascata.
+DROP POLICY IF EXISTS "alunos_delete_gestao" ON public.alunos;
 CREATE POLICY "alunos_delete_gestao" ON public.alunos
   FOR DELETE TO authenticated USING (
     public.usuario_tem_papel('SECRETARIA') OR public.usuario_tem_papel('GESTAO')
@@ -121,8 +129,10 @@ DROP POLICY IF EXISTS "Professores podem gerenciar suas avaliações" ON public.
 DROP POLICY IF EXISTS "Permitir leitura para todos" ON public.turmas;
 DROP POLICY IF EXISTS "Permitir tudo para anon" ON public.turmas;
 
+DROP POLICY IF EXISTS "turmas_select_autenticado" ON public.turmas;
 CREATE POLICY "turmas_select_autenticado" ON public.turmas
   FOR SELECT TO authenticated USING (true);
+DROP POLICY IF EXISTS "turmas_escrita_servidor" ON public.turmas;
 CREATE POLICY "turmas_escrita_servidor" ON public.turmas
   FOR ALL TO authenticated
   USING (NOT public.usuario_tem_papel('ALUNO'))
@@ -130,6 +140,7 @@ CREATE POLICY "turmas_escrita_servidor" ON public.turmas
 
 -- visitas_responsavel: "Allow all" para todos.
 DROP POLICY IF EXISTS "Allow all" ON public.visitas_responsavel;
+DROP POLICY IF EXISTS "visitas_responsavel_autenticado" ON public.visitas_responsavel;
 CREATE POLICY "visitas_responsavel_autenticado" ON public.visitas_responsavel
   FOR ALL TO authenticated USING (true) WITH CHECK (true);
 
@@ -138,6 +149,7 @@ CREATE POLICY "visitas_responsavel_autenticado" ON public.visitas_responsavel
 -- `authenticated` é para o mesmo fim das demais: se um GRANT voltar por engano, a
 -- política não é a que vai ceder. As expressões são copiadas sem alteração.
 DROP POLICY IF EXISTS "recursos_select_publico" ON public.recursos;
+DROP POLICY IF EXISTS "recursos_select_autenticado" ON public.recursos;
 CREATE POLICY "recursos_select_autenticado" ON public.recursos
   FOR SELECT TO authenticated USING (true);
 
