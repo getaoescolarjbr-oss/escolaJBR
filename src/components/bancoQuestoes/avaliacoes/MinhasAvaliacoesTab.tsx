@@ -45,6 +45,7 @@ export function MinhasAvaliacoesTab() {
   const [previewDe, setPreviewDe] = useState<Avaliacao | null>(null);
   const [corrigindoDe, setCorrigindoDe] = useState<Avaliacao | null>(null);
   const [inserindoCota, setInserindoCota] = useState<{ avaliacao: AvaliacaoArea; cota: ProvaAreaCota } | null>(null);
+  const [previewAreaDe, setPreviewAreaDe] = useState<AvaliacaoArea | null>(null);
   // Ids das provas com resposta escrita ainda sem nota — decide se o botão "Corrigir" aparece.
   const [comCorrecaoPendente, setComCorrecaoPendente] = useState<Set<string>>(new Set());
   const [editandoDe, setEditandoDe] = useState<Avaliacao | null>(null);
@@ -297,13 +298,25 @@ export function MinhasAvaliacoesTab() {
                       Área: {av.area_conhecimento} · {av.bimestre_id}º Bimestre · {av.turma_nomes?.join(', ') || 'Todas as turmas'}
                     </p>
                   </div>
-                  <span className="text-xs font-bold px-2.5 py-1 bg-amber-950/80 text-amber-300 border border-amber-800/80 rounded-full">
-                    {av.status_colaboracao === 'PUBLICADA' ? 'Publicada' : 'Em Elaboração'}
-                  </span>
+                  <div className="flex items-center gap-2">
+                    {(av.total_questoes ?? 0) > 0 && (
+                      <button
+                        onClick={() => setPreviewAreaDe(av)}
+                        className="flex items-center gap-1.5 px-2.5 py-1 bg-ms-card border border-gray-700 text-ms-main rounded-full text-[11px] font-bold hover:bg-gray-800"
+                      >
+                        <Eye className="w-3 h-3" /> Pré-visualizar
+                      </button>
+                    )}
+                    <span className="text-xs font-bold px-2.5 py-1 bg-amber-950/80 text-amber-300 border border-amber-800/80 rounded-full">
+                      {av.status_colaboracao === 'PUBLICADA' ? 'Publicada' : 'Em Elaboração'}
+                    </span>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-                  {(av.cotas || []).map((cota) => {
+                  {/* Só a(s) própria(s) disciplina(s) do professor logado — rpc_listar_avaliacoes_area
+                      já marca eh_minha_cota; evita ver (e antes até conseguir mexer em) cota alheia. */}
+                  {(av.cotas || []).filter((c) => c.eh_minha_cota).map((cota) => {
                     const preenchida = cota.qtd_inserida >= cota.qtd_questoes;
                     return (
                       <div
@@ -353,6 +366,7 @@ export function MinhasAvaliacoesTab() {
         />
       )}
       {previewDe && <PreviewAvaliacaoAlunoModal avaliacao={previewDe} onClose={() => setPreviewDe(null)} />}
+      {previewAreaDe && <PreviewAvaliacaoAlunoModal avaliacao={previewAreaDe} onClose={() => setPreviewAreaDe(null)} />}
       {inserindoCota && (
         <InserirQuestoesAreaModal
           avaliacao={inserindoCota.avaliacao}

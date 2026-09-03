@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Eye, Loader2, X } from 'lucide-react';
-import type { Avaliacao, QuestaoParaAluno } from '../../../types/avaliacoes';
+import type { QuestaoParaAluno } from '../../../types/avaliacoes';
 import { obterQuestoesAvaliacaoPreview } from '../../../services/avaliacoesService';
 import { QuestaoAlunoView } from '../../aluno/QuestaoAlunoView';
 
 interface Props {
-  avaliacao: Avaliacao;
+  // Só id/titulo são usados aqui — aceita tanto Avaliacao quanto AvaliacaoArea (prova de
+  // área ainda em elaboração), sem precisar de um objeto Avaliacao completo pra isso.
+  avaliacao: { id: string; titulo: string };
   onClose: () => void;
 }
 

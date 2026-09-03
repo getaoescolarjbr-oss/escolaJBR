@@ -247,6 +247,7 @@ export interface ProvaAreaCota {
   disciplina_nome?: string;
   qtd_questoes: number;
   qtd_inserida: number;
+  eh_minha_cota?: boolean;
 }
 
 export interface CotaProfessorInput {
