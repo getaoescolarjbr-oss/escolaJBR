@@ -608,6 +608,34 @@ export async function publicarAvaliacaoArea(provaId: string): Promise<void> {
   if (error) throw error;
 }
 
+// Questões que este professor (ou o coordenador, em nome dele) já gravou para a
+// disciplina, pra pré-carregar o modal de edição em vez de abrir sempre vazio.
+export async function obterQuestoesCotaArea(
+  provaId: string,
+  disciplinaId: string
+): Promise<{ question_id: string; ordem: number; valor: number }[]> {
+  const { data, error } = await supabase.rpc('rpc_obter_questoes_cota_area', {
+    p_prova_id: provaId,
+    p_disciplina_id: disciplinaId,
+  });
+  if (error) throw error;
+  return (data ?? []) as { question_id: string; ordem: number; valor: number }[];
+}
+
+// Só COORDENACAO_AREA/COORDENACAO/GESTAO. p_prazo null limpa o prazo automático.
+export async function definirBloqueioAvaliacaoArea(
+  provaId: string,
+  edicaoBloqueada: boolean,
+  prazoEdicaoArea: string | null
+): Promise<void> {
+  const { error } = await supabase.rpc('rpc_definir_bloqueio_avaliacao_area', {
+    p_prova_id: provaId,
+    p_edicao_bloqueada: edicaoBloqueada,
+    p_prazo_edicao_area: prazoEdicaoArea,
+  });
+  if (error) throw error;
+}
+
 
 // Quantas folhas com QR já foram geradas para esta prova. A tela de edição usa isto para
 // avisar antes de invalidar impressões que já podem estar na mesa do professor.

@@ -287,4 +287,8 @@ export interface AvaliacaoArea {
   total_questoes: number;
   turma_nomes?: string[];
   cotas?: ProvaAreaCota[];
+  edicao_bloqueada: boolean;
+  prazo_edicao_area: string | null;
+  /** Já calculado no backend: !edicao_bloqueada && (sem prazo ou prazo no futuro). */
+  edicao_permitida: boolean;
 }

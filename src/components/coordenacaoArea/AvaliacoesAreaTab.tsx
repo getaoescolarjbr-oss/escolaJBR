@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText } from 'lucide-react';
+import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText, Lock, Unlock } from 'lucide-react';
 import type { AvaliacaoArea, ProvaAreaCota } from '../../types/avaliacoes';
 import type { AreaConhecimento } from '../../utils/areasConhecimento';
-import { listarAvaliacoesArea, publicarAvaliacaoArea, excluirAvaliacao } from '../../services/avaliacoesService';
+import { listarAvaliacoesArea, publicarAvaliacaoArea, excluirAvaliacao, definirBloqueioAvaliacaoArea } from '../../services/avaliacoesService';
 import { NovaAvaliacaoAreaModal } from './NovaAvaliacaoAreaModal';
 import { InserirQuestoesAreaModal } from './InserirQuestoesAreaModal';
 import { ReimprimirAvaliacaoModal } from '../bancoQuestoes/avaliacoes/ReimprimirAvaliacaoModal';
@@ -22,6 +22,10 @@ export function AvaliacoesAreaTab({ area }: Props) {
   const [resultadosDe, setResultadosDe] = useState<AvaliacaoArea | null>(null);
   const [publicandoId, setPublicandoId] = useState<string | null>(null);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
+  const [bloqueandoId, setBloqueandoId] = useState<string | null>(null);
+  // Valor do input datetime-local do prazo de edição, por avaliação — só existe enquanto
+  // o coordenador está digitando; ao salvar, o estado de verdade volta a vir do backend.
+  const [prazoInput, setPrazoInput] = useState<Record<string, string>>({});
 
   const carregar = useCallback(async () => {
     setLoading(true);
@@ -70,6 +74,44 @@ export function AvaliacoesAreaTab({ area }: Props) {
       alert(e.message || 'Erro ao excluir avaliação de área.');
     } finally {
       setExcluindoId(null);
+    }
+  }
+
+  async function alternarBloqueio(av: AvaliacaoArea) {
+    setBloqueandoId(av.id);
+    try {
+      await definirBloqueioAvaliacaoArea(av.id, !av.edicao_bloqueada, av.prazo_edicao_area);
+      await carregar();
+    } catch (e: any) {
+      alert(e.message || 'Erro ao travar/destravar a edição.');
+    } finally {
+      setBloqueandoId(null);
+    }
+  }
+
+  async function salvarPrazo(av: AvaliacaoArea) {
+    const valor = prazoInput[av.id];
+    const prazoIso = valor ? new Date(valor).toISOString() : null;
+    setBloqueandoId(av.id);
+    try {
+      await definirBloqueioAvaliacaoArea(av.id, av.edicao_bloqueada, prazoIso);
+      await carregar();
+    } catch (e: any) {
+      alert(e.message || 'Erro ao definir o prazo de edição.');
+    } finally {
+      setBloqueandoId(null);
+    }
+  }
+
+  async function limparPrazo(av: AvaliacaoArea) {
+    setBloqueandoId(av.id);
+    try {
+      await definirBloqueioAvaliacaoArea(av.id, av.edicao_bloqueada, null);
+      await carregar();
+    } catch (e: any) {
+      alert(e.message || 'Erro ao limpar o prazo de edição.');
+    } finally {
+      setBloqueandoId(null);
     }
   }
 
@@ -130,6 +172,14 @@ export function AvaliacoesAreaTab({ area }: Props) {
                       >
                         {av.status === 'PUBLICADA' ? 'Publicada' : 'Em Elaboração'}
                       </span>
+                      {!av.edicao_permitida && (
+                        <span
+                          className="flex items-center gap-1 text-xs font-bold px-2.5 py-0.5 rounded-full bg-red-100 text-red-900 border border-red-300 dark:bg-red-950 dark:text-red-300 dark:border-red-800"
+                          title={av.prazo_edicao_area ? `Prazo de edição venceu em ${new Date(av.prazo_edicao_area).toLocaleString('pt-BR')}` : undefined}
+                        >
+                          <Lock className="w-3 h-3" /> Edição bloqueada
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-ms-muted mt-1">
                       {av.tipo === 'AVALIACAO' ? 'Avaliação com nota' : 'Simulado'} · Valor {Number(av.valor_total).toFixed(2)} pts · Modo {av.modo}
@@ -164,6 +214,25 @@ export function AvaliacoesAreaTab({ area }: Props) {
                       </button>
                     )}
                     <button
+                      onClick={() => alternarBloqueio(av)}
+                      disabled={bloqueandoId === av.id}
+                      title={av.edicao_bloqueada ? 'Destravar a edição de questões' : 'Travar a edição de questões (nenhum professor consegue mais alterar)'}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm transition-colors disabled:opacity-40 ${
+                        av.edicao_bloqueada
+                          ? 'bg-red-50 dark:bg-red-950/60 border border-red-300 dark:border-red-900/50 text-red-800 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40'
+                          : 'bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main hover:bg-gray-100 dark:hover:bg-gray-800'
+                      }`}
+                    >
+                      {bloqueandoId === av.id ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : av.edicao_bloqueada ? (
+                        <Unlock className="w-3.5 h-3.5" />
+                      ) : (
+                        <Lock className="w-3.5 h-3.5" />
+                      )}
+                      {av.edicao_bloqueada ? 'Destravar Edição' : 'Travar Edição'}
+                    </button>
+                    <button
                       onClick={() => handleExcluir(av)}
                       disabled={excluindoId === av.id || publicandoId === av.id}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 dark:bg-red-950/60 border border-red-300 dark:border-red-900/50 text-red-800 dark:text-red-300 rounded-lg text-xs font-bold hover:bg-red-100 dark:hover:bg-red-900/40 shadow-sm transition-colors disabled:opacity-40"
@@ -182,6 +251,33 @@ export function AvaliacoesAreaTab({ area }: Props) {
                     <span className={todasPreenchidas ? 'text-emerald-400' : 'text-amber-400'}>
                       {totalInserido} de {totalPrevisto} questões inseridas
                     </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap text-[11px] text-ms-muted pb-1 border-b border-gray-800/80">
+                    <Clock className="w-3.5 h-3.5 shrink-0" />
+                    <span>Bloquear edição automaticamente a partir de:</span>
+                    <input
+                      type="datetime-local"
+                      value={prazoInput[av.id] ?? (av.prazo_edicao_area ? av.prazo_edicao_area.slice(0, 16) : '')}
+                      onChange={(e) => setPrazoInput((prev) => ({ ...prev, [av.id]: e.target.value }))}
+                      className="px-2 py-1 bg-ms-card border border-gray-700 rounded text-ms-main text-[11px] outline-none focus:ring-2 focus:ring-ms-blueText"
+                    />
+                    <button
+                      onClick={() => salvarPrazo(av)}
+                      disabled={bloqueandoId === av.id}
+                      className="px-2 py-1 bg-ms-card border border-gray-700 rounded font-bold hover:bg-gray-800 disabled:opacity-40"
+                    >
+                      Salvar prazo
+                    </button>
+                    {av.prazo_edicao_area && (
+                      <button
+                        onClick={() => { setPrazoInput((prev) => ({ ...prev, [av.id]: '' })); limparPrazo(av); }}
+                        disabled={bloqueandoId === av.id}
+                        className="px-2 py-1 text-red-400 hover:text-red-300 font-bold disabled:opacity-40"
+                      >
+                        Limpar prazo
+                      </button>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
@@ -204,13 +300,13 @@ export function AvaliacoesAreaTab({ area }: Props) {
                             >
                               {c.qtd_inserida}/{c.qtd_questoes} q.
                             </span>
-                            {av.status !== 'PUBLICADA' && (
+                            {av.status !== 'PUBLICADA' && av.edicao_permitida && (
                               <button
                                 onClick={() => setInserindoCota({ avaliacao: av, cota: c })}
                                 className="px-2 py-1 bg-ms-blue/20 text-ms-blueText rounded border border-ms-blueText/40 hover:bg-ms-blue/30 font-bold text-[10px]"
                                 title="Inserir ou editar questões para esta disciplina"
                               >
-                                Inserir
+                                {c.qtd_inserida > 0 ? 'Editar' : 'Inserir'}
                               </button>
                             )}
                           </div>

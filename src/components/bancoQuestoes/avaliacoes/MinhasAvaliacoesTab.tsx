@@ -307,6 +307,14 @@ export function MinhasAvaliacoesTab() {
                         <Eye className="w-3 h-3" /> Pré-visualizar
                       </button>
                     )}
+                    {!av.edicao_permitida && (
+                      <span
+                        className="text-xs font-bold px-2.5 py-1 bg-red-950/80 text-red-300 border border-red-800/80 rounded-full"
+                        title={av.prazo_edicao_area ? `Prazo de edição: ${new Date(av.prazo_edicao_area).toLocaleString('pt-BR')}` : undefined}
+                      >
+                        Edição bloqueada
+                      </span>
+                    )}
                     <span className="text-xs font-bold px-2.5 py-1 bg-amber-950/80 text-amber-300 border border-amber-800/80 rounded-full">
                       {av.status_colaboracao === 'PUBLICADA' ? 'Publicada' : 'Em Elaboração'}
                     </span>
@@ -337,12 +345,12 @@ export function MinhasAvaliacoesTab() {
                           >
                             {cota.qtd_inserida}/{cota.qtd_questoes} q.
                           </span>
-                          {av.status !== 'PUBLICADA' && (
+                          {av.status !== 'PUBLICADA' && av.edicao_permitida && (
                             <button
                               onClick={() => setInserindoCota({ avaliacao: av, cota })}
                               className="px-2.5 py-1 bg-ms-blue text-white hover:bg-blue-600 rounded font-bold text-[10px] shadow"
                             >
-                              Inserir Questões
+                              {cota.qtd_inserida > 0 ? 'Editar Questões' : 'Inserir Questões'}
                             </button>
                           )}
                         </div>
