@@ -20,7 +20,7 @@ import type {
 } from '../types/avaliacoes';
 import { QUESTION_SELECT_FIELDS, type Question } from '../types/bancoQuestoes';
 
-const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at, embaralhar, qtd_versoes, cartao_separado, modo_nota, ponderada_escopo, lancar_no_boletim';
+const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at, embaralhar, qtd_versoes, cartao_separado, modo_nota, ponderada_escopo, lancar_no_boletim, eh_prova_area';
 
 function mapAvaliacaoRow(row: Record<string, unknown>): Avaliacao {
   const turmas = (row.prova_turmas as { turmas: { id: string; nome: string } | null }[] | undefined) ?? [];

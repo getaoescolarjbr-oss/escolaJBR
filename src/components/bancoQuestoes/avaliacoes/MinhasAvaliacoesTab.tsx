@@ -154,6 +154,9 @@ export function MinhasAvaliacoesTab() {
                     {a.tipo === 'SIMULADO' && (
                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-300 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800">Simulado · sem nota</span>
                     )}
+                    {a.eh_prova_area && (
+                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">Avaliação de área</span>
+                    )}
                   </div>
                   <p className="text-xs text-ms-muted mt-1">
                     {a.disciplina ? `${a.disciplina} · ` : ''}
@@ -172,7 +175,15 @@ export function MinhasAvaliacoesTab() {
                   >
                     <Pencil className="w-3.5 h-3.5" /> Editar
                   </button>
-                  {a.status === 'RASCUNHO' && (
+                  {/* Avaliação de área é publicada só pela aba Coordenação de Área — o botão
+                      genérico daqui não sabe distribuir a nota por professor/turma (ver
+                      rpc_publicar_avaliacao_area vs. atualizarStatusAvaliacao). */}
+                  {a.status === 'RASCUNHO' && a.eh_prova_area && (
+                    <span className={btnSecondary + ' cursor-default hover:bg-transparent dark:hover:bg-transparent'} title="Esta é uma avaliação colaborativa de área: publique pela aba Coordenação de Área > Avaliações da Área, que lança a nota certa para cada professor/turma.">
+                      <Send className="w-3.5 h-3.5" /> Publique pela Coordenação de Área
+                    </span>
+                  )}
+                  {a.status === 'RASCUNHO' && !a.eh_prova_area && (
                     <button
                       disabled={processando === a.id}
                       onClick={() => mudarStatus(a.id, 'PUBLICADA')}

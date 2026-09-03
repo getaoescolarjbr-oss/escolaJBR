@@ -37,6 +37,14 @@ export interface Avaliacao {
   turma_ids?: string[];
   turma_nomes?: string[];
   total_questoes?: number;
+  /**
+   * true quando esta prova é uma Avaliação Colaborativa de Área (ver AvaliacoesAreaTab.tsx
+   * / prova_area_cotas). Ela também aparece aqui em "Minhas Avaliações" para quem a criou
+   * (o coordenador, via RLS provas_select_dono_ou_staff), mas deve ser publicada só pela
+   * aba Coordenação de Área — rpc_publicar_avaliacao_area distribui a nota certa por
+   * professor/turma; o botão "Publicar" genérico daqui não sabe fazer isso.
+   */
+  eh_prova_area?: boolean;
 }
 
 export interface AvaliacaoQuestaoInput {
