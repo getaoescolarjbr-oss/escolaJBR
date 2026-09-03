@@ -12,6 +12,16 @@ interface Props {
   area: AreaConhecimento;
 }
 
+// prazo_edicao_area vem do banco em UTC (ex.: "2026-09-04T20:30:00+00:00"). Um
+// input datetime-local mostra e edita em hora LOCAL do navegador — cortar a string UTC
+// com .slice() reexibia a hora errada (mostrava 20:30 quando o coordenador tinha
+// digitado 16:30 local). Monta o valor a partir dos componentes locais do Date.
+function paraDatetimeLocal(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 export function AvaliacoesAreaTab({ area }: Props) {
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoArea[]>([]);
   const [loading, setLoading] = useState(true);
@@ -258,7 +268,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                     <span>Bloquear edição automaticamente a partir de:</span>
                     <input
                       type="datetime-local"
-                      value={prazoInput[av.id] ?? (av.prazo_edicao_area ? av.prazo_edicao_area.slice(0, 16) : '')}
+                      value={prazoInput[av.id] ?? (av.prazo_edicao_area ? paraDatetimeLocal(av.prazo_edicao_area) : '')}
                       onChange={(e) => setPrazoInput((prev) => ({ ...prev, [av.id]: e.target.value }))}
                       className="px-2 py-1 bg-ms-card border border-gray-700 rounded text-ms-main text-[11px] outline-none focus:ring-2 focus:ring-ms-blueText"
                     />
