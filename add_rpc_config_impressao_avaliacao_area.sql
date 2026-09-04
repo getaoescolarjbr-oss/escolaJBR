@@ -41,3 +41,8 @@ END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.rpc_definir_impressao_avaliacao_area(UUID, TEXT, SMALLINT, BOOLEAN) TO authenticated;
+
+-- Força o PostgREST a recarregar o schema na hora — sem isso, às vezes o cache dele demora
+-- (ou não atualiza sozinho) e o front continua recebendo "Could not find the function" mesmo
+-- com a função já criada com sucesso no banco.
+NOTIFY pgrst, 'reload schema';

@@ -304,6 +304,15 @@ export async function atualizarStatusAvaliacao(id: string, status: StatusAvaliac
   }
 }
 
+// Desfaz a publicação: volta a prova pra RASCUNHO e remove a(s) nota(s) já lançada(s) no
+// diário — mesma limpeza que excluirAvaliacao() faz, só sem apagar a prova (questões/cotas/
+// turmas continuam intactas). Recusa se já houver resposta finalizada ou cartão corrigido
+// (mesmo critério do "Sortear de novo" em rpc_gerar_versoes_prova).
+export async function despublicarAvaliacao(id: string): Promise<void> {
+  const { error } = await supabase.rpc('rpc_despublicar_avaliacao', { p_prova_id: id });
+  if (error) throw error;
+}
+
 // Exclui a prova e, se ela já tiver avaliação(ões) de nota vinculada(s) (ver
 // sincronizarNotasDaProva), apaga também as notas lançadas e a avaliação em "Notas e
 // Avaliações" — pra nunca sobrar um boletim com uma coluna de nota "órfã" de uma prova

@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BookUp, Camera, Check, ClipboardCheck, Copy, Eye, Loader2, Pencil, Printer, QrCode, Send, Square, Trash2, Users, Layers } from 'lucide-react';
+import { BookUp, Camera, Check, ClipboardCheck, Copy, Eye, Loader2, Pencil, Printer, QrCode, Send, Square, Trash2, Undo2, Users, Layers } from 'lucide-react';
 import type { Avaliacao, AvaliacaoArea, ProvaAreaCota, StatusAvaliacao } from '../../../types/avaliacoes';
 import {
   atualizarStatusAvaliacao,
+  despublicarAvaliacao,
   excluirAvaliacao,
   linkPublicoSimulado,
   listarAvaliacoesArea,
@@ -116,6 +117,23 @@ export function MinhasAvaliacoesTab() {
     }
   }
 
+  async function despublicar(a: Avaliacao) {
+    if (!confirm(
+      `Despublicar "${a.titulo}"? A avaliação volta pra rascunho e some do boletim dos alunos — ` +
+      'as questões continuam salvas, dá pra editar e publicar de novo depois.'
+    )) return;
+    setProcessando(a.id);
+    setErro(null);
+    try {
+      await despublicarAvaliacao(a.id);
+      await carregar();
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível despublicar a avaliação.');
+    } finally {
+      setProcessando(null);
+    }
+  }
+
   async function excluir(a: Avaliacao) {
     if (!confirm(`Tem certeza de que deseja excluir a avaliação "${a.titulo}"? Esta ação não pode ser desfeita.`)) {
       return;
@@ -199,6 +217,16 @@ export function MinhasAvaliacoesTab() {
                       className={btnSecondary}
                     >
                       <Square className="w-3.5 h-3.5" /> Encerrar
+                    </button>
+                  )}
+                  {a.status === 'PUBLICADA' && (
+                    <button
+                      disabled={processando === a.id}
+                      onClick={() => despublicar(a)}
+                      className={btnSecondary}
+                      title="Volta pra rascunho e remove a nota do boletim (só funciona se ninguém já respondeu/corrigiu)"
+                    >
+                      <Undo2 className="w-3.5 h-3.5" /> Despublicar
                     </button>
                   )}
                   {a.tipo === 'SIMULADO' && a.status !== 'RASCUNHO' && (

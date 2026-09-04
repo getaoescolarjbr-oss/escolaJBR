@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText, Lock, Unlock, Pencil, QrCode, Settings } from 'lucide-react';
+import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText, Lock, Unlock, Pencil, QrCode, Settings, Undo2 } from 'lucide-react';
 import type { AvaliacaoArea, ProvaAreaCota } from '../../types/avaliacoes';
 import type { AreaConhecimento } from '../../utils/areasConhecimento';
-import { listarAvaliacoesArea, publicarAvaliacaoArea, excluirAvaliacao, definirBloqueioAvaliacaoArea } from '../../services/avaliacoesService';
+import { listarAvaliacoesArea, publicarAvaliacaoArea, excluirAvaliacao, definirBloqueioAvaliacaoArea, despublicarAvaliacao } from '../../services/avaliacoesService';
 import { NovaAvaliacaoAreaModal } from './NovaAvaliacaoAreaModal';
 import { InserirQuestoesAreaModal } from './InserirQuestoesAreaModal';
 import { ReimprimirAvaliacaoModal } from '../bancoQuestoes/avaliacoes/ReimprimirAvaliacaoModal';
@@ -36,6 +36,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
   const [configImpressaoDe, setConfigImpressaoDe] = useState<AvaliacaoArea | null>(null);
   const [resultadosDe, setResultadosDe] = useState<AvaliacaoArea | null>(null);
   const [publicandoId, setPublicandoId] = useState<string | null>(null);
+  const [despublicandoId, setDespublicandoId] = useState<string | null>(null);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
   const [bloqueandoId, setBloqueandoId] = useState<string | null>(null);
   // Valor do input datetime-local do prazo de edição, por avaliação — só existe enquanto
@@ -71,6 +72,22 @@ export function AvaliacoesAreaTab({ area }: Props) {
       alert(e.message || 'Erro ao publicar avaliação.');
     } finally {
       setPublicandoId(null);
+    }
+  }
+
+  async function handleDespublicar(av: AvaliacaoArea) {
+    if (!confirm(
+      `Despublicar "${av.titulo}"? A avaliação volta pra rascunho e a nota some do boletim de cada professor — ` +
+      'as questões e cotas continuam salvas, dá pra editar e publicar de novo depois.'
+    )) return;
+    setDespublicandoId(av.id);
+    try {
+      await despublicarAvaliacao(av.id);
+      await carregar();
+    } catch (e: any) {
+      alert(e.message || 'Erro ao despublicar avaliação.');
+    } finally {
+      setDespublicandoId(null);
     }
   }
 
@@ -212,6 +229,17 @@ export function AvaliacoesAreaTab({ area }: Props) {
                       >
                         {publicandoId === av.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
                         Publicar e Sincronizar Notas
+                      </button>
+                    )}
+                    {av.status === 'PUBLICADA' && (
+                      <button
+                        onClick={() => handleDespublicar(av)}
+                        disabled={despublicandoId === av.id}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors disabled:opacity-40"
+                        title="Volta pra rascunho e remove a nota do boletim de cada professor (só funciona se ninguém já respondeu/corrigiu)"
+                      >
+                        {despublicandoId === av.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Undo2 className="w-3.5 h-3.5" />}
+                        Despublicar
                       </button>
                     )}
                     {av.status !== 'PUBLICADA' && (
