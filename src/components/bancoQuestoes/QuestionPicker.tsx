@@ -41,6 +41,10 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar, 
   const [editando, setEditando] = useState<Question | null>(null);
   const [criando, setCriando] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  // Mostra só as já selecionadas (sem novo fetch — os objetos completos já estão no Map do
+  // pai), pra localizar e desmarcar uma questão sem precisar reconstruir o filtro que a achou
+  // da primeira vez.
+  const [somenteSelecionadas, setSomenteSelecionadas] = useState(false);
 
   useEffect(() => {
     buscarFilterOptions().then(setOpcoes).catch(() => setOpcoes(null));
@@ -90,13 +94,19 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar, 
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const paginaAtual = (filtro.page ?? 0) + 1;
   const assuntosParaFiltro = assuntosDisciplina ?? opcoes?.assuntos ?? [];
+  const questoesSelecionadasLista = Array.from(selecionadas.values());
+  const questoesExibidas = somenteSelecionadas ? questoesSelecionadasLista : questoes;
 
   return (
     <div className="space-y-6">
       <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-4">
         <div className="flex items-center justify-between">
           <p className="text-sm font-bold text-ms-main">
-            {loading ? 'Buscando...' : `${total} questão${total === 1 ? '' : 'ões'} encontrada${total === 1 ? '' : 's'}`}
+            {somenteSelecionadas
+              ? `Mostrando ${questoesSelecionadasLista.length} questão${questoesSelecionadasLista.length === 1 ? '' : 'ões'} selecionada${questoesSelecionadasLista.length === 1 ? '' : 's'}`
+              : loading
+              ? 'Buscando...'
+              : `${total} questão${total === 1 ? '' : 'ões'} encontrada${total === 1 ? '' : 's'}`}
           </p>
         </div>
         <div className="flex gap-3">
@@ -176,7 +186,22 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar, 
       </div>
 
       <div className="flex items-center justify-between bg-ms-blue/10 border border-ms-blueText/40 rounded-xl px-5 py-3">
-        <p className="text-sm text-ms-main font-bold">{selecionadas.size} questão(ões) selecionada(s)</p>
+        <div className="flex items-center gap-3">
+          <p className="text-sm text-ms-main font-bold">{selecionadas.size} questão(ões) selecionada(s)</p>
+          {selecionadas.size > 0 && (
+            <button
+              type="button"
+              onClick={() => setSomenteSelecionadas((v) => !v)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-colors ${
+                somenteSelecionadas
+                  ? 'bg-ms-blueText text-white border-ms-blueText'
+                  : 'border-ms-blueText/50 text-ms-blueText hover:bg-ms-blue/10'
+              }`}
+            >
+              {somenteSelecionadas ? 'Ver todas as questões' : 'Ver só as selecionadas'}
+            </button>
+          )}
+        </div>
         <div className="flex items-center gap-3">
           {onContinuar && (
             <button
@@ -199,7 +224,23 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar, 
         </div>
       </div>
 
-      {loading ? (
+      {somenteSelecionadas ? (
+        questoesExibidas.length === 0 ? (
+          <p className="text-center text-ms-muted py-12">Nenhuma questão selecionada ainda.</p>
+        ) : (
+          <div className="space-y-4">
+            {questoesExibidas.map((q) => (
+              <QuestionCard
+                key={q.id}
+                question={q}
+                selecionada
+                onToggleSelecionar={() => onToggleSelecionar(q)}
+                onEditar={podeEditar ? () => setEditando(q) : undefined}
+              />
+            ))}
+          </div>
+        )
+      ) : loading ? (
         <div className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>
       ) : questoes.length === 0 ? (
         <p className="text-center text-ms-muted py-12">Nenhuma questão encontrada com estes filtros.</p>
