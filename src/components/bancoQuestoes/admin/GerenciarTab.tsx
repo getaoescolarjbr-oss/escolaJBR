@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Loader2, Plus, Search, Trash2 } from 'lucide-react';
 import type { FilterOptions, FiltroQuestoes, Question } from '../../../types/bancoQuestoes';
-import { buscarAssuntosPorDisciplina, buscarFilterOptions, excluirQuestao, listarQuestoes } from '../../../services/bancoQuestoesService';
+import {
+  buscarAssuntosPorDisciplina,
+  buscarFilterOptions,
+  buscarTopicosPorAssunto,
+  excluirQuestao,
+  listarQuestoes,
+} from '../../../services/bancoQuestoesService';
 import { QuestionEditorDialog } from '../QuestionEditorDialog';
 
 const PAGE_SIZE = 20;
@@ -20,6 +26,7 @@ interface GerenciarTabProps {
 export function GerenciarTab({ podeCriar = true }: GerenciarTabProps) {
   const [opcoes, setOpcoes] = useState<FilterOptions | null>(null);
   const [assuntosDisciplina, setAssuntosDisciplina] = useState<string[] | null>(null);
+  const [topicosAssunto, setTopicosAssunto] = useState<string[]>([]);
   const [filtro, setFiltro] = useState<FiltroQuestoes>({ page: 0 });
   const [busca, setBusca] = useState('');
   const [questoes, setQuestoes] = useState<Question[]>([]);
@@ -43,6 +50,16 @@ export function GerenciarTab({ podeCriar = true }: GerenciarTabProps) {
     }, 0);
     return () => clearTimeout(timeout);
   }, [filtro.discipline]);
+
+  useEffect(() => {
+    if (!filtro.assunto) {
+      setTopicosAssunto([]);
+      return;
+    }
+    buscarTopicosPorAssunto(filtro.assunto)
+      .then(setTopicosAssunto)
+      .catch(() => setTopicosAssunto([]));
+  }, [filtro.assunto]);
 
   async function carregar() {
     setLoading(true);
@@ -104,18 +121,26 @@ export function GerenciarTab({ podeCriar = true }: GerenciarTabProps) {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
           <select
             className={selectClass}
             value={filtro.discipline ?? ''}
-            onChange={(e) => atualizarFiltro({ discipline: e.target.value || undefined, assunto: undefined })}
+            onChange={(e) => atualizarFiltro({ discipline: e.target.value || undefined, assunto: undefined, topico: undefined })}
           >
             <option value="">Disciplina...</option>
             {opcoes?.disciplines.map((d) => <option key={d} value={d}>{d}</option>)}
           </select>
-          <select className={selectClass} value={filtro.assunto ?? ''} onChange={(e) => atualizarFiltro({ assunto: e.target.value || undefined })}>
+          <select
+            className={selectClass}
+            value={filtro.assunto ?? ''}
+            onChange={(e) => atualizarFiltro({ assunto: e.target.value || undefined, topico: undefined })}
+          >
             <option value="">{filtro.discipline ? 'Assunto...' : 'Assunto (escolha a disciplina)'}</option>
             {assuntosParaFiltro.map((a) => <option key={a} value={a}>{a}</option>)}
+          </select>
+          <select className={selectClass} value={filtro.topico ?? ''} onChange={(e) => atualizarFiltro({ topico: e.target.value || undefined })}>
+            <option value="">{filtro.assunto ? 'Tópico...' : 'Tópico (escolha o assunto)'}</option>
+            {topicosAssunto.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
           <select className={selectClass} value={filtro.level ?? ''} onChange={(e) => atualizarFiltro({ level: e.target.value || undefined })}>
             <option value="">Nível...</option>
@@ -146,7 +171,11 @@ export function GerenciarTab({ podeCriar = true }: GerenciarTabProps) {
             {questoes.map((q) => (
               <div key={q.id} className="flex items-center justify-between gap-4 px-4 py-3 bg-ms-card border border-gray-800 rounded-xl">
                 <div className="min-w-0">
-                  <p className="text-xs font-bold text-ms-blueText">{q.discipline}{q.assunto ? ` — ${q.assunto}` : ''}</p>
+                  <p className="text-xs font-bold text-ms-blueText">
+                    {q.discipline}
+                    {q.assunto ? ` — ${q.assunto}` : ''}
+                    {q.topico ? `: ${q.topico}` : ''}
+                  </p>
                   <p className="text-sm text-ms-main truncate">{q.statement}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

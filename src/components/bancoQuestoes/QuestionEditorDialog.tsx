@@ -1,6 +1,6 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Loader2, Plus, Trash2, X } from 'lucide-react';
-import type { Alternative, Question, TipoQuestao } from '../../types/bancoQuestoes';
+import type { Alternative, FilterOptions, Question, TipoQuestao } from '../../types/bancoQuestoes';
 import {
   LINHAS_RESPOSTA_PADRAO,
   TIPOS_QUESTAO,
@@ -8,8 +8,15 @@ import {
   ehQuestaoEscrita,
   normalizarTipoQuestao,
 } from '../../types/bancoQuestoes';
-import { atualizarQuestao, criarQuestao, salvarTextoApoio } from '../../services/bancoQuestoesService';
+import {
+  atualizarQuestao,
+  buscarFilterOptions,
+  buscarTopicosPorAssunto,
+  criarQuestao,
+  salvarTextoApoio,
+} from '../../services/bancoQuestoesService';
 import { MarkupToolbar } from './MarkupToolbar';
+import { AutocompleteField } from './AutocompleteField';
 
 interface Props {
   questao: Question | null;
@@ -69,7 +76,10 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
   const [ano, setAno] = useState(questao?.ano ? String(questao.ano) : '');
   const [difficulty, setDifficulty] = useState(questao?.difficulty ?? '');
   const [assunto, setAssunto] = useState(questao?.assunto ?? '');
+  const [topico, setTopico] = useState(questao?.topico ?? '');
   const [tipo, setTipo] = useState<TipoQuestao>(normalizarTipoQuestao(questao?.tipo));
+  const [opcoes, setOpcoes] = useState<FilterOptions | null>(null);
+  const [topicosDoAssunto, setTopicosDoAssunto] = useState<string[]>([]);
   const [criteriosCorrecao, setCriteriosCorrecao] = useState(questao?.criterios_correcao ?? '');
   const [linhasResposta, setLinhasResposta] = useState(questao?.linhas_resposta ? String(questao.linhas_resposta) : '');
   const [statement, setStatement] = useState(questao?.statement ?? '');
@@ -83,6 +93,28 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
   const [erro, setErro] = useState<string | null>(null);
 
   const escrita = ehQuestaoEscrita(tipo);
+
+  useEffect(() => {
+    buscarFilterOptions().then(setOpcoes).catch(() => setOpcoes(null));
+  }, []);
+
+  useEffect(() => {
+    if (!assunto) {
+      setTopicosDoAssunto([]);
+      return;
+    }
+    let cancelado = false;
+    buscarTopicosPorAssunto(assunto)
+      .then((lista) => {
+        if (!cancelado) setTopicosDoAssunto(lista);
+      })
+      .catch(() => {
+        if (!cancelado) setTopicosDoAssunto([]);
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [assunto]);
 
   function atualizarAlternativa(idx: number, texto: string) {
     setAlternatives((prev) => prev.map((a, i) => (i === idx ? { ...a, text: texto } : a)));
@@ -130,6 +162,7 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
         ano: ano ? Number(ano) : null,
         difficulty: difficulty.trim() || null,
         assunto: assunto.trim() || null,
+        topico: topico.trim() || null,
         statement: statement.trim(),
         tipo,
         // O banco tem CHECK: dissertativa/redação exigem alternatives = [] e
@@ -194,15 +227,41 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
         </div>
 
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          <input placeholder="Disciplina *" value={discipline} onChange={(e) => setDiscipline(e.target.value)} className={inputClass} />
-          <input placeholder="Nível" value={level} onChange={(e) => setLevel(e.target.value)} className={inputClass} />
-          <input placeholder="Área" value={area} onChange={(e) => setArea(e.target.value)} className={inputClass} />
-          <input placeholder="Assunto" value={assunto} onChange={(e) => setAssunto(e.target.value)} className={inputClass} />
-          <input placeholder="Dificuldade" value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className={inputClass} />
-          <input placeholder="Ano" value={ano} onChange={(e) => setAno(e.target.value.replace(/\D/g, ''))} className={inputClass} />
-          <input placeholder="Banca" value={banca} onChange={(e) => setBanca(e.target.value)} className={inputClass} />
-          <input placeholder="Órgão" value={orgao} onChange={(e) => setOrgao(e.target.value)} className={inputClass} />
-          <input placeholder="Cargo" value={cargo} onChange={(e) => setCargo(e.target.value)} className={inputClass} />
+          <AutocompleteField
+            label="Disciplina *"
+            placeholder="Disciplina *"
+            value={discipline}
+            onChange={setDiscipline}
+            options={opcoes?.disciplines ?? []}
+          />
+          <AutocompleteField label="Nível" placeholder="Nível" value={level} onChange={setLevel} options={opcoes?.levels ?? []} />
+          <AutocompleteField label="Área" placeholder="Área" value={area} onChange={setArea} options={opcoes?.areas ?? []} />
+          <AutocompleteField
+            label="Assunto"
+            placeholder="Assunto"
+            value={assunto}
+            onChange={(v) => {
+              setAssunto(v);
+              if (v !== assunto) setTopico('');
+            }}
+            options={opcoes?.assuntos ?? []}
+          />
+          <AutocompleteField
+            label="Tópico"
+            placeholder={assunto ? 'Tópico' : 'Tópico (escolha o assunto)'}
+            value={topico}
+            onChange={setTopico}
+            options={topicosDoAssunto}
+            disabled={!assunto}
+          />
+          <AutocompleteField label="Dificuldade" placeholder="Dificuldade" value={difficulty} onChange={setDifficulty} options={opcoes?.difficulties ?? []} />
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-ms-muted mb-1">Ano</label>
+            <input placeholder="Ano" value={ano} onChange={(e) => setAno(e.target.value.replace(/\D/g, ''))} className={inputClass} />
+          </div>
+          <AutocompleteField label="Banca" placeholder="Banca" value={banca} onChange={setBanca} options={opcoes?.bancas ?? []} />
+          <AutocompleteField label="Órgão" placeholder="Órgão" value={orgao} onChange={setOrgao} options={opcoes?.orgaos ?? []} />
+          <AutocompleteField label="Cargo" placeholder="Cargo" value={cargo} onChange={setCargo} options={opcoes?.cargos ?? []} />
         </div>
 
         <div>

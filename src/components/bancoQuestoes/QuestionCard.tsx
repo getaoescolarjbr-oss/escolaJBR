@@ -23,7 +23,11 @@ export function QuestionCard({ question: q, selecionada, onToggleSelecionar, onE
         <div className="flex flex-wrap gap-2 text-xs font-bold">
           <span className="px-2.5 py-1 rounded-full bg-ms-blue/20 text-ms-blueText">{q.discipline}</span>
           {escrita && <span className="px-2.5 py-1 rounded-full bg-ms-gold/20 text-ms-gold">{TIPO_QUESTAO_LABEL[tipo]}</span>}
-          {q.assunto && <span className="px-2.5 py-1 rounded-full bg-ms-border/40 text-ms-muted">{q.assunto}</span>}
+          {q.assunto && (
+            <span className="px-2.5 py-1 rounded-full bg-ms-border/40 text-ms-muted">
+              {q.assunto}{q.topico ? `: ${q.topico}` : ''}
+            </span>
+          )}
           {q.difficulty && <span className="px-2.5 py-1 rounded-full bg-ms-border/40 text-ms-muted">{q.difficulty}</span>}
         </div>
         <div className="flex items-center gap-4 shrink-0">

@@ -54,6 +54,7 @@ export interface Question {
   ano: number | null;
   difficulty: string | null;
   assunto: string | null;
+  topico: string | null;
   statement: string;
   image_url: string | null;
   tipo: TipoQuestao;
@@ -73,7 +74,7 @@ export interface Question {
 }
 
 export const QUESTION_SELECT_FIELDS =
-  'id, discipline, area, level, banca, orgao, cargo, ano, difficulty, assunto, statement, image_url, tipo, alternatives, correct_letter, criterios_correcao, linhas_resposta, explanation, support_text_id, active, criado_por, support_texts:support_text_id(id, discipline, content, image_url)';
+  'id, discipline, area, level, banca, orgao, cargo, ano, difficulty, assunto, topico, statement, image_url, tipo, alternatives, correct_letter, criterios_correcao, linhas_resposta, explanation, support_text_id, active, criado_por, support_texts:support_text_id(id, discipline, content, image_url)';
 
 export interface FiltroQuestoes {
   discipline?: string;
@@ -83,6 +84,7 @@ export interface FiltroQuestoes {
   ano?: number;
   difficulty?: string;
   assunto?: string;
+  topico?: string;
   tipo?: TipoQuestao;
   busca?: string;
   apenasMinhas?: string;
@@ -100,9 +102,10 @@ export interface FilterOptions {
   bancas: string[];
   levels: string[];
   areas: string[];
+  topicos: string[];
 }
 
-export type TaxonomyField = 'discipline' | 'difficulty' | 'assunto' | 'banca' | 'orgao' | 'cargo' | 'level' | 'area';
+export type TaxonomyField = 'discipline' | 'difficulty' | 'assunto' | 'topico' | 'banca' | 'orgao' | 'cargo' | 'level' | 'area';
 
 export interface TaxonomyTerm {
   id: string;
@@ -114,6 +117,7 @@ export const TAXONOMY_FIELD_LABELS: Record<TaxonomyField, string> = {
   discipline: 'Disciplina',
   difficulty: 'Dificuldade',
   assunto: 'Assunto',
+  topico: 'Tópico',
   banca: 'Banca',
   orgao: 'Órgão',
   cargo: 'Cargo',

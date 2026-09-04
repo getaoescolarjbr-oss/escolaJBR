@@ -16,11 +16,18 @@ export async function buscarFilterOptions(): Promise<FilterOptions> {
     bancas: (d.bancas as string[]) ?? [],
     levels: (d.levels as string[]) ?? [],
     areas: (d.areas as string[]) ?? [],
+    topicos: (d.topicos as string[]) ?? [],
   };
 }
 
 export async function buscarAssuntosPorDisciplina(discipline: string): Promise<string[]> {
   const { data, error } = await supabase.rpc('question_bank_assuntos_by_discipline', { p_discipline: discipline });
+  if (error) throw error;
+  return (data as string[]) ?? [];
+}
+
+export async function buscarTopicosPorAssunto(assunto: string): Promise<string[]> {
+  const { data, error } = await supabase.rpc('question_bank_topicos_by_assunto', { p_assunto: assunto });
   if (error) throw error;
   return (data as string[]) ?? [];
 }
@@ -50,6 +57,7 @@ export async function listarQuestoes(filtro: FiltroQuestoes): Promise<ListaQuest
   if (filtro.ano) query = query.eq('ano', filtro.ano);
   if (filtro.difficulty) query = query.eq('difficulty', filtro.difficulty);
   if (filtro.assunto) query = query.eq('assunto', filtro.assunto);
+  if (filtro.topico) query = query.eq('topico', filtro.topico);
   if (filtro.tipo) query = query.eq('tipo', filtro.tipo);
   if (filtro.busca) query = query.ilike('statement', `%${filtro.busca}%`);
   if (filtro.apenasMinhas) query = query.eq('criado_por', filtro.apenasMinhas);

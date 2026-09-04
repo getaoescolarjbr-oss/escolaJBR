@@ -11,7 +11,7 @@ import {
   listarTermos,
 } from '../../../services/bancoQuestoesService';
 
-const CAMPOS: TaxonomyField[] = ['discipline', 'level', 'area', 'difficulty', 'assunto', 'banca', 'orgao', 'cargo'];
+const CAMPOS: TaxonomyField[] = ['discipline', 'level', 'area', 'difficulty', 'assunto', 'topico', 'banca', 'orgao', 'cargo'];
 
 export function CategoriasTab() {
   const [campo, setCampo] = useState<TaxonomyField>('discipline');
