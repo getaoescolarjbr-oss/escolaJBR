@@ -188,7 +188,10 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar, 
       <div className="flex items-center justify-between bg-ms-blue/10 border border-ms-blueText/40 rounded-xl px-5 py-3">
         <div className="flex items-center gap-3">
           <p className="text-sm text-ms-main font-bold">{selecionadas.size} questão(ões) selecionada(s)</p>
-          {selecionadas.size > 0 && (
+          {/* Fica visível mesmo com 0 selecionadas quando já está no modo "Ver selecionadas" —
+              senão, ao desmarcar a última questão dali, o botão de voltar pra lista completa
+              sumia junto e a pessoa ficava presa numa lista vazia sem saída. */}
+          {(selecionadas.size > 0 || somenteSelecionadas) && (
             <button
               type="button"
               onClick={() => setSomenteSelecionadas((v) => !v)}
@@ -198,7 +201,7 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar, 
                   : 'border-ms-blueText/50 text-ms-blueText hover:bg-ms-blue/10'
               }`}
             >
-              {somenteSelecionadas ? 'Ver todas as questões' : 'Ver só as selecionadas'}
+              {somenteSelecionadas ? 'Ver todas as questões' : 'Ver selecionadas'}
             </button>
           )}
         </div>
