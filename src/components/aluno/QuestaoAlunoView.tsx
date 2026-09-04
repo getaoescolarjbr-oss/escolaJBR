@@ -1,6 +1,6 @@
 import { Check, PenLine, XCircle } from 'lucide-react';
 import type { ItemResultadoSubmissao, QuestaoParaAluno } from '../../types/avaliacoes';
-import { TIPO_QUESTAO_LABEL, ehQuestaoEscrita, normalizarTipoQuestao } from '../../types/bancoQuestoes';
+import { TIPO_QUESTAO_LABEL, ehQuestaoEscrita, normalizarTipoQuestao, ordenarAlternativas } from '../../types/bancoQuestoes';
 import { renderLightMarkup } from '../../lib/questionMarkup';
 
 interface Props {
@@ -81,7 +81,7 @@ export function QuestaoAlunoView({
         </div>
       ) : (
         <div className="space-y-2 mt-2">
-          {questao.alternatives.map((a) => {
+          {ordenarAlternativas(questao.alternatives).map((a) => {
             const marcada = letraMarcada === a.letter;
             const correta = resultado && a.letter === resultado.correct_letter;
             const errouEssa = resultado && marcada && !resultado.correta;

@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { ClipboardList, Loader2, Send } from 'lucide-react';
 import type { SimuladoPublicoIniciarResposta, SimuladoPublicoItemResultado } from '../../types/avaliacoes';
 import { iniciarSimuladoPublico, submeterSimuladoPublico } from '../../services/avaliacoesService';
+import { ordenarAlternativas } from '../../types/bancoQuestoes';
 import { renderLightMarkup } from '../../lib/questionMarkup';
 
 interface Props {
@@ -152,7 +153,7 @@ export function SimuladoPublicoPage({ token }: Props) {
                       </div>
                       {q.image_url && <img src={q.image_url} alt="" className="max-w-full rounded-lg my-2" />}
                       <div className="space-y-2 mt-2">
-                        {q.alternatives.map((a) => {
+                        {ordenarAlternativas(q.alternatives).map((a) => {
                           const marcada = respostas[q.question_id] === a.letter;
                           const correta = item && a.letter === item.correct_letter;
                           const errouEssa = item && marcada && !item.correta;

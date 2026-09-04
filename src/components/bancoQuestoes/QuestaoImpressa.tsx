@@ -1,5 +1,5 @@
 import type { Question } from '../../types/bancoQuestoes';
-import { ehQuestaoEscrita, linhasParaResposta, normalizarTipoQuestao } from '../../types/bancoQuestoes';
+import { ehQuestaoEscrita, linhasParaResposta, normalizarTipoQuestao, ordenarAlternativas } from '../../types/bancoQuestoes';
 import { renderLightMarkup } from '../../lib/questionMarkup';
 
 // entraNoCartaoResposta vive em utils/printProva.ts: este arquivo só pode exportar
@@ -95,7 +95,7 @@ export function QuestaoImpressa({ questao: q, indice, valor, ocultarTextoApoio }
         </div>
       ) : (
         <div className={obterClasseLayoutAlternativas(q)}>
-          {q.alternatives.map((a) => (
+          {ordenarAlternativas(q.alternatives).map((a) => (
             <div className="alternativa" key={a.letter}>
               <b>{a.letter})</b>
               <div className="alternativa-texto">{renderLightMarkup(a.text, `p-${q.id}-${a.letter}`, undefined, 'left')}</div>

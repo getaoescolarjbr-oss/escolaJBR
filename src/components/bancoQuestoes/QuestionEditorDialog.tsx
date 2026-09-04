@@ -7,6 +7,7 @@ import {
   TIPO_QUESTAO_LABEL,
   ehQuestaoEscrita,
   normalizarTipoQuestao,
+  ordenarAlternativas,
 } from '../../types/bancoQuestoes';
 import {
   atualizarQuestao,
@@ -85,7 +86,9 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
   const [statement, setStatement] = useState(questao?.statement ?? '');
   const [textoApoio, setTextoApoio] = useState(questao?.support_texts?.content ?? '');
   const [alternatives, setAlternatives] = useState<Alternative[]>(
-    questao?.alternatives?.length ? questao.alternatives : [novaAlternativa('A'), novaAlternativa('B'), novaAlternativa('C'), novaAlternativa('D')]
+    questao?.alternatives?.length
+      ? ordenarAlternativas(questao.alternatives)
+      : [novaAlternativa('A'), novaAlternativa('B'), novaAlternativa('C'), novaAlternativa('D')]
   );
   const [correctLetter, setCorrectLetter] = useState(questao?.correct_letter ?? 'A');
   const [explanation, setExplanation] = useState(questao?.explanation ?? '');

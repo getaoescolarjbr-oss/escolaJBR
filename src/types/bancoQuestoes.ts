@@ -1,5 +1,14 @@
 export type Alternative = { letter: string; text: string; image_url?: string | null };
 
+// Algumas questões do lote importado (~12k) vieram com o array `alternatives` fora de
+// ordem (ex.: B antes de A) — o gabarito continua certo (`correct_letter` referencia a
+// letra, não a posição), mas a tela mostrava as opções embaralhadas. Usar isto em toda
+// exibição/impressão corrige a visualização na hora, sem precisar caçar questão por
+// questão no banco; abrir e salvar a questão no editor corrige a ordem gravada também.
+export function ordenarAlternativas<T extends { letter: string }>(alternatives: T[]): T[] {
+  return [...alternatives].sort((a, b) => a.letter.localeCompare(b.letter));
+}
+
 // OBJETIVA = múltipla escolha (alternatives + correct_letter). DISSERTATIVA e REDACAO
 // são respondidas por escrito: `alternatives` fica `[]` e `correct_letter` fica null
 // (há CHECK no banco garantindo isso), a correção é manual pelo professor e a

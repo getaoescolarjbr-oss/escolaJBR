@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BookOpen, Check, ChevronDown, ChevronUp, Pencil } from 'lucide-react';
 import type { Question } from '../../types/bancoQuestoes';
-import { TIPO_QUESTAO_LABEL, ehQuestaoEscrita, linhasParaResposta, normalizarTipoQuestao } from '../../types/bancoQuestoes';
+import { TIPO_QUESTAO_LABEL, ehQuestaoEscrita, linhasParaResposta, normalizarTipoQuestao, ordenarAlternativas } from '../../types/bancoQuestoes';
 import { buildFonte, renderLightMarkup } from '../../lib/questionMarkup';
 
 interface Props {
@@ -16,6 +16,7 @@ export function QuestionCard({ question: q, selecionada, onToggleSelecionar, onE
   const [mostrarTexto, setMostrarTexto] = useState(false);
   const tipo = normalizarTipoQuestao(q.tipo);
   const escrita = ehQuestaoEscrita(tipo);
+  const alternativas = ordenarAlternativas(q.alternatives);
 
   return (
     <div className="bg-ms-card border border-ms-border rounded-2xl p-6 space-y-4">
@@ -96,7 +97,7 @@ export function QuestionCard({ question: q, selecionada, onToggleSelecionar, onE
         </div>
       ) : (
         <div className="space-y-2">
-          {q.alternatives.map((alt) => (
+          {alternativas.map((alt) => (
             <div
               key={alt.letter}
               className={`flex gap-3 px-4 py-2.5 rounded-xl border text-sm ${

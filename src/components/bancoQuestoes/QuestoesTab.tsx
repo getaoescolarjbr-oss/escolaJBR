@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Copy, Check, FileText } from 'lucide-react';
 import type { Question } from '../../types/bancoQuestoes';
+import { ordenarAlternativas } from '../../types/bancoQuestoes';
 import { QuestionPicker } from './QuestionPicker';
 import { buildFonte } from '../../lib/questionMarkup';
 import { GerarProvaModal } from './GerarProvaModal';
@@ -24,7 +25,7 @@ export function QuestoesTab() {
   async function copiarSelecionadas() {
     const texto = questoesSelecionadas
       .map((q, i) => {
-        const alternativas = q.alternatives.map((a) => `${a.letter}) ${a.text.replace(/\[\[[^\]]*\]\]|<[^>]+>/g, '')}`).join('\n');
+        const alternativas = ordenarAlternativas(q.alternatives).map((a) => `${a.letter}) ${a.text.replace(/\[\[[^\]]*\]\]|<[^>]+>/g, '')}`).join('\n');
         return `${i + 1}. ${q.statement.replace(/\[\[[^\]]*\]\]|<[^>]+>/g, '')}\n${alternativas}\n(Fonte: ${buildFonte(q)})\n`;
       })
       .join('\n');
