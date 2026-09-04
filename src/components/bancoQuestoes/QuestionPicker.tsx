@@ -94,6 +94,11 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar, 
   return (
     <div className="space-y-6">
       <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-4">
+        <div className="flex items-center justify-between">
+          <p className="text-sm font-bold text-ms-main">
+            {loading ? 'Buscando...' : `${total} questão${total === 1 ? '' : 'ões'} encontrada${total === 1 ? '' : 's'}`}
+          </p>
+        </div>
         <div className="flex gap-3">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-ms-muted" />
