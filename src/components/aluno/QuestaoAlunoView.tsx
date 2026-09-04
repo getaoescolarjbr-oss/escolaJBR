@@ -37,15 +37,30 @@ export function QuestaoAlunoView({
   const tipo = normalizarTipoQuestao(questao.tipo);
   const escrita = ehQuestaoEscrita(tipo);
 
+  const numeroPrefixo = (
+    <span className="font-bold text-ms-blueText">
+      {indice + 1}. <span className="font-normal text-ms-muted text-xs">({Number(questao.valor).toFixed(2)} pt)</span>{' '}
+    </span>
+  );
+
   return (
     <div className="border-b border-gray-800 pb-4 last:border-0">
+      {/* Texto associado (passagem, tirinha, poema citado antes do comando) — vinha nos
+          dados desde sempre mas nunca era desenhado aqui, então o aluno via a pergunta sem
+          o texto que ela se refere. Sempre antes do comando, com o número grudado nele. */}
+      {questao.support_text_content && (
+        <div className="mb-2 pl-3 border-l-2 border-gray-700 text-sm text-ms-muted">
+          {renderLightMarkup(questao.support_text_content, `st-${questao.question_id}`, numeroPrefixo)}
+          {questao.support_text_image_url && (
+            <img src={questao.support_text_image_url} alt="" className="max-w-full rounded-lg my-2" />
+          )}
+        </div>
+      )}
       <div className="text-sm text-ms-main">
         {renderLightMarkup(
           questao.statement,
           `p-${questao.question_id}`,
-          <span className="font-bold text-ms-blueText">
-            {indice + 1}. <span className="font-normal text-ms-muted text-xs">({Number(questao.valor).toFixed(2)} pt)</span>{' '}
-          </span>
+          questao.support_text_content ? undefined : numeroPrefixo
         )}
         {escrita && (
           <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-ms-gold/20 text-ms-gold text-[11px] font-bold align-middle">
