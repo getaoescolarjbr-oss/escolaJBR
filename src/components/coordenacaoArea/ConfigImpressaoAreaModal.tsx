@@ -4,7 +4,7 @@ import type { AvaliacaoArea } from '../../types/avaliacoes';
 import type { ModoEmbaralhar } from '../../types/correcaoOmr';
 import { MODO_EMBARALHAR_LABEL } from '../../types/correcaoOmr';
 import { definirImpressaoAvaliacaoArea } from '../../services/avaliacoesService';
-import { contarAlunosAtivosTurmas } from '../../services/correcaoOmrService';
+import { contarAlunosAtivosTurmas, gerarVersoes } from '../../services/correcaoOmrService';
 import { supabase } from '../../lib/supabase';
 
 interface Props {
@@ -60,6 +60,20 @@ export function ConfigImpressaoAreaModal({ avaliacao, onClose, onSalvo }: Props)
     setErro(null);
     try {
       await definirImpressaoAvaliacaoArea(avaliacao.id, embaralhar, versoesEfetivas, cartaoSeparado);
+      // Salvar sozinho não muda nada visível — as folhas só refletem a config depois de
+      // sortear de novo. Faz isso aqui mesmo, em vez de depender de mais um clique manual
+      // em "Folhas com QR" (que é exatamente onde essa confusão vinha acontecendo).
+      try {
+        await gerarVersoes(avaliacao.id);
+      } catch (eSorteio: any) {
+        setErro(
+          'Configuração salva, mas não deu pra sortear as versões automaticamente: ' +
+          (eSorteio.message || 'erro desconhecido') +
+          ' Você ainda pode tentar de novo em "Folhas com QR" → "Sortear de novo".'
+        );
+        onSalvo();
+        return;
+      }
       onSalvo();
       onClose();
     } catch (e: any) {
@@ -79,7 +93,7 @@ export function ConfigImpressaoAreaModal({ avaliacao, onClose, onSalvo }: Props)
           </button>
         </div>
         <p className="text-xs text-ms-muted">
-          {avaliacao.titulo}. Depois de salvar, abra "Folhas com QR" e clique em "Sortear de novo" pra gerar as versões.
+          {avaliacao.titulo}. Salvar já sorteia as versões de novo — se algum aluno já tiver cartão corrigido, o sorteio é recusado (pra não invalidar folha já aplicada), mas a configuração fica salva mesmo assim.
         </p>
 
         {erro && <p className="text-xs text-red-400 font-bold">{erro}</p>}

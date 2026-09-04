@@ -218,7 +218,10 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                   <span>Turma: {aloc.turma_nome ?? '—'}</span>
                   {aloc.numero_chamada != null && <span>Nº {aloc.numero_chamada}</span>}
                   <span>Data: {dataFormatada}</span>
-                  <span>Versão: <strong>{aloc.rotulo}</strong></span>
+                  {/* Mesmo cuidado do cartão-resposta: versão colada ao SGDE em vez de um
+                      rótulo "Versão: X" isolado, que convida o aluno a procurar outro com a
+                      mesma letra na sala. */}
+                  <span>SGDE: {aloc.codigo_sgde ?? '—'}-{aloc.rotulo}</span>
                 </div>
               </div>
               <div className="prova-nota-box"><span className="prova-nota-label">Nota</span></div>
@@ -304,14 +307,20 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                     {turmas.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </Campo>
-                {!versaoPorAluno && (
-                  <Campo label="Versão">
+                <Campo label="Versão">
+                  {versaoPorAluno ? (
+                    // Uma por aluno: listar/filtrar por rótulo individual não ajuda em nada
+                    // (ninguém procura pelo código interno da versão) — só informa o modo.
+                    <div className={`${SELECT_CLS} flex items-center text-ms-muted`}>
+                      Uma por aluno ({versoes.length})
+                    </div>
+                  ) : (
                     <select value={versaoFiltro} onChange={(e) => setVersaoFiltro(e.target.value)} className={SELECT_CLS}>
                       <option value="">Todas</option>
                       {versoes.map((v) => <option key={v} value={v}>Versão {v}</option>)}
                     </select>
-                  </Campo>
-                )}
+                  )}
+                </Campo>
                 <Campo label="Imprimir">
                   <select value={conteudo} onChange={(e) => setConteudo(e.target.value as Conteudo)} className={SELECT_CLS}>
                     {(Object.keys(CONTEUDO_LABEL) as Conteudo[]).map((c) => (

@@ -8,7 +8,10 @@ import type { AvaliacaoArea, CotaProfessorInput, ModoAvaliacao, NovaAvaliacaoAre
 import type { ModoEmbaralhar } from '../../types/correcaoOmr';
 import { MODO_EMBARALHAR_LABEL } from '../../types/correcaoOmr';
 import { criarAvaliacaoArea, editarAvaliacaoArea, buscarInstrucoesPadrao, salvarInstrucoesPadrao } from '../../services/avaliacoesService';
+import { contarAlunosAtivosTurmas } from '../../services/correcaoOmrService';
 import { getCurrentBimestre } from '../../utils/academicUtils';
+
+type ModoVersoes = 'FIXO' | 'POR_ALUNO';
 
 interface Props {
   area: AreaConhecimento;
@@ -38,6 +41,8 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
   const [salvandoPadrao, setSalvandoPadrao] = useState(false);
   const [embaralhar, setEmbaralhar] = useState<ModoEmbaralhar>((avaliacaoExistente?.embaralhar as ModoEmbaralhar) ?? 'NENHUM');
   const [qtdVersoes, setQtdVersoes] = useState<number>(avaliacaoExistente?.qtd_versoes ?? 1);
+  const [modoVersoes, setModoVersoes] = useState<ModoVersoes>('FIXO');
+  const [contandoAlunos, setContandoAlunos] = useState(false);
   const [cartaoSeparado, setCartaoSeparado] = useState<boolean>(avaliacaoExistente?.cartao_separado ?? false);
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>([]);
@@ -216,6 +221,23 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
     }
   }
 
+  // "Uma versão por aluno": mesma regra do gerador de avaliação normal (ConfigAvaliacaoForm) —
+  // sem embaralhar, versão além da A sai idêntica à original, então empurra pra QUESTOES ao
+  // entrar nesse modo, sem travar o seletor.
+  useEffect(() => {
+    if (modoVersoes !== 'POR_ALUNO') return;
+    if (embaralhar === 'NENHUM') setEmbaralhar('QUESTOES');
+    if (turmasSelecionadas.length === 0) { setQtdVersoes(1); return; }
+    setContandoAlunos(true);
+    contarAlunosAtivosTurmas(turmasSelecionadas)
+      .then((n) => setQtdVersoes(Math.max(1, n)))
+      .catch(() => {})
+      .finally(() => setContandoAlunos(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modoVersoes, turmasSelecionadas]);
+
+  const versoesEfetivas = embaralhar === 'NENHUM' ? qtdVersoes : Math.max(2, qtdVersoes);
+
   function toggleTurma(turmaId: string) {
     setTurmasSelecionadas((prev) =>
       prev.includes(turmaId) ? prev.filter((id) => id !== turmaId) : [...prev, turmaId]
@@ -291,7 +313,7 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
         turma_ids: turmasSelecionadas,
         cotas: cotasPayload,
         embaralhar,
-        qtd_versoes: qtdVersoes,
+        qtd_versoes: versoesEfetivas,
         cartao_separado: cartaoSeparado,
       };
 
@@ -467,8 +489,12 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
                   <div>
                     <label className="text-xs font-bold text-ms-muted">Versões da prova</label>
                     <select
-                      value={qtdVersoes}
-                      onChange={(e) => setQtdVersoes(Number(e.target.value))}
+                      value={modoVersoes === 'POR_ALUNO' ? 'POR_ALUNO' : versoesEfetivas}
+                      onChange={(e) => {
+                        if (e.target.value === 'POR_ALUNO') { setModoVersoes('POR_ALUNO'); return; }
+                        setModoVersoes('FIXO');
+                        setQtdVersoes(Number(e.target.value));
+                      }}
                       className="w-full mt-1 px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
                     >
                       {[1, 2, 3, 4].map((n) => (
@@ -476,7 +502,17 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
                           {n === 1 ? 'Versão única (A)' : `${n} versões (A–${String.fromCharCode(64 + n)})`}
                         </option>
                       ))}
+                      <option value="POR_ALUNO">Uma versão por aluno da turma</option>
                     </select>
+                    {modoVersoes === 'POR_ALUNO' && (
+                      <p className="text-xs text-ms-muted mt-1">
+                        {contandoAlunos
+                          ? 'Contando alunos ativos...'
+                          : turmasSelecionadas.length === 0
+                          ? 'Selecione a(s) turma(s) abaixo para calcular.'
+                          : `${qtdVersoes} versão(ões) — uma por aluno ativo (transferido/remanejado não conta).`}
+                      </p>
+                    )}
                   </div>
                   <div>
                     <label className="text-xs font-bold text-ms-muted">Cartão-resposta</label>
