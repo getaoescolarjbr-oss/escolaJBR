@@ -56,16 +56,15 @@ export function CartaoRespostaFolha({
           <div className="linha-dados">
             {aluno.serie ? `${aluno.serie} — ` : ''}Turma {aluno.turma ?? '—'}
             {aluno.numeroChamada != null ? ` · Nº ${aluno.numeroChamada}` : ''}
-            {aluno.codigoSgde ? ` · SGDE ${aluno.codigoSgde}` : ''}
+            {/* Versão colada no código SGDE (não num selo grande à parte) — de propósito:
+                um selo "VERSÃO B" bem visível convida o aluno a procurar outro com a mesma
+                letra na sala. Colado ao código, quem olha de longe não identifica nada. */}
+            {aluno.codigoSgde ? ` · SGDE ${aluno.codigoSgde}-${versao}` : ` · Versão ${versao}`}
           </div>
           <div className="linha-dados">
             <strong>{titulo}</strong>
             {disciplina ? ` — ${disciplina}` : ''} · {dataAplicacao}
           </div>
-        </div>
-        <div className="cartao-omr-versao">
-          <div className="cap">Versão</div>
-          <div className="rot">{versao}</div>
         </div>
       </div>
 

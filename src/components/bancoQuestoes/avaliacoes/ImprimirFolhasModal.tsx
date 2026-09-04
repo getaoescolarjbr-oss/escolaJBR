@@ -127,6 +127,11 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
     () => Array.from(new Set((alocacoes ?? []).map((a) => a.rotulo))).sort(),
     [alocacoes]
   );
+  // "Uma versão por aluno" gera um rótulo pra cada um — listar/filtrar por versão individual
+  // não ajuda ninguém aqui (o professor procura aluno, não código interno de versão), só
+  // polui a tela com dezenas de opções/selos. Detecta pelo padrão: toda versão tem 1 aluno só.
+  const versaoPorAluno =
+    versoes.length > 1 && versoes.every((v) => (alocacoes ?? []).filter((a) => a.rotulo === v).length === 1);
 
   const selecionadas = useMemo(
     () => (alocacoes ?? []).filter(
@@ -299,12 +304,14 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                     {turmas.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </Campo>
-                <Campo label="Versão">
-                  <select value={versaoFiltro} onChange={(e) => setVersaoFiltro(e.target.value)} className={SELECT_CLS}>
-                    <option value="">Todas</option>
-                    {versoes.map((v) => <option key={v} value={v}>Versão {v}</option>)}
-                  </select>
-                </Campo>
+                {!versaoPorAluno && (
+                  <Campo label="Versão">
+                    <select value={versaoFiltro} onChange={(e) => setVersaoFiltro(e.target.value)} className={SELECT_CLS}>
+                      <option value="">Todas</option>
+                      {versoes.map((v) => <option key={v} value={v}>Versão {v}</option>)}
+                    </select>
+                  </Campo>
+                )}
                 <Campo label="Imprimir">
                   <select value={conteudo} onChange={(e) => setConteudo(e.target.value as Conteudo)} className={SELECT_CLS}>
                     {(Object.keys(CONTEUDO_LABEL) as Conteudo[]).map((c) => (
@@ -334,11 +341,12 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                 <span className="px-2.5 py-1 rounded-full bg-ms-dark border border-gray-800 text-ms-main font-bold">
                   {selecionadas.length} folha(s)
                 </span>
-                {versoes.map((v) => (
-                  <span key={v} className="px-2.5 py-1 rounded-full bg-ms-dark border border-gray-800 text-ms-muted">
-                    Versão {v}: {(alocacoes ?? []).filter((a) => a.rotulo === v).length} aluno(s)
-                  </span>
-                ))}
+                {!versaoPorAluno &&
+                  versoes.map((v) => (
+                    <span key={v} className="px-2.5 py-1 rounded-full bg-ms-dark border border-gray-800 text-ms-muted">
+                      Versão {v}: {(alocacoes ?? []).filter((a) => a.rotulo === v).length} aluno(s)
+                    </span>
+                  ))}
                 <button
                   onClick={handleGerarVersoes}
                   disabled={gerando}

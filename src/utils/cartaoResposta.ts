@@ -301,16 +301,6 @@ export const CARTAO_CSS = `
   .cartao-omr-dados { flex: 1; min-width: 0; font-family: Arial, Helvetica, sans-serif; font-size: 10pt; line-height: 1.45; }
   .cartao-omr-dados .nome { font-size: 12pt; font-weight: 900; text-transform: uppercase; }
   .cartao-omr-dados .linha-dados { color: #333; }
-  .cartao-omr-versao {
-    flex-shrink: 0;
-    border: 0.6mm solid #000;
-    border-radius: 2mm;
-    padding: 2mm 4mm;
-    text-align: center;
-    font-family: Arial, Helvetica, sans-serif;
-  }
-  .cartao-omr-versao .rot { font-size: 20pt; font-weight: 900; line-height: 1; }
-  .cartao-omr-versao .cap { font-size: 7pt; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
 
   .cartao-omr-aviso {
     font-family: Arial, Helvetica, sans-serif;
