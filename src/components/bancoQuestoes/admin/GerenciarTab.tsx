@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Loader2, Plus, Search, Trash2 } from 'lucide-react';
+import { Eye, Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import type { FilterOptions, FiltroQuestoes, Question } from '../../../types/bancoQuestoes';
 import {
   buscarAssuntosPorDisciplina,
@@ -9,16 +9,17 @@ import {
   listarQuestoes,
 } from '../../../services/bancoQuestoesService';
 import { QuestionEditorDialog } from '../QuestionEditorDialog';
+import { QuestionCard } from '../QuestionCard';
 
 const PAGE_SIZE = 20;
 
 const selectClass =
   'w-full min-w-0 px-3 py-2.5 bg-ms-dark border border-gray-800 rounded-xl text-ms-main text-sm outline-none focus:ring-2 focus:ring-ms-blue truncate';
 
-// Aqui só cria e exclui questões — a edição fica na aba Consultar, onde dá pra filtrar
-// por disciplina antes de abrir o editor (ver QuestoesTab.tsx).
-// podeCriar=false (COORDENACAO_AREA): esconde "Nova questão" — RLS só libera DELETE pra esse
-// papel (ver permitir_coordenacao_area_excluir_questoes.sql), então criar falharia mesmo assim.
+// podeCriar=false (COORDENACAO_AREA): esconde "Nova questão" — RLS só libera
+// UPDATE/DELETE pra esse papel, não INSERT (ver permitir_coordenacao_area_excluir_questoes.sql
+// e permitir_coordenacao_area_editar_assunto_topico.sql). Visualizar e editar (assunto/tópico
+// incluso) ficam abertos pra quem chega nessa aba, já que só GESTAO/COORDENACAO_AREA chegam aqui.
 interface GerenciarTabProps {
   podeCriar?: boolean;
 }
@@ -33,6 +34,8 @@ export function GerenciarTab({ podeCriar = true }: GerenciarTabProps) {
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [criando, setCriando] = useState(false);
+  const [editando, setEditando] = useState<Question | null>(null);
+  const [visualizando, setVisualizando] = useState<Question | null>(null);
 
   useEffect(() => {
     buscarFilterOptions().then(setOpcoes).catch(() => setOpcoes(null));
@@ -179,7 +182,13 @@ export function GerenciarTab({ podeCriar = true }: GerenciarTabProps) {
                   <p className="text-sm text-ms-main truncate">{q.statement}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => handleExcluir(q.id)} className="text-ms-muted hover:text-red-400">
+                  <button onClick={() => setVisualizando(q)} title="Visualizar questão" className="text-ms-muted hover:text-ms-blueText">
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => setEditando(q)} title="Editar questão" className="text-ms-muted hover:text-ms-blueText">
+                    <Pencil className="w-4 h-4" />
+                  </button>
+                  <button onClick={() => handleExcluir(q.id)} title="Excluir questão" className="text-ms-muted hover:text-red-400">
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
@@ -213,6 +222,48 @@ export function GerenciarTab({ podeCriar = true }: GerenciarTabProps) {
           onClose={() => setCriando(false)}
           onSalvo={carregar}
         />
+      )}
+
+      {editando && (
+        <QuestionEditorDialog
+          questao={editando}
+          onClose={() => setEditando(null)}
+          onSalvo={carregar}
+        />
+      )}
+
+      {visualizando && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-ms-card border border-gray-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-lg font-black text-ms-main">Visualizar questão</h3>
+              <button onClick={() => setVisualizando(null)} className="text-ms-muted hover:text-ms-main">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <QuestionCard question={visualizando} />
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => {
+                  setEditando(visualizando);
+                  setVisualizando(null);
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl border border-gray-800 text-ms-muted font-bold hover:text-ms-main"
+              >
+                <Pencil className="w-4 h-4" /> Editar
+              </button>
+              <button
+                onClick={() => {
+                  handleExcluir(visualizando.id);
+                  setVisualizando(null);
+                }}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-500/10 text-red-400 border border-red-900/50 font-bold hover:bg-red-500/20"
+              >
+                <Trash2 className="w-4 h-4" /> Excluir
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

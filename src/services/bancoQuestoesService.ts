@@ -146,6 +146,26 @@ export async function excluirTermo(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// Renomeia um termo cadastrado e "arrasta" junto todas as questões que já usam o valor antigo,
+// pra não ficarem presas a um rótulo que sumiu da lista (ex.: juntar "Acento diacrítico" e
+// "Acentuação Diacrítica" num só, renomeando os dois pra "Acentuação").
+export async function renomearTermo(id: string, field: TaxonomyField, oldValue: string, newValue: string): Promise<void> {
+  const { error: cascadeError } = await supabase.from('questions').update({ [field]: newValue }).eq(field, oldValue);
+  if (cascadeError) throw cascadeError;
+
+  const { error } = await supabase.from('question_taxonomy_terms').update({ value: newValue }).eq('id', id);
+  // Se o novo valor já existir como termo cadastrado, colide com a constraint UNIQUE(field,
+  // value) — nesse caso o valor antigo fica sem uso (as questões já foram movidas acima) e só
+  // apagamos o termo duplicado em vez de propagar o erro.
+  if (error) {
+    if (error.code === '23505') {
+      await supabase.from('question_taxonomy_terms').delete().eq('id', id);
+      return;
+    }
+    throw error;
+  }
+}
+
 export async function contarQuestoesPorDisciplina(discipline: string): Promise<number> {
   const { count, error } = await supabase
     .from('questions')

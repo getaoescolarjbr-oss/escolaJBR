@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Loader2, Plus, Trash2 } from 'lucide-react';
+import { Check, Loader2, Pencil, Plus, Trash2, X } from 'lucide-react';
 import type { TaxonomyField, TaxonomyTerm } from '../../../types/bancoQuestoes';
 import { TAXONOMY_FIELD_LABELS } from '../../../types/bancoQuestoes';
 import {
@@ -9,12 +9,20 @@ import {
   excluirDisciplinaComQuestoes,
   excluirTermo,
   listarTermos,
+  renomearTermo,
 } from '../../../services/bancoQuestoesService';
+import { useAuth } from '../../../hooks/useAuth';
 
-const CAMPOS: TaxonomyField[] = ['discipline', 'level', 'area', 'difficulty', 'assunto', 'topico', 'banca', 'orgao', 'cargo'];
+const CAMPOS_GESTAO: TaxonomyField[] = ['discipline', 'level', 'area', 'difficulty', 'assunto', 'topico', 'banca', 'orgao', 'cargo'];
+// Coordenação de área só pode mexer em assunto/tópico (RLS libera só esses dois campos pra
+// esse papel — ver permitir_coordenacao_area_editar_assunto_topico.sql).
+const CAMPOS_COORDENACAO: TaxonomyField[] = ['assunto', 'topico'];
 
 export function CategoriasTab() {
-  const [campo, setCampo] = useState<TaxonomyField>('discipline');
+  const { hasAnyRole } = useAuth();
+  const isGestao = hasAnyRole(['GESTAO']);
+  const CAMPOS = isGestao ? CAMPOS_GESTAO : CAMPOS_COORDENACAO;
+  const [campo, setCampo] = useState<TaxonomyField>(CAMPOS[0]);
   const [termos, setTermos] = useState<TaxonomyTerm[]>([]);
   const [contagens, setContagens] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
@@ -24,6 +32,9 @@ export function CategoriasTab() {
   const [excluindo, setExcluindo] = useState<string | null>(null);
   const [selecionados, setSelecionados] = useState<Set<string>>(new Set());
   const [excluindoLote, setExcluindoLote] = useState(false);
+  const [editandoId, setEditandoId] = useState<string | null>(null);
+  const [valorEdicao, setValorEdicao] = useState('');
+  const [renomeando, setRenomeando] = useState(false);
 
   async function carregar() {
     setLoading(true);
@@ -111,6 +122,33 @@ export function CategoriasTab() {
       setErro(err instanceof Error ? err.message : 'Erro ao excluir disciplina.');
     } finally {
       setExcluindo(null);
+    }
+  }
+
+  function iniciarEdicao(t: TaxonomyTerm) {
+    setEditandoId(t.id || t.value);
+    setValorEdicao(t.value);
+  }
+
+  async function handleRenomear(t: TaxonomyTerm) {
+    const novoValor = valorEdicao.trim();
+    if (!novoValor || novoValor === t.value) {
+      setEditandoId(null);
+      return;
+    }
+    setRenomeando(true);
+    setErro(null);
+    try {
+      // Termo sem id (ex.: disciplina reaproveitada só via questions.discipline, sem registro
+      // próprio em question_taxonomy_terms) precisa ser criado antes de poder renomear.
+      const id = t.id || (await criarTermo(campo, t.value)).id;
+      await renomearTermo(id, campo, t.value, novoValor);
+      setEditandoId(null);
+      await carregar();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Erro ao renomear termo.');
+    } finally {
+      setRenomeando(false);
     }
   }
 
@@ -207,31 +245,75 @@ export function CategoriasTab() {
         ) : (
           termos.map((t) => {
             const chave = t.id || t.value;
+            const editando = editandoId === chave;
             return (
               <div key={chave} className="flex items-center justify-between px-4 py-3 bg-ms-card border border-gray-800 rounded-xl">
-                <div className="flex items-center gap-3">
-                  {campo === 'discipline' && (
+                {editando ? (
+                  <>
                     <input
-                      type="checkbox"
-                      checked={selecionados.has(chave)}
-                      onChange={() => toggleSelecionado(chave)}
-                      className="w-4 h-4 rounded border-gray-800 accent-ms-blue"
+                      autoFocus
+                      value={valorEdicao}
+                      onChange={(e) => setValorEdicao(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleRenomear(t)}
+                      className="flex-1 mr-2 px-3 py-1.5 bg-ms-dark border border-gray-800 rounded-lg text-ms-main text-sm outline-none focus:ring-2 focus:ring-ms-blue"
                     />
-                  )}
-                  <p className="text-sm font-bold text-ms-main">{t.value}</p>
-                  {campo === 'discipline' && (
-                    <span className="text-xs text-ms-muted">
-                      {contagens[t.value] ?? 0} questão{(contagens[t.value] ?? 0) === 1 ? '' : 'ões'}
-                    </span>
-                  )}
-                </div>
-                <button
-                  onClick={() => handleExcluir(t)}
-                  disabled={excluindo === chave || excluindoLote}
-                  className="text-ms-muted hover:text-red-400 transition-colors disabled:opacity-50"
-                >
-                  {excluindo === chave ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
-                </button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => handleRenomear(t)}
+                        disabled={renomeando}
+                        className="text-ms-muted hover:text-ms-blueText transition-colors disabled:opacity-50"
+                        aria-label="Salvar"
+                      >
+                        {renomeando ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                      </button>
+                      <button
+                        onClick={() => setEditandoId(null)}
+                        disabled={renomeando}
+                        className="text-ms-muted hover:text-ms-main transition-colors disabled:opacity-50"
+                        aria-label="Cancelar"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex items-center gap-3">
+                      {campo === 'discipline' && (
+                        <input
+                          type="checkbox"
+                          checked={selecionados.has(chave)}
+                          onChange={() => toggleSelecionado(chave)}
+                          className="w-4 h-4 rounded border-gray-800 accent-ms-blue"
+                        />
+                      )}
+                      <p className="text-sm font-bold text-ms-main">{t.value}</p>
+                      {campo === 'discipline' && (
+                        <span className="text-xs text-ms-muted">
+                          {contagens[t.value] ?? 0} questão{(contagens[t.value] ?? 0) === 1 ? '' : 'ões'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <button
+                        onClick={() => iniciarEdicao(t)}
+                        className="text-ms-muted hover:text-ms-blueText transition-colors"
+                        aria-label="Renomear"
+                        title="Renomear (atualiza também as questões que já usam esse valor)"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleExcluir(t)}
+                        disabled={excluindo === chave || excluindoLote}
+                        className="text-ms-muted hover:text-red-400 transition-colors disabled:opacity-50"
+                        aria-label="Excluir"
+                      >
+                        {excluindo === chave ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             );
           })

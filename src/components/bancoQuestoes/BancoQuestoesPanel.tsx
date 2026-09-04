@@ -11,9 +11,13 @@ type Aba = 'nova-avaliacao' | 'minhas-avaliacoes' | 'consultar' | 'gerenciar' | 
 // Gerador de avaliações: o banco de questões (Consultar/Gerenciar/Categorias) vive dentro
 // deste módulo, junto com o fluxo de montar e publicar avaliações (Nova Avaliação/Minhas
 // Avaliações). Criar avaliação liberado para PROFESSOR/GESTAO/COORDENACAO (já dá acesso às
-// questões via seleção); Consultar/Categorias (banco de questões bruto) restritos a GESTAO.
-// Gerenciar Questões também abre pra COORDENACAO_AREA, mas só pra excluir duplicata — não cria
-// questão (RLS só libera DELETE pra esse papel, ver permitir_coordenacao_area_excluir_questoes.sql).
+// questões via seleção); Consultar (banco de questões bruto) restrito a GESTAO.
+// Gerenciar Questões e Categorias também abrem pra COORDENACAO_AREA: pode excluir/editar
+// questões e gerenciar termos de assunto/tópico, mas não criar questão nem mexer nos outros
+// campos de taxonomia — RLS libera só isso pra esse papel (ver
+// permitir_coordenacao_area_excluir_questoes.sql e
+// permitir_coordenacao_area_editar_assunto_topico.sql). CategoriasTab já restringe a lista de
+// campos mostrados conforme o papel.
 export function BancoQuestoesPanel() {
   const { hasAnyRole } = useAuth();
   const isGestao = hasAnyRole(['GESTAO']);
@@ -26,7 +30,7 @@ export function BancoQuestoesPanel() {
     ...(podeCriarAvaliacao ? [{ id: 'minhas-avaliacoes' as const, label: 'Minhas Avaliações' }] : []),
     ...(isGestao ? [{ id: 'consultar' as const, label: 'Consultar' }] : []),
     ...(podeGerenciarQuestoes ? [{ id: 'gerenciar' as const, label: 'Gerenciar Questões' }] : []),
-    ...(isGestao ? [{ id: 'categorias' as const, label: 'Categorias' }] : []),
+    ...(podeGerenciarQuestoes ? [{ id: 'categorias' as const, label: 'Categorias' }] : []),
   ];
 
   return (
@@ -52,7 +56,7 @@ export function BancoQuestoesPanel() {
       {aba === 'minhas-avaliacoes' && podeCriarAvaliacao && <MinhasAvaliacoesTab />}
       {aba === 'consultar' && isGestao && <QuestoesTab />}
       {aba === 'gerenciar' && podeGerenciarQuestoes && <GerenciarTab podeCriar={isGestao} />}
-      {aba === 'categorias' && isGestao && <CategoriasTab />}
+      {aba === 'categorias' && podeGerenciarQuestoes && <CategoriasTab />}
     </div>
   );
 }
