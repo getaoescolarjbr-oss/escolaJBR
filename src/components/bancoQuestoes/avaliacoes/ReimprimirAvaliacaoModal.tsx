@@ -77,6 +77,7 @@ export function ReimprimirAvaliacaoModal({ avaliacao, onClose }: Props) {
             ano: null,
             difficulty: null,
             assunto: null,
+            topico: null,
             statement: p.statement,
             image_url: p.image_url,
             tipo: p.tipo,
