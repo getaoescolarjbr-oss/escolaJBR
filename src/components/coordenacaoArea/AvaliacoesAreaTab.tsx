@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText, Lock, Unlock, Pencil, QrCode, Settings, Undo2 } from 'lucide-react';
 import type { AvaliacaoArea, ProvaAreaCota } from '../../types/avaliacoes';
 import type { AreaConhecimento } from '../../utils/areasConhecimento';
@@ -43,16 +43,25 @@ export function AvaliacoesAreaTab({ area }: Props) {
   // o coordenador está digitando; ao salvar, o estado de verdade volta a vir do backend.
   const [prazoInput, setPrazoInput] = useState<Record<string, string>>({});
 
+  // O spinner de tela cheia só faz sentido na primeira carga: nos recarregamentos depois de
+  // salvar/publicar/despublicar (chamados com a lista já na tela), ele trocava o conteúdo
+  // inteiro por um spinner, a página encolhia, e ao voltar o scroll já tinha ido pro topo —
+  // é essa troca de altura que dava a sensação de "pular pro início" a cada ação.
+  const carregouUmaVez = useRef(false);
   const carregar = useCallback(async () => {
-    setLoading(true);
+    const primeiraCarga = !carregouUmaVez.current;
+    if (primeiraCarga) setLoading(true);
     setErro(null);
+    const scrollY = window.scrollY;
     try {
       const lista = await listarAvaliacoesArea(area);
       setAvaliacoes(lista);
+      carregouUmaVez.current = true;
     } catch (e: any) {
       setErro(e.message || 'Não foi possível carregar as avaliações de área.');
     } finally {
-      setLoading(false);
+      if (primeiraCarga) setLoading(false);
+      if (!primeiraCarga) requestAnimationFrame(() => window.scrollTo({ top: scrollY }));
     }
   }, [area]);
 
