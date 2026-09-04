@@ -168,9 +168,11 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
     } else if (block.type === 'table') {
       if (block.content.trim() === '') continue;
       const key = `${keyPrefix}-${i++}`;
-      // Célula "normal" é só a string; célula mesclada vira {text, colspan, rowspan} no cell
-      // de origem, e null nas posições que ela cobre (pra não desenhar <td> duplicado ali).
-      let rows: (string | { text: string; colspan?: number; rowspan?: number } | null)[][];
+      // Célula "normal" é só a string; célula mesclada/formatada vira {text, colspan, rowspan,
+      // align, shade} no cell de origem, e null nas posições que ela cobre (pra não desenhar
+      // <td> duplicado ali).
+      type TableCell = { text: string; colspan?: number; rowspan?: number; align?: 'left' | 'center' | 'right' | 'justify'; shade?: boolean };
+      let rows: (string | TableCell | null)[][];
       try {
         rows = JSON.parse(decodeURIComponent(block.content));
       } catch {
@@ -187,12 +189,16 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
                     const texto = typeof cell === 'string' ? cell : cell.text;
                     const colSpan = typeof cell === 'string' ? undefined : cell.colspan;
                     const rowSpan = typeof cell === 'string' ? undefined : cell.rowspan;
+                    const align = typeof cell === 'string' ? undefined : cell.align;
+                    const shade = typeof cell === 'string' ? false : !!cell.shade;
+                    const alignClass =
+                      align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : align === 'justify' ? 'text-justify' : '';
                     return (
                       <td
                         key={`${key}-r${ri}-c${ci}`}
                         colSpan={colSpan}
                         rowSpan={rowSpan}
-                        className="border border-ms-border px-3 py-1.5"
+                        className={`border border-ms-border px-3 py-1.5 ${alignClass} ${shade ? 'bg-gray-500/25' : ''}`}
                       >
                         {parseInline(texto, `${key}-r${ri}-c${ci}`)}
                       </td>

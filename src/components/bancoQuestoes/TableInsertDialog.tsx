@@ -1,7 +1,29 @@
-import { useState } from 'react';
-import { Combine, Grid3x3, Split, X } from 'lucide-react';
+import { useRef, useState } from 'react';
+import {
+  Bold,
+  Combine,
+  Grid3x3,
+  PaintBucket,
+  Split,
+  Subscript,
+  Superscript,
+  TextAlignCenter,
+  TextAlignEnd,
+  TextAlignJustify,
+  TextAlignStart,
+  X,
+} from 'lucide-react';
 
-type Celula = { texto: string; colspan: number; rowspan: number; oculta: boolean };
+type Alinhamento = 'left' | 'center' | 'right' | 'justify';
+
+type Celula = {
+  texto: string;
+  colspan: number;
+  rowspan: number;
+  oculta: boolean;
+  align: Alinhamento;
+  sombreado: boolean;
+};
 
 type Ponto = { r: number; c: number };
 
@@ -12,12 +34,16 @@ interface Props {
 
 function gradeVazia(linhas: number, colunas: number): Celula[][] {
   return Array.from({ length: linhas }, () =>
-    Array.from({ length: colunas }, () => ({ texto: '', colspan: 1, rowspan: 1, oculta: false }))
+    Array.from({ length: colunas }, () => ({ texto: '', colspan: 1, rowspan: 1, oculta: false, align: 'left', sombreado: false }))
   );
 }
 
 function normalizarRetangulo(a: Ponto, b: Ponto) {
   return { r1: Math.min(a.r, b.r), r2: Math.max(a.r, b.r), c1: Math.min(a.c, b.c), c2: Math.max(a.c, b.c) };
+}
+
+function alignClass(align: Alinhamento) {
+  return align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : align === 'justify' ? 'text-justify' : 'text-left';
 }
 
 export function TableInsertDialog({ onInserir, onFechar }: Props) {
@@ -28,6 +54,8 @@ export function TableInsertDialog({ onInserir, onFechar }: Props) {
   const [ancora, setAncora] = useState<Ponto | null>(null);
   const [fimSelecao, setFimSelecao] = useState<Ponto | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [celulaAtiva, setCelulaAtiva] = useState<Ponto | null>(null);
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   function criarGrade() {
     const l = Math.min(Math.max(linhas, 1), 20);
@@ -36,8 +64,8 @@ export function TableInsertDialog({ onInserir, onFechar }: Props) {
     setEtapa('edicao');
   }
 
-  function editarTexto(r: number, c: number, texto: string) {
-    setGrade((g) => g.map((row, ri) => (ri === r ? row.map((cel, ci) => (ci === c ? { ...cel, texto } : cel)) : row)));
+  function editarCelula(r: number, c: number, patch: Partial<Celula>) {
+    setGrade((g) => g.map((row, ri) => (ri === r ? row.map((cel, ci) => (ci === c ? { ...cel, ...patch } : cel)) : row)));
   }
 
   function selecionarCelula(r: number, c: number) {
@@ -102,12 +130,54 @@ export function TableInsertDialog({ onInserir, onFechar }: Props) {
     );
   }
 
+  // Formatação (negrito/sub/sobrescrito) envolve o texto SELECIONADO dentro do input da
+  // célula ativa com a mesma marcação `<tag>` já usada no resto do editor (parseInline em
+  // questionMarkup.tsx entende) — por isso o texto da célula mostra as tags "cruas" enquanto
+  // edita, igual ao enunciado/alternativas.
+  function formatarCelulaAtiva(tag: 'strong' | 'sub' | 'sup') {
+    if (!celulaAtiva) return;
+    const { r, c } = celulaAtiva;
+    const el = inputRefs.current[`${r}-${c}`];
+    if (!el) return;
+    const texto = grade[r][c].texto;
+    const start = el.selectionStart ?? texto.length;
+    const end = el.selectionEnd ?? texto.length;
+    const selecionado = texto.slice(start, end);
+    const novoTexto = `${texto.slice(0, start)}<${tag}>${selecionado}</${tag}>${texto.slice(end)}`;
+    editarCelula(r, c, { texto: novoTexto });
+    const novoInicio = start + tag.length + 2;
+    const novoFim = novoInicio + selecionado.length;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(novoInicio, novoFim);
+    });
+  }
+
+  function definirAlinhamentoAtivo(align: Alinhamento) {
+    if (!celulaAtiva) return;
+    editarCelula(celulaAtiva.r, celulaAtiva.c, { align });
+  }
+
+  function alternarSombreadoAtivo() {
+    if (!celulaAtiva) return;
+    editarCelula(celulaAtiva.r, celulaAtiva.c, { sombreado: !grade[celulaAtiva.r][celulaAtiva.c].sombreado });
+  }
+
+  const cAtiva = celulaAtiva ? grade[celulaAtiva.r]?.[celulaAtiva.c] : null;
+
   function confirmarInsercao() {
     const matriz = grade.map((row) =>
       row.map((cel) => {
         if (cel.oculta) return null;
-        if (cel.colspan > 1 || cel.rowspan > 1) return { text: cel.texto, colspan: cel.colspan, rowspan: cel.rowspan };
-        return cel.texto;
+        const simples = cel.colspan === 1 && cel.rowspan === 1 && cel.align === 'left' && !cel.sombreado;
+        if (simples) return cel.texto;
+        return {
+          text: cel.texto,
+          ...(cel.colspan > 1 ? { colspan: cel.colspan } : {}),
+          ...(cel.rowspan > 1 ? { rowspan: cel.rowspan } : {}),
+          ...(cel.align !== 'left' ? { align: cel.align } : {}),
+          ...(cel.sombreado ? { shade: true } : {}),
+        };
       })
     );
     const marcador = `\n[[TABLE:${encodeURIComponent(JSON.stringify(matriz))}]]\n`;
@@ -161,8 +231,90 @@ export function TableInsertDialog({ onInserir, onFechar }: Props) {
         ) : (
           <div className="space-y-3">
             <p className="text-xs text-ms-muted">
-              Clique numa célula e depois em outra pra selecionar um retângulo, então mescle. Digite o texto direto nas células.
+              Clique numa célula e depois em outra pra selecionar um retângulo, então mescle. Pra formatar, selecione o texto dentro
+              da célula (clique no input primeiro) e use a barra abaixo.
             </p>
+
+            <div className="flex flex-wrap items-center gap-0.5 rounded-lg border border-gray-800 bg-ms-dark/40 p-1">
+              <button
+                type="button"
+                title="Negrito"
+                disabled={!celulaAtiva}
+                onClick={() => formatarCelulaAtiva('strong')}
+                className="rounded-lg p-1.5 text-ms-muted hover:bg-ms-dark hover:text-ms-main disabled:opacity-40"
+              >
+                <Bold className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                title="Subscrito"
+                disabled={!celulaAtiva}
+                onClick={() => formatarCelulaAtiva('sub')}
+                className="rounded-lg p-1.5 text-ms-muted hover:bg-ms-dark hover:text-ms-main disabled:opacity-40"
+              >
+                <Subscript className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                title="Sobrescrito"
+                disabled={!celulaAtiva}
+                onClick={() => formatarCelulaAtiva('sup')}
+                className="rounded-lg p-1.5 text-ms-muted hover:bg-ms-dark hover:text-ms-main disabled:opacity-40"
+              >
+                <Superscript className="h-3.5 w-3.5" />
+              </button>
+
+              <div className="mx-1 h-4 w-px bg-gray-800" />
+
+              <button
+                type="button"
+                title="Alinhar à esquerda"
+                disabled={!celulaAtiva}
+                onClick={() => definirAlinhamentoAtivo('left')}
+                className={`rounded-lg p-1.5 hover:bg-ms-dark disabled:opacity-40 ${cAtiva?.align === 'left' ? 'text-ms-blueText bg-ms-dark' : 'text-ms-muted'}`}
+              >
+                <TextAlignStart className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                title="Centralizar"
+                disabled={!celulaAtiva}
+                onClick={() => definirAlinhamentoAtivo('center')}
+                className={`rounded-lg p-1.5 hover:bg-ms-dark disabled:opacity-40 ${cAtiva?.align === 'center' ? 'text-ms-blueText bg-ms-dark' : 'text-ms-muted'}`}
+              >
+                <TextAlignCenter className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                title="Alinhar à direita"
+                disabled={!celulaAtiva}
+                onClick={() => definirAlinhamentoAtivo('right')}
+                className={`rounded-lg p-1.5 hover:bg-ms-dark disabled:opacity-40 ${cAtiva?.align === 'right' ? 'text-ms-blueText bg-ms-dark' : 'text-ms-muted'}`}
+              >
+                <TextAlignEnd className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                title="Justificar"
+                disabled={!celulaAtiva}
+                onClick={() => definirAlinhamentoAtivo('justify')}
+                className={`rounded-lg p-1.5 hover:bg-ms-dark disabled:opacity-40 ${cAtiva?.align === 'justify' ? 'text-ms-blueText bg-ms-dark' : 'text-ms-muted'}`}
+              >
+                <TextAlignJustify className="h-3.5 w-3.5" />
+              </button>
+
+              <div className="mx-1 h-4 w-px bg-gray-800" />
+
+              <button
+                type="button"
+                title="Sombrear fundo (cinza)"
+                disabled={!celulaAtiva}
+                onClick={alternarSombreadoAtivo}
+                className={`rounded-lg p-1.5 hover:bg-ms-dark disabled:opacity-40 ${cAtiva?.sombreado ? 'text-ms-blueText bg-ms-dark' : 'text-ms-muted'}`}
+              >
+                <PaintBucket className="h-3.5 w-3.5" />
+              </button>
+            </div>
 
             <div className="overflow-x-auto">
               <table className="border-collapse">
@@ -179,10 +331,17 @@ export function TableInsertDialog({ onInserir, onFechar }: Props) {
                             rowSpan={cel.rowspan}
                             className={`border p-0 ${selecionada ? 'border-ms-blueText' : 'border-gray-800'}`}
                           >
-                            <div className={`relative min-w-[90px] ${selecionada ? 'bg-ms-blue/20' : ''}`}>
+                            <div
+                              className={`relative min-w-[90px] ${selecionada ? 'bg-ms-blue/20' : cel.sombreado ? 'bg-gray-500/25' : ''}`}
+                            >
                               <input
+                                ref={(el) => {
+                                  inputRefs.current[`${ri}-${ci}`] = el;
+                                }}
                                 value={cel.texto}
-                                onChange={(e) => editarTexto(ri, ci, e.target.value)}
+                                onFocus={() => setCelulaAtiva({ r: ri, c: ci })}
+                                onChange={(e) => editarCelula(ri, ci, { texto: e.target.value })}
+                                style={{ textAlign: cel.align }}
                                 className="w-full px-2 py-1.5 bg-transparent text-ms-main text-xs outline-none"
                                 placeholder={`L${ri + 1}C${ci + 1}`}
                               />
