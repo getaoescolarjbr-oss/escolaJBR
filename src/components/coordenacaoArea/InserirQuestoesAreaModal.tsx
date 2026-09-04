@@ -68,6 +68,15 @@ export function InserirQuestoesAreaModal({ avaliacao, cota, onClose, onSalvo }: 
 
   const bloqueada = avaliacao.edicao_permitida === false;
 
+  // A cota só guarda quantas questões cada disciplina contribui (qtd_questoes) — nada divide
+  // o valor_total da avaliação entre elas, então toda questão inserida sem valor próprio caía
+  // pra 1.0 fixo e a prova acabava valendo "nº de questões" pontos em vez do valor_total
+  // configurado. Divide o valor_total igualmente pelo total de questões PLANEJADO em todas as
+  // cotas da área (soma de qtd_questoes) — estável entre disciplinas, independente da ordem em
+  // que cada professor insere as suas.
+  const totalQuestoesPlanejado = (avaliacao.cotas ?? []).reduce((soma, c) => soma + c.qtd_questoes, 0);
+  const valorPorQuestaoPadrao = totalQuestoesPlanejado > 0 ? avaliacao.valor_total / totalQuestoesPlanejado : 1.0;
+
   async function handleSalvar() {
     if (bloqueada) return;
     if (qtdSelecionada === 0) {
@@ -79,7 +88,7 @@ export function InserirQuestoesAreaModal({ avaliacao, cota, onClose, onSalvo }: 
     try {
       const questoesPayload = Array.from(selecionadas.values()).map((q) => ({
         question_id: q.id,
-        valor: valores[q.id] ?? 1.0,
+        valor: valores[q.id] ?? valorPorQuestaoPadrao,
       }));
 
       await inserirQuestoesCotaArea(avaliacao.id, cota.disciplina_id, questoesPayload);
@@ -143,6 +152,10 @@ export function InserirQuestoesAreaModal({ avaliacao, cota, onClose, onSalvo }: 
                 }`}
               >
                 {qtdSelecionada} de {cota.qtd_questoes} selecionadas
+              </span>
+              <span className="text-xs text-ms-muted">
+                · vale {valorPorQuestaoPadrao.toFixed(2)} pt cada (avaliação vale {avaliacao.valor_total.toFixed(2)} ÷{' '}
+                {totalQuestoesPlanejado} questões no total)
               </span>
             </div>
             {cotaAtingida && (

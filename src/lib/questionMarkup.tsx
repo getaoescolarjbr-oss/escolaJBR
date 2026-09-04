@@ -252,11 +252,16 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
 
   if (leadingPrefix) {
     const idx = nodes.findIndex((n) => isValidElement(n) && n.type === 'p');
-    if (idx !== -1) {
-      const p = nodes[idx] as ReactElement<{ children?: ReactNode }>;
+    if (idx === 0) {
+      // O primeiro bloco já é um parágrafo de texto: gruda o número/valor nele mesmo, na
+      // mesma linha ("1. (1,00 pt) Enunciado...").
+      const p = nodes[0] as ReactElement<{ children?: ReactNode }>;
       const prevChildren = Array.isArray(p.props.children) ? p.props.children : [p.props.children];
-      nodes[idx] = cloneElement(p, {}, leadingPrefix, ...prevChildren);
+      nodes[0] = cloneElement(p, {}, leadingPrefix, ...prevChildren);
     } else {
+      // O primeiro bloco é imagem/tabela/etc (ou não há parágrafo nenhum): número/valor vai
+      // numa linha própria ANTES de tudo — nunca "escondido" depois de uma imagem que abre
+      // o enunciado.
       nodes.unshift(<p key={`${keyPrefix}-prefix`}>{leadingPrefix}</p>);
     }
   }
