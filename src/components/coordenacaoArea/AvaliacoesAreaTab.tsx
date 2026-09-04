@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText, Lock, Unlock, Pencil, QrCode } from 'lucide-react';
+import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText, Lock, Unlock, Pencil, QrCode, Settings } from 'lucide-react';
 import type { AvaliacaoArea, ProvaAreaCota } from '../../types/avaliacoes';
 import type { AreaConhecimento } from '../../utils/areasConhecimento';
 import { listarAvaliacoesArea, publicarAvaliacaoArea, excluirAvaliacao, definirBloqueioAvaliacaoArea } from '../../services/avaliacoesService';
@@ -7,6 +7,7 @@ import { NovaAvaliacaoAreaModal } from './NovaAvaliacaoAreaModal';
 import { InserirQuestoesAreaModal } from './InserirQuestoesAreaModal';
 import { ReimprimirAvaliacaoModal } from '../bancoQuestoes/avaliacoes/ReimprimirAvaliacaoModal';
 import { ImprimirFolhasModal } from '../bancoQuestoes/avaliacoes/ImprimirFolhasModal';
+import { ConfigImpressaoAreaModal } from './ConfigImpressaoAreaModal';
 import { AvaliacaoResultadosModal } from '../bancoQuestoes/avaliacoes/AvaliacaoResultadosModal';
 
 interface Props {
@@ -32,6 +33,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
   const [inserindoCota, setInserindoCota] = useState<{ avaliacao: AvaliacaoArea; cota: ProvaAreaCota } | null>(null);
   const [reimprimirDe, setReimprimirDe] = useState<AvaliacaoArea | null>(null);
   const [folhasQrDe, setFolhasQrDe] = useState<AvaliacaoArea | null>(null);
+  const [configImpressaoDe, setConfigImpressaoDe] = useState<AvaliacaoArea | null>(null);
   const [resultadosDe, setResultadosDe] = useState<AvaliacaoArea | null>(null);
   const [publicandoId, setPublicandoId] = useState<string | null>(null);
   const [excluindoId, setExcluindoId] = useState<string | null>(null);
@@ -234,6 +236,13 @@ export function AvaliacoesAreaTab({ area }: Props) {
                     >
                       <QrCode className="w-3.5 h-3.5" /> Folhas com QR
                     </button>
+                    <button
+                      onClick={() => setConfigImpressaoDe(av)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors"
+                      title="Embaralhamento, versões e cartão-resposta — funciona mesmo já publicada"
+                    >
+                      <Settings className="w-3.5 h-3.5" /> Config. impressão
+                    </button>
                     {av.status === 'PUBLICADA' && (
                       <button
                         onClick={() => setResultadosDe(av)}
@@ -396,6 +405,14 @@ export function AvaliacoesAreaTab({ area }: Props) {
         <ImprimirFolhasModal
           avaliacao={folhasQrDe as any}
           onClose={() => setFolhasQrDe(null)}
+        />
+      )}
+
+      {configImpressaoDe && (
+        <ConfigImpressaoAreaModal
+          avaliacao={configImpressaoDe}
+          onClose={() => setConfigImpressaoDe(null)}
+          onSalvo={carregar}
         />
       )}
 

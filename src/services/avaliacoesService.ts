@@ -660,6 +660,23 @@ export async function definirBloqueioAvaliacaoArea(
   if (error) throw error;
 }
 
+// Ajusta só a configuração de impressão (embaralhamento/versões/cartão-resposta) de uma
+// avaliação de área — funciona mesmo depois de publicada, ao contrário de editarAvaliacaoArea.
+export async function definirImpressaoAvaliacaoArea(
+  provaId: string,
+  embaralhar: string,
+  qtdVersoes: number,
+  cartaoSeparado: boolean
+): Promise<void> {
+  const { error } = await supabase.rpc('rpc_definir_impressao_avaliacao_area', {
+    p_prova_id: provaId,
+    p_embaralhar: embaralhar,
+    p_qtd_versoes: qtdVersoes,
+    p_cartao_separado: cartaoSeparado,
+  });
+  if (error) throw error;
+}
+
 // Texto de instruções reaproveitável ao criar uma nova avaliação (banco de provas ou área),
 // em vez de digitar do zero toda vez.
 export async function buscarInstrucoesPadrao(): Promise<string> {
