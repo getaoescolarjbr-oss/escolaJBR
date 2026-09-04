@@ -575,6 +575,9 @@ export async function criarAvaliacaoArea(dados: NovaAvaliacaoAreaInput): Promise
     p_instrucoes: dados.instrucoes || null,
     p_turma_ids: dados.turma_ids,
     p_cotas: dados.cotas,
+    p_embaralhar: dados.embaralhar ?? 'NENHUM',
+    p_qtd_versoes: dados.qtd_versoes ?? 1,
+    p_cartao_separado: dados.cartao_separado ?? false,
   });
   if (error) throw error;
   return data as string;
@@ -593,6 +596,9 @@ export async function editarAvaliacaoArea(provaId: string, dados: NovaAvaliacaoA
     p_instrucoes: dados.instrucoes || null,
     p_turma_ids: dados.turma_ids,
     p_cotas: dados.cotas,
+    p_embaralhar: dados.embaralhar ?? 'NENHUM',
+    p_qtd_versoes: dados.qtd_versoes ?? 1,
+    p_cartao_separado: dados.cartao_separado ?? false,
   });
   if (error) throw error;
   return data as string;
@@ -651,6 +657,26 @@ export async function definirBloqueioAvaliacaoArea(
     p_edicao_bloqueada: edicaoBloqueada,
     p_prazo_edicao_area: prazoEdicaoArea,
   });
+  if (error) throw error;
+}
+
+// Texto de instruções reaproveitável ao criar uma nova avaliação (banco de provas ou área),
+// em vez de digitar do zero toda vez.
+export async function buscarInstrucoesPadrao(): Promise<string> {
+  const { data, error } = await supabase
+    .from('configuracoes_avaliacoes')
+    .select('valor')
+    .eq('chave', 'instrucoes_padrao')
+    .maybeSingle();
+  if (error) throw error;
+  return data?.valor ?? '';
+}
+
+export async function salvarInstrucoesPadrao(texto: string): Promise<void> {
+  const { data: userData } = await supabase.auth.getUser();
+  const { error } = await supabase
+    .from('configuracoes_avaliacoes')
+    .upsert({ chave: 'instrucoes_padrao', valor: texto, atualizado_por: userData.user?.id ?? null, atualizado_em: new Date().toISOString() });
   if (error) throw error;
 }
 

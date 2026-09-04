@@ -5,7 +5,9 @@ import type { Turma } from '../../types';
 import type { AreaConhecimento } from '../../utils/areasConhecimento';
 import { DISCIPLINAS_POR_AREA, disciplinaPertenceAArea, normalizarArea } from '../../utils/areasConhecimento';
 import type { AvaliacaoArea, CotaProfessorInput, ModoAvaliacao, NovaAvaliacaoAreaInput, TipoAvaliacao } from '../../types/avaliacoes';
-import { criarAvaliacaoArea, editarAvaliacaoArea } from '../../services/avaliacoesService';
+import type { ModoEmbaralhar } from '../../types/correcaoOmr';
+import { MODO_EMBARALHAR_LABEL } from '../../types/correcaoOmr';
+import { criarAvaliacaoArea, editarAvaliacaoArea, buscarInstrucoesPadrao, salvarInstrucoesPadrao } from '../../services/avaliacoesService';
 import { getCurrentBimestre } from '../../utils/academicUtils';
 
 interface Props {
@@ -32,9 +34,11 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
   const [tipo, setTipo] = useState<TipoAvaliacao>(avaliacaoExistente?.tipo ?? 'AVALIACAO');
   const [dataAplicacao, setDataAplicacao] = useState(avaliacaoExistente?.data_aplicacao ?? '');
   const [prazoEntrega, setPrazoEntrega] = useState('');
-  const [instrucoes, setInstrucoes] = useState(
-    avaliacaoExistente?.instrucoes ?? 'Leia atentamente cada questão antes de responder.'
-  );
+  const [instrucoes, setInstrucoes] = useState(avaliacaoExistente?.instrucoes ?? '');
+  const [salvandoPadrao, setSalvandoPadrao] = useState(false);
+  const [embaralhar, setEmbaralhar] = useState<ModoEmbaralhar>((avaliacaoExistente?.embaralhar as ModoEmbaralhar) ?? 'NENHUM');
+  const [qtdVersoes, setQtdVersoes] = useState<number>(avaliacaoExistente?.qtd_versoes ?? 1);
+  const [cartaoSeparado, setCartaoSeparado] = useState<boolean>(avaliacaoExistente?.cartao_separado ?? false);
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>([]);
   
@@ -68,6 +72,11 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
             const pad = (n: number) => String(n).padStart(2, '0');
             setPrazoEntrega(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
           }
+        } else {
+          // Criando: pré-preenche com o texto padrão configurado (poupa digitar de novo).
+          buscarInstrucoesPadrao()
+            .then((texto) => texto && setInstrucoes(texto))
+            .catch(() => {});
         }
 
         // 2. Tentar buscar da RPC de professores da área
@@ -196,6 +205,17 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
     return mapa;
   }, [avaliacaoExistente]);
 
+  async function handleSalvarInstrucoesPadrao() {
+    setSalvandoPadrao(true);
+    try {
+      await salvarInstrucoesPadrao(instrucoes.trim());
+    } catch (e: any) {
+      setErro(e.message || 'Erro ao salvar instruções padrão.');
+    } finally {
+      setSalvandoPadrao(false);
+    }
+  }
+
   function toggleTurma(turmaId: string) {
     setTurmasSelecionadas((prev) =>
       prev.includes(turmaId) ? prev.filter((id) => id !== turmaId) : [...prev, turmaId]
@@ -270,6 +290,9 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
         instrucoes: instrucoes.trim() || null,
         turma_ids: turmasSelecionadas,
         cotas: cotasPayload,
+        embaralhar,
+        qtd_versoes: qtdVersoes,
+        cartao_separado: cartaoSeparado,
       };
 
       if (editando) {
@@ -402,6 +425,72 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
                   </div>
                 )}
               </div>
+
+              {/* Instruções */}
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-xs font-bold text-ms-muted">Instruções (opcional)</label>
+                  <button
+                    type="button"
+                    onClick={handleSalvarInstrucoesPadrao}
+                    disabled={salvandoPadrao}
+                    className="text-[11px] font-bold text-ms-blueText hover:underline disabled:opacity-40"
+                    title="Usar este texto como padrão para as próximas avaliações"
+                  >
+                    {salvandoPadrao ? 'Salvando...' : 'Salvar como padrão'}
+                  </button>
+                </div>
+                <textarea
+                  value={instrucoes}
+                  onChange={(e) => setInstrucoes(e.target.value)}
+                  rows={2}
+                  placeholder="Ex.: Leia atentamente cada questão antes de responder."
+                  className="w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue resize-y"
+                />
+              </div>
+
+              {/* Embaralhamento / versões / cartão-resposta (aplicação impressa) */}
+              {modo !== 'ONLINE' && (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-gray-200 dark:border-gray-800">
+                  <div>
+                    <label className="text-xs font-bold text-ms-muted">Embaralhamento</label>
+                    <select
+                      value={embaralhar}
+                      onChange={(e) => setEmbaralhar(e.target.value as ModoEmbaralhar)}
+                      className="w-full mt-1 px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
+                    >
+                      {(Object.keys(MODO_EMBARALHAR_LABEL) as ModoEmbaralhar[]).map((m) => (
+                        <option key={m} value={m}>{MODO_EMBARALHAR_LABEL[m]}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-ms-muted">Versões da prova</label>
+                    <select
+                      value={qtdVersoes}
+                      onChange={(e) => setQtdVersoes(Number(e.target.value))}
+                      className="w-full mt-1 px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
+                    >
+                      {[1, 2, 3, 4].map((n) => (
+                        <option key={n} value={n} disabled={embaralhar !== 'NENHUM' && n < 2}>
+                          {n === 1 ? 'Versão única (A)' : `${n} versões (A–${String.fromCharCode(64 + n)})`}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold text-ms-muted">Cartão-resposta</label>
+                    <select
+                      value={cartaoSeparado ? 'SEPARADO' : 'JUNTO'}
+                      onChange={(e) => setCartaoSeparado(e.target.value === 'SEPARADO')}
+                      className="w-full mt-1 px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
+                    >
+                      <option value="JUNTO">Junto, no fim da prova</option>
+                      <option value="SEPARADO">Em folha separada</option>
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {/* Turmas Participantes */}
               <div>

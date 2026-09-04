@@ -276,6 +276,9 @@ export interface NovaAvaliacaoAreaInput {
   instrucoes?: string | null;
   turma_ids: string[];
   cotas: CotaProfessorInput[];
+  embaralhar?: string;
+  qtd_versoes?: number;
+  cartao_separado?: boolean;
 }
 
 export interface AvaliacaoArea {
@@ -293,6 +296,9 @@ export interface AvaliacaoArea {
   instrucoes: string | null;
   created_at: string;
   total_questoes: number;
+  embaralhar: string;
+  qtd_versoes: number;
+  cartao_separado: boolean;
   turma_nomes?: string[];
   cotas?: ProvaAreaCota[];
   edicao_bloqueada: boolean;
