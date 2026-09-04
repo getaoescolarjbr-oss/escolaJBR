@@ -172,14 +172,25 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
       // align, shade} no cell de origem, e null nas posições que ela cobre (pra não desenhar
       // <td> duplicado ali).
       type TableCell = { text: string; colspan?: number; rowspan?: number; align?: 'left' | 'center' | 'right' | 'justify'; shade?: boolean };
-      let rows: (string | TableCell | null)[][];
+      type TableRows = (string | TableCell | null)[][];
+      let rows: TableRows = [];
+      let tablePos: 'left' | 'center' | 'right' = 'left';
       try {
-        rows = JSON.parse(decodeURIComponent(block.content));
+        const parsed = JSON.parse(decodeURIComponent(block.content));
+        // Formato antigo: array de linhas direto. Formato novo (com posição da tabela na
+        // página, escolhida no diálogo de inserção): { rows, align }.
+        if (Array.isArray(parsed)) {
+          rows = parsed;
+        } else {
+          rows = parsed.rows ?? [];
+          tablePos = parsed.align ?? 'left';
+        }
       } catch {
         rows = [];
       }
+      const posClass = tablePos === 'center' ? 'justify-center' : tablePos === 'right' ? 'justify-end' : 'justify-start';
       nodes.push(
-        <div key={key} className="qm-table-wrap overflow-x-auto">
+        <div key={key} className={`qm-table-wrap flex overflow-x-auto ${posClass}`}>
           <table className="qm-table my-2 w-auto border-collapse border border-ms-border text-sm">
             <tbody>
               {rows.map((row, ri) => (

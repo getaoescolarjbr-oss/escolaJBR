@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 
 type Alinhamento = 'left' | 'center' | 'right' | 'justify';
+type PosicaoTabela = 'left' | 'center' | 'right';
 
 type Celula = {
   texto: string;
@@ -42,15 +43,12 @@ function normalizarRetangulo(a: Ponto, b: Ponto) {
   return { r1: Math.min(a.r, b.r), r2: Math.max(a.r, b.r), c1: Math.min(a.c, b.c), c2: Math.max(a.c, b.c) };
 }
 
-function alignClass(align: Alinhamento) {
-  return align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : align === 'justify' ? 'text-justify' : 'text-left';
-}
-
 export function TableInsertDialog({ onInserir, onFechar }: Props) {
   const [etapa, setEtapa] = useState<'tamanho' | 'edicao'>('tamanho');
   const [linhas, setLinhas] = useState(3);
   const [colunas, setColunas] = useState(3);
   const [grade, setGrade] = useState<Celula[][]>([]);
+  const [posicaoTabela, setPosicaoTabela] = useState<PosicaoTabela>('left');
   const [ancora, setAncora] = useState<Ponto | null>(null);
   const [fimSelecao, setFimSelecao] = useState<Ponto | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -180,7 +178,8 @@ export function TableInsertDialog({ onInserir, onFechar }: Props) {
         };
       })
     );
-    const marcador = `\n[[TABLE:${encodeURIComponent(JSON.stringify(matriz))}]]\n`;
+    const dados = { rows: matriz, ...(posicaoTabela !== 'left' ? { align: posicaoTabela } : {}) };
+    const marcador = `\n[[TABLE:${encodeURIComponent(JSON.stringify(dados))}]]\n`;
     onInserir(marcador);
   }
 
@@ -234,6 +233,36 @@ export function TableInsertDialog({ onInserir, onFechar }: Props) {
               Clique numa célula e depois em outra pra selecionar um retângulo, então mescle. Pra formatar, selecione o texto dentro
               da célula (clique no input primeiro) e use a barra abaixo.
             </p>
+
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-ms-muted">Posição da tabela na página</span>
+              <div className="flex items-center gap-0.5 rounded-lg border border-gray-800 bg-ms-dark/40 p-1">
+                <button
+                  type="button"
+                  title="Tabela à esquerda"
+                  onClick={() => setPosicaoTabela('left')}
+                  className={`rounded-lg p-1.5 hover:bg-ms-dark ${posicaoTabela === 'left' ? 'text-ms-blueText bg-ms-dark' : 'text-ms-muted'}`}
+                >
+                  <TextAlignStart className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  title="Tabela centralizada"
+                  onClick={() => setPosicaoTabela('center')}
+                  className={`rounded-lg p-1.5 hover:bg-ms-dark ${posicaoTabela === 'center' ? 'text-ms-blueText bg-ms-dark' : 'text-ms-muted'}`}
+                >
+                  <TextAlignCenter className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  title="Tabela à direita"
+                  onClick={() => setPosicaoTabela('right')}
+                  className={`rounded-lg p-1.5 hover:bg-ms-dark ${posicaoTabela === 'right' ? 'text-ms-blueText bg-ms-dark' : 'text-ms-muted'}`}
+                >
+                  <TextAlignEnd className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
 
             <div className="flex flex-wrap items-center gap-0.5 rounded-lg border border-gray-800 bg-ms-dark/40 p-1">
               <button
