@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText, Lock, Unlock } from 'lucide-react';
+import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText, Lock, Unlock, Pencil } from 'lucide-react';
 import type { AvaliacaoArea, ProvaAreaCota } from '../../types/avaliacoes';
 import type { AreaConhecimento } from '../../utils/areasConhecimento';
 import { listarAvaliacoesArea, publicarAvaliacaoArea, excluirAvaliacao, definirBloqueioAvaliacaoArea } from '../../services/avaliacoesService';
@@ -27,6 +27,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [showNovaModal, setShowNovaModal] = useState(false);
+  const [editandoAvaliacao, setEditandoAvaliacao] = useState<AvaliacaoArea | null>(null);
   const [inserindoCota, setInserindoCota] = useState<{ avaliacao: AvaliacaoArea; cota: ProvaAreaCota } | null>(null);
   const [reimprimirDe, setReimprimirDe] = useState<AvaliacaoArea | null>(null);
   const [resultadosDe, setResultadosDe] = useState<AvaliacaoArea | null>(null);
@@ -209,6 +210,15 @@ export function AvaliacoesAreaTab({ area }: Props) {
                         Publicar e Sincronizar Notas
                       </button>
                     )}
+                    {av.status !== 'PUBLICADA' && (
+                      <button
+                        onClick={() => setEditandoAvaliacao(av)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors"
+                        title="Editar título, valor, datas, turmas e cotas da avaliação"
+                      >
+                        <Pencil className="w-3.5 h-3.5" /> Editar
+                      </button>
+                    )}
                     <button
                       onClick={() => setReimprimirDe(av)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors"
@@ -337,6 +347,18 @@ export function AvaliacoesAreaTab({ area }: Props) {
           onClose={() => setShowNovaModal(false)}
           onCriada={() => {
             setShowNovaModal(false);
+            carregar();
+          }}
+        />
+      )}
+
+      {editandoAvaliacao && (
+        <NovaAvaliacaoAreaModal
+          area={area}
+          avaliacaoExistente={editandoAvaliacao}
+          onClose={() => setEditandoAvaliacao(null)}
+          onCriada={() => {
+            setEditandoAvaliacao(null);
             carregar();
           }}
         />

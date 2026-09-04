@@ -1,17 +1,19 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Loader2, Plus, Trash2, X, AlertCircle, CheckSquare, Square, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Turma } from '../../types';
 import type { AreaConhecimento } from '../../utils/areasConhecimento';
 import { DISCIPLINAS_POR_AREA, disciplinaPertenceAArea, normalizarArea } from '../../utils/areasConhecimento';
-import type { CotaProfessorInput, ModoAvaliacao, NovaAvaliacaoAreaInput, TipoAvaliacao } from '../../types/avaliacoes';
-import { criarAvaliacaoArea } from '../../services/avaliacoesService';
+import type { AvaliacaoArea, CotaProfessorInput, ModoAvaliacao, NovaAvaliacaoAreaInput, TipoAvaliacao } from '../../types/avaliacoes';
+import { criarAvaliacaoArea, editarAvaliacaoArea } from '../../services/avaliacoesService';
 import { getCurrentBimestre } from '../../utils/academicUtils';
 
 interface Props {
   area: AreaConhecimento;
   onClose: () => void;
   onCriada: () => void;
+  /** Presente = modo edição (só permitido enquanto a avaliação não foi publicada). */
+  avaliacaoExistente?: AvaliacaoArea;
 }
 
 interface ProfessorDisciplina {
@@ -21,15 +23,18 @@ interface ProfessorDisciplina {
   disciplina_nome: string;
 }
 
-export function NovaAvaliacaoAreaModal({ area, onClose, onCriada }: Props) {
-  const [titulo, setTitulo] = useState(`Avaliação da Área — ${area}`);
-  const [bimestre, setBimestre] = useState<number>(() => getCurrentBimestre());
-  const [valorTotal, setValorTotal] = useState<number>(10);
-  const [modo, setModo] = useState<ModoAvaliacao>('IMPRESSA');
-  const [tipo, setTipo] = useState<TipoAvaliacao>('AVALIACAO');
-  const [dataAplicacao, setDataAplicacao] = useState('');
+export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExistente }: Props) {
+  const editando = !!avaliacaoExistente;
+  const [titulo, setTitulo] = useState(avaliacaoExistente?.titulo ?? `Avaliação da Área — ${area}`);
+  const [bimestre, setBimestre] = useState<number>(avaliacaoExistente?.bimestre_id ?? (() => getCurrentBimestre()));
+  const [valorTotal, setValorTotal] = useState<number>(avaliacaoExistente ? Number(avaliacaoExistente.valor_total) : 10);
+  const [modo, setModo] = useState<ModoAvaliacao>(avaliacaoExistente?.modo ?? 'IMPRESSA');
+  const [tipo, setTipo] = useState<TipoAvaliacao>(avaliacaoExistente?.tipo ?? 'AVALIACAO');
+  const [dataAplicacao, setDataAplicacao] = useState(avaliacaoExistente?.data_aplicacao ?? '');
   const [prazoEntrega, setPrazoEntrega] = useState('');
-  const [instrucoes, setInstrucoes] = useState('Leia atentamente cada questão antes de responder.');
+  const [instrucoes, setInstrucoes] = useState(
+    avaliacaoExistente?.instrucoes ?? 'Leia atentamente cada questão antes de responder.'
+  );
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>([]);
   
@@ -48,6 +53,22 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada }: Props) {
         // 1. Carregar turmas
         const { data: tData } = await supabase.from('turmas').select('*').order('nome');
         setTurmas(tData || []);
+
+        // 1b. Editando: pré-carrega as turmas e o prazo já salvos (turma_ids não vem na
+        // listagem, só turma_nomes — busca direto de prova_turmas).
+        if (avaliacaoExistente) {
+          const { data: ptData } = await supabase
+            .from('prova_turmas')
+            .select('turma_id')
+            .eq('prova_id', avaliacaoExistente.id);
+          setTurmasSelecionadas((ptData ?? []).map((r: { turma_id: string }) => r.turma_id));
+
+          if (avaliacaoExistente.prazo_entrega) {
+            const d = new Date(avaliacaoExistente.prazo_entrega);
+            const pad = (n: number) => String(n).padStart(2, '0');
+            setPrazoEntrega(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+          }
+        }
 
         // 2. Tentar buscar da RPC de professores da área
         const { data: rpcData, error: rpcErr } = await supabase
@@ -135,13 +156,24 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada }: Props) {
         );
         setProfessoresArea(lista);
 
-        // Inicializar seleção e cotas padrão de 2 questões
+        // Inicializar seleção e cotas: editando, parte do que já está salvo (cotas com
+        // questão já inserida não podem ser desmarcadas — ver aviso no RPC de edição);
+        // criando, marca todo mundo com 2 questões por padrão.
+        const cotasExistentes = new Map(
+          (avaliacaoExistente?.cotas ?? []).map((c) => [`${c.professor_id}-${c.disciplina_id}`, c])
+        );
         const selIniciais: Record<string, boolean> = {};
         const cotasIniciais: Record<string, number> = {};
         lista.forEach((item) => {
           const k = `${item.professor_id}-${item.disciplina_id}`;
-          selIniciais[k] = true;
-          cotasIniciais[k] = 2;
+          const existente = cotasExistentes.get(k);
+          if (avaliacaoExistente) {
+            selIniciais[k] = !!existente;
+            cotasIniciais[k] = existente?.qtd_questoes ?? 2;
+          } else {
+            selIniciais[k] = true;
+            cotasIniciais[k] = 2;
+          }
         });
         setSelecionados(selIniciais);
         setCotas(cotasIniciais);
@@ -151,7 +183,18 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada }: Props) {
         setLoading(false);
       }
     })();
-  }, [area]);
+  }, [area, avaliacaoExistente]);
+
+  // Cota com questão já inserida não pode ser desmarcada nem ter a quantidade reduzida
+  // abaixo do que já foi inserido — o RPC de edição recusa isso, então trava aqui também
+  // pra dar o aviso na hora em vez de só no erro ao salvar.
+  const qtdInseridaPorKey = useMemo(() => {
+    const mapa: Record<string, number> = {};
+    (avaliacaoExistente?.cotas ?? []).forEach((c) => {
+      mapa[`${c.professor_id}-${c.disciplina_id}`] = c.qtd_inserida;
+    });
+    return mapa;
+  }, [avaliacaoExistente]);
 
   function toggleTurma(turmaId: string) {
     setTurmasSelecionadas((prev) =>
@@ -160,6 +203,7 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada }: Props) {
   }
 
   function toggleProfessor(key: string) {
+    if (qtdInseridaPorKey[key] > 0) return;
     setSelecionados((prev) => ({
       ...prev,
       [key]: !prev[key],
@@ -167,13 +211,14 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada }: Props) {
   }
 
   function setCotaQtd(key: string, qtd: number) {
-    setCotas((prev) => ({ ...prev, [key]: Math.max(1, qtd) }));
+    setCotas((prev) => ({ ...prev, [key]: Math.max(1, qtdInseridaPorKey[key] ?? 1, qtd) }));
   }
 
   function marcarTodos(status: boolean) {
     const novos: Record<string, boolean> = {};
     professoresArea.forEach((p) => {
-      novos[`${p.professor_id}-${p.disciplina_id}`] = status;
+      const k = `${p.professor_id}-${p.disciplina_id}`;
+      novos[k] = qtdInseridaPorKey[k] > 0 ? true : status;
     });
     setSelecionados(novos);
   }
@@ -227,10 +272,14 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada }: Props) {
         cotas: cotasPayload,
       };
 
-      await criarAvaliacaoArea(payload);
+      if (editando) {
+        await editarAvaliacaoArea(avaliacaoExistente!.id, payload);
+      } else {
+        await criarAvaliacaoArea(payload);
+      }
       onCriada();
     } catch (e: any) {
-      setErro(e.message || 'Erro ao criar avaliação de área.');
+      setErro(e.message || `Erro ao ${editando ? 'salvar' : 'criar'} avaliação de área.`);
     } finally {
       setSalvando(false);
     }
@@ -241,9 +290,13 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada }: Props) {
       <div className="bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
           <div>
-            <h2 className="text-lg font-bold text-ms-main">Elaborar Avaliação da Área — {area}</h2>
+            <h2 className="text-lg font-bold text-ms-main">
+              {editando ? 'Editar Avaliação da Área' : 'Elaborar Avaliação da Área'} — {area}
+            </h2>
             <p className="text-xs text-ms-muted">
-              Crie a avaliação, selecione os docentes participantes da área e estipule o número de questões para cada um.
+              {editando
+                ? 'Ajuste os dados da avaliação. Professores que já inseriram questões não podem ser removidos nem ter a cota reduzida.'
+                : 'Crie a avaliação, selecione os docentes participantes da área e estipule o número de questões para cada um.'}
             </p>
           </div>
           <button onClick={onClose} className="text-ms-muted hover:text-ms-main p-1 rounded-lg">
@@ -416,6 +469,8 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada }: Props) {
                       const key = `${p.professor_id}-${p.disciplina_id}`;
                       const ativo = !!selecionados[key];
                       const qtd = cotas[key] ?? 2;
+                      const qtdInserida = qtdInseridaPorKey[key] ?? 0;
+                      const travado = qtdInserida > 0;
                       return (
                         <div
                           key={key}
@@ -427,7 +482,8 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada }: Props) {
                         >
                           <div
                             onClick={() => toggleProfessor(key)}
-                            className="flex items-center gap-3 cursor-pointer select-none flex-1"
+                            title={travado ? `Já tem ${qtdInserida} questão(ões) inserida(s) — não pode ser removido` : undefined}
+                            className={`flex items-center gap-3 flex-1 select-none ${travado ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                           >
                             <div
                               className={`w-5 h-5 rounded flex items-center justify-center border transition-all ${
@@ -441,6 +497,11 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada }: Props) {
                             <div>
                               <p className={`text-sm font-bold ${ativo ? 'text-ms-main' : 'text-gray-500'}`}>
                                 {p.professor_nome}
+                                {travado && (
+                                  <span className="ml-1.5 text-[10px] font-bold text-ms-muted">
+                                    ({qtdInserida} já inserida{qtdInserida === 1 ? '' : 's'})
+                                  </span>
+                                )}
                               </p>
                               <p className="text-xs text-ms-muted">{p.disciplina_nome}</p>
                             </div>
@@ -450,7 +511,7 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada }: Props) {
                             <span className="text-xs text-ms-muted">Questões:</span>
                             <input
                               type="number"
-                              min={1}
+                              min={Math.max(1, qtdInserida)}
                               max={50}
                               disabled={!ativo}
                               value={qtd}
@@ -483,7 +544,7 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada }: Props) {
             className="flex items-center gap-2 px-5 py-2 bg-ms-blue text-white rounded-lg text-sm font-bold hover:bg-blue-600 disabled:opacity-40 shadow transition-all"
           >
             {salvando && <Loader2 className="w-4 h-4 animate-spin" />}
-            Criar Avaliação de Área
+            {editando ? 'Salvar Alterações' : 'Criar Avaliação de Área'}
           </button>
         </div>
       </div>

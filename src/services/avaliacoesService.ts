@@ -580,6 +580,24 @@ export async function criarAvaliacaoArea(dados: NovaAvaliacaoAreaInput): Promise
   return data as string;
 }
 
+export async function editarAvaliacaoArea(provaId: string, dados: NovaAvaliacaoAreaInput): Promise<string> {
+  const { data, error } = await supabase.rpc('rpc_editar_avaliacao_area', {
+    p_prova_id: provaId,
+    p_titulo: dados.titulo,
+    p_bimestre_id: dados.bimestre_id,
+    p_valor_total: dados.valor_total,
+    p_modo: dados.modo,
+    p_tipo: dados.tipo,
+    p_data_aplicacao: dados.data_aplicacao || null,
+    p_prazo_entrega: dados.prazo_entrega || null,
+    p_instrucoes: dados.instrucoes || null,
+    p_turma_ids: dados.turma_ids,
+    p_cotas: dados.cotas,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
 export async function listarAvaliacoesArea(areaConhecimento?: string): Promise<AvaliacaoArea[]> {
   const { data, error } = await supabase.rpc('rpc_listar_avaliacoes_area', {
     p_area_conhecimento: areaConhecimento || null,
