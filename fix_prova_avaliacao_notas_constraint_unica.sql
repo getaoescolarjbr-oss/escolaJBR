@@ -26,7 +26,7 @@ JOIN public.prova_turmas pt ON pt.prova_id = p.id
 JOIN public.prova_area_cotas pac ON pac.prova_id = p.id
 JOIN public.avaliacoes a
   ON a.professor_id = pac.professor_id
- AND a.turma_id = pt.turma_id
+ AND a.turma_id = pt.turma_id::text  -- avaliacoes.turma_id é text, não uuid
  AND a.bimestre_id = p.bimestre_id
  AND a.nome = p.titulo || ' (' || COALESCE(
        (SELECT d.nome FROM public.disciplinas d WHERE d.id = pac.disciplina_id),
