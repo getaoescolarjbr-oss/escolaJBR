@@ -69,11 +69,18 @@ export function parseInline(text: string, keyPrefix: string): ReactNode[] {
   return nodes;
 }
 
-// Quebras de linha simples no conteúdo importado costumam ser apenas quebras
-// manuais de largura de coluna do material de origem, não parágrafos novos —
-// viram espaço para o texto fluir e o justify funcionar de fato.
+// Cada quebra de linha simples (Enter) vira uma quebra visual (<br/>) — é o que o professor
+// vê ao digitar linha por linha (ex.: marcadores de lista, um item por linha) e esperava ver
+// igual na prévia/impressão. Uma linha em branco (Enter duas vezes) continua separando em
+// parágrafos novos, tratado antes desta função.
 function renderWithBreaks(text: string, keyPrefix: string): ReactNode[] {
-  return parseInline(text.replace(/\n+/g, ' ').replace(/ {2,}/g, ' '), keyPrefix);
+  const linhas = text.replace(/ {2,}/g, ' ').split('\n');
+  const nodes: ReactNode[] = [];
+  linhas.forEach((linha, idx) => {
+    if (idx > 0) nodes.push(<br key={`${keyPrefix}-br${idx}`} />);
+    nodes.push(...parseInline(linha, `${keyPrefix}-l${idx}`));
+  });
+  return nodes;
 }
 
 function normalizeHtmlArtifacts(content: string): string {
@@ -161,7 +168,9 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
     } else if (block.type === 'table') {
       if (block.content.trim() === '') continue;
       const key = `${keyPrefix}-${i++}`;
-      let rows: string[][];
+      // Célula "normal" é só a string; célula mesclada vira {text, colspan, rowspan} no cell
+      // de origem, e null nas posições que ela cobre (pra não desenhar <td> duplicado ali).
+      let rows: (string | { text: string; colspan?: number; rowspan?: number } | null)[][];
       try {
         rows = JSON.parse(decodeURIComponent(block.content));
       } catch {
@@ -173,11 +182,22 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
             <tbody>
               {rows.map((row, ri) => (
                 <tr key={`${key}-r${ri}`}>
-                  {row.map((cell, ci) => (
-                    <td key={`${key}-r${ri}-c${ci}`} className="border border-ms-border px-3 py-1.5">
-                      {parseInline(cell, `${key}-r${ri}-c${ci}`)}
-                    </td>
-                  ))}
+                  {row.map((cell, ci) => {
+                    if (cell === null) return null;
+                    const texto = typeof cell === 'string' ? cell : cell.text;
+                    const colSpan = typeof cell === 'string' ? undefined : cell.colspan;
+                    const rowSpan = typeof cell === 'string' ? undefined : cell.rowspan;
+                    return (
+                      <td
+                        key={`${key}-r${ri}-c${ci}`}
+                        colSpan={colSpan}
+                        rowSpan={rowSpan}
+                        className="border border-ms-border px-3 py-1.5"
+                      >
+                        {parseInline(texto, `${key}-r${ri}-c${ci}`)}
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
@@ -196,9 +216,17 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
       for (const para of block.content.split(/\n{2,}/)) {
         if (para.trim() === '') continue;
         const key = `${keyPrefix}-${i++}`;
+        // Alinhamento escolhido no editor (botões da barra) fica marcado como
+        // [[ALIGN:x]]...[[/ALIGN]] envolvendo o parágrafo inteiro. Sem marcador, o padrão
+        // continua sendo justificado, como sempre foi.
+        const alinhado = para.trim().match(/^\[\[ALIGN:(left|center|right|justify)\]\]([\s\S]*)\[\[\/ALIGN\]\]$/);
+        const align = alinhado ? alinhado[1] : 'justify';
+        const conteudo = alinhado ? alinhado[2] : para;
+        const alignClass =
+          align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-justify';
         nodes.push(
-          <p key={key} className="text-justify">
-            {renderWithBreaks(para.trim(), key)}
+          <p key={key} className={alignClass}>
+            {renderWithBreaks(conteudo.trim(), key)}
           </p>
         );
       }

@@ -12,10 +12,16 @@ import {
   Sigma,
   Subscript,
   Superscript,
+  Table as TableIcon,
+  TextAlignCenter,
+  TextAlignEnd,
+  TextAlignJustify,
+  TextAlignStart,
   Underline,
 } from 'lucide-react';
 import katex from 'katex';
 import { supabase } from '../../lib/supabase';
+import { TableInsertDialog } from './TableInsertDialog';
 
 const GREGAS = ['α', 'β', 'γ', 'δ', 'ε', 'θ', 'λ', 'μ', 'π', 'ρ', 'σ', 'φ', 'ω', 'Δ', 'Σ', 'Φ', 'Ω', 'Γ', 'Θ', 'Λ', 'Π', 'Ψ'];
 const SETAS = ['→', '←', '↔', '⇒', '⇐', '⇔', '↑', '↓', '↦'];
@@ -59,6 +65,7 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [popover, setPopover] = useState<'simbolos' | 'equacao' | null>(null);
+  const [tabelaAberta, setTabelaAberta] = useState(false);
   const [latexEquacao, setLatexEquacao] = useState('');
   const latexRef = useRef<HTMLTextAreaElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
@@ -146,6 +153,35 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
     });
   }
 
+  // Acha o início/fim do parágrafo que contém `pos` (parágrafos são separados por linha em
+  // branco — mesma regra usada na renderização em questionMarkup.tsx).
+  function limitesParagrafo(pos: number) {
+    const antes = value.slice(0, pos);
+    const depois = value.slice(pos);
+    const quebras = [...antes.matchAll(/\n{2,}/g)];
+    const ultima = quebras[quebras.length - 1];
+    const inicio = ultima ? ultima.index! + ultima[0].length : 0;
+    const proxima = depois.match(/\n{2,}/);
+    const fim = proxima ? pos + proxima.index! : value.length;
+    return { inicio, fim };
+  }
+
+  function alinharParagrafo(align: 'left' | 'center' | 'right' | 'justify') {
+    const sel = getSelection();
+    if (!sel) return;
+    const { el, start } = sel;
+    const { inicio, fim } = limitesParagrafo(start);
+    const paragrafo = value.slice(inicio, fim);
+    const semMarcador = paragrafo.replace(/^(\s*)\[\[ALIGN:(left|center|right|justify)\]\]([\s\S]*?)\[\[\/ALIGN\]\](\s*)$/, '$1$3$4');
+    const novoParagrafo = align === 'justify' ? semMarcador : `[[ALIGN:${align}]]${semMarcador.trim()}[[/ALIGN]]`;
+    onChange(`${value.slice(0, inicio)}${novoParagrafo}${value.slice(fim)}`);
+    const novoFim = inicio + novoParagrafo.length;
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(novoFim, novoFim);
+    });
+  }
+
   function inserirNoLatex(antes: string, depois = '') {
     const el = latexRef.current;
     const start = el?.selectionStart ?? latexEquacao.length;
@@ -215,6 +251,21 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
       </ToolbarButton>
       <ToolbarButton title="Marcar como referência (citação, fonte)" onClick={() => wrapMarker('REF')}>
         <Quote className="h-3.5 w-3.5" />
+      </ToolbarButton>
+
+      <div className="mx-1 h-4 w-px bg-gray-800" />
+
+      <ToolbarButton title="Alinhar à esquerda" onClick={() => alinharParagrafo('left')}>
+        <TextAlignStart className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton title="Centralizar" onClick={() => alinharParagrafo('center')}>
+        <TextAlignCenter className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton title="Alinhar à direita" onClick={() => alinharParagrafo('right')}>
+        <TextAlignEnd className="h-3.5 w-3.5" />
+      </ToolbarButton>
+      <ToolbarButton title="Justificar" onClick={() => alinharParagrafo('justify')}>
+        <TextAlignJustify className="h-3.5 w-3.5" />
       </ToolbarButton>
 
       <div className="mx-1 h-4 w-px bg-gray-800" />
@@ -350,6 +401,11 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
         </>
       )}
 
+      <div className="mx-1 h-4 w-px bg-gray-800" />
+      <ToolbarButton title="Inserir tabela" onClick={() => setTabelaAberta(true)}>
+        <TableIcon className="h-3.5 w-3.5" />
+      </ToolbarButton>
+
       {showImage && (
         <>
           <div className="mx-1 h-4 w-px bg-gray-800" />
@@ -358,6 +414,16 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
           </ToolbarButton>
           <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={(e) => handleImageFile(e.target.files?.[0])} />
         </>
+      )}
+
+      {tabelaAberta && (
+        <TableInsertDialog
+          onFechar={() => setTabelaAberta(false)}
+          onInserir={(marcador) => {
+            insertAtCursor(marcador);
+            setTabelaAberta(false);
+          }}
+        />
       )}
     </div>
   );
