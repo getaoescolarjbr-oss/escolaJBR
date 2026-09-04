@@ -76,12 +76,13 @@ export function QuestaoImpressa({ questao: q, indice, valor, ocultarTextoApoio }
         </div>
       )}
       <div className="questao-enunciado">
-        {renderLightMarkup(q.statement, `p-${q.id}`, <span className="questao-num">{indice + 1}. </span>)}
-        {valor !== undefined && (
-          <>
-            {' '}
-            <span style={{ fontSize: '0.8em', color: '#666' }}>({valor.toFixed(2)} pt)</span>
-          </>
+        {renderLightMarkup(
+          q.statement,
+          `p-${q.id}`,
+          <span className="questao-num">
+            {indice + 1}.{' '}
+            {valor !== undefined && <span style={{ fontSize: '0.8em', color: '#666' }}>({valor.toFixed(2)} pt) </span>}
+          </span>
         )}
       </div>
       {q.image_url && <img src={q.image_url} alt="" className="questao-img" />}

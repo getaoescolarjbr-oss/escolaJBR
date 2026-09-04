@@ -142,8 +142,13 @@ export function SimuladoPublicoPage({ token }: Props) {
                   return (
                     <div key={q.question_id} className="border-b border-gray-800 pb-4 last:border-0">
                       <div className="text-sm text-ms-main">
-                        {renderLightMarkup(q.statement, `sp-${q.question_id}`, <span className="font-bold text-blue-400">{i + 1}. </span>)}
-                        <span className="text-xs text-ms-muted ml-1">({Number(q.valor).toFixed(2)} pt)</span>
+                        {renderLightMarkup(
+                          q.statement,
+                          `sp-${q.question_id}`,
+                          <span className="font-bold text-blue-400">
+                            {i + 1}. <span className="font-normal text-ms-muted text-xs">({Number(q.valor).toFixed(2)} pt)</span>{' '}
+                          </span>
+                        )}
                       </div>
                       {q.image_url && <img src={q.image_url} alt="" className="max-w-full rounded-lg my-2" />}
                       <div className="space-y-2 mt-2">

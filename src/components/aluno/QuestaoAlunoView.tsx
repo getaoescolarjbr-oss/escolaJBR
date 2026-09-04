@@ -40,8 +40,13 @@ export function QuestaoAlunoView({
   return (
     <div className="border-b border-gray-800 pb-4 last:border-0">
       <div className="text-sm text-ms-main">
-        {renderLightMarkup(questao.statement, `p-${questao.question_id}`, <span className="font-bold text-ms-blueText">{indice + 1}. </span>)}
-        <span className="text-xs text-ms-muted ml-1">({Number(questao.valor).toFixed(2)} pt)</span>
+        {renderLightMarkup(
+          questao.statement,
+          `p-${questao.question_id}`,
+          <span className="font-bold text-ms-blueText">
+            {indice + 1}. <span className="font-normal text-ms-muted text-xs">({Number(questao.valor).toFixed(2)} pt)</span>{' '}
+          </span>
+        )}
         {escrita && (
           <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-ms-gold/20 text-ms-gold text-[11px] font-bold align-middle">
             <PenLine className="w-3 h-3" />
