@@ -69,22 +69,27 @@ export function QuestaoImpressa({ questao: q, indice, valor, ocultarTextoApoio }
           revela-se uma pessoa" sozinho não diz de que trecho se trata. Na tela o
           QuestionCard deixa o texto recolhido atrás de um botão; em prova
           impressa não há como recolher. */}
-      {apoio && (
-        <div className="texto-apoio">
-          {renderLightMarkup(apoio.content, `st-${q.id}`)}
-          {apoio.image_url && <img src={apoio.image_url} alt="" className="questao-img" />}
-        </div>
-      )}
-      <div className="questao-enunciado">
-        {renderLightMarkup(
-          q.statement,
-          `p-${q.id}`,
+      {(() => {
+        const numeroPrefixo = (
           <span className="questao-num">
             {indice + 1}.{' '}
             {valor !== undefined && <span style={{ fontSize: '0.8em', color: '#666' }}>({valor.toFixed(2)} pt) </span>}
           </span>
-        )}
-      </div>
+        );
+        return (
+          <>
+            {apoio && (
+              <div className="texto-apoio">
+                {renderLightMarkup(apoio.content, `st-${q.id}`, numeroPrefixo)}
+                {apoio.image_url && <img src={apoio.image_url} alt="" className="questao-img" />}
+              </div>
+            )}
+            <div className="questao-enunciado">
+              {renderLightMarkup(q.statement, `p-${q.id}`, apoio ? undefined : numeroPrefixo)}
+            </div>
+          </>
+        );
+      })()}
       {q.image_url && <img src={q.image_url} alt="" className="questao-img" />}
 
       {escrita ? (

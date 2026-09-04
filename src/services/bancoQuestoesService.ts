@@ -40,6 +40,20 @@ export interface ListaQuestoes {
 export async function listarQuestoes(filtro: FiltroQuestoes): Promise<ListaQuestoes> {
   const page = filtro.page ?? 0;
   const pageSize = filtro.pageSize ?? 20;
+
+  // Busca por palavra-chave batia só no enunciado — quem procurava um trecho que só existe
+  // no texto associado (support_texts, ex.: um poema ou tirinha citado antes do comando)
+  // nunca achava a questão. Busca primeiro os textos associados que batem e inclui as
+  // questões ligadas a eles na busca por OR junto do enunciado.
+  let idsTextoApoio: string[] = [];
+  if (filtro.busca) {
+    const { data: textosBatendo } = await supabase
+      .from('support_texts')
+      .select('id')
+      .ilike('content', `%${filtro.busca}%`);
+    idsTextoApoio = (textosBatendo ?? []).map((t: { id: string }) => t.id);
+  }
+
   let query = supabase
     .from('questions')
     .select(QUESTION_SELECT_FIELDS, { count: 'exact' })
@@ -59,7 +73,14 @@ export async function listarQuestoes(filtro: FiltroQuestoes): Promise<ListaQuest
   if (filtro.assunto) query = query.eq('assunto', filtro.assunto);
   if (filtro.topico) query = query.eq('topico', filtro.topico);
   if (filtro.tipo) query = query.eq('tipo', filtro.tipo);
-  if (filtro.busca) query = query.ilike('statement', `%${filtro.busca}%`);
+  if (filtro.busca) {
+    // vírgula e parênteses são delimitadores da sintaxe do .or() do PostgREST — precisam
+    // ser neutralizados pra não quebrar o filtro se aparecerem no texto buscado.
+    const buscaEscapada = filtro.busca.replace(/[,()]/g, '_');
+    const condicoes = [`statement.ilike.%${buscaEscapada}%`];
+    if (idsTextoApoio.length > 0) condicoes.push(`support_text_id.in.(${idsTextoApoio.join(',')})`);
+    query = query.or(condicoes.join(','));
+  }
   if (filtro.apenasMinhas) query = query.eq('criado_por', filtro.apenasMinhas);
 
   const { data, error, count } = await query;
