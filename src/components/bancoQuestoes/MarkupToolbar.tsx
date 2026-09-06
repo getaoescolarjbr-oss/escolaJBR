@@ -302,6 +302,18 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
               <button type="button" title="Letra grega" onClick={() => inserirNoLatex('\\alpha')} className="px-2 py-1 rounded-lg text-xs font-bold text-ms-main hover:bg-ms-dark border border-gray-800">
                 α
               </button>
+              <button type="button" title="Logaritmo" onClick={() => inserirNoLatex('\\log ')} className="px-2 py-1 rounded-lg text-xs font-bold text-ms-main hover:bg-ms-dark border border-gray-800">
+                log
+              </button>
+              <button type="button" title="Logaritmo em base n" onClick={() => inserirNoLatex('\\log_{', '}')} className="px-2 py-1 rounded-lg text-xs font-bold text-ms-main hover:bg-ms-dark border border-gray-800">
+                log_n
+              </button>
+              <button type="button" title="Matriz 2x2" onClick={() => inserirNoLatex('\\begin{pmatrix} a & b \\\\ c & d \\end{pmatrix}')} className="px-2 py-1 rounded-lg text-xs font-bold text-ms-main hover:bg-ms-dark border border-gray-800">
+                [ ]
+              </button>
+              <button type="button" title="Sistema linear (2 equações)" onClick={() => inserirNoLatex('\\begin{cases} a_1x + b_1y = c_1 \\\\ a_2x + b_2y = c_2 \\end{cases}')} className="px-2 py-1 rounded-lg text-xs font-bold text-ms-main hover:bg-ms-dark border border-gray-800">
+                {'{ }'}
+              </button>
             </div>
 
             <textarea

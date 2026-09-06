@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Eye, Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Eye, Loader2, Pencil, Plus, Search, Trash2, X } from 'lucide-react';
 import type { FilterOptions, FiltroQuestoes, Question } from '../../../types/bancoQuestoes';
 import {
   buscarAssuntosPorDisciplina,
@@ -93,6 +93,11 @@ export function GerenciarTab({ podeCriar = true }: GerenciarTabProps) {
   const paginaAtual = (filtro.page ?? 0) + 1;
   const assuntosParaFiltro = assuntosDisciplina ?? opcoes?.assuntos ?? [];
 
+  function irParaPagina(pagina: number) {
+    const clamped = Math.min(Math.max(pagina, 1), totalPaginas);
+    setFiltro((f) => ({ ...f, page: clamped - 1 }));
+  }
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -170,6 +175,8 @@ export function GerenciarTab({ podeCriar = true }: GerenciarTabProps) {
         <p className="text-center text-ms-muted py-12">Nenhuma questão encontrada com estes filtros.</p>
       ) : (
         <>
+          <Paginacao paginaAtual={paginaAtual} totalPaginas={totalPaginas} irPara={irParaPagina} />
+
           <div className="space-y-2">
             {questoes.map((q) => (
               <div key={q.id} className="flex items-center justify-between gap-4 px-4 py-3 bg-ms-card border border-gray-800 rounded-xl">
@@ -196,23 +203,7 @@ export function GerenciarTab({ podeCriar = true }: GerenciarTabProps) {
             ))}
           </div>
 
-          <div className="flex items-center justify-between text-sm text-ms-muted">
-            <button
-              disabled={paginaAtual <= 1}
-              onClick={() => setFiltro((f) => ({ ...f, page: (f.page ?? 0) - 1 }))}
-              className="px-3 py-1.5 rounded-lg border border-gray-800 disabled:opacity-40"
-            >
-              Anterior
-            </button>
-            <span>Página {paginaAtual} de {totalPaginas}</span>
-            <button
-              disabled={paginaAtual >= totalPaginas}
-              onClick={() => setFiltro((f) => ({ ...f, page: (f.page ?? 0) + 1 }))}
-              className="px-3 py-1.5 rounded-lg border border-gray-800 disabled:opacity-40"
-            >
-              Próxima
-            </button>
-          </div>
+          <Paginacao paginaAtual={paginaAtual} totalPaginas={totalPaginas} irPara={irParaPagina} />
         </>
       )}
 
@@ -265,6 +256,50 @@ export function GerenciarTab({ podeCriar = true }: GerenciarTabProps) {
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+interface PaginacaoProps {
+  paginaAtual: number;
+  totalPaginas: number;
+  irPara: (pagina: number) => void;
+}
+
+// Bancas grandes (ENEM/UNESP/UNICAMP raspadas) deixaram o banco com dezenas de
+// páginas -- só "Anterior"/"Próxima" exigia clicar 1 por 1 pra navegar longe. Pulos
+// de 3/5 páginas + ir pra primeira/última cobrem o caso comum sem virar uma lista de
+// números de página (que não cabe bem no layout).
+function Paginacao({ paginaAtual, totalPaginas, irPara }: PaginacaoProps) {
+  const botaoClasse = 'p-1.5 rounded-lg border border-gray-800 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-ms-dark flex items-center gap-0.5';
+
+  return (
+    <div className="flex items-center justify-center gap-1 text-sm text-ms-muted flex-wrap">
+      <button title="Primeira página" disabled={paginaAtual <= 1} onClick={() => irPara(1)} className={botaoClasse}>
+        <ChevronsLeft className="w-4 h-4" />
+      </button>
+      <button title="Voltar 5 páginas" disabled={paginaAtual <= 1} onClick={() => irPara(paginaAtual - 5)} className={botaoClasse + ' px-2'}>
+        -5
+      </button>
+      <button title="Voltar 3 páginas" disabled={paginaAtual <= 1} onClick={() => irPara(paginaAtual - 3)} className={botaoClasse + ' px-2'}>
+        -3
+      </button>
+      <button title="Página anterior" disabled={paginaAtual <= 1} onClick={() => irPara(paginaAtual - 1)} className={botaoClasse}>
+        <ChevronLeft className="w-4 h-4" /> Anterior
+      </button>
+      <span className="px-3 font-bold text-ms-main whitespace-nowrap">Página {paginaAtual} de {totalPaginas}</span>
+      <button title="Próxima página" disabled={paginaAtual >= totalPaginas} onClick={() => irPara(paginaAtual + 1)} className={botaoClasse}>
+        Próxima <ChevronRight className="w-4 h-4" />
+      </button>
+      <button title="Avançar 3 páginas" disabled={paginaAtual >= totalPaginas} onClick={() => irPara(paginaAtual + 3)} className={botaoClasse + ' px-2'}>
+        +3
+      </button>
+      <button title="Avançar 5 páginas" disabled={paginaAtual >= totalPaginas} onClick={() => irPara(paginaAtual + 5)} className={botaoClasse + ' px-2'}>
+        +5
+      </button>
+      <button title="Última página" disabled={paginaAtual >= totalPaginas} onClick={() => irPara(totalPaginas)} className={botaoClasse}>
+        <ChevronsRight className="w-4 h-4" />
+      </button>
     </div>
   );
 }
