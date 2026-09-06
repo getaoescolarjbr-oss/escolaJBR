@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Loader2, Plus, Search } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Loader2, Plus, Search } from 'lucide-react';
 import type { FilterOptions, FiltroQuestoes, Question, TipoQuestao } from '../../types/bancoQuestoes';
 import { TIPOS_QUESTAO, TIPO_QUESTAO_LABEL } from '../../types/bancoQuestoes';
 import { buscarAssuntosPorDisciplina, buscarFilterOptions, buscarTopicosPorAssunto, listarQuestoes } from '../../services/bancoQuestoesService';
@@ -93,6 +93,11 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar, 
 
   const totalPaginas = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const paginaAtual = (filtro.page ?? 0) + 1;
+
+  function irParaPagina(pagina: number) {
+    const clamped = Math.min(Math.max(pagina, 1), totalPaginas);
+    setFiltro((f) => ({ ...f, page: clamped - 1 }));
+  }
   const assuntosParaFiltro = assuntosDisciplina ?? opcoes?.assuntos ?? [];
   const questoesSelecionadasLista = Array.from(selecionadas.values());
   const questoesExibidas = somenteSelecionadas ? questoesSelecionadasLista : questoes;
@@ -249,6 +254,8 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar, 
         <p className="text-center text-ms-muted py-12">Nenhuma questão encontrada com estes filtros.</p>
       ) : (
         <>
+          <Paginacao paginaAtual={paginaAtual} totalPaginas={totalPaginas} irPara={irParaPagina} total={total} />
+
           <div className="space-y-4">
             {questoes.map((q) => (
               <QuestionCard
@@ -261,26 +268,7 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar, 
             ))}
           </div>
 
-          <div className="flex items-center justify-between text-sm text-ms-muted">
-            <span>{total} questões encontradas</span>
-            <div className="flex items-center gap-3">
-              <button
-                disabled={paginaAtual <= 1}
-                onClick={() => setFiltro((f) => ({ ...f, page: (f.page ?? 0) - 1 }))}
-                className="px-3 py-1.5 rounded-lg border border-gray-800 disabled:opacity-40"
-              >
-                Anterior
-              </button>
-              <span>Página {paginaAtual} de {totalPaginas}</span>
-              <button
-                disabled={paginaAtual >= totalPaginas}
-                onClick={() => setFiltro((f) => ({ ...f, page: (f.page ?? 0) + 1 }))}
-                className="px-3 py-1.5 rounded-lg border border-gray-800 disabled:opacity-40"
-              >
-                Próxima
-              </button>
-            </div>
-          </div>
+          <Paginacao paginaAtual={paginaAtual} totalPaginas={totalPaginas} irPara={irParaPagina} total={total} />
         </>
       )}
 
@@ -294,6 +282,54 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar, 
           onSalvo={() => setRefreshKey((k) => k + 1)}
         />
       )}
+    </div>
+  );
+}
+
+interface PaginacaoProps {
+  paginaAtual: number;
+  totalPaginas: number;
+  irPara: (pagina: number) => void;
+  total: number;
+}
+
+// Bancas grandes (ENEM/UNESP/UNICAMP/USP raspadas) deixaram o banco com dezenas de
+// páginas -- só "Anterior"/"Próxima" exigia clicar 1 por 1 pra navegar longe. Pulos
+// de 3/5 páginas + ir para primeira/última cobrem o caso comum sem virar uma lista de
+// números de página (que não cabe bem no layout). Mesmo componente do GerenciarTab.
+function Paginacao({ paginaAtual, totalPaginas, irPara, total }: PaginacaoProps) {
+  const botaoClasse = 'p-1.5 rounded-lg border border-gray-800 disabled:opacity-40 disabled:cursor-not-allowed hover:enabled:bg-ms-dark flex items-center gap-0.5';
+
+  return (
+    <div className="flex items-center justify-between text-sm text-ms-muted flex-wrap gap-2">
+      <span>{total} questões encontradas</span>
+      <div className="flex items-center gap-1 flex-wrap">
+        <button title="Primeira página" disabled={paginaAtual <= 1} onClick={() => irPara(1)} className={botaoClasse}>
+          <ChevronsLeft className="w-4 h-4" />
+        </button>
+        <button title="Voltar 5 páginas" disabled={paginaAtual <= 1} onClick={() => irPara(paginaAtual - 5)} className={botaoClasse + ' px-2'}>
+          -5
+        </button>
+        <button title="Voltar 3 páginas" disabled={paginaAtual <= 1} onClick={() => irPara(paginaAtual - 3)} className={botaoClasse + ' px-2'}>
+          -3
+        </button>
+        <button title="Página anterior" disabled={paginaAtual <= 1} onClick={() => irPara(paginaAtual - 1)} className={botaoClasse}>
+          <ChevronLeft className="w-4 h-4" /> Anterior
+        </button>
+        <span className="px-3 font-bold text-ms-main whitespace-nowrap">Página {paginaAtual} de {totalPaginas}</span>
+        <button title="Próxima página" disabled={paginaAtual >= totalPaginas} onClick={() => irPara(paginaAtual + 1)} className={botaoClasse}>
+          Próxima <ChevronRight className="w-4 h-4" />
+        </button>
+        <button title="Avançar 3 páginas" disabled={paginaAtual >= totalPaginas} onClick={() => irPara(paginaAtual + 3)} className={botaoClasse + ' px-2'}>
+          +3
+        </button>
+        <button title="Avançar 5 páginas" disabled={paginaAtual >= totalPaginas} onClick={() => irPara(paginaAtual + 5)} className={botaoClasse + ' px-2'}>
+          +5
+        </button>
+        <button title="Última página" disabled={paginaAtual >= totalPaginas} onClick={() => irPara(totalPaginas)} className={botaoClasse}>
+          <ChevronsRight className="w-4 h-4" />
+        </button>
+      </div>
     </div>
   );
 }
