@@ -5,6 +5,7 @@ import type {
   FolhaIdentificada,
   LinhaGabarito,
   ProgressoCorrecao,
+  ResultadoAnulacaoItem,
   ResultadoCorrecaoOmr,
   ResumoVersao,
 } from '../types/correcaoOmr';
@@ -103,6 +104,27 @@ export async function corrigirPorOmr(
   });
   if (error) throw error;
   return data as ResultadoCorrecaoOmr;
+}
+
+/**
+ * Anula (ou reverte) manualmente uma questão de um aluno já corrigido — para o caso do
+ * professor exigir a resolução no papel: o aluno marcou a bolha certa, mas sem
+ * desenvolver, e o professor não quer dar o ponto mesmo assim.
+ */
+export async function anularItemProva(
+  provaId: string,
+  alunoId: string,
+  questionId: string,
+  anular: boolean
+): Promise<ResultadoAnulacaoItem> {
+  const { data, error } = await supabase.rpc('rpc_anular_item_prova', {
+    p_prova_id: provaId,
+    p_aluno_id: alunoId,
+    p_question_id: questionId,
+    p_anular: anular,
+  });
+  if (error) throw error;
+  return data as ResultadoAnulacaoItem;
 }
 
 /** Quem já teve o cartão lido e quem falta. */

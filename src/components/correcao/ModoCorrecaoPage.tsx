@@ -5,6 +5,7 @@ import { aspectoParaEnquadrar, calcularGeometria } from '../../utils/cartaoRespo
 import { lerCartao, lerQrCode, type LeituraCartao } from '../../lib/omr';
 import type { FolhaIdentificada, LinhaGabarito, ResultadoCorrecaoOmr } from '../../types/correcaoOmr';
 import {
+  anularItemProva,
   corrigirPorOmr,
   identificarFolha,
   obterGabaritoVersao,
@@ -58,6 +59,11 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
   const [resultado, setResultado] = useState<ResultadoCorrecaoOmr | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [manual, setManual] = useState(false);
+  // Questões anuladas manualmente pelo professor nesta folha (ex.: bolha certa, mas sem
+  // resolução no papel — ele desconsidera o ponto mesmo assim). Só clicável depois que o
+  // cartão já foi gravado (fase PRONTO): antes disso não existe item na tabela pra anular.
+  const [anulando, setAnulando] = useState<string | null>(null);
+  const [anuladas, setAnuladas] = useState<Set<string>>(new Set());
   // Proporção do cartão desta versão, para a moldura da tela ter a MESMA forma da folha.
   // Sem isto a moldura fica 4:3 deitada, o cartão sai em pé, e o professor acaba virando
   // o celular — que é a posição em que a orientação é mais difícil de resolver.
@@ -88,6 +94,7 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
     setErro(null);
     setManual(false);
     setAspectoCartao(null);
+    setAnuladas(new Set());
     mudarFase('PROCURANDO_QR');
   }, [mudarFase]);
 
@@ -183,6 +190,7 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
         setAspectoCartao(aspectoParaEnquadrar(cache.geom));
         setLeitura(null);
         setErro(null);
+        setAnuladas(new Set());
         void bipe('identificado');
         mudarFase('LENDO_CARTAO');
         return;
@@ -251,6 +259,26 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
       void bipe('erro');
     } finally {
       mudarFase('PRONTO');
+    }
+  }
+
+  async function alternarAnulacao(questionId: string) {
+    const alvo = folhaRef.current;
+    if (!alvo || fase !== 'PRONTO' || !resultado) return;
+    const anularAgora = !anuladas.has(questionId);
+    setAnulando(questionId);
+    try {
+      const r = await anularItemProva(alvo.prova_id, alvo.aluno_id, questionId, anularAgora);
+      setAnuladas((atual) => {
+        const novo = new Set(atual);
+        if (r.anulada_manual) novo.add(questionId); else novo.delete(questionId);
+        return novo;
+      });
+      setResultado((atual) => (atual ? { ...atual, nota: r.nota } : atual));
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAnulando(null);
     }
   }
 
@@ -395,7 +423,22 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
               <p className="flex items-center gap-1.5 text-xs text-ms-muted"><Loader2 className="w-3 h-3 animate-spin" /> Gravando...</p>
             )}
 
-            {leitura && gabarito && <GradeLeitura leitura={leitura} gabarito={gabarito} />}
+            {leitura && gabarito && (
+              <GradeLeitura
+                leitura={leitura}
+                gabarito={gabarito}
+                anuladas={anuladas}
+                anulando={anulando}
+                onClicar={fase === 'PRONTO' && resultado ? alternarAnulacao : undefined}
+              />
+            )}
+
+            {fase === 'PRONTO' && resultado && (
+              <p className="text-[11px] text-ms-muted">
+                Toque numa questão para anular o ponto dela (ex.: marcou a bolha certa mas não
+                mostrou a resolução no papel). Toque de novo para desfazer.
+              </p>
+            )}
 
             {resultado && (
               <div className="flex items-center justify-between gap-3 bg-green-950/40 border border-green-900 rounded-lg px-3 py-2">
@@ -408,6 +451,7 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
                       : ''}
                     {resultado.em_branco > 0 ? ` · ${resultado.em_branco} em branco` : ''}
                     {resultado.anuladas > 0 ? ` · ${resultado.anuladas} anulada(s)` : ''}
+                    {anuladas.size > 0 ? ` · ${anuladas.size} anulada(s) manualmente` : ''}
                   </p>
                 </div>
                 <button
@@ -429,8 +473,24 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
  * As letras lidas, em grade. Verde/vermelho vêm do gabarito da versão, que o professor
  * já tem direito de ver — é o retorno imediato que permite perceber, ainda com a folha
  * na mão, que uma linha saiu em branco por marcação fraca.
+ *
+ * Clicável só depois de PRONTO (onClicar vem undefined antes disso): antes de gravar o
+ * cartão não existe item na tabela pra anular. Uma anulada fica riscada e cinza, mesmo
+ * que a bolha marcada estivesse certa — é exatamente o que a anulação sinaliza.
  */
-function GradeLeitura({ leitura, gabarito }: { leitura: LeituraCartao; gabarito: LinhaGabarito[] }) {
+function GradeLeitura({
+  leitura,
+  gabarito,
+  anuladas,
+  anulando,
+  onClicar,
+}: {
+  leitura: LeituraCartao;
+  gabarito: LinhaGabarito[];
+  anuladas: Set<string>;
+  anulando: string | null;
+  onClicar?: (questionId: string) => void;
+}) {
   return (
     <div className="grid grid-cols-8 sm:grid-cols-12 gap-1">
       {leitura.marcacoes.map((marca, i) => {
@@ -438,24 +498,38 @@ function GradeLeitura({ leitura, gabarito }: { leitura: LeituraCartao; gabarito:
         const duvidosa = leitura.linhasDuvidosas.includes(i + 1);
         const vazia = marca === '' || marca === '*';
         const certa = !vazia && linha?.bolha_correta === marca;
+        const anulada = !!linha && anuladas.has(linha.question_id);
 
-        const cor = vazia
+        const cor = anulada
+          ? 'bg-gray-900 text-gray-500 border-gray-700 line-through opacity-60'
+          : vazia
           ? 'bg-gray-800 text-gray-500 border-gray-700'
           : certa
             ? 'bg-green-900/60 text-green-200 border-green-700'
             : 'bg-red-900/50 text-red-200 border-red-800';
 
+        const clicavel = !!onClicar && !!linha;
+
         return (
-          <div
+          <button
             key={i}
-            title={`Questão ${linha?.numero_na_prova ?? i + 1}${duvidosa ? ' — leitura duvidosa' : ''}`}
+            type="button"
+            disabled={!clicavel || anulando === linha?.question_id}
+            onClick={() => linha && onClicar?.(linha.question_id)}
+            title={
+              clicavel
+                ? `Questão ${linha?.numero_na_prova ?? i + 1}${anulada ? ' — anulada, toque para desfazer' : ' — toque para anular'}`
+                : `Questão ${linha?.numero_na_prova ?? i + 1}${duvidosa ? ' — leitura duvidosa' : ''}`
+            }
             className={`flex flex-col items-center justify-center rounded border text-[10px] leading-none py-1 ${cor} ${
-              duvidosa ? 'ring-1 ring-amber-400' : ''
-            }`}
+              duvidosa && !anulada ? 'ring-1 ring-amber-400' : ''
+            } ${clicavel ? 'cursor-pointer active:scale-95' : 'cursor-default'}`}
           >
             <span className="opacity-60">{linha?.numero_na_prova ?? i + 1}</span>
-            <span className="font-bold text-xs">{marca === '' ? '–' : marca}</span>
-          </div>
+            <span className="font-bold text-xs">
+              {anulando === linha?.question_id ? '···' : marca === '' ? '–' : marca}
+            </span>
+          </button>
         );
       })}
     </div>

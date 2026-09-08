@@ -95,6 +95,13 @@ export interface FolhaIdentificada {
   nota_ponderada: number | null;
 }
 
+/** rpc_anular_item_prova: alterna a anulação manual de uma questão de um aluno. */
+export interface ResultadoAnulacaoItem {
+  question_id: string;
+  anulada_manual: boolean;
+  nota: number | null;
+}
+
 export interface ResultadoCorrecaoOmr {
   aluno_id: string;
   prova_id: string;
