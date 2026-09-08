@@ -30,8 +30,8 @@ import { bipe } from './bipe';
 //    o pior defeito possível aqui — pior que não ler —, porque ninguém percebe.
 // ====================================================================================
 
-/** Largura de processamento. Acima disto o ganho de acerto não paga a queda de quadros. */
-const LARGURA_PROC = 900;
+/** Largura de processamento. 1200px dá resolução para ler com nitidez folhas reduzidas (ex: 2 por página). */
+const LARGURA_PROC = 1200;
 
 /** Intervalo entre processamentos. ~6 leituras/s é mais que suficiente para folha parada. */
 const INTERVALO_MS = 160;

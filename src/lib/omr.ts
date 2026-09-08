@@ -178,7 +178,7 @@ function acharMarcas(
   const candidatos = comps.filter((c) => {
     const larg = c.maxX - c.minX + 1;
     const alt = c.maxY - c.minY + 1;
-    if (larg < 5 || alt < 5) return false;
+    if (larg < 4 || alt < 4) return false;
 
     // Faixa larga de propósito: a marca é um quadrado no papel, mas a perspectiva de um
     // celular inclinado sobre a mesa a entrega como paralelogramo.
@@ -192,7 +192,8 @@ function acharMarcas(
     if (c.area / (larg * alt) < 0.55) return false;
 
     const rel = c.area / areaImagem;
-    return rel > 0.00012 && rel < 0.02;
+    // Permite detectar marcas menores quando a folha é impressa 2 por página (~70% da escala)
+    return rel > 0.00007 && rel < 0.02;
   });
 
   if (candidatos.length < 4) return null;
@@ -226,12 +227,13 @@ function acharMarcas(
   // Quatro pontos distintos: sem isto, um mesmo borrão poderia ser eleito duas vezes.
   for (let i = 0; i < 4; i++) {
     for (let j = i + 1; j < 4; j++) {
-      if (Math.hypot(quad[i].x - quad[j].x, quad[i].y - quad[j].y) < 20) return null;
+      if (Math.hypot(quad[i].x - quad[j].x, quad[i].y - quad[j].y) < 15) return null;
     }
   }
 
   // Um quadrilátero pequeno demais não é a folha, são quatro sujeiras agrupadas.
-  if (areaPoligono(quad) < areaImagem * 0.08) return null;
+  // Limite ajustado de 0.08 para 0.035 para permitir ler cartões impressos em 2 por folha.
+  if (areaPoligono(quad) < areaImagem * 0.035) return null;
 
   // Os quatro escolhidos precisam ser parecidos ENTRE SI, não só grandes. É esta
   // checagem que pega o caso perigoso: um canto da folha fora do quadro deixa três

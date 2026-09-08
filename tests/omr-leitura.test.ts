@@ -250,6 +250,7 @@ cenario('20 questões, girada -12 graus', itens20, respostas20, { giroGraus: -12
 cenario('20 questões, celular inclinado', itens20, respostas20, { inclinacao: 0.16 });
 cenario('20 questões, inclinado e girado', itens20, respostas20, { giroGraus: 9, inclinacao: 0.13 });
 cenario('20 questões, câmera longe (50% do quadro)', itens20, respostas20, { ocupacao: 0.5 });
+cenario('20 questões, 2 páginas por folha / reduzido (38% do quadro)', itens20, respostas20, { ocupacao: 0.38 });
 cenario('10 questões (1 bloco)', itens10, respostasDe(itens10), { giroGraus: 5 });
 cenario('45 questões (3 blocos)', itens45, respostasDe(itens45), { giroGraus: -6, inclinacao: 0.1 });
 cenario('20 questões, girada 20 graus', itens20, respostas20, { giroGraus: 20 });

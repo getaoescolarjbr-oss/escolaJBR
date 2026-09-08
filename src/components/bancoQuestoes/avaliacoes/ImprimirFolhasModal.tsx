@@ -52,6 +52,47 @@ const CSS_LOTE = `
     padding-bottom: 4mm;
     border-bottom: 1px dashed #999;
   }
+
+  /* Verso de rascunho / separador de folha física para frente-e-verso ou 2 páginas por folha */
+  .pagina-rascunho {
+    box-sizing: border-box;
+    padding: 10mm 8mm;
+    min-height: 260mm;
+    display: flex;
+    flex-direction: column;
+  }
+  .pagina-rascunho-box {
+    flex: 1;
+    border: 1.5px dashed #a0aec0;
+    border-radius: 8px;
+    padding: 8mm;
+    display: flex;
+    flex-direction: column;
+    min-height: 240mm;
+  }
+  .pagina-rascunho-header {
+    text-align: center;
+    border-bottom: 1px solid #e2e8f0;
+    padding-bottom: 4mm;
+    margin-bottom: 8mm;
+  }
+  .pagina-rascunho-titulo {
+    display: block;
+    font-size: 12pt;
+    font-weight: 800;
+    color: #002677;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+  }
+  .pagina-rascunho-sub {
+    display: block;
+    font-size: 8.5pt;
+    color: #718096;
+    margin-top: 3px;
+  }
+  .pagina-em-branco {
+    min-height: 260mm;
+  }
 `;
 
 interface Props {
@@ -75,6 +116,14 @@ const POSICAO_CARTAO_LABEL: Record<PosicaoCartao, string> = {
   SEPARADO: 'Em folha separada',
 };
 
+type ModoSeparador = 'RASCUNHO_VERSO' | 'PAGINA_BRANCA' | 'CONTINUO';
+
+const MODO_SEPARADOR_LABEL: Record<ModoSeparador, string> = {
+  RASCUNHO_VERSO: 'Folha de rascunho no verso (Frente/Verso ou 2 por folha)',
+  PAGINA_BRANCA: 'Página em branco no verso (Frente/Verso ou 2 por folha)',
+  CONTINUO: 'Contínuo (sem verso/rascunho)',
+};
+
 export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
   const [alocacoes, setAlocacoes] = useState<AlocacaoProva[] | null>(null);
   const [questoes, setQuestoes] = useState<Question[]>([]);
@@ -91,8 +140,10 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
 
   const [turmaFiltro, setTurmaFiltro] = useState('');
   const [versaoFiltro, setVersaoFiltro] = useState('');
+  const [alunoFiltro, setAlunoFiltro] = useState('');
   const [conteudo, setConteudo] = useState<Conteudo>('PROVA_E_CARTAO');
   const [colunas, setColunas] = useState<1 | 2>(2);
+  const [modoSeparador, setModoSeparador] = useState<ModoSeparador>('RASCUNHO_VERSO');
   // Vem da configuração da avaliação, mas é ajustável aqui: reimprimir de outro jeito não
   // deveria obrigar o professor a voltar e editar a avaliação inteira. cartao_separado é
   // só booleano no banco (folha própria ou não); "antes das questões" é uma opção só
@@ -159,14 +210,31 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
   const versaoPorAluno =
     versoes.length > 1 && versoes.every((v) => (alocacoes ?? []).filter((a) => a.rotulo === v).length === 1);
 
+  const discrepanciaQuestoes = useMemo(() => {
+    if (!alocacoes || alocacoes.length === 0 || questoes.length === 0) return null;
+    const qtdVersao = alocacoes[0].ordem_questoes?.length ?? 0;
+    if (qtdVersao !== questoes.length) {
+      return { totalProva: questoes.length, totalVersao: qtdVersao };
+    }
+    return null;
+  }, [alocacoes, questoes]);
+
+  const alunosDisponiveis = useMemo(() => {
+    const filtrados = (alocacoes ?? []).filter(
+      (a) => (!turmaFiltro || a.turma_nome === turmaFiltro) && (!versaoFiltro || a.rotulo === versaoFiltro)
+    );
+    return [...filtrados].sort((a, b) => a.aluno_nome.localeCompare(b.aluno_nome, 'pt-BR'));
+  }, [alocacoes, turmaFiltro, versaoFiltro]);
+
   const selecionadas = useMemo(
     () => (alocacoes ?? []).filter(
       (a) =>
         (!turmaFiltro || a.turma_nome === turmaFiltro) &&
         (!versaoFiltro || a.rotulo === versaoFiltro) &&
+        (!alunoFiltro || a.aluno_id === alunoFiltro) &&
         (!somenteNovos || alunosNovosIds.has(a.aluno_id))
     ),
-    [alocacoes, turmaFiltro, versaoFiltro, somenteNovos, alunosNovosIds]
+    [alocacoes, turmaFiltro, versaoFiltro, alunoFiltro, somenteNovos, alunosNovosIds]
   );
 
   async function handleGerarVersoes() {
@@ -314,6 +382,26 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
         blocos.push(<div className="pagina" key={`c-${aloc.codigo}`}>{cartao}</div>);
       }
 
+      // Separador para garantir início em nova folha física (frente-e-verso e 2 pág/folha)
+      if (conteudo !== 'SO_CARTAO') {
+        if (modoSeparador === 'RASCUNHO_VERSO') {
+          blocos.push(
+            <div className="pagina pagina-rascunho" key={`r-${aloc.codigo}`}>
+              <div className="pagina-rascunho-box">
+                <div className="pagina-rascunho-header">
+                  <span className="pagina-rascunho-titulo">Espaço para Rascunho / Cálculos</span>
+                  <span className="pagina-rascunho-sub">
+                    Aluno: <strong>{aloc.aluno_nome}</strong> &nbsp;·&nbsp; Turma: {aloc.turma_nome ?? '—'} &nbsp;·&nbsp; Versão: {aloc.rotulo}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        } else if (modoSeparador === 'PAGINA_BRANCA') {
+          blocos.push(<div className="pagina pagina-em-branco" key={`b-${aloc.codigo}`} />);
+        }
+      }
+
       return blocos;
     });
   }
@@ -341,6 +429,20 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
             </div>
           )}
 
+          {discrepanciaQuestoes && (
+            <div className="flex items-start gap-3 bg-amber-950/40 border border-amber-800 rounded-xl px-4 py-3">
+              <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm text-amber-200 font-bold">
+                  Atenção: A prova possui {discrepanciaQuestoes.totalProva} questões, mas o sorteio gravado tem {discrepanciaQuestoes.totalVersao} questões.
+                </p>
+                <p className="text-xs text-amber-300/90 leading-relaxed">
+                  Questões foram adicionadas ou editadas após o sorteio das versões. O sistema já incluiu todas as {discrepanciaQuestoes.totalProva} questões nesta impressão para que nenhuma falte na prova, mas para sincronizar o gabarito oficial com perfeição, clique no botão <strong>Sortear de novo</strong> abaixo.
+                </p>
+              </div>
+            </div>
+          )}
+
           {carregando ? (
             <div className="flex items-center gap-2 text-ms-muted py-10 justify-center">
               <Loader2 className="w-5 h-5 animate-spin" /> Carregando folhas...
@@ -363,9 +465,9 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-3">
                 <Campo label="Turma">
-                  <select value={turmaFiltro} onChange={(e) => setTurmaFiltro(e.target.value)} className={SELECT_CLS}>
+                  <select value={turmaFiltro} onChange={(e) => { setTurmaFiltro(e.target.value); setAlunoFiltro(''); }} className={SELECT_CLS}>
                     <option value="">Todas</option>
                     {turmas.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
@@ -378,11 +480,21 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                       Uma por aluno ({versoes.length})
                     </div>
                   ) : (
-                    <select value={versaoFiltro} onChange={(e) => setVersaoFiltro(e.target.value)} className={SELECT_CLS}>
+                    <select value={versaoFiltro} onChange={(e) => { setVersaoFiltro(e.target.value); setAlunoFiltro(''); }} className={SELECT_CLS}>
                       <option value="">Todas</option>
                       {versoes.map((v) => <option key={v} value={v}>Versão {v}</option>)}
                     </select>
                   )}
+                </Campo>
+                <Campo label="Aluno individual">
+                  <select value={alunoFiltro} onChange={(e) => setAlunoFiltro(e.target.value)} className={SELECT_CLS}>
+                    <option value="">Todos ({alunosDisponiveis.length})</option>
+                    {alunosDisponiveis.map((a) => (
+                      <option key={a.aluno_id} value={a.aluno_id}>
+                        {a.aluno_nome} {a.numero_chamada != null ? `(Nº ${a.numero_chamada})` : ''} - {a.rotulo}
+                      </option>
+                    ))}
+                  </select>
                 </Campo>
                 <Campo label="Imprimir">
                   <select value={conteudo} onChange={(e) => setConteudo(e.target.value as Conteudo)} className={SELECT_CLS}>
@@ -391,7 +503,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                     ))}
                   </select>
                 </Campo>
-                <Campo label="Colunas da prova">
+                <Campo label="Colunas">
                   <select value={colunas} onChange={(e) => setColunas(Number(e.target.value) as 1 | 2)} className={SELECT_CLS}>
                     <option value={1}>1 coluna</option>
                     <option value={2}>2 colunas</option>
@@ -405,6 +517,18 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                   >
                     {(Object.keys(POSICAO_CARTAO_LABEL) as PosicaoCartao[]).map((p) => (
                       <option key={p} value={p}>{POSICAO_CARTAO_LABEL[p]}</option>
+                    ))}
+                  </select>
+                </Campo>
+                <Campo label="Separar provas (Frente/Verso / 2 pág)">
+                  <select
+                    value={modoSeparador}
+                    onChange={(e) => setModoSeparador(e.target.value as ModoSeparador)}
+                    className={SELECT_CLS}
+                    title="Garante que a próxima prova inicie sempre em uma folha física limpa"
+                  >
+                    {(Object.keys(MODO_SEPARADOR_LABEL) as ModoSeparador[]).map((s) => (
+                      <option key={s} value={s}>{MODO_SEPARADOR_LABEL[s]}</option>
                     ))}
                   </select>
                 </Campo>

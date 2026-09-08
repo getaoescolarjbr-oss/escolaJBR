@@ -27,7 +27,27 @@ export function aplicarVersao(
 ): Question[] {
   const permutacoes = mapa ?? {};
 
-  return ordem
+  // 1. Elimina qualquer ID duplicado que possa ter vindo na ordem sorteada
+  const vistos = new Set<string>();
+  const ordemLimpa: string[] = [];
+  for (const id of ordem) {
+    if (!vistos.has(id) && questoesPorId.has(id)) {
+      vistos.add(id);
+      ordemLimpa.push(id);
+    }
+  }
+
+  // 2. Se a prova tem questões cadastradas que NÃO estavam na versão sorteada
+  // (ex: adicionadas por cotas de outras disciplinas após o sorteio inicial da versão),
+  // anexa-as ao final para garantir que nenhuma questão fique faltando na prova impressa.
+  for (const [id] of questoesPorId) {
+    if (!vistos.has(id)) {
+      vistos.add(id);
+      ordemLimpa.push(id);
+    }
+  }
+
+  return ordemLimpa
     .map((id) => questoesPorId.get(id))
     .filter((q): q is Question => !!q)
     .map((q) => {
