@@ -149,7 +149,16 @@ export const PROVA_QUESTOES_CSS = `
     break-inside: avoid;
     page-break-inside: avoid;
   }
-  .questao-img { max-width: 100%; margin: 4px 0; }
+  .questao-img {
+    max-width: 100%;
+    max-height: 65mm;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain;
+    margin: 4px auto;
+    display: block;
+  }
+  .questoes-coluna:not(.duas-colunas) .questao-img { max-height: 95mm; }
 
   /* Linhas pautadas das questões dissertativas/redação, no lugar das alternativas.
      São border-bottom — regra de verdade, não background: o navegador imprime
@@ -176,18 +185,21 @@ export const PROVA_QUESTOES_CSS = `
 
   .qm-img-group { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: center; gap: 8px; margin: 4px 0; }
 
-  /* Teto em mm: em duas colunas cada coluna tem ~90mm. Imagens no enunciado podem
-     ser um pouco maiores; imagens dentro de alternativas (.alternativa .qm-img) devem
-     ser bem compactas para não ocupar espaço desnecessário no papel.
-     No papel o limitador REAL é a largura da coluna (~90mm em duas colunas), e o
-     max-width: 100% já cuida disso. O teto de altura serve só para uma figura
-     muito alta não ocupar a página inteira; apertá-lo demais encolhia a figura
-     abaixo do tamanho natural e tornava o gráfico ilegível. */
-  .qm-img { max-width: 100%; max-height: 78mm; width: auto; height: auto; object-fit: contain; }
-  .questoes-coluna:not(.duas-colunas) .qm-img { max-height: 114mm; }
+  /* Teto em mm: em duas colunas cada coluna tem ~90mm, então 65mm mantém a figura legível sem
+     empurrar as alternativas pra página seguinte. Imagens no enunciado ficam contidas;
+     imagens dentro de alternativas (.alternativa .qm-img) devem ser bem compactas
+     para não ocupar espaço desnecessário no papel. */
+  .qm-img {
+    max-width: 100%;
+    max-height: 65mm;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain;
+  }
+  .questoes-coluna:not(.duas-colunas) .qm-img { max-height: 95mm; }
 
-  /* Imagens dentro de alternativas. Em duas colunas (~90mm) o teto é 48mm; em
-     coluna única, 64mm. */
+  /* Imagens dentro de alternativas. Em duas colunas (~90mm) o teto é 30mm; em
+     coluna única, 40mm. */
   .alternativa .qm-img,
   .alternativa img {
     max-height: 30mm !important;

@@ -32,6 +32,26 @@ const CSS_LOTE = `
 
   .cartao-omr-folha { break-inside: avoid; }
 
+  .pagina {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Garante que as imagens na prova com QR Code respeitem exatamente os mesmos limites da prova sem QR Code */
+  .pagina .questao-img,
+  .pagina .qm-img {
+    max-width: 100% !important;
+    max-height: 65mm !important;
+    width: auto !important;
+    height: auto !important;
+    object-fit: contain !important;
+  }
+  .pagina .questoes-coluna:not(.duas-colunas) .questao-img,
+  .pagina .questoes-coluna:not(.duas-colunas) .qm-img {
+    max-height: 85mm !important;
+  }
+
   /* O cartão no fim da prova: não pode partir ao meio nem se separar do que veio antes
      sem necessidade. Sem o avoid, uma metade das bolhas cairia na página seguinte e a
      folha ficaria impossível de ler pela câmera — as quatro marcas de referência
@@ -505,8 +525,8 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                 </Campo>
                 <Campo label="Colunas">
                   <select value={colunas} onChange={(e) => setColunas(Number(e.target.value) as 1 | 2)} className={SELECT_CLS}>
+                    <option value={2}>2 colunas (Padrão)</option>
                     <option value={1}>1 coluna</option>
-                    <option value={2}>2 colunas</option>
                   </select>
                 </Campo>
                 <Campo label="Cartão-resposta">
