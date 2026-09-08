@@ -24,13 +24,17 @@ import { CartaoRespostaFolha } from './CartaoRespostaFolha';
 const CSS_LOTE = `
   ${CARTAO_CSS}
 
-  /* Cada bloco começa numa folha nova, menos o primeiro — assim não sobra uma página
-     em branco no fim da pilha. Só funciona porque renderFolhas() achata os blocos de
-     todos os alunos num único array de irmãos diretos: o combinador "+" do CSS não
-     atravessa um <div> de agrupamento por aluno (ver comentário lá). */
+  /* Quebras de página: entre alunos e entre páginas do mesmo aluno */
+  .bloco-aluno + .bloco-aluno { break-before: page; page-break-before: always; }
+  .bloco-aluno .pagina + .pagina { break-before: page; page-break-before: always; }
   .pagina + .pagina { break-before: page; page-break-before: always; }
 
   .cartao-omr-folha { break-inside: avoid; }
+
+  .bloco-aluno {
+    width: 100%;
+    box-sizing: border-box;
+  }
 
   .pagina {
     width: 100%;
@@ -136,13 +140,57 @@ const POSICAO_CARTAO_LABEL: Record<PosicaoCartao, string> = {
   SEPARADO: 'Em folha separada',
 };
 
-type ModoSeparador = 'RASCUNHO_VERSO' | 'PAGINA_BRANCA' | 'CONTINUO';
+type ModoSeparador = 'RASCUNHO_VERSO' | 'SEMPRE_RASCUNHO' | 'PAGINA_BRANCA' | 'CONTINUO';
 
 const MODO_SEPARADOR_LABEL: Record<ModoSeparador, string> = {
-  RASCUNHO_VERSO: 'Folha de rascunho no verso (Frente/Verso ou 2 por folha)',
-  PAGINA_BRANCA: 'Página em branco no verso (Frente/Verso ou 2 por folha)',
+  RASCUNHO_VERSO: 'Folha de rascunho no verso (Padrão - se páginas ímpares)',
+  SEMPRE_RASCUNHO: 'Sempre incluir rascunho (folha própria se páginas pares)',
+  PAGINA_BRANCA: 'Página em branco no verso (se páginas ímpares)',
   CONTINUO: 'Contínuo (sem verso/rascunho)',
 };
+
+function estimarPaginasProva(
+  questoes: Question[],
+  conteudo: Conteudo,
+  posicaoCartao: PosicaoCartao,
+  colunas: 1 | 2
+): number {
+  if (conteudo === 'SO_CARTAO') return 1;
+
+  const ALTURA_UTIL_MM = 270;
+  let alturaTotalMm = 35; // cabeçalho
+
+  if (conteudo === 'PROVA_E_CARTAO' && posicaoCartao === 'INICIO') {
+    alturaTotalMm += 90; // cartão OMR antes das questões
+  }
+
+  let alturaQuestoesMm = 0;
+  for (const q of questoes) {
+    let altQ = 22;
+    if (q.statement && q.statement.length > 200) altQ += Math.ceil((q.statement.length - 200) / 100) * 8;
+    if (q.image_url || (q.statement && q.statement.includes('[[IMG:'))) altQ += 60;
+    if (q.alternatives && q.alternatives.some((a) => a.image_url || (a.text && a.text.includes('[[IMG:')))) altQ += 30;
+    alturaQuestoesMm += altQ;
+  }
+
+  if (colunas === 2) {
+    alturaTotalMm += Math.ceil(alturaQuestoesMm / 1.85);
+  } else {
+    alturaTotalMm += alturaQuestoesMm;
+  }
+
+  if (conteudo === 'PROVA_E_CARTAO' && posicaoCartao === 'FIM') {
+    alturaTotalMm += 90;
+  }
+
+  let paginas = Math.max(1, Math.ceil(alturaTotalMm / ALTURA_UTIL_MM));
+
+  if (conteudo === 'PROVA_E_CARTAO' && posicaoCartao === 'SEPARADO') {
+    paginas += 1;
+  }
+
+  return paginas;
+}
 
 export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
   const [alocacoes, setAlocacoes] = useState<AlocacaoProva[] | null>(null);
@@ -314,7 +362,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
   // seguinte). Por isso flatMap em vez de map: o retorno de cada aluno já é achatado no
   // array final, todos no mesmo nível.
   function renderFolhas(lista: AlocacaoProva[]) {
-    return lista.flatMap((aloc) => {
+    return lista.map((aloc) => {
       const daVersao = aplicarVersao(questoesPorId, aloc.ordem_questoes, aloc.mapa_alternativas);
       const itens = itensCartaoDaVersao(daVersao);
       const geom = calcularGeometria(itens);
@@ -352,7 +400,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
 
       if (conteudo !== 'SO_CARTAO') {
         blocos.push(
-          <div className="pagina" key={`p-${aloc.codigo}`}>
+          <div className="pagina pagina-conteudo" key={`p-${aloc.codigo}`}>
             <div className="prova-header">
               <img src={`${window.location.origin}/logo.png.png`} alt="" className="prova-logo" />
               <div className="prova-header-info">
@@ -399,12 +447,24 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
       }
 
       if (cartaoEmFolhaPropria && cartao) {
-        blocos.push(<div className="pagina" key={`c-${aloc.codigo}`}>{cartao}</div>);
+        blocos.push(<div className="pagina pagina-cartao" key={`c-${aloc.codigo}`}>{cartao}</div>);
       }
 
-      // Separador para garantir início em nova folha física (frente-e-verso e 2 pág/folha)
+      // Separador para garantir início em nova folha física (frente-e-verso e 2 pág/folha).
+      // Se a prova já possui páginas pares (ex: 2 páginas):
+      // ela já preenche frente-e-verso perfeitamente! Adicionar um rascunho a tornaria 3 páginas
+      // (ímpar), fazendo a primeira página do próximo aluno sair ao lado do rascunho na mesma folha.
+      const pagsCalculadas = estimarPaginasProva(daVersao, conteudo, posicaoCartao, colunas);
+      const ehPar = pagsCalculadas % 2 === 0;
+
       if (conteudo !== 'SO_CARTAO') {
-        if (modoSeparador === 'RASCUNHO_VERSO') {
+        const incluirRascunho =
+          modoSeparador === 'SEMPRE_RASCUNHO' ||
+          (modoSeparador === 'RASCUNHO_VERSO' && !ehPar);
+
+        const incluirBranca = modoSeparador === 'PAGINA_BRANCA' && !ehPar;
+
+        if (incluirRascunho) {
           blocos.push(
             <div className="pagina pagina-rascunho" key={`r-${aloc.codigo}`}>
               <div className="pagina-rascunho-box">
@@ -417,12 +477,27 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
               </div>
             </div>
           );
-        } else if (modoSeparador === 'PAGINA_BRANCA') {
+        } else if (incluirBranca) {
           blocos.push(<div className="pagina pagina-em-branco" key={`b-${aloc.codigo}`} />);
+        }
+
+        // Se o usuário quer sempre rascunho mas a prova tem páginas pares:
+        // adiciona 1 página em branco para totalizar 4 páginas e não quebrar o alinhamento
+        if (modoSeparador === 'SEMPRE_RASCUNHO' && ehPar) {
+          blocos.push(<div className="pagina pagina-em-branco" key={`b2-${aloc.codigo}`} />);
         }
       }
 
-      return blocos;
+      return (
+        <div
+          className="bloco-aluno"
+          key={aloc.codigo}
+          data-aluno={aloc.codigo}
+          data-separador={modoSeparador}
+        >
+          {blocos}
+        </div>
+      );
     });
   }
 

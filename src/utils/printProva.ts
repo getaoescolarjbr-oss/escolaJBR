@@ -286,6 +286,52 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
   ${clone.innerHTML}
   <script>
     window.onload = function() {
+      try {
+        var ruler = document.createElement('div');
+        ruler.style.height = '277mm';
+        ruler.style.position = 'absolute';
+        ruler.style.visibility = 'hidden';
+        document.body.appendChild(ruler);
+        var a4Height = ruler.offsetHeight || 1047;
+        document.body.removeChild(ruler);
+
+        var blocos = document.querySelectorAll('.bloco-aluno');
+        blocos.forEach(function(bloco) {
+          var conteudo = bloco.querySelector('.pagina-conteudo');
+          var rascunho = bloco.querySelector('.pagina-rascunho');
+          var emBranco = bloco.querySelector('.pagina-em-branco');
+          var cartao = bloco.querySelector('.pagina-cartao');
+          if (!conteudo) return;
+
+          var h = conteudo.scrollHeight;
+          var paginasConteudo = Math.max(1, Math.ceil((h - 25) / a4Height));
+          if (cartao) paginasConteudo += 1;
+
+          var modo = bloco.getAttribute('data-separador');
+
+          if (modo === 'RASCUNHO_VERSO' || modo === 'PAGINA_BRANCA') {
+            // Se as páginas já forem pares (ex: 2 páginas):
+            // Remove o separador extra para não deixar o total ímpar (3 páginas),
+            // evitando que o próximo aluno comece ao lado do rascunho na mesma folha.
+            if (paginasConteudo % 2 === 0) {
+              if (rascunho) rascunho.remove();
+              if (emBranco) emBranco.remove();
+            }
+          } else if (modo === 'SEMPRE_RASCUNHO') {
+            // Se o usuário quer sempre rascunho mesmo com páginas pares:
+            // adiciona página em branco para manter o total de páginas PAR (4 páginas).
+            if (paginasConteudo % 2 === 0 && rascunho && !emBranco) {
+              var blank = document.createElement('div');
+              blank.className = 'pagina pagina-em-branco';
+              blank.style.minHeight = '260mm';
+              bloco.appendChild(blank);
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Erro no ajuste de páginas:', err);
+      }
+
       window.print();
       setTimeout(function() { window.close(); }, 500);
     };
