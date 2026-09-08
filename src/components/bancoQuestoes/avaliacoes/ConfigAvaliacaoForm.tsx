@@ -11,6 +11,14 @@ import { getBimestreFromDate } from '../../../utils/academicUtils';
 
 const BIMESTRES = [1, 2, 3, 4] as const;
 
+type PosicaoCartao = 'INICIO' | 'FIM' | 'SEPARADO';
+
+const POSICAO_CARTAO_LABEL: Record<PosicaoCartao, string> = {
+  INICIO: 'Junto, antes das questões',
+  FIM: 'Junto, no fim da prova',
+  SEPARADO: 'Em folha separada',
+};
+
 const inputClass =
   'w-full px-3 py-2 bg-ms-dark border border-gray-800 rounded-lg text-ms-main text-sm outline-none focus:ring-2 focus:ring-ms-blueText';
 
@@ -29,6 +37,7 @@ export interface ConfigAvaliacaoInicial {
   embaralhar?: ModoEmbaralhar;
   qtdVersoes?: number;
   cartaoSeparado?: boolean;
+  cartaoPosicao?: 'INICIO' | 'FIM';
   modoNota?: ModoNota;
   ponderadaEscopo?: PonderadaEscopo;
   lancarNoBoletim?: boolean;
@@ -73,10 +82,14 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
   // turma), pra cada aluno da sala receber uma ordem de questões diferente.
   const [modoVersoes, setModoVersoes] = useState<'FIXO' | 'POR_ALUNO'>('FIXO');
   const [contandoAlunos, setContandoAlunos] = useState(false);
-  // Padrão: cartão JUNTO com a prova. Separado gasta uma folha a mais por aluno — numa
-  // turma de 30, uma resma a cada poucas avaliações — e só compensa quando o professor
-  // quer recolher os cartões e devolver as provas.
-  const [cartaoSeparado, setCartaoSeparado] = useState<boolean>(inicial?.cartaoSeparado ?? false);
+  // Padrão: cartão JUNTO com a prova, no fim. Separado gasta uma folha a mais por aluno —
+  // numa turma de 30, uma resma a cada poucas avaliações — e só compensa quando o
+  // professor quer recolher os cartões e devolver as provas. Estado único de 3 valores
+  // (em vez de um boolean + um enum) porque as duas colunas de banco (cartao_separado e
+  // cartao_posicao) descrevem uma escolha só do ponto de vista do professor.
+  const posicaoInicial: PosicaoCartao =
+    inicial?.cartaoSeparado ? 'SEPARADO' : (inicial?.cartaoPosicao ?? 'FIM');
+  const [posicaoCartao, setPosicaoCartao] = useState<PosicaoCartao>(posicaoInicial);
   const [modoNota, setModoNota] = useState<ModoNota>(
     inicial?.modoNota ?? ((inicial?.tipo ?? 'AVALIACAO') === 'SIMULADO' ? 'SEM_NOTA' : 'DIRETA')
   );
@@ -211,7 +224,8 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
         turmaIds: Array.from(turmaIds),
         embaralhar,
         qtdVersoes: versoesEfetivas,
-        cartaoSeparado,
+        cartaoSeparado: posicaoCartao === 'SEPARADO',
+        cartaoPosicao: posicaoCartao === 'INICIO' ? 'INICIO' : 'FIM',
         modoNota,
         ponderadaEscopo,
         lancarNoBoletim,
@@ -409,19 +423,23 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
               <label className="text-xs font-bold text-ms-muted">Cartão-resposta</label>
               <select
                 className={inputClass}
-                value={cartaoSeparado ? 'SEPARADO' : 'JUNTO'}
-                onChange={(e) => setCartaoSeparado(e.target.value === 'SEPARADO')}
+                value={posicaoCartao}
+                onChange={(e) => setPosicaoCartao(e.target.value as PosicaoCartao)}
               >
-                <option value="JUNTO">Junto, no fim da prova</option>
-                <option value="SEPARADO">Em folha separada</option>
+                {(Object.keys(POSICAO_CARTAO_LABEL) as PosicaoCartao[]).map((p) => (
+                  <option key={p} value={p}>{POSICAO_CARTAO_LABEL[p]}</option>
+                ))}
               </select>
             </div>
           </div>
 
           <p className="text-xs text-ms-muted leading-relaxed">
-            {cartaoSeparado
-              ? 'Uma folha só para o cartão, por aluno. Útil quando você quer recolher os cartões e devolver as provas — ao custo de uma folha a mais por aluno.'
-              : 'O cartão sai logo depois da última questão, aproveitando a sobra da página. Se não couber ali, vai inteiro para a folha seguinte — nunca partido ao meio.'}
+            {posicaoCartao === 'SEPARADO' &&
+              'Uma folha só para o cartão, por aluno. Útil quando você quer recolher os cartões e devolver as provas — ao custo de uma folha a mais por aluno.'}
+            {posicaoCartao === 'FIM' &&
+              'O cartão sai logo depois da última questão, aproveitando a sobra da página. Se não couber ali, vai inteiro para a folha seguinte — nunca partido ao meio.'}
+            {posicaoCartao === 'INICIO' &&
+              'O cartão sai logo no início, antes da primeira questão.'}
             {embaralhar !== 'NENHUM' && ' A versão A nunca é embaralhada: ela é a sua cópia de referência.'}
           </p>
         </div>

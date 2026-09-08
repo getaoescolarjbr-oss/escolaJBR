@@ -22,6 +22,7 @@ export async function salvarConfigCorrecao(provaId: string, config: ConfigCorrec
       embaralhar: config.embaralhar,
       qtd_versoes: config.qtd_versoes,
       cartao_separado: config.cartao_separado,
+      cartao_posicao: config.cartao_posicao,
       modo_nota: config.modo_nota,
       ponderada_escopo: config.ponderada_escopo,
       lancar_no_boletim: config.lancar_no_boletim,

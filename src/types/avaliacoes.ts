@@ -30,6 +30,8 @@ export interface Avaliacao {
   embaralhar: ModoEmbaralhar;
   qtd_versoes: number;
   cartao_separado: boolean;
+  /** Só importa quando cartao_separado = false: cartão antes ou depois das questões. */
+  cartao_posicao: 'INICIO' | 'FIM';
   modo_nota: ModoNota;
   ponderada_escopo: PonderadaEscopo;
   lancar_no_boletim: boolean;
@@ -69,6 +71,7 @@ export interface NovaAvaliacaoInput {
   embaralhar: ModoEmbaralhar;
   qtdVersoes: number;
   cartaoSeparado: boolean;
+  cartaoPosicao: 'INICIO' | 'FIM';
   modoNota: ModoNota;
   ponderadaEscopo: PonderadaEscopo;
   lancarNoBoletim: boolean;
@@ -279,6 +282,7 @@ export interface NovaAvaliacaoAreaInput {
   embaralhar?: string;
   qtd_versoes?: number;
   cartao_separado?: boolean;
+  cartao_posicao?: 'INICIO' | 'FIM';
 }
 
 export interface AvaliacaoArea {
@@ -299,6 +303,7 @@ export interface AvaliacaoArea {
   embaralhar: string;
   qtd_versoes: number;
   cartao_separado: boolean;
+  cartao_posicao: 'INICIO' | 'FIM';
   turma_nomes?: string[];
   cotas?: ProvaAreaCota[];
   edicao_bloqueada: boolean;

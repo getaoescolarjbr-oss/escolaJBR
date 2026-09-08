@@ -33,6 +33,8 @@ export interface ConfigCorrecaoProva {
   embaralhar: ModoEmbaralhar;
   qtd_versoes: number;
   cartao_separado: boolean;
+  /** Só importa quando cartao_separado = false: cartão antes ou depois das questões. */
+  cartao_posicao: 'INICIO' | 'FIM';
   modo_nota: ModoNota;
   ponderada_escopo: PonderadaEscopo;
   lancar_no_boletim: boolean;

@@ -12,6 +12,13 @@ import { contarAlunosAtivosTurmas } from '../../services/correcaoOmrService';
 import { getCurrentBimestre } from '../../utils/academicUtils';
 
 type ModoVersoes = 'FIXO' | 'POR_ALUNO';
+type PosicaoCartao = 'INICIO' | 'FIM' | 'SEPARADO';
+
+const POSICAO_CARTAO_LABEL: Record<PosicaoCartao, string> = {
+  INICIO: 'Junto, antes das questões',
+  FIM: 'Junto, no fim da prova',
+  SEPARADO: 'Em folha separada',
+};
 
 interface Props {
   area: AreaConhecimento;
@@ -43,7 +50,9 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
   const [qtdVersoes, setQtdVersoes] = useState<number>(avaliacaoExistente?.qtd_versoes ?? 1);
   const [modoVersoes, setModoVersoes] = useState<ModoVersoes>('FIXO');
   const [contandoAlunos, setContandoAlunos] = useState(false);
-  const [cartaoSeparado, setCartaoSeparado] = useState<boolean>(avaliacaoExistente?.cartao_separado ?? false);
+  const [posicaoCartao, setPosicaoCartao] = useState<PosicaoCartao>(
+    avaliacaoExistente?.cartao_separado ? 'SEPARADO' : (avaliacaoExistente?.cartao_posicao ?? 'FIM')
+  );
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>([]);
   
@@ -314,7 +323,8 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
         cotas: cotasPayload,
         embaralhar,
         qtd_versoes: versoesEfetivas,
-        cartao_separado: cartaoSeparado,
+        cartao_separado: posicaoCartao === 'SEPARADO',
+        cartao_posicao: posicaoCartao === 'INICIO' ? 'INICIO' : 'FIM',
       };
 
       if (editando) {
@@ -517,12 +527,13 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
                   <div>
                     <label className="text-xs font-bold text-ms-muted">Cartão-resposta</label>
                     <select
-                      value={cartaoSeparado ? 'SEPARADO' : 'JUNTO'}
-                      onChange={(e) => setCartaoSeparado(e.target.value === 'SEPARADO')}
+                      value={posicaoCartao}
+                      onChange={(e) => setPosicaoCartao(e.target.value as PosicaoCartao)}
                       className="w-full mt-1 px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
                     >
-                      <option value="JUNTO">Junto, no fim da prova</option>
-                      <option value="SEPARADO">Em folha separada</option>
+                      {(Object.keys(POSICAO_CARTAO_LABEL) as PosicaoCartao[]).map((p) => (
+                        <option key={p} value={p}>{POSICAO_CARTAO_LABEL[p]}</option>
+                      ))}
                     </select>
                   </div>
                 </div>

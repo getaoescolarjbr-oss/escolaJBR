@@ -98,7 +98,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
   // só booleano no banco (folha própria ou não); "antes das questões" é uma opção só
   // deste diálogo, por isso o estado local é de três valores e não dois.
   const [posicaoCartao, setPosicaoCartao] = useState<PosicaoCartao>(
-    avaliacao.cartao_separado ? 'SEPARADO' : 'FIM'
+    avaliacao.cartao_separado ? 'SEPARADO' : (avaliacao.cartao_posicao ?? 'FIM')
   );
 
   const previewRef = useRef<HTMLDivElement>(null);

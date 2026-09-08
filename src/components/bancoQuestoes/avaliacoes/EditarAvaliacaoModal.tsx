@@ -153,6 +153,7 @@ export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo }: Props) {
                   embaralhar: avaliacao.embaralhar,
                   qtdVersoes: avaliacao.qtd_versoes,
                   cartaoSeparado: avaliacao.cartao_separado,
+                  cartaoPosicao: avaliacao.cartao_posicao,
                   modoNota: avaliacao.modo_nota,
                   ponderadaEscopo: avaliacao.ponderada_escopo,
                   lancarNoBoletim: avaliacao.lancar_no_boletim,

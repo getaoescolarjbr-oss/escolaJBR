@@ -20,7 +20,7 @@ import type {
 } from '../types/avaliacoes';
 import { QUESTION_SELECT_FIELDS, type Question } from '../types/bancoQuestoes';
 
-const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at, embaralhar, qtd_versoes, cartao_separado, modo_nota, ponderada_escopo, lancar_no_boletim, eh_prova_area';
+const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at, embaralhar, qtd_versoes, cartao_separado, cartao_posicao, modo_nota, ponderada_escopo, lancar_no_boletim, eh_prova_area';
 
 function mapAvaliacaoRow(row: Record<string, unknown>): Avaliacao {
   const turmas = (row.prova_turmas as { turmas: { id: string; nome: string } | null }[] | undefined) ?? [];
@@ -98,6 +98,7 @@ export async function criarAvaliacao(dados: NovaAvaliacaoInput, status: StatusAv
       embaralhar: dados.embaralhar,
       qtd_versoes: dados.qtdVersoes,
       cartao_separado: dados.cartaoSeparado,
+      cartao_posicao: dados.cartaoPosicao,
       modo_nota: dados.modoNota,
       ponderada_escopo: dados.ponderadaEscopo,
       lancar_no_boletim: dados.lancarNoBoletim,
@@ -239,6 +240,7 @@ export async function atualizarAvaliacao(id: string, dados: NovaAvaliacaoInput, 
       embaralhar: dados.embaralhar,
       qtd_versoes: dados.qtdVersoes,
       cartao_separado: dados.cartaoSeparado,
+      cartao_posicao: dados.cartaoPosicao,
       modo_nota: dados.modoNota,
       ponderada_escopo: dados.ponderadaEscopo,
       lancar_no_boletim: dados.lancarNoBoletim,
@@ -587,6 +589,7 @@ export async function criarAvaliacaoArea(dados: NovaAvaliacaoAreaInput): Promise
     p_embaralhar: dados.embaralhar ?? 'NENHUM',
     p_qtd_versoes: dados.qtd_versoes ?? 1,
     p_cartao_separado: dados.cartao_separado ?? false,
+    p_cartao_posicao: dados.cartao_posicao ?? 'FIM',
   });
   if (error) throw error;
   return data as string;
@@ -608,6 +611,7 @@ export async function editarAvaliacaoArea(provaId: string, dados: NovaAvaliacaoA
     p_embaralhar: dados.embaralhar ?? 'NENHUM',
     p_qtd_versoes: dados.qtd_versoes ?? 1,
     p_cartao_separado: dados.cartao_separado ?? false,
+    p_cartao_posicao: dados.cartao_posicao ?? 'FIM',
   });
   if (error) throw error;
   return data as string;
@@ -675,13 +679,15 @@ export async function definirImpressaoAvaliacaoArea(
   provaId: string,
   embaralhar: string,
   qtdVersoes: number,
-  cartaoSeparado: boolean
+  cartaoSeparado: boolean,
+  cartaoPosicao: 'INICIO' | 'FIM' = 'FIM'
 ): Promise<void> {
   const { error } = await supabase.rpc('rpc_definir_impressao_avaliacao_area', {
     p_prova_id: provaId,
     p_embaralhar: embaralhar,
     p_qtd_versoes: qtdVersoes,
     p_cartao_separado: cartaoSeparado,
+    p_cartao_posicao: cartaoPosicao,
   });
   if (error) throw error;
 }

@@ -17,6 +17,13 @@ const inputClass =
   'w-full mt-1 px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue';
 
 type ModoVersoes = 'FIXO' | 'POR_ALUNO';
+type PosicaoCartao = 'INICIO' | 'FIM' | 'SEPARADO';
+
+const POSICAO_CARTAO_LABEL: Record<PosicaoCartao, string> = {
+  INICIO: 'Junto, antes das questões',
+  FIM: 'Junto, no fim da prova',
+  SEPARADO: 'Em folha separada',
+};
 
 // Separado da edição completa da avaliação porque embaralhamento/versões/cartão-resposta são
 // só configuração de impressão — não mexem em cota, valor ou turma — então continuam
@@ -25,7 +32,9 @@ export function ConfigImpressaoAreaModal({ avaliacao, onClose, onSalvo }: Props)
   const [embaralhar, setEmbaralhar] = useState<ModoEmbaralhar>((avaliacao.embaralhar as ModoEmbaralhar) ?? 'NENHUM');
   const [qtdVersoes, setQtdVersoes] = useState(avaliacao.qtd_versoes ?? 1);
   const [modoVersoes, setModoVersoes] = useState<ModoVersoes>('FIXO');
-  const [cartaoSeparado, setCartaoSeparado] = useState(avaliacao.cartao_separado ?? false);
+  const [posicaoCartao, setPosicaoCartao] = useState<PosicaoCartao>(
+    avaliacao.cartao_separado ? 'SEPARADO' : (avaliacao.cartao_posicao ?? 'FIM')
+  );
   const [turmaIds, setTurmaIds] = useState<string[]>([]);
   const [contandoAlunos, setContandoAlunos] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -59,7 +68,13 @@ export function ConfigImpressaoAreaModal({ avaliacao, onClose, onSalvo }: Props)
     setSalvando(true);
     setErro(null);
     try {
-      await definirImpressaoAvaliacaoArea(avaliacao.id, embaralhar, versoesEfetivas, cartaoSeparado);
+      await definirImpressaoAvaliacaoArea(
+        avaliacao.id,
+        embaralhar,
+        versoesEfetivas,
+        posicaoCartao === 'SEPARADO',
+        posicaoCartao === 'INICIO' ? 'INICIO' : 'FIM'
+      );
       // Salvar sozinho não muda nada visível — as folhas só refletem a config depois de
       // sortear de novo. Faz isso aqui mesmo, em vez de depender de mais um clique manual
       // em "Folhas com QR" (que é exatamente onde essa confusão vinha acontecendo).
@@ -137,9 +152,10 @@ export function ConfigImpressaoAreaModal({ avaliacao, onClose, onSalvo }: Props)
           </div>
           <div>
             <label className="text-xs font-bold text-ms-muted">Cartão-resposta</label>
-            <select className={inputClass} value={cartaoSeparado ? 'SEPARADO' : 'JUNTO'} onChange={(e) => setCartaoSeparado(e.target.value === 'SEPARADO')}>
-              <option value="JUNTO">Junto, no fim da prova</option>
-              <option value="SEPARADO">Em folha separada</option>
+            <select className={inputClass} value={posicaoCartao} onChange={(e) => setPosicaoCartao(e.target.value as PosicaoCartao)}>
+              {(Object.keys(POSICAO_CARTAO_LABEL) as PosicaoCartao[]).map((p) => (
+                <option key={p} value={p}>{POSICAO_CARTAO_LABEL[p]}</option>
+              ))}
             </select>
           </div>
         </div>
