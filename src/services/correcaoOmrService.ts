@@ -49,6 +49,18 @@ export async function listarAlocacoes(provaId: string): Promise<AlocacaoProva[]>
 }
 
 /**
+ * Aloca só quem ainda não tem folha (aluno matriculado depois do sorteio original),
+ * numa versão já existente — ao contrário de gerarVersoes, não mexe em ninguém que já
+ * tinha alocação, então não invalida folha já impressa. Devolve os alunos que entraram
+ * agora, para a tela filtrar e imprimir só a folha deles.
+ */
+export async function adicionarAlunosNovos(provaId: string): Promise<{ aluno_id: string; aluno_nome: string }[]> {
+  const { data, error } = await supabase.rpc('rpc_adicionar_alunos_prova', { p_prova_id: provaId });
+  if (error) throw error;
+  return (data ?? []) as { aluno_id: string; aluno_nome: string }[];
+}
+
+/**
  * Quantos alunos ativos (exclui transferido/remanejado, mesmo critério de
  * rpc_gerar_versoes_prova) as turmas dadas têm hoje. Usado para sugerir qtd_versoes
  * quando o professor escolhe "uma versão por aluno" em vez de um número fixo.

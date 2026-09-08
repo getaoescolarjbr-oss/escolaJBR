@@ -26,43 +26,49 @@
  */
 export const MARCA_MM = 7;
 
-/** Diâmetro da bolha impressa. */
-export const BOLHA_MM = 5;
+/**
+ * Diâmetro da bolha impressa.
+ *
+ * Encolhida de 5 pra 4,2mm a pedido — ainda com área (13,9mm²) bem menor que a marca de
+ * referência (49mm²), então o leitor continua distinguindo uma da outra sem ambiguidade.
+ */
+export const BOLHA_MM = 4.2;
 
 /** Distância entre centros de bolhas vizinhas, na horizontal. */
-export const PASSO_BOLHA_MM = 7.5;
+export const PASSO_BOLHA_MM = 6.2;
 
 /** Distância entre centros de linhas vizinhas, quando há espaço de sobra. */
-export const PASSO_LINHA_MM = 8;
+export const PASSO_LINHA_MM = 6.8;
 
 /**
  * Até onde o passo entre linhas pode encolher para uma prova longa caber na A4.
  *
- * Com a bolha de 5mm, 6,5mm de passo deixa 1,5mm de folga entre uma linha e a seguinte.
- * O leitor amostra só o miolo da bolha (60% do raio, ou seja 1,5mm), então a área
- * medida continua bem longe da linha vizinha. Abaixo disso a folha começa a ficar
+ * Com a bolha de 4,2mm, 5,6mm de passo deixa 1,4mm de folga entre uma linha e a seguinte.
+ * O leitor amostra só o miolo da bolha (60% do raio, ou seja 1,26mm), então a área
+ * medida continua longe da linha vizinha. Abaixo disso a folha começa a ficar
  * apertada para o aluno pintar sem invadir a linha de baixo, que é o limite prático —
  * não o do algoritmo.
  */
-export const PASSO_LINHA_MINIMO_MM = 6.5;
+export const PASSO_LINHA_MINIMO_MM = 5.6;
 
 /** Espaço reservado à esquerda de cada bloco para o número da questão. */
-export const ROTULO_MM = 11;
+export const ROTULO_MM = 8.5;
 
 /** Folga entre o retângulo das marcas e a primeira/última bolha. */
-export const MARGEM_INTERNA_MM = 9;
+export const MARGEM_INTERNA_MM = 6.5;
 
 /** Espaço horizontal entre blocos de colunas. */
-export const ENTRE_BLOCOS_MM = 6;
+export const ENTRE_BLOCOS_MM = 5;
 
 /** Máximo de alternativas que uma questão pode ter (A..E). */
 export const MAX_ALTERNATIVAS = 5;
 
 /**
- * Teto de blocos lado a lado. Quatro não cabem: 4 x 48,5mm + 3 x 6mm de intervalo dá
- * 230mm, contra os ~190mm úteis de uma A4 retrato.
+ * Teto de blocos lado a lado. Com o passo compactado, 4 blocos de 39,5mm + 3 x 5mm de
+ * intervalo + 2 x 6,5mm de margem dá 186mm — cabe nos ~190mm úteis de uma A4 retrato
+ * (não cabia com as medidas antigas, que davam 230mm para 4 blocos).
  */
-export const MAX_BLOCOS = 3;
+export const MAX_BLOCOS = 4;
 
 /**
  * Altura máxima que a folha do cartão (cabeçalho + grade) pode ocupar numa A4 retrato,
@@ -164,25 +170,21 @@ function medirComBlocos(total: number, blocos: number) {
 /**
  * Em quantas colunas dividir as questões.
  *
- * O critério é deixar a FOLHA o mais perto possível de quadrada, e não um número fixo de
- * linhas por coluna. Isso porque a forma da folha é o que a câmera tem de enquadrar: uma
- * tira alta e estreita (10 questões numa coluna só davam 67x98mm de grade, ou seja
- * 75x137mm de folha) obriga o professor a aproximar demais ou a virar o aparelho, e as
- * marcas dos cantos ficam pequenas em relação ao quadro. Com o mesmo cartão em duas
- * colunas de cinco, a folha vai a 129x97mm e cabe confortavelmente no visor.
- *
- * Restrição dura antes do gosto: a folha tem de caber na altura da A4.
+ * O critério é usar o MAIOR número de colunas que ainda cabe na altura da A4, e não
+ * deixar a folha o mais perto possível de quadrada. Mais colunas encolhe a altura da
+ * grade, o que aumenta a chance de o cartão-resposta caber no espaço sobrando ao final
+ * da última página da prova, em vez de ser empurrado para uma página nova só para ele.
  */
 function escolherBlocos(total: number): number {
   const opcoes = [];
   for (let b = 1; b <= MAX_BLOCOS; b++) {
     const m = medirComBlocos(total, b);
-    opcoes.push({ b, cabe: m.folhaAltura <= ALTURA_MAXIMA_MM, desvio: Math.abs(Math.log(m.folhaLargura / m.folhaAltura)) });
+    opcoes.push({ b, cabe: m.folhaAltura <= ALTURA_MAXIMA_MM });
   }
   const cabem = opcoes.filter((o) => o.cabe);
   // Nada cabe (prova enorme): fica com o máximo de colunas, que é o mais baixo possível.
   if (cabem.length === 0) return MAX_BLOCOS;
-  return cabem.reduce((melhor, o) => (o.desvio < melhor.desvio ? o : melhor)).b;
+  return cabem.reduce((melhor, o) => (o.b > melhor.b ? o : melhor)).b;
 }
 
 export function calcularGeometria(itens: ItemCartao[]): CartaoGeom {
