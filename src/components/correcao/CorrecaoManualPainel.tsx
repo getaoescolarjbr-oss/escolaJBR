@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { AlertTriangle, Check, Loader2, Search } from 'lucide-react';
 import type { FolhaIdentificada, LinhaGabarito, ResultadoCorrecaoOmr } from '../../types/correcaoOmr';
 import { corrigirPorOmr, identificarFolha, obterGabaritoVersao } from '../../services/correcaoOmrService';
+import { extrairMensagemErro } from './ModoCorrecaoPage';
 
 // Correção digitando, para quando a câmera não resolve: cartão rasgado, folha
 // fotocopiada com o QR borrado, celular sem permissão de câmera, aluno que marcou a
@@ -38,7 +39,7 @@ export function CorrecaoManualPainel({ onCorrigido }: { onCorrigido?: (r: Result
       setMarcacoes(new Array(g.length).fill(''));
     } catch (e) {
       setFolha(null);
-      setErro(e instanceof Error ? e.message : String(e));
+      setErro(extrairMensagemErro(e));
     } finally {
       setBuscando(false);
     }
@@ -63,7 +64,7 @@ export function CorrecaoManualPainel({ onCorrigido }: { onCorrigido?: (r: Result
       setResultado(r);
       onCorrigido?.(r);
     } catch (e) {
-      setErro(e instanceof Error ? e.message : String(e));
+      setErro(extrairMensagemErro(e));
     } finally {
       setSalvando(false);
     }

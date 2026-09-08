@@ -228,7 +228,8 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
       void bipe('sucesso');
       mudarFase('PRONTO');
     } catch (e) {
-      setErro(e instanceof Error ? e.message : String(e));
+      console.error('Erro no processamento da câmera:', e);
+      setErro(extrairMensagemErro(e));
       void bipe('erro');
       // Sem envio, volta a procurar QR: insistir no mesmo cartão com o mesmo erro só
       // repete o erro. Com envio, para em PRONTO para o professor ler a mensagem.
@@ -255,7 +256,8 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
       onCorrigido?.(r);
       void bipe('sucesso');
     } catch (e) {
-      setErro(e instanceof Error ? e.message : String(e));
+      console.error('Erro ao enviar leitura:', e);
+      setErro(extrairMensagemErro(e));
       void bipe('erro');
     } finally {
       mudarFase('PRONTO');
@@ -276,7 +278,8 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
       });
       setResultado((atual) => (atual ? { ...atual, nota: r.nota } : atual));
     } catch (e) {
-      setErro(e instanceof Error ? e.message : String(e));
+      console.error('Erro ao alternar anulação:', e);
+      setErro(extrairMensagemErro(e));
     } finally {
       setAnulando(null);
     }
@@ -534,4 +537,24 @@ function GradeLeitura({
       })}
     </div>
   );
+}
+
+export function extrairMensagemErro(e: unknown): string {
+  if (!e) return 'Erro desconhecido.';
+  if (typeof e === 'string') return e;
+  if (e instanceof Error) return e.message;
+  if (typeof e === 'object') {
+    const err = e as { message?: unknown; details?: unknown; hint?: unknown; error?: unknown; error_description?: unknown };
+    if (typeof err.message === 'string' && err.message) return err.message;
+    if (typeof err.details === 'string' && err.details) return err.details;
+    if (typeof err.error_description === 'string' && err.error_description) return err.error_description;
+    if (typeof err.error === 'string' && err.error) return err.error;
+    if (typeof err.hint === 'string' && err.hint) return err.hint;
+    try {
+      return JSON.stringify(e);
+    } catch {
+      return String(e);
+    }
+  }
+  return String(e);
 }
