@@ -64,11 +64,10 @@ export const ENTRE_BLOCOS_MM = 5;
 export const MAX_ALTERNATIVAS = 5;
 
 /**
- * Teto de blocos lado a lado. Com o passo compactado, 4 blocos de 39,5mm + 3 x 5mm de
- * intervalo + 2 x 6,5mm de margem dá 186mm — cabe nos ~190mm úteis de uma A4 retrato
- * (não cabia com as medidas antigas, que davam 230mm para 4 blocos).
+ * Teto de blocos lado a lado. Três blocos mantêm o cartão compacto e legível em qualquer
+ * orientação, evitando faixas horizontais finas demais para a câmera enquadrar.
  */
-export const MAX_BLOCOS = 4;
+export const MAX_BLOCOS = 3;
 
 /**
  * Altura máxima que a folha do cartão (cabeçalho + grade) pode ocupar numa A4 retrato,
@@ -170,30 +169,27 @@ function medirComBlocos(total: number, blocos: number) {
 /**
  * Em quantas colunas dividir as questões.
  *
- * O critério equilibra a proporção da folha (mais próxima de 1:1 a 3:2) sem gerar
- * colunas quase vazias ou faixas horizontais compridas demais para a câmera enquadrar.
- * Cada coluna precisa de pelo menos 4 a 5 questões para justificar um novo bloco.
+ * O critério é usar o MAIOR número de colunas que ainda cabe na altura da A4, e não
+ * deixar a folha o mais perto possível de quadrada. Mais colunas encolhe a altura da
+ * grade, o que aumenta a chance de o cartão-resposta caber no espaço sobrando ao final
+ * da última página da prova, em vez de ser empurrado para uma página nova só para ele.
  */
 function escolherBlocos(total: number): number {
   if (total <= 0) return 1;
-  const maxB = Math.min(MAX_BLOCOS, Math.max(1, Math.ceil(total / 6)));
-  const opcoes = [];
-  for (let b = 1; b <= maxB; b++) {
-    const m = medirComBlocos(total, b);
-    opcoes.push({
-      b,
-      cabe: m.folhaAltura <= ALTURA_MAXIMA_MM,
-      desvio: Math.abs(Math.log(m.folhaLargura / m.folhaAltura)),
-    });
-  }
-  const cabem = opcoes.filter((o) => o.cabe);
-  if (cabem.length === 0) return maxB;
-  return cabem.reduce((melhor, o) => (o.desvio < melhor.desvio ? o : melhor)).b;
+  // Provas curtas (até 5 questões): 1 coluna
+  if (total <= 5) return 1;
+  // Provas de 6 a 9 questões: 3 colunas (ex.: 3x3 para 9 questões),
+  // mantendo a grade simétrica, compacta em altura e casando com as folhas impressas.
+  if (total <= 9) return 3;
+  // Provas de 10 a 20 questões: 2 colunas para proporção estável no enquadramento OMR.
+  if (total <= 20) return 2;
+  // Provas com mais de 20 questões: 3 colunas.
+  return MAX_BLOCOS;
 }
 
-export function calcularGeometria(itens: ItemCartao[], blocosForcados?: number): CartaoGeom {
+export function calcularGeometria(itens: ItemCartao[]): CartaoGeom {
   const total = itens.length;
-  const blocos = blocosForcados != null ? Math.max(1, Math.min(MAX_BLOCOS, blocosForcados)) : escolherBlocos(total);
+  const blocos = escolherBlocos(total);
   const { linhasPorBloco, passoLinha, larguraMm, alturaMm } = medirComBlocos(total, blocos);
 
   const larguraBloco = ROTULO_MM + MAX_ALTERNATIVAS * PASSO_BOLHA_MM;
