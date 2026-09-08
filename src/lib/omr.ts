@@ -165,6 +165,15 @@ function componentes(bin: Uint8Array, width: number, height: number): Componente
  * Duas coisas os eliminam: o anel externo do olho é oco (preenchimento ~0,49 do seu
  * retângulo, contra ~0,95 de uma marca sólida) e o quadradinho central é pequeno demais
  * para sobreviver ao corte por área relativa.
+ *
+ * MUDANÇA IMPORTANTE: o algoritmo anterior pegava os 4 extremos absolutos da imagem,
+ * o que falha quando a câmera enquadra toda a folha A4 com questões em 2 colunas:
+ * logo, caixa de nota e números de questão também geram componentes sólidos e ocupam
+ * os extremos, fazendo o algoritmo eleger cantos do cabeçalho em vez das 4 marcas.
+ *
+ * Agora testamos combinações de candidatos, priorizando os mais próximos do QR Code
+ * (que já foi localizado com precisão) e escolhendo o quarteto que minimiza o erro
+ * de aspecto em relação à geometria conhecida do cartão.
  */
 function acharMarcas(
   comps: Componente[],
@@ -180,19 +189,12 @@ function acharMarcas(
     const alt = c.maxY - c.minY + 1;
     if (larg < 4 || alt < 4) return false;
 
-    // Faixa larga de propósito: a marca é um quadrado no papel, mas a perspectiva de um
-    // celular inclinado sobre a mesa a entrega como paralelogramo.
     const proporcao = larg / alt;
     if (proporcao < 0.5 || proporcao > 2) return false;
 
-    // Preenchimento do retângulo envolvente. O limite é BAIXO por um motivo geométrico:
-    // um quadrado girado não preenche o próprio bounding box — a 12 graus já cai para
-    // 0,71 e a 45 graus para 0,50. Exigir "quase 1" aqui equivale a exigir a folha no
-    // prumo, e quem trabalha com a folha no prumo não precisa de homografia nenhuma.
     if (c.area / (larg * alt) < 0.55) return false;
 
     const rel = c.area / areaImagem;
-    // Permite detectar marcas menores quando a folha é impressa 2 por página (~70% da escala)
     return rel > 0.00007 && rel < 0.02;
   });
 
@@ -200,52 +202,85 @@ function acharMarcas(
 
   // As quatro marcas são do mesmo tamanho impresso. Uma bolha preenchida também é um
   // borrão sólido e arredondado, e passa nos filtros acima — o que a elimina é a área:
-  // uma bolha de 5mm tem ~40% da área de uma marca de 7mm.
+  // uma bolha de 4,2mm tem ~36% da área de uma marca de 7mm.
   const maiorArea = Math.max(...candidatos.map((c) => c.area));
-  const semelhantes = candidatos.filter((c) => c.area >= maiorArea * 0.55);
+  const semelhantes = candidatos
+    .filter((c) => c.area >= maiorArea * 0.45)
+    .map((c) => ({ x: c.somaX / c.area, y: c.somaY / c.area, area: c.area }));
+
   if (semelhantes.length < 4) return null;
 
-  const pontos = semelhantes.map((c) => ({ x: c.somaX / c.area, y: c.somaY / c.area, area: c.area }));
+  // Ordena: quando o QR já foi lido, preferimos candidatos próximos a ele (as marcas
+  // reais ficam logo abaixo do QR). Sem âncora, usamos área decrescente.
+  // Limitamos a N_CANDS candidatos: C(12,4)=495 combinações, custo desprezível.
+  const N_CANDS = Math.min(semelhantes.length, 12);
+  const ordenados = ancoraQr
+    ? [...semelhantes]
+        .sort((a, b) =>
+          Math.hypot(a.x - ancoraQr.x, a.y - ancoraQr.y) -
+          Math.hypot(b.x - ancoraQr.x, b.y - ancoraQr.y)
+        )
+        .slice(0, N_CANDS)
+    : [...semelhantes].sort((a, b) => b.area - a.area).slice(0, N_CANDS);
 
-  // Os quatro extremos das duas diagonais: a folha é o maior retângulo em cena, então
-  // as marcas dela ficam nos extremos e o que houver de ruído sobra no meio.
-  type PontoArea = (typeof pontos)[number];
-  const extremo = (pontuar: (p: PontoArea) => number, maior: boolean) =>
-    pontos.reduce((melhor, p) => {
-      const a = pontuar(p);
-      const b = pontuar(melhor);
-      return maior ? (a > b ? p : melhor) : (a < b ? p : melhor);
-    });
+  let melhorQuad: Ponto[] | null = null;
+  let melhorPontuacao = Infinity;
 
-  const quad = [
-    extremo((p) => p.x + p.y, false),
-    extremo((p) => p.x - p.y, true),
-    extremo((p) => p.x + p.y, true),
-    extremo((p) => p.x - p.y, false),
-  ];
+  for (let i = 0; i < ordenados.length; i++) {
+    for (let j = i + 1; j < ordenados.length; j++) {
+      for (let k = j + 1; k < ordenados.length; k++) {
+        for (let l = k + 1; l < ordenados.length; l++) {
+          const grupo = [ordenados[i], ordenados[j], ordenados[k], ordenados[l]];
 
-  // Quatro pontos distintos: sem isto, um mesmo borrão poderia ser eleito duas vezes.
-  for (let i = 0; i < 4; i++) {
-    for (let j = i + 1; j < 4; j++) {
-      if (Math.hypot(quad[i].x - quad[j].x, quad[i].y - quad[j].y) < 15) return null;
+          // Áreas parecidas entre si — a marca impressa é igual nos 4 cantos.
+          const areas = grupo.map((p) => p.area);
+          if (Math.max(...areas) / Math.min(...areas) > 2.5) continue;
+
+          // Pontos bem espaçados (não são 4 sujeiras coladas).
+          let colados = false;
+          for (let a = 0; a < 4 && !colados; a++) {
+            for (let b = a + 1; b < 4; b++) {
+              if (Math.hypot(grupo[a].x - grupo[b].x, grupo[a].y - grupo[b].y) < 15) {
+                colados = true; break;
+              }
+            }
+          }
+          if (colados) continue;
+
+          // Quadrilátero mínimo — evita 4 sujeiras num pequeno cluster.
+          // ATENÇÃO: os pontos chegam em ordem de distância ao QR (ou de área),
+          // não em ordem de ângulo — portanto areaPoligono() poderia devolver 0
+          // para um bowtie. Usamos a área do bounding box, que é sempre correta.
+          const pts = grupo.map(({ x, y }) => ({ x, y }));
+          const bboxW = Math.max(...pts.map((p) => p.x)) - Math.min(...pts.map((p) => p.x));
+          const bboxH = Math.max(...pts.map((p) => p.y)) - Math.min(...pts.map((p) => p.y));
+          if (bboxW * bboxH < areaImagem * 0.015) continue;
+
+          const orientado = ordenarCantos(pts, aspectoAlvo, ancoraQr);
+          if (!orientado) continue;
+
+          // Pontuação = erro de aspecto + penalidade de distância ao QR.
+          // Com a âncora QR, preferimos o quarteto cujo TL fica mais perto do QR.
+          let pontuacao = orientado.erro;
+          if (ancoraQr) {
+            const distTL = Math.hypot(orientado.quad[0].x - ancoraQr.x, orientado.quad[0].y - ancoraQr.y);
+            pontuacao += (distTL / width) * 0.15;
+          }
+
+          if (pontuacao < melhorPontuacao) {
+            melhorPontuacao = pontuacao;
+            melhorQuad = orientado.quad;
+          }
+        }
+      }
     }
   }
 
-  // Um quadrilátero pequeno demais não é a folha, são quatro sujeiras agrupadas.
-  // Limite ajustado de 0.08 para 0.035 para permitir ler cartões impressos em 2 por folha.
-  if (areaPoligono(quad) < areaImagem * 0.035) return null;
-
-  // Os quatro escolhidos precisam ser parecidos ENTRE SI, não só grandes. É esta
-  // checagem que pega o caso perigoso: um canto da folha fora do quadro deixa três
-  // marcas e uma bolha preenchida assumindo o lugar da quarta — e daí sairia uma
-  // leitura completa, plausível e inteiramente errada, que ninguém percebe.
-  const areas = quad.map((p) => p.area);
-  if (Math.max(...areas) / Math.min(...areas) > 2.2) return null;
-
-  return ordenarCantos(quad.map(({ x, y }) => ({ x, y })), aspectoAlvo, ancoraQr);
+  return melhorQuad;
 }
 
-function ordenarCantos(pontos: Ponto[], aspectoAlvo: number, ancoraQr?: Ponto | null): Ponto[] | null {
+
+function ordenarCantos(pontos: Ponto[], aspectoAlvo: number, ancoraQr?: Ponto | null): { quad: Ponto[]; erro: number } | null {
   const cx = pontos.reduce((s, p) => s + p.x, 0) / 4;
   const cy = pontos.reduce((s, p) => s + p.y, 0) / 4;
 
@@ -273,7 +308,7 @@ function ordenarCantos(pontos: Ponto[], aspectoAlvo: number, ancoraQr?: Ponto | 
   if (candidatos[0].erro > TOLERANCIA_ASPECTO) return null;
 
   const [primeiro, segundo] = candidatos;
-  if (!segundo) return primeiro.q;
+  if (!segundo) return { quad: primeiro.q, erro: primeiro.erro };
 
   // Sobram dois candidatos: a orientação certa e ela girada 180 graus. Escolher errado
   // aqui não produz erro visível — produz uma folha lida ao contrário, em que as bolhas
@@ -284,7 +319,8 @@ function ordenarCantos(pontos: Ponto[], aspectoAlvo: number, ancoraQr?: Ponto | 
   // canto superior esquerdo do cartão é o que está mais perto dele.
   if (ancoraQr) {
     const distTL = (c: typeof primeiro) => Math.hypot(c.q[0].x - ancoraQr.x, c.q[0].y - ancoraQr.y);
-    return distTL(primeiro) <= distTL(segundo) ? primeiro.q : segundo.q;
+    const melhor = distTL(primeiro) <= distTL(segundo) ? primeiro : segundo;
+    return { quad: melhor.q, erro: melhor.erro };
   }
 
   // Sem o QR no quadro, resta supor que ninguém fotografa o cartão de cabeça para baixo
@@ -297,7 +333,8 @@ function ordenarCantos(pontos: Ponto[], aspectoAlvo: number, ancoraQr?: Ponto | 
   const diagonal = Math.hypot(primeiro.q[0].x - primeiro.q[2].x, primeiro.q[0].y - primeiro.q[2].y);
   if (Math.abs(alturaDe(primeiro) - alturaDe(segundo)) < diagonal * 0.5) return null;
 
-  return alturaDe(primeiro) <= alturaDe(segundo) ? primeiro.q : segundo.q;
+  const melhor = alturaDe(primeiro) <= alturaDe(segundo) ? primeiro : segundo;
+  return { quad: melhor.q, erro: melhor.erro };
 }
 
 function areaPoligono(p: Ponto[]): number {
@@ -479,11 +516,24 @@ export function lerCartao(img: ImageData, geom: CartaoGeom, ancoraQr?: Ponto | n
       continue;
     }
 
-    const valores = linha.bolhas.map((b) => {
+    const valoresBrutos = linha.bolhas.map((b) => {
       const centro = projetar(h, b.x, b.y);
       const borda = projetar(h, b.x + raioAmostraMm, b.y);
       return escuridao(cinza, width, height, centro, Math.hypot(borda.x - centro.x, borda.y - centro.y));
     });
+
+    // Subtração de fundo local: folhas impressas em 2 por página ficam menores e o
+    // limiar adaptativo de Bradley pode subtrair menos, deixando as bolhas vazias com
+    // uma escuridão de fundo (~0,25) que se confunde com lápis fraco. Subtraindo o
+    // mínimo da linha (= fundo estimado) todos os valores ficam relativos, e a decisão
+    // não depende mais da iluminação nem do zoom da câmera.
+    //
+    // O fundo é limitado a LIMIAR_MARCADA * 0.5 (= 0,15) para não ocorrer
+    // sobre-subtração no caso em que todas as bolhas estão preenchidas (marcação dupla
+    // `*`): sem o limite, min seria o valor das bolhas cheias e tudo viraria zero.
+    const fundoBruto = Math.min(...valoresBrutos);
+    const fundo = Math.min(fundoBruto, LIMIAR_MARCADA * 0.3);
+    const valores = valoresBrutos.map((v) => Math.max(0, v - fundo));
 
     const ordenados = [...valores].sort((a, b) => b - a);
     const primeiro = ordenados[0];

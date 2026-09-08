@@ -170,26 +170,30 @@ function medirComBlocos(total: number, blocos: number) {
 /**
  * Em quantas colunas dividir as questões.
  *
- * O critério é usar o MAIOR número de colunas que ainda cabe na altura da A4, e não
- * deixar a folha o mais perto possível de quadrada. Mais colunas encolhe a altura da
- * grade, o que aumenta a chance de o cartão-resposta caber no espaço sobrando ao final
- * da última página da prova, em vez de ser empurrado para uma página nova só para ele.
+ * O critério equilibra a proporção da folha (mais próxima de 1:1 a 3:2) sem gerar
+ * colunas quase vazias ou faixas horizontais compridas demais para a câmera enquadrar.
+ * Cada coluna precisa de pelo menos 4 a 5 questões para justificar um novo bloco.
  */
 function escolherBlocos(total: number): number {
+  if (total <= 0) return 1;
+  const maxB = Math.min(MAX_BLOCOS, Math.max(1, Math.ceil(total / 6)));
   const opcoes = [];
-  for (let b = 1; b <= MAX_BLOCOS; b++) {
+  for (let b = 1; b <= maxB; b++) {
     const m = medirComBlocos(total, b);
-    opcoes.push({ b, cabe: m.folhaAltura <= ALTURA_MAXIMA_MM });
+    opcoes.push({
+      b,
+      cabe: m.folhaAltura <= ALTURA_MAXIMA_MM,
+      desvio: Math.abs(Math.log(m.folhaLargura / m.folhaAltura)),
+    });
   }
   const cabem = opcoes.filter((o) => o.cabe);
-  // Nada cabe (prova enorme): fica com o máximo de colunas, que é o mais baixo possível.
-  if (cabem.length === 0) return MAX_BLOCOS;
-  return cabem.reduce((melhor, o) => (o.b > melhor.b ? o : melhor)).b;
+  if (cabem.length === 0) return maxB;
+  return cabem.reduce((melhor, o) => (o.desvio < melhor.desvio ? o : melhor)).b;
 }
 
-export function calcularGeometria(itens: ItemCartao[]): CartaoGeom {
+export function calcularGeometria(itens: ItemCartao[], blocosForcados?: number): CartaoGeom {
   const total = itens.length;
-  const blocos = escolherBlocos(total);
+  const blocos = blocosForcados != null ? Math.max(1, Math.min(MAX_BLOCOS, blocosForcados)) : escolherBlocos(total);
   const { linhasPorBloco, passoLinha, larguraMm, alturaMm } = medirComBlocos(total, blocos);
 
   const larguraBloco = ROTULO_MM + MAX_ALTERNATIVAS * PASSO_BOLHA_MM;
