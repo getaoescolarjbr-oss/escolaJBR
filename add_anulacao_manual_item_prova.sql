@@ -162,8 +162,8 @@ BEGIN
   INSERT INTO _anuladas_preservar (question_id)
   SELECT ri.question_id
   FROM prova_respostas_itens ri
-  USING public.linhas_cartao_versao(v_versao.id) l
-  WHERE ri.resposta_id = v_resposta_id AND ri.question_id = l.question_id AND ri.anulada_manual = true;
+  JOIN public.linhas_cartao_versao(v_versao.id) l ON l.question_id = ri.question_id
+  WHERE ri.resposta_id = v_resposta_id AND ri.anulada_manual = true;
 
   DELETE FROM prova_respostas_itens ri
   USING public.linhas_cartao_versao(v_versao.id) l
