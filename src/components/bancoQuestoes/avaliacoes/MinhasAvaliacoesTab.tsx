@@ -18,7 +18,7 @@ import { PreviewAvaliacaoAlunoModal } from './PreviewAvaliacaoAlunoModal';
 import { ReimprimirAvaliacaoModal } from './ReimprimirAvaliacaoModal';
 import { ImprimirFolhasModal } from './ImprimirFolhasModal';
 import { ModoCorrecaoPage } from '../../correcao/ModoCorrecaoPage';
-import { lancarNotasNoBoletim } from '../../../services/correcaoOmrService';
+import { ConfirmacaoSubstituicaoError, lancarNotasNoBoletim } from '../../../services/correcaoOmrService';
 import { InserirQuestoesAreaModal } from '../../coordenacaoArea/InserirQuestoesAreaModal';
 import { useAuth } from '../../../hooks/useAuth';
 
@@ -105,7 +105,22 @@ export function MinhasAvaliacoesTab() {
     setProcessando(a.id);
     setErro(null);
     try {
-      const quantas = await lancarNotasNoBoletim(a.id);
+      let quantas: number;
+      try {
+        quantas = await lancarNotasNoBoletim(a.id);
+      } catch (e) {
+        if (e instanceof ConfirmacaoSubstituicaoError) {
+          if (!confirm(
+            `${e.conflitos} aluno(s) já têm nota preenchida diferente da que seria lançada agora ` +
+            '(pode ter sido digitada manualmente). Substituir pela nota calculada na correção?'
+          )) {
+            return;
+          }
+          quantas = await lancarNotasNoBoletim(a.id, true);
+        } else {
+          throw e;
+        }
+      }
       setNotasLancadas(a.id);
       setTimeout(() => setNotasLancadas(null), 2500);
       if (quantas === 0) {

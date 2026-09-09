@@ -1,15 +1,18 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Camera, CameraOff, Check, Keyboard, Loader2, X } from 'lucide-react';
+import { AlertTriangle, Camera, CameraOff, Check, Keyboard, Loader2, RotateCcw, Save, X } from 'lucide-react';
 import type { CartaoGeom } from '../../utils/cartaoResposta';
 import { aspectoParaEnquadrar, calcularGeometria } from '../../utils/cartaoResposta';
 import { lerCartao, lerQrCode, type LeituraCartao } from '../../lib/omr';
 import type { FolhaIdentificada, LinhaGabarito, ResultadoCorrecaoOmr } from '../../types/correcaoOmr';
+import type { ItemPendenteCorrecao } from '../../types/avaliacoes';
 import {
   anularItemProva,
   corrigirPorOmr,
   identificarFolha,
   obterGabaritoVersao,
+  lancarNotasNoBoletim,
 } from '../../services/correcaoOmrService';
+import { corrigirItemDissertativo, listarItensPendentesCorrecao } from '../../services/avaliacoesService';
 import { CorrecaoManualPainel } from './CorrecaoManualPainel';
 import { bipe } from './bipe';
 
@@ -71,6 +74,14 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
   // cartão já foi gravado (fase PRONTO): antes disso não existe item na tabela pra anular.
   const [anulando, setAnulando] = useState<string | null>(null);
   const [anuladas, setAnuladas] = useState<Set<string>>(new Set());
+  // Questões dissertativas/redação deste aluno, nesta prova — o professor digita a nota
+  // aqui mesmo, na hora, em vez de deixar pendente pra um passo de correção separado.
+  const [pendentesDissert, setPendentesDissert] = useState<ItemPendenteCorrecao[]>([]);
+  const [notasDissert, setNotasDissert] = useState<Record<string, string>>({});
+  const [salvandoDissertId, setSalvandoDissertId] = useState<string | null>(null);
+  // Status do lançamento automático pros professores selecionados, depois de gravar o
+  // cartão — separado de `erro` porque não é um erro de LEITURA, é do passo seguinte.
+  const [avisoLancamento, setAvisoLancamento] = useState<string | null>(null);
   // Proporção do cartão desta versão, para a moldura da tela ter a MESMA forma da folha.
   // Sem isto a moldura fica 4:3 deitada, o cartão sai em pé, e o professor acaba virando
   // o celular — que é a posição em que a orientação é mais difícil de resolver.
@@ -102,6 +113,9 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
     setManual(false);
     setAspectoCartao(null);
     setAnuladas(new Set());
+    setPendentesDissert([]);
+    setNotasDissert({});
+    setAvisoLancamento(null);
     mudarFase('PROCURANDO_QR');
   }, [mudarFase]);
 
@@ -250,9 +264,7 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
       mudarFase('ENVIANDO');
       tentouEnviar = true;
       const r = await corrigirPorOmr(alvo.codigo, lida.marcacoes, 'CAMERA');
-      setResultado(r);
-      onCorrigido?.(r);
-      void bipe('sucesso');
+      await posGravar(alvo, r);
       mudarFase('PRONTO');
     } catch (e) {
       console.error('Erro no processamento da câmera:', e);
@@ -272,6 +284,39 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
     return () => clearInterval(id);
   }, [camAtiva, processarQuadro]);
 
+  /**
+   * Roda depois de gravar o cartão com sucesso (câmera ou botão "Gravar"): mostra o
+   * resultado, busca as questões dissertativas/redação deste aluno (se houver, pra
+   * digitar a nota delas aqui mesmo) e já lança a nota pros professores selecionados —
+   * sem confirmação, porque aqui é sempre o valor recém-corrigido substituindo o que
+   * havia antes, que é exatamente o resultado esperado de corrigir de novo.
+   */
+  async function posGravar(alvo: FolhaIdentificada, r: ResultadoCorrecaoOmr) {
+    setResultado(r);
+    onCorrigido?.(r);
+    void bipe('sucesso');
+    setAvisoLancamento(null);
+
+    try {
+      const itens = await listarItensPendentesCorrecao(alvo.prova_id);
+      setPendentesDissert(itens.filter((i) => i.aluno_id === alvo.aluno_id));
+    } catch {
+      setPendentesDissert([]);
+    }
+
+    try {
+      await lancarNotasNoBoletim(alvo.prova_id, true);
+      setAvisoLancamento('Nota lançada para os professores selecionados.');
+    } catch (eLancar) {
+      // "sem nota"/"não lança no boletim" são configuração normal da prova, não erro —
+      // não vale assustar o professor com isso a cada cartão gravado.
+      const msg = extrairMensagemErro(eLancar);
+      if (!/sem nota|não lança no boletim/i.test(msg)) {
+        setAvisoLancamento(`Não foi possível lançar a nota no boletim: ${msg}`);
+      }
+    }
+  }
+
   async function enviarLeituraAtual() {
     const alvo = folhaRef.current;
     const lida = leitura;
@@ -279,9 +324,7 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
     mudarFase('ENVIANDO');
     try {
       const r = await corrigirPorOmr(alvo.codigo, lida.marcacoes, 'CAMERA');
-      setResultado(r);
-      onCorrigido?.(r);
-      void bipe('sucesso');
+      await posGravar(alvo, r);
     } catch (e) {
       console.error('Erro ao enviar leitura:', e);
       setErro(extrairMensagemErro(e));
@@ -309,6 +352,41 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
       setErro(extrairMensagemErro(e));
     } finally {
       setAnulando(null);
+    }
+  }
+
+  async function salvarNotaDissert(item: ItemPendenteCorrecao) {
+    const alvo = folhaRef.current;
+    if (!alvo) return;
+    const bruto = (notasDissert[item.item_id] ?? '').replace(',', '.').trim();
+    const valorMax = Number(item.valor) || 0;
+    const valor = Number(bruto);
+    if (bruto === '' || !Number.isFinite(valor) || valor < 0 || valor > valorMax) {
+      setErro(`Informe uma nota entre 0 e ${valorMax.toFixed(2)} para a questão ${item.ordem}.`);
+      return;
+    }
+    setSalvandoDissertId(item.item_id);
+    try {
+      await corrigirItemDissertativo(item.item_id, valor, null);
+      setPendentesDissert((atual) =>
+        atual.map((i) => (i.item_id === item.item_id ? { ...i, corrigido: true, valor_obtido: valor } : i))
+      );
+      // A nota da prova mudou — reconsulta a folha pra atualizar o total mostrado, e
+      // relança pros professores selecionados com o valor novo.
+      const atualizada = await identificarFolha(alvo.codigo);
+      setResultado((atual) => (atual ? { ...atual, nota: atualizada.nota } : atual));
+      try {
+        await lancarNotasNoBoletim(alvo.prova_id, true);
+        setAvisoLancamento('Nota lançada para os professores selecionados.');
+      } catch {
+        // Silencioso aqui: já avisamos uma vez em posGravar; não repetir a cada questão
+        // dissertativa salva evita empilhar avisos pra um problema já sinalizado.
+      }
+    } catch (e) {
+      console.error('Erro ao salvar nota da questão aberta:', e);
+      setErro(extrairMensagemErro(e));
+    } finally {
+      setSalvandoDissertId(null);
     }
   }
 
@@ -375,7 +453,19 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
         {manual && (
           <div className="absolute inset-0 bg-ms-dark overflow-y-auto">
             <CorrecaoManualPainel
-              onCorrigido={(r) => { setResultado(r); onCorrigido?.(r); void bipe('sucesso'); }}
+              onCorrigido={(r) => {
+                setResultado(r);
+                onCorrigido?.(r);
+                void bipe('sucesso');
+                lancarNotasNoBoletim(r.prova_id, true)
+                  .then(() => setAvisoLancamento('Nota lançada para os professores selecionados.'))
+                  .catch((e) => {
+                    const msg = extrairMensagemErro(e);
+                    if (!/sem nota|não lança no boletim/i.test(msg)) {
+                      setAvisoLancamento(`Não foi possível lançar a nota no boletim: ${msg}`);
+                    }
+                  });
+              }}
             />
           </div>
         )}
@@ -385,7 +475,28 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
         {erro && (
           <div className="flex items-start gap-2 bg-red-950/50 border border-red-900 rounded-lg px-3 py-2">
             <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-            <p className="text-xs text-red-300 font-medium">{erro}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-red-300 font-medium">{erro}</p>
+            </div>
+            <button
+              onClick={reiniciar}
+              className="flex items-center gap-1 px-2.5 py-1 rounded-lg border border-red-800 text-red-200 text-[11px] font-bold shrink-0 hover:bg-red-900/50"
+              title="Limpar a tela e voltar a procurar o QR Code"
+            >
+              <RotateCcw className="w-3 h-3" /> Atualizar
+            </button>
+          </div>
+        )}
+
+        {avisoLancamento && (
+          <div className={`flex items-start gap-2 rounded-lg px-3 py-2 border ${
+            avisoLancamento.startsWith('Não foi possível')
+              ? 'bg-amber-950/50 border-amber-900'
+              : 'bg-green-950/40 border-green-900'
+          }`}>
+            <p className={`text-xs font-medium ${avisoLancamento.startsWith('Não foi possível') ? 'text-amber-200' : 'text-green-200'}`}>
+              {avisoLancamento}
+            </p>
           </div>
         )}
 
@@ -423,9 +534,20 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
             </div>
 
             {fase === 'LENDO_CARTAO' && (
-              <p className="text-xs text-amber-300 font-medium">
-                {leitura ? 'Segure firme para confirmar a leitura...' : 'Enquadre o cartão inteiro, com os quatro cantos pretos visíveis.'}
-              </p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs text-amber-300 font-medium">
+                  {leitura ? 'Segure firme para confirmar a leitura...' : 'Enquadre o cartão inteiro, com os quatro cantos pretos visíveis.'}
+                </p>
+                {leitura && (
+                  <button
+                    onClick={() => void enviarLeituraAtual()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-blue text-white rounded-lg text-xs font-bold shrink-0 hover:bg-blue-600"
+                    title="Gravar agora esta leitura, sem esperar dois quadros seguidos concordarem"
+                  >
+                    <Save className="w-3.5 h-3.5" /> Gravar
+                  </button>
+                )}
+              </div>
             )}
             {fase === 'CONFIRMAR_BRANCO' && (
               <div className="flex items-center justify-between gap-3 bg-amber-950/50 border border-amber-900 rounded-lg px-3 py-2">
@@ -490,6 +612,41 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
                 >
                   Próximo
                 </button>
+              </div>
+            )}
+
+            {resultado && pendentesDissert.length > 0 && (
+              <div className="space-y-2 bg-ms-dark border border-gray-800 rounded-lg p-2.5">
+                <p className="text-[11px] font-bold text-ms-muted">
+                  Questão(ões) aberta(s) desta prova — digite a nota agora, sem precisar corrigir depois:
+                </p>
+                {pendentesDissert.map((item) => (
+                  <div key={item.item_id} className="flex items-center gap-2">
+                    <span className="text-xs text-ms-main shrink-0 w-14">
+                      Q{item.ordem} / {Number(item.valor).toFixed(2)}
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min={0}
+                      max={Number(item.valor)}
+                      placeholder="Nota"
+                      value={notasDissert[item.item_id] ?? (item.valor_obtido != null ? String(item.valor_obtido) : '')}
+                      onChange={(e) => setNotasDissert((prev) => ({ ...prev, [item.item_id]: e.target.value }))}
+                      className="w-20 px-2 py-1 bg-ms-card border border-gray-700 rounded text-ms-main text-xs outline-none focus:ring-2 focus:ring-ms-blue"
+                    />
+                    <button
+                      onClick={() => void salvarNotaDissert(item)}
+                      disabled={salvandoDissertId === item.item_id}
+                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-ms-blue text-white text-[11px] font-bold hover:bg-blue-600 disabled:opacity-40 shrink-0"
+                    >
+                      {salvandoDissertId === item.item_id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvar'}
+                    </button>
+                    {item.corrigido && salvandoDissertId !== item.item_id && (
+                      <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />
+                    )}
+                  </div>
+                ))}
               </div>
             )}
           </div>

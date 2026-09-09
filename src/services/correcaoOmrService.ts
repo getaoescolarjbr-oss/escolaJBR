@@ -141,10 +141,38 @@ export async function recalcularPonderada(provaId: string): Promise<number> {
   return (data as number) ?? 0;
 }
 
-/** Copia as notas para "Notas e Avaliações". Devolve quantas foram lançadas. */
-export async function lancarNotasNoBoletim(provaId: string): Promise<number> {
-  const { data, error } = await supabase.rpc('rpc_lancar_notas_boletim', { p_prova_id: provaId });
-  if (error) throw error;
+/**
+ * Erro específico de "já existe nota diferente lançada" — rpc_lancar_notas_boletim
+ * recusa substituir sem confirmação explícita. `conflitos` é quantos alunos têm nota
+ * preenchida e diferente da que seria lançada agora, para a tela perguntar com número.
+ */
+export class ConfirmacaoSubstituicaoError extends Error {
+  conflitos: number;
+  constructor(conflitos: number) {
+    super(`${conflitos} nota(s) já preenchida(s) seria(m) substituída(s).`);
+    this.name = 'ConfirmacaoSubstituicaoError';
+    this.conflitos = conflitos;
+  }
+}
+
+/**
+ * Copia as notas para "Notas e Avaliações". Devolve quantas foram lançadas.
+ * Lança ConfirmacaoSubstituicaoError se isso for substituir nota(s) já preenchida(s)
+ * e `confirmarSubstituicao` não tiver sido passado — quem chama decide se pergunta ao
+ * professor e chama de novo com true, ou se já confirma direto (ex.: correção acabada
+ * de fazer no Modo Correção, onde a substituição É o resultado esperado).
+ */
+export async function lancarNotasNoBoletim(provaId: string, confirmarSubstituicao = false): Promise<number> {
+  const { data, error } = await supabase.rpc('rpc_lancar_notas_boletim', {
+    p_prova_id: provaId,
+    p_confirmar_substituicao: confirmarSubstituicao,
+  });
+  if (error) {
+    const msg = typeof error === 'object' && error && 'message' in error ? String((error as { message: unknown }).message) : String(error);
+    const m = msg.match(/^CONFIRMACAO_SUBSTITUICAO:(\d+)/);
+    if (m) throw new ConfirmacaoSubstituicaoError(Number(m[1]));
+    throw error;
+  }
   return (data as number) ?? 0;
 }
 
