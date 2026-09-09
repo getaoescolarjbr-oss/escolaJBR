@@ -184,7 +184,14 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
           // Anexa o texto CRU lido do QR à mensagem — sem isso, "código não encontrado"
           // não diz se a câmera leu o código certo (e ele não existe mesmo) ou leu
           // algo errado (aí o problema é a leitura do QR, não o cadastro).
-          const msg = eIdent instanceof Error ? eIdent.message : String(eIdent);
+          // O erro do supabase.rpc() é um objeto PostgrestError (tem `.message`, mas não
+          // é instanceof Error) — String(objeto) dá "[object Object]", não o texto.
+          const msg =
+            eIdent instanceof Error
+              ? eIdent.message
+              : typeof eIdent === 'object' && eIdent && 'message' in eIdent
+                ? String((eIdent as { message: unknown }).message)
+                : String(eIdent);
           throw new Error(`${msg} (QR lido: "${qr.valor}")`);
         }
         const chave = `${identificada.prova_id}:${identificada.versao}`;
