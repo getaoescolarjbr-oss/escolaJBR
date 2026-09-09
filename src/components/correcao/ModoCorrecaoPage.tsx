@@ -177,7 +177,16 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
       if (faseRef.current === 'PROCURANDO_QR' || (qr && qr.valor !== folhaRef.current?.codigo)) {
         if (!qr) return;
 
-        const identificada = await identificarFolha(qr.valor);
+        let identificada: FolhaIdentificada;
+        try {
+          identificada = await identificarFolha(qr.valor);
+        } catch (eIdent) {
+          // Anexa o texto CRU lido do QR à mensagem — sem isso, "código não encontrado"
+          // não diz se a câmera leu o código certo (e ele não existe mesmo) ou leu
+          // algo errado (aí o problema é a leitura do QR, não o cadastro).
+          const msg = eIdent instanceof Error ? eIdent.message : String(eIdent);
+          throw new Error(`${msg} (QR lido: "${qr.valor}")`);
+        }
         const chave = `${identificada.prova_id}:${identificada.versao}`;
 
         let cache = cacheGeomRef.current.get(chave);
