@@ -593,18 +593,24 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
             )}
 
             {resultado && (
-              <div className="flex items-center justify-between gap-3 bg-green-950/40 border border-green-900 rounded-lg px-3 py-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <Check className="w-4 h-4 text-green-400 shrink-0" />
-                  <p className="text-xs text-green-200 font-bold truncate">
+              <div className="flex items-center justify-between gap-3 bg-ms-dark border border-gray-800 rounded-lg px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 text-[11px] text-ms-muted truncate">
+                    <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />
                     {resultado.acertos}/{resultado.total_linhas} acertos
-                    {resultado.modo_nota !== 'SEM_NOTA' && resultado.nota != null
-                      ? ` · nota ${Number(resultado.nota).toFixed(2)} de ${Number(resultado.valor_total).toFixed(2)}`
-                      : ''}
                     {resultado.em_branco > 0 ? ` · ${resultado.em_branco} em branco` : ''}
                     {resultado.anuladas > 0 ? ` · ${resultado.anuladas} anulada(s)` : ''}
                     {anuladas.size > 0 ? ` · ${anuladas.size} anulada(s) manualmente` : ''}
                   </p>
+                  {resultado.modo_nota !== 'SEM_NOTA' && resultado.nota != null && (
+                    <p
+                      className="text-3xl font-black leading-tight tracking-tight"
+                      style={{ color: corPorPorcentagem((Number(resultado.nota) / Number(resultado.valor_total)) * 100) }}
+                    >
+                      {Number(resultado.nota).toFixed(2)}
+                      <span className="text-sm font-medium text-ms-muted"> / {Number(resultado.valor_total).toFixed(2)}</span>
+                    </p>
+                  )}
                 </div>
                 <button
                   onClick={reiniciar}
@@ -721,6 +727,24 @@ function GradeLeitura({
       })}
     </div>
   );
+}
+
+/**
+ * Cor da nota conforme o % de acerto: vermelho (0%) -> verde (60%, considerado a nota
+ * de corte) -> azul (100%). Interpolação linear em RGB entre os dois trechos, em vez de
+ * uma classe Tailwind fixa, porque o ponto de virada (60%) não é 0/50/100 — não cai em
+ * nenhuma escala pronta.
+ */
+function corPorPorcentagem(pct: number): string {
+  const p = Math.max(0, Math.min(100, Number.isFinite(pct) ? pct : 0));
+  const VERMELHO = [220, 38, 38];
+  const VERDE = [34, 197, 94];
+  const AZUL = [37, 99, 235];
+  const [a, b, t] = p <= 60 ? [VERMELHO, VERDE, p / 60] : [VERDE, AZUL, (p - 60) / 40];
+  const r = Math.round(a[0] + (b[0] - a[0]) * t);
+  const g = Math.round(a[1] + (b[1] - a[1]) * t);
+  const bl = Math.round(a[2] + (b[2] - a[2]) * t);
+  return `rgb(${r}, ${g}, ${bl})`;
 }
 
 export function extrairMensagemErro(e: unknown): string {
