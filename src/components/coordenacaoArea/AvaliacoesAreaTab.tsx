@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText, Lock, Unlock, Pencil, QrCode, Settings, Undo2 } from 'lucide-react';
 import type { AvaliacaoArea, ProvaAreaCota } from '../../types/avaliacoes';
 import type { AreaConhecimento } from '../../utils/areasConhecimento';
-import { listarAvaliacoesArea, publicarAvaliacaoArea, excluirAvaliacao, definirBloqueioAvaliacaoArea, despublicarAvaliacao } from '../../services/avaliacoesService';
+import { listarAvaliacoesArea, publicarAvaliacaoArea, excluirAvaliacao, contarImpressaoELeituraAvaliacao, definirBloqueioAvaliacaoArea, despublicarAvaliacao } from '../../services/avaliacoesService';
 import { NovaAvaliacaoAreaModal } from './NovaAvaliacaoAreaModal';
 import { InserirQuestoesAreaModal } from './InserirQuestoesAreaModal';
 import { ReimprimirAvaliacaoModal } from '../bancoQuestoes/avaliacoes/ReimprimirAvaliacaoModal';
@@ -101,9 +101,26 @@ export function AvaliacoesAreaTab({ area }: Props) {
   }
 
   async function handleExcluir(av: AvaliacaoArea) {
-    const msg = av.status === 'PUBLICADA'
+    let msg = av.status === 'PUBLICADA'
       ? `A avaliação "${av.titulo}" já está PUBLICADA. Excluí-la irá remover as notas sincronizadas nos diários dos professores. Deseja realmente excluir definitivamente?`
       : `Deseja realmente excluir a avaliação da área "${av.titulo}"? Esta ação não pode ser desfeita.`;
+
+    // Excluir apaga a prova em cascata (versões e alocações incluídas) — se já existem
+    // folhas geradas, os códigos que estão no papel de algum professor/turma deixam de
+    // existir no banco, sem conserto depois.
+    try {
+      const { alocacoes, leituras } = await contarImpressaoELeituraAvaliacao(av.id);
+      if (alocacoes > 0) {
+        msg =
+          `ATENÇÃO: esta avaliação já tem ${alocacoes} folha(s) gerada(s)` +
+          (leituras > 0 ? ` e ${leituras} cartão(ões) já lido(s) pela câmera` : '') +
+          `. Excluir invalida o código de TODAS as folhas já impressas — se algum aluno ` +
+          `já respondeu no papel, o cartão dele deixa de poder ser lido, sem conserto. ` +
+          msg;
+      }
+    } catch {
+      // Segue com o aviso genérico se a checagem falhar.
+    }
 
     if (!confirm(msg)) return;
 

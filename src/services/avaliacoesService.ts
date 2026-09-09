@@ -315,6 +315,22 @@ export async function despublicarAvaliacao(id: string): Promise<void> {
   if (error) throw error;
 }
 
+// Quantas folhas já foram geradas (prova_alocacoes) e quantas já foram lidas pela câmera
+// (prova_leituras) para esta prova — usado só para avisar antes de excluir. Excluir
+// apaga a prova em cascata, incluindo prova_versoes/prova_alocacoes: o código que já
+// saiu impresso no papel do aluno deixa de existir no banco, e "Código não encontrado"
+// na leitura passa a não ter conserto (foi exatamente isso que aconteceu com uma
+// avaliação de área duplicada nesta escola — ver histórico do chat).
+export async function contarImpressaoELeituraAvaliacao(
+  provaId: string
+): Promise<{ alocacoes: number; leituras: number }> {
+  const [{ count: alocacoes }, { count: leituras }] = await Promise.all([
+    supabase.from('prova_alocacoes').select('id', { count: 'exact', head: true }).eq('prova_id', provaId),
+    supabase.from('prova_leituras').select('id', { count: 'exact', head: true }).eq('prova_id', provaId),
+  ]);
+  return { alocacoes: alocacoes ?? 0, leituras: leituras ?? 0 };
+}
+
 // Exclui a prova e, se ela já tiver avaliação(ões) de nota vinculada(s) (ver
 // sincronizarNotasDaProva), apaga também as notas lançadas e a avaliação em "Notas e
 // Avaliações" — pra nunca sobrar um boletim com uma coluna de nota "órfã" de uma prova

@@ -3,6 +3,7 @@ import { BookUp, Camera, Check, ClipboardCheck, Copy, Eye, Loader2, Pencil, Prin
 import type { Avaliacao, AvaliacaoArea, ProvaAreaCota, StatusAvaliacao } from '../../../types/avaliacoes';
 import {
   atualizarStatusAvaliacao,
+  contarImpressaoELeituraAvaliacao,
   despublicarAvaliacao,
   excluirAvaliacao,
   linkPublicoSimulado,
@@ -135,9 +136,26 @@ export function MinhasAvaliacoesTab() {
   }
 
   async function excluir(a: Avaliacao) {
-    if (!confirm(`Tem certeza de que deseja excluir a avaliação "${a.titulo}"? Esta ação não pode ser desfeita.`)) {
-      return;
+    // Excluir apaga a prova em cascata (versões e alocações incluídas). Se já existem
+    // folhas geradas — e ainda mais se alguma já foi lida pela câmera — os códigos que
+    // estão no papel do aluno deixam de existir no banco e não têm mais conserto.
+    let aviso = `Tem certeza de que deseja excluir a avaliação "${a.titulo}"? Esta ação não pode ser desfeita.`;
+    try {
+      const { alocacoes, leituras } = await contarImpressaoELeituraAvaliacao(a.id);
+      if (alocacoes > 0) {
+        aviso =
+          `ATENÇÃO: esta avaliação já tem ${alocacoes} folha(s) gerada(s)` +
+          (leituras > 0 ? ` e ${leituras} cartão(ões) já lido(s) pela câmera` : '') +
+          `. Excluir invalida o código de TODAS as folhas já impressas — se algum aluno ` +
+          `já respondeu no papel, o cartão dele deixa de poder ser lido, sem conserto. ` +
+          `Tem certeza de que quer excluir "${a.titulo}"?`;
+      }
+    } catch {
+      // Falhou a checagem (ex.: sem permissão de leitura): segue com o aviso genérico
+      // em vez de travar a exclusão por causa de um aviso extra que não é essencial.
     }
+    if (!confirm(aviso)) return;
+
     setProcessando(a.id);
     try {
       await excluirAvaliacao(a.id);
