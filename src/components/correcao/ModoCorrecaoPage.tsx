@@ -30,8 +30,15 @@ import { bipe } from './bipe';
 //    o pior defeito possível aqui — pior que não ler —, porque ninguém percebe.
 // ====================================================================================
 
-/** Largura de processamento. 1200px dá resolução para ler com nitidez folhas reduzidas (ex: 2 por página). */
-const LARGURA_PROC = 1200;
+/**
+ * Largura de processamento. Cartão em 2+ colunas é bem mais largo em mm (até ~186mm)
+ * que um cartão de 1 coluna (~60-70mm) — na mesma resolução de captura, isso significa
+ * menos pixels por milímetro em CADA bolha, e é exatamente o cenário em que a leitura
+ * some/erra. 1600px é o valor pareado com o pedido de captura mais alta abaixo (ver
+ * getUserMedia): sem subir a captura, aumentar isto sozinho não ajuda, porque o
+ * downscale já era quase nulo (1200 vs os 1280 pedidos antes).
+ */
+const LARGURA_PROC = 1600;
 
 /** Intervalo entre processamentos. ~6 leituras/s é mais que suficiente para folha parada. */
 const INTERVALO_MS = 160;
@@ -108,8 +115,12 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
         fluxo = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
+            // 1920x1080: câmeras traseiras de celular suportam isso tranquilamente, e sem
+            // subir o pedido aqui o LARGURA_PROC acima não tem o que aproveitar — o
+            // navegador já entregava perto de 1280px, então processar em 1200/1600 não
+            // ganhava nada de verdade.
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
           },
           audio: false,
         });
