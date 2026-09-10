@@ -30,23 +30,65 @@ const SEGMENTO_LABEL: Record<FiltroSegmento, string> = {
   MEDIO: 'Médio (1º–3º)',
 };
 
+function segmentoDaTurmaModulo(nomeTurma: string | null | undefined): 'FUNDAMENTAL' | 'MEDIO' | null {
+  if (!nomeTurma) return null;
+  const m = nomeTurma.match(/^(\d)/);
+  if (!m) return null;
+  const digito = Number(m[1]);
+  if (digito >= 1 && digito <= 3) return 'MEDIO';
+  if (digito >= 6 && digito <= 9) return 'FUNDAMENTAL';
+  return null;
+}
+
 /** Botões de filtro por segmento, reaproveitados em Novas Ocorrências e Alunos
  * Reincidentes — mesmo controle, dois estados independentes (cada painel filtra o que
- * mostra, sem afetar o outro). */
-function FiltroSegmentoBotoes({ valor, onChange }: { valor: FiltroSegmento; onChange: (v: FiltroSegmento) => void }) {
+ * mostra, sem afetar o outro). Escolher Fundamental ou Médio abre a lista de turmas
+ * daquele segmento pra restringir a uma turma específica; "Todas" (padrão) mantém o
+ * segmento inteiro. */
+function FiltroSegmentoBotoes({
+  valor,
+  onChange,
+  turmas,
+  turmaSelecionada,
+  onTurmaChange,
+}: {
+  valor: FiltroSegmento;
+  onChange: (v: FiltroSegmento) => void;
+  turmas: Turma[];
+  turmaSelecionada: string;
+  onTurmaChange: (turmaId: string) => void;
+}) {
+  const turmasDoSegmento = valor === 'TODOS'
+    ? []
+    : turmas.filter((t) => segmentoDaTurmaModulo(t.nome) === valor);
+
   return (
-    <div className="flex items-center gap-1 bg-ms-card border border-ms-border rounded-xl p-1">
-      {(Object.keys(SEGMENTO_LABEL) as FiltroSegmento[]).map((opt) => (
-        <button
-          key={opt}
-          onClick={() => onChange(opt)}
-          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
-            valor === opt ? 'bg-ms-blue text-white shadow' : 'text-gray-400 hover:text-white'
-          }`}
+    <div className="flex items-center gap-2 flex-wrap">
+      <div className="flex items-center gap-1 bg-ms-card border border-ms-border rounded-xl p-1">
+        {(Object.keys(SEGMENTO_LABEL) as FiltroSegmento[]).map((opt) => (
+          <button
+            key={opt}
+            onClick={() => { onChange(opt); onTurmaChange('TODAS'); }}
+            className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+              valor === opt ? 'bg-ms-blue text-white shadow' : 'text-gray-400 hover:text-white'
+            }`}
+          >
+            {SEGMENTO_LABEL[opt]}
+          </button>
+        ))}
+      </div>
+      {valor !== 'TODOS' && (
+        <select
+          value={turmaSelecionada}
+          onChange={(e) => onTurmaChange(e.target.value)}
+          className="px-3 py-2 bg-ms-card border border-ms-border rounded-xl text-white text-[10px] font-black uppercase tracking-wider outline-none focus:ring-2 focus:ring-ms-blueText"
         >
-          {SEGMENTO_LABEL[opt]}
-        </button>
-      ))}
+          <option value="TODAS">Todas as turmas</option>
+          {turmasDoSegmento.map((t) => (
+            <option key={t.id} value={t.id}>{t.nome}</option>
+          ))}
+        </select>
+      )}
     </div>
   );
 }
@@ -107,6 +149,11 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   // da turma já basta, sem precisar de uma coluna de segmento no banco.
   const [filtroSegmentoOcorrencias, setFiltroSegmentoOcorrencias] = useState<FiltroSegmento>('TODOS');
   const [filtroSegmentoReincidentes, setFiltroSegmentoReincidentes] = useState<FiltroSegmento>('TODOS');
+  // 'TODAS' = todas as turmas do segmento escolhido acima; um id específico restringe
+  // a uma turma só. Reseta pra 'TODAS' sempre que o segmento muda (ver onTurmaChange
+  // em FiltroSegmentoBotoes).
+  const [turmaFiltroOcorrencias, setTurmaFiltroOcorrencias] = useState<string>('TODAS');
+  const [turmaFiltroReincidentes, setTurmaFiltroReincidentes] = useState<string>('TODAS');
   const [avaliacoesAgenda, setAvaliacoesAgenda] = useState<any[]>([]);
   const [loadingAgenda, setLoadingAgenda] = useState(false);
   const agendaTableRef = useRef<HTMLTableElement>(null);
@@ -1242,13 +1289,17 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
     s.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const ocorrenciasPendentesFiltradas = filtroSegmentoOcorrencias === 'TODOS'
-    ? ocorrenciasPendentes
-    : ocorrenciasPendentes.filter((oc: any) => segmentoDaTurma(oc.turma?.nome) === filtroSegmentoOcorrencias);
+  const ocorrenciasPendentesFiltradas = ocorrenciasPendentes.filter((oc: any) => {
+    if (filtroSegmentoOcorrencias === 'TODOS') return true;
+    if (segmentoDaTurma(oc.turma?.nome) !== filtroSegmentoOcorrencias) return false;
+    return turmaFiltroOcorrencias === 'TODAS' || oc.turma_id === turmaFiltroOcorrencias;
+  });
 
-  const alunosReincidentesFiltrados = filtroSegmentoReincidentes === 'TODOS'
-    ? alunosReincidentes
-    : alunosReincidentes.filter((item: any) => segmentoDaTurma(item.aluno?.turmas?.nome) === filtroSegmentoReincidentes);
+  const alunosReincidentesFiltrados = alunosReincidentes.filter((item: any) => {
+    if (filtroSegmentoReincidentes === 'TODOS') return true;
+    if (segmentoDaTurma(item.aluno?.turmas?.nome) !== filtroSegmentoReincidentes) return false;
+    return turmaFiltroReincidentes === 'TODAS' || item.aluno?.turma_id === turmaFiltroReincidentes;
+  });
 
   return (
     <div className="space-y-8">
@@ -2031,7 +2082,13 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                         className="w-16 px-2 py-1.5 bg-ms-card border border-ms-border rounded-lg text-white text-xs font-bold text-center outline-none focus:ring-2 focus:ring-amber-500/50"
                       />
                     </label>
-                    <FiltroSegmentoBotoes valor={filtroSegmentoReincidentes} onChange={setFiltroSegmentoReincidentes} />
+                    <FiltroSegmentoBotoes
+                      valor={filtroSegmentoReincidentes}
+                      onChange={setFiltroSegmentoReincidentes}
+                      turmas={turmas}
+                      turmaSelecionada={turmaFiltroReincidentes}
+                      onTurmaChange={setTurmaFiltroReincidentes}
+                    />
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
@@ -2398,7 +2455,13 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                  </button>
                </div>
 
-               <FiltroSegmentoBotoes valor={filtroSegmentoOcorrencias} onChange={setFiltroSegmentoOcorrencias} />
+               <FiltroSegmentoBotoes
+                 valor={filtroSegmentoOcorrencias}
+                 onChange={setFiltroSegmentoOcorrencias}
+                 turmas={turmas}
+                 turmaSelecionada={turmaFiltroOcorrencias}
+                 onTurmaChange={setTurmaFiltroOcorrencias}
+               />
 
                {modoSelecaoLote && (
                  <div className="sticky top-0 z-10 bg-ms-card border border-ms-blueText/40 rounded-2xl p-4 space-y-3 shadow-lg">
