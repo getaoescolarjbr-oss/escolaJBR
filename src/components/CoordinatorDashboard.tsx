@@ -43,6 +43,13 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   const [devolutivaModalOc, setDevolutivaModalOc] = useState<any | null>(null);
   const [devolutivaText, setDevolutivaText] = useState('');
   const [submittingDevolutiva, setSubmittingDevolutiva] = useState(false);
+  // Confirmação em lote: o coordenador marca várias ocorrências como lidas de uma vez,
+  // sem escrever devolutiva individual pra cada uma — "Confirmar & Devolutiva" continua
+  // existindo à parte pra quem quer responder uma ocorrência específica.
+  const [modoSelecaoLote, setModoSelecaoLote] = useState(false);
+  const [ocorrenciasSelecionadas, setOcorrenciasSelecionadas] = useState<Set<string>>(new Set());
+  const [devolutivaLoteText, setDevolutivaLoteText] = useState('');
+  const [confirmandoLote, setConfirmandoLote] = useState(false);
   const [alunosReincidentes, setAlunosReincidentes] = useState<any[]>([]);
   const [loadingReincidentes, setLoadingReincidentes] = useState(false);
   const [showReincidentes, setShowReincidentes] = useState(false);
@@ -880,6 +887,59 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
       setSubmittingDevolutiva(false);
     }
   };
+
+  function toggleSelecaoOcorrencia(id: string) {
+    setOcorrenciasSelecionadas((atual) => {
+      const nova = new Set(atual);
+      if (nova.has(id)) nova.delete(id); else nova.add(id);
+      return nova;
+    });
+  }
+
+  function toggleSelecionarTodas() {
+    setOcorrenciasSelecionadas((atual) =>
+      atual.size === ocorrenciasPendentes.length
+        ? new Set()
+        : new Set(ocorrenciasPendentes.map((oc) => oc.id as string))
+    );
+  }
+
+  function sairDoModoLote() {
+    setModoSelecaoLote(false);
+    setOcorrenciasSelecionadas(new Set());
+    setDevolutivaLoteText('');
+  }
+
+  async function handleConfirmarLote() {
+    if (ocorrenciasSelecionadas.size === 0) return;
+    setConfirmandoLote(true);
+    const ids = Array.from(ocorrenciasSelecionadas);
+    const devolutiva = devolutivaLoteText.trim() || null;
+    // Otimista: some da lista de pendentes na hora, sem esperar o servidor.
+    setOcorrenciasPendentes((prev) => prev.filter((o) => !ocorrenciasSelecionadas.has(o.id)));
+    setModoSelecaoLote(false);
+    setOcorrenciasSelecionadas(new Set());
+    setDevolutivaLoteText('');
+    try {
+      const now = new Date().toISOString();
+      const { error } = await supabase
+        .from('ocorrências')
+        .update({
+          visto_coordenador: true,
+          data_visualizacao_coordenador: now,
+          ...(devolutiva ? { devolutiva_coordenador: devolutiva } : {}),
+        })
+        .in('id', ids);
+      if (error) throw error;
+      fetchAlunosReincidentes();
+    } catch (err: any) {
+      console.error('Error confirming ocorrências em lote:', err);
+      fetchOcorrenciasPendentes();
+      alert('Erro ao confirmar ocorrências selecionadas: ' + err.message);
+    } finally {
+      setConfirmandoLote(false);
+    }
+  }
 
   useEffect(() => {
     if (activeTab === 'novas_ocorrencias') {
@@ -1801,12 +1861,76 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
              </div>
            ) : (
              <div className="space-y-4">
-               <p className="text-xs font-black text-red-400 uppercase tracking-widest">
-                 {ocorrenciasPendentes.length} ocorrência{ocorrenciasPendentes.length > 1 ? 's' : ''} aguardando leitura
-               </p>
+               <div className="flex items-center justify-between flex-wrap gap-2">
+                 <p className="text-xs font-black text-red-400 uppercase tracking-widest">
+                   {ocorrenciasPendentes.length} ocorrência{ocorrenciasPendentes.length > 1 ? 's' : ''} aguardando leitura
+                 </p>
+                 <button
+                   onClick={() => (modoSelecaoLote ? sairDoModoLote() : setModoSelecaoLote(true))}
+                   className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                     modoSelecaoLote
+                       ? 'bg-gray-700 text-white hover:bg-gray-600'
+                       : 'bg-ms-blue/10 text-ms-blueText hover:bg-ms-blue hover:text-white'
+                   }`}
+                 >
+                   <CheckCheck className="w-3.5 h-3.5" />
+                   {modoSelecaoLote ? 'Cancelar seleção' : 'Selecionar em lote'}
+                 </button>
+               </div>
+
+               {modoSelecaoLote && (
+                 <div className="sticky top-0 z-10 bg-ms-card border border-ms-blueText/40 rounded-2xl p-4 space-y-3 shadow-lg">
+                   <div className="flex items-center justify-between flex-wrap gap-2">
+                     <label className="flex items-center gap-2 text-xs font-bold text-white cursor-pointer">
+                       <input
+                         type="checkbox"
+                         checked={ocorrenciasPendentes.length > 0 && ocorrenciasSelecionadas.size === ocorrenciasPendentes.length}
+                         onChange={toggleSelecionarTodas}
+                         className="w-4 h-4 accent-ms-blueText"
+                       />
+                       Selecionar todas ({ocorrenciasSelecionadas.size}/{ocorrenciasPendentes.length})
+                     </label>
+                     <button
+                       onClick={handleConfirmarLote}
+                       disabled={ocorrenciasSelecionadas.size === 0 || confirmandoLote}
+                       className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-900/30 transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                     >
+                       {confirmandoLote ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCheck className="w-4 h-4" />}
+                       Confirmar {ocorrenciasSelecionadas.size > 0 ? `(${ocorrenciasSelecionadas.size})` : ''} selecionada{ocorrenciasSelecionadas.size === 1 ? '' : 's'}
+                     </button>
+                   </div>
+                   <textarea
+                     value={devolutivaLoteText}
+                     onChange={(e) => setDevolutivaLoteText(e.target.value)}
+                     placeholder="Devolutiva opcional, aplicada a todas as ocorrências selecionadas (deixe em branco pra só marcar como lidas)"
+                     rows={2}
+                     className="w-full px-3 py-2 bg-ms-dark border border-ms-border rounded-xl text-white text-xs outline-none focus:ring-2 focus:ring-ms-blueText placeholder:text-gray-600"
+                   />
+                 </div>
+               )}
+
                {ocorrenciasPendentes.map((oc) => (
-                 <div key={oc.id} className="bg-ms-card rounded-2xl border border-red-500/30 shadow-xl overflow-hidden hover:border-red-500/60 transition-all group">
+                 <div
+                   key={oc.id}
+                   onClick={() => modoSelecaoLote && toggleSelecaoOcorrencia(oc.id)}
+                   className={`bg-ms-card rounded-2xl border shadow-xl overflow-hidden transition-all group ${
+                     modoSelecaoLote
+                       ? `cursor-pointer ${ocorrenciasSelecionadas.has(oc.id) ? 'border-ms-blueText ring-2 ring-ms-blueText/40' : 'border-red-500/30 hover:border-ms-blueText/50'}`
+                       : 'border-red-500/30 hover:border-red-500/60'
+                   }`}
+                 >
                    <div className="flex items-stretch">
+                     {modoSelecaoLote && (
+                       <div className="flex items-center justify-center px-3 bg-ms-dark/40 shrink-0">
+                         <input
+                           type="checkbox"
+                           checked={ocorrenciasSelecionadas.has(oc.id)}
+                           onChange={() => toggleSelecaoOcorrencia(oc.id)}
+                           onClick={(e) => e.stopPropagation()}
+                           className="w-4 h-4 accent-ms-blueText pointer-events-auto"
+                         />
+                       </div>
+                     )}
                      {/* Red accent bar */}
                      <div className="w-1.5 bg-gradient-to-b from-red-500 to-red-700 shrink-0" />
                      <div className="flex-1 p-5">
@@ -1851,13 +1975,15 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                              </span>
                            </div>
                          </div>
-                         <button
-                           onClick={() => setDevolutivaModalOc(oc)}
-                           className="shrink-0 flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-900/30 transition-all hover:scale-105"
-                         >
-                           <MessageSquare className="w-4 h-4" />
-                           Confirmar & Devolutiva
-                         </button>
+                         {!modoSelecaoLote && (
+                           <button
+                             onClick={() => setDevolutivaModalOc(oc)}
+                             className="shrink-0 flex items-center gap-2 px-5 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-emerald-900/30 transition-all hover:scale-105"
+                           >
+                             <MessageSquare className="w-4 h-4" />
+                             Confirmar & Devolutiva
+                           </button>
+                         )}
                        </div>
                      </div>
                    </div>
