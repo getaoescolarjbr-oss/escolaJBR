@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, Turma, Student } from '../types';
-import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer, AlertTriangle, CheckCheck, Clock, Mail, MessageSquare, BarChart2, Send, X, Cake, Pencil, Lock } from 'lucide-react';
+import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer, AlertTriangle, CheckCheck, Clock, Mail, MessageSquare, BarChart2, Send, X, Cake, Pencil, Lock, Archive, ArchiveRestore, Eye } from 'lucide-react';
 import { printReport } from '../utils/printUtils';
 import { getCurrentBimestre, getBimestreFromDate } from '../utils/academicUtils';
 import { autoUpdateExpiredAbsences } from '../utils/studentUtils';
@@ -53,6 +53,26 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   const [alunosReincidentes, setAlunosReincidentes] = useState<any[]>([]);
   const [loadingReincidentes, setLoadingReincidentes] = useState(false);
   const [showReincidentes, setShowReincidentes] = useState(false);
+  // Quantas ocorrências um aluno precisa ter pra entrar na lista — fica salvo no
+  // aparelho (não é algo que precise ser igual pra todo coordenador da escola).
+  const [limiarReincidencia, setLimiarReincidencia] = useState<number>(() => {
+    const salvo = Number(localStorage.getItem('limiar_reincidencia'));
+    return Number.isFinite(salvo) && salvo > 0 ? salvo : 3;
+  });
+  const [arquivadosReincidencia, setArquivadosReincidencia] = useState<Set<string>>(new Set());
+  const [modoSelecaoReincidentes, setModoSelecaoReincidentes] = useState(false);
+  const [reincidentesSelecionados, setReincidentesSelecionados] = useState<Set<string>>(new Set());
+  const [arquivandoId, setArquivandoId] = useState<string | null>(null);
+  const [arquivandoLote, setArquivandoLote] = useState(false);
+  const [printingListaReincidentes, setPrintingListaReincidentes] = useState(false);
+  const [verRegistrosAluno, setVerRegistrosAluno] = useState<{ id: string; nome: string; turma?: string } | null>(null);
+  const [registrosAlunoModal, setRegistrosAlunoModal] = useState<any[]>([]);
+  const [loadingRegistrosAluno, setLoadingRegistrosAluno] = useState(false);
+  const [printingRegistrosAluno, setPrintingRegistrosAluno] = useState(false);
+  const [mostrarArquivados, setMostrarArquivados] = useState(false);
+  const [alunosArquivadosDetalhe, setAlunosArquivadosDetalhe] = useState<any[]>([]);
+  const [loadingArquivados, setLoadingArquivados] = useState(false);
+  const [restaurandoId, setRestaurandoId] = useState<string | null>(null);
   const [avaliacoesAgenda, setAvaliacoesAgenda] = useState<any[]>([]);
   const [loadingAgenda, setLoadingAgenda] = useState(false);
   const agendaTableRef = useRef<HTMLTableElement>(null);
@@ -808,16 +828,21 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
     }
   };
 
-  const fetchAlunosReincidentes = async () => {
+  const fetchAlunosReincidentes = async (limiarOverride?: number) => {
     setLoadingReincidentes(true);
+    const limiar = limiarOverride ?? limiarReincidencia;
     try {
-      // Busca todas as ocorrências com dados do aluno e turma em uma única query
-      const { data, error } = await supabase
-        .from('ocorrências')
-        .select('aluno_id, aluno:alunos(id, nome, aluno_numero, turma_id, turmas(nome))');
+      const [ocorrenciasRes, arquivadosRes] = await Promise.all([
+        supabase.from('ocorrências').select('aluno_id, aluno:alunos(id, nome, aluno_numero, turma_id, turmas(nome))'),
+        supabase.from('alunos_reincidencia_arquivados').select('aluno_id'),
+      ]);
 
-      if (error) throw error;
+      if (ocorrenciasRes.error) throw ocorrenciasRes.error;
 
+      const arquivadosSet = new Set((arquivadosRes.data ?? []).map((r: any) => String(r.aluno_id)));
+      setArquivadosReincidencia(arquivadosSet);
+
+      const data = ocorrenciasRes.data;
       if (data && data.length > 0) {
         // Agrupa por aluno_id e conta ocorrências
         const countMap = new Map<string, { count: number; aluno: any }>();
@@ -831,7 +856,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
         });
 
         const result = Array.from(countMap.entries())
-          .filter(([, { count }]) => count >= 3)
+          .filter(([id, { count }]) => count >= limiar && !arquivadosSet.has(id))
           .sort((a, b) => b[1].count - a[1].count)
           .map(([id, { count, aluno }]) => ({ id, count, aluno }))
           .filter(r => r.aluno); // remove entradas sem aluno válido
@@ -847,6 +872,225 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
       setLoadingReincidentes(false);
     }
   };
+
+  function handleMudarLimiarReincidencia(valor: number) {
+    const limiarValido = Number.isFinite(valor) && valor > 0 ? Math.floor(valor) : 1;
+    setLimiarReincidencia(limiarValido);
+    localStorage.setItem('limiar_reincidencia', String(limiarValido));
+    fetchAlunosReincidentes(limiarValido);
+  }
+
+  function toggleSelecaoReincidente(id: string) {
+    setReincidentesSelecionados((atual) => {
+      const nova = new Set(atual);
+      if (nova.has(id)) nova.delete(id); else nova.add(id);
+      return nova;
+    });
+  }
+
+  function toggleSelecionarTodosReincidentes() {
+    setReincidentesSelecionados((atual) =>
+      atual.size === alunosReincidentes.length
+        ? new Set()
+        : new Set(alunosReincidentes.map((item) => item.id as string))
+    );
+  }
+
+  function sairDoModoSelecaoReincidentes() {
+    setModoSelecaoReincidentes(false);
+    setReincidentesSelecionados(new Set());
+  }
+
+  async function handleArquivarAluno(alunoId: string) {
+    setArquivandoId(alunoId);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const { error } = await supabase.from('alunos_reincidencia_arquivados').upsert({
+        aluno_id: alunoId,
+        arquivado_por: userData.user?.id ?? null,
+      });
+      if (error) throw error;
+      setAlunosReincidentes((prev) => prev.filter((item) => item.id !== alunoId));
+      setArquivadosReincidencia((prev) => new Set(prev).add(alunoId));
+    } catch (err: any) {
+      console.error('Erro ao arquivar aluno:', err);
+      alert('Erro ao remover aluno da lista: ' + err.message);
+    } finally {
+      setArquivandoId(null);
+    }
+  }
+
+  async function handleArquivarLote() {
+    if (reincidentesSelecionados.size === 0) return;
+    setArquivandoLote(true);
+    const ids = Array.from(reincidentesSelecionados);
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      const { error } = await supabase.from('alunos_reincidencia_arquivados').upsert(
+        ids.map((aluno_id) => ({ aluno_id, arquivado_por: userData.user?.id ?? null }))
+      );
+      if (error) throw error;
+      setAlunosReincidentes((prev) => prev.filter((item) => !reincidentesSelecionados.has(item.id)));
+      setArquivadosReincidencia((prev) => {
+        const nova = new Set(prev);
+        ids.forEach((id) => nova.add(id));
+        return nova;
+      });
+      sairDoModoSelecaoReincidentes();
+    } catch (err: any) {
+      console.error('Erro ao arquivar alunos selecionados:', err);
+      alert('Erro ao remover alunos selecionados: ' + err.message);
+    } finally {
+      setArquivandoLote(false);
+    }
+  }
+
+  async function fetchAlunosArquivados() {
+    setLoadingArquivados(true);
+    try {
+      const { data, error } = await supabase
+        .from('alunos_reincidencia_arquivados')
+        .select('aluno_id, arquivado_em, aluno:alunos(id, nome, aluno_numero, turma_id, turmas(nome))')
+        .order('arquivado_em', { ascending: false });
+      if (error) throw error;
+      setAlunosArquivadosDetalhe((data ?? []).filter((r: any) => r.aluno));
+    } catch (err) {
+      console.error('Erro ao carregar arquivados:', err);
+      setAlunosArquivadosDetalhe([]);
+    } finally {
+      setLoadingArquivados(false);
+    }
+  }
+
+  async function handleRestaurarAluno(alunoId: string) {
+    setRestaurandoId(alunoId);
+    try {
+      const { error } = await supabase.from('alunos_reincidencia_arquivados').delete().eq('aluno_id', alunoId);
+      if (error) throw error;
+      setAlunosArquivadosDetalhe((prev) => prev.filter((r) => r.aluno_id !== alunoId));
+      setArquivadosReincidencia((prev) => {
+        const nova = new Set(prev);
+        nova.delete(alunoId);
+        return nova;
+      });
+      fetchAlunosReincidentes();
+    } catch (err: any) {
+      console.error('Erro ao restaurar aluno:', err);
+      alert('Erro ao restaurar aluno: ' + err.message);
+    } finally {
+      setRestaurandoId(null);
+    }
+  }
+
+  async function handleVerRegistrosAluno(item: any) {
+    setVerRegistrosAluno({ id: item.id, nome: item.aluno?.nome || 'Aluno', turma: item.aluno?.turmas?.nome });
+    setRegistrosAlunoModal([]);
+    setLoadingRegistrosAluno(true);
+    try {
+      const { data: raw, error } = await supabase
+        .from('ocorrências')
+        .select('*')
+        .eq('aluno_id', item.id)
+        .order('data_registro', { ascending: false });
+      if (error) throw error;
+
+      const teacherIds = [...new Set((raw ?? []).map((o: any) => o.id_do_professor).filter(Boolean))];
+      const { data: teachers } = teacherIds.length > 0
+        ? await supabase.from('professores').select('id, nome, cargo').in('id', teacherIds)
+        : { data: [] as any[] };
+      const teachersMap = new Map((teachers ?? []).map((t: any) => [t.id, t]));
+
+      setRegistrosAlunoModal((raw ?? []).map((o: any) => ({
+        ...o,
+        professor: o.id_do_professor ? teachersMap.get(o.id_do_professor) : null,
+      })));
+    } catch (err) {
+      console.error('Erro ao carregar registros do aluno:', err);
+      setRegistrosAlunoModal([]);
+    } finally {
+      setLoadingRegistrosAluno(false);
+    }
+  }
+
+  function formatarDataOcorrencia(dateStr: string | null | undefined) {
+    if (!dateStr) return '—';
+    if (dateStr.includes('-') && !dateStr.includes('T')) {
+      const [y, m, d] = dateStr.split('-');
+      return `${d}/${m}/${y}`;
+    }
+    return new Date(dateStr).toLocaleDateString('pt-BR');
+  }
+
+  function escapeHtmlReincidentes(s: string) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function handlePrintRegistrosAluno() {
+    if (!verRegistrosAluno) return;
+    setPrintingRegistrosAluno(true);
+    try {
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Tipo</th>
+            <th>Descrição</th>
+            <th>Registrado por</th>
+            <th>Devolutiva da Coordenação</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${registrosAlunoModal.map((o: any) => `<tr>
+            <td>${formatarDataOcorrencia(o.data || o.data_registro)}</td>
+            <td>${escapeHtmlReincidentes(o.tipo || '—')}</td>
+            <td style="text-align:left">${escapeHtmlReincidentes(o.descricao || o.observacao || '—')}</td>
+            <td>${escapeHtmlReincidentes(o.professor?.nome || o.registrado_por || 'Sistema')}</td>
+            <td style="text-align:left">${escapeHtmlReincidentes(o.devolutiva_coordenador || '—')}</td>
+          </tr>`).join('')}
+        </tbody>
+      `;
+      printReport(table, {
+        title: `Registros de Ocorrências — ${verRegistrosAluno.nome}`,
+        subtitle: verRegistrosAluno.turma || undefined,
+        info: [{ label: 'Total de Registros', value: String(registrosAlunoModal.length) }],
+      });
+    } finally {
+      setPrintingRegistrosAluno(false);
+    }
+  }
+
+  function handlePrintListaReincidentes() {
+    setPrintingListaReincidentes(true);
+    try {
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>Aluno</th>
+            <th>Nº</th>
+            <th>Turma</th>
+            <th>Ocorrências</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${alunosReincidentes.map((item) => `<tr>
+            <td style="text-align:left">${escapeHtmlReincidentes(item.aluno?.nome || '—')}</td>
+            <td>${item.aluno?.aluno_numero ?? '—'}</td>
+            <td>${escapeHtmlReincidentes(item.aluno?.turmas?.nome || '—')}</td>
+            <td>${item.count}</td>
+          </tr>`).join('')}
+        </tbody>
+      `;
+      printReport(table, {
+        title: 'Alunos Reincidentes',
+        subtitle: `Alunos com ${limiarReincidencia} ou mais ocorrências registradas`,
+        info: [{ label: 'Total de Alunos', value: String(alunosReincidentes.length) }],
+      });
+    } finally {
+      setPrintingListaReincidentes(false);
+    }
+  }
 
   const handleConfirmLeitura = (oc: any) => {
     setDevolutivaModalOc(oc);
@@ -1716,10 +1960,124 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                 <div className="flex items-center gap-3">
                   <div className="h-px flex-1 bg-ms-border" />
                   <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest flex items-center gap-2">
-                    <BarChart2 className="w-3.5 h-3.5" /> Alunos com 3 ou mais ocorrências
+                    <BarChart2 className="w-3.5 h-3.5" /> Alunos com {limiarReincidencia} ou mais ocorrências
                   </span>
                   <div className="h-px flex-1 bg-ms-border" />
                 </div>
+
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <label className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                    Mínimo de ocorrências
+                    <input
+                      type="number"
+                      min={1}
+                      value={limiarReincidencia}
+                      onChange={(e) => handleMudarLimiarReincidencia(Number(e.target.value))}
+                      className="w-16 px-2 py-1.5 bg-ms-card border border-ms-border rounded-lg text-white text-xs font-bold text-center outline-none focus:ring-2 focus:ring-amber-500/50"
+                    />
+                  </label>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={handlePrintListaReincidentes}
+                      disabled={printingListaReincidentes || alunosReincidentes.length === 0}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-ms-card border border-ms-border text-gray-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:text-white hover:border-ms-blueText/50 transition-all disabled:opacity-40"
+                    >
+                      {printingListaReincidentes ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />}
+                      Imprimir Lista
+                    </button>
+                    <button
+                      onClick={() => {
+                        const next = !mostrarArquivados;
+                        setMostrarArquivados(next);
+                        if (next) fetchAlunosArquivados();
+                      }}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                        mostrarArquivados
+                          ? 'bg-gray-700 text-white border-gray-600'
+                          : 'bg-ms-card text-gray-400 border-ms-border hover:text-white hover:border-ms-blueText/50'
+                      }`}
+                    >
+                      <Archive className="w-3.5 h-3.5" />
+                      {mostrarArquivados ? 'Ocultar removidos' : 'Ver removidos'}
+                      {arquivadosReincidencia.size > 0 && (
+                        <span className="ml-1 bg-gray-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded-full">
+                          {arquivadosReincidencia.size}
+                        </span>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => (modoSelecaoReincidentes ? sairDoModoSelecaoReincidentes() : setModoSelecaoReincidentes(true))}
+                      className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all border ${
+                        modoSelecaoReincidentes
+                          ? 'bg-gray-700 text-white border-gray-600'
+                          : 'bg-ms-card text-gray-400 border-ms-border hover:text-white hover:border-amber-500/50'
+                      }`}
+                    >
+                      <CheckCheck className="w-3.5 h-3.5" />
+                      {modoSelecaoReincidentes ? 'Cancelar seleção' : 'Selecionar em lote'}
+                    </button>
+                  </div>
+                </div>
+
+                {mostrarArquivados && (
+                  <div className="bg-ms-card rounded-2xl border border-gray-700 p-4 space-y-2">
+                    <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                      <Archive className="w-3.5 h-3.5" /> Alunos removidos da lista
+                    </p>
+                    {loadingArquivados ? (
+                      <div className="py-4 flex items-center justify-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin text-gray-400" />
+                        <span className="text-gray-500 text-xs font-bold">Carregando...</span>
+                      </div>
+                    ) : alunosArquivadosDetalhe.length === 0 ? (
+                      <p className="text-gray-500 text-xs italic py-2">Nenhum aluno removido da lista.</p>
+                    ) : (
+                      <div className="divide-y divide-ms-border/30">
+                        {alunosArquivadosDetalhe.map((r: any) => (
+                          <div key={r.aluno_id} className="flex items-center justify-between py-2.5">
+                            <div>
+                              <p className="text-sm font-bold text-white">{r.aluno?.nome}</p>
+                              <p className="text-[10px] font-black text-gray-500 uppercase">
+                                {r.aluno?.aluno_numero ? `Nº ${r.aluno.aluno_numero} · ` : ''}{r.aluno?.turmas?.nome || '—'}
+                              </p>
+                            </div>
+                            <button
+                              onClick={() => handleRestaurarAluno(r.aluno_id)}
+                              disabled={restaurandoId === r.aluno_id}
+                              className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-blue/10 text-ms-blueText rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-ms-blue hover:text-white transition-all disabled:opacity-40"
+                            >
+                              {restaurandoId === r.aluno_id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ArchiveRestore className="w-3.5 h-3.5" />}
+                              Restaurar
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {modoSelecaoReincidentes && (
+                  <div className="sticky top-0 z-10 bg-ms-card border border-amber-500/40 rounded-2xl p-4 flex items-center justify-between flex-wrap gap-2 shadow-lg">
+                    <label className="flex items-center gap-2 text-xs font-bold text-white cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={alunosReincidentes.length > 0 && reincidentesSelecionados.size === alunosReincidentes.length}
+                        onChange={toggleSelecionarTodosReincidentes}
+                        className="w-4 h-4 accent-amber-500"
+                      />
+                      Selecionar todos ({reincidentesSelecionados.size}/{alunosReincidentes.length})
+                    </label>
+                    <button
+                      onClick={handleArquivarLote}
+                      disabled={reincidentesSelecionados.size === 0 || arquivandoLote}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-gray-700 hover:bg-gray-600 text-white text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                    >
+                      {arquivandoLote ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
+                      Remover {reincidentesSelecionados.size > 0 ? `(${reincidentesSelecionados.size})` : ''} selecionado{reincidentesSelecionados.size === 1 ? '' : 's'}
+                    </button>
+                  </div>
+                )}
+
                 {loadingReincidentes ? (
                   <div className="py-8 flex items-center justify-center gap-3">
                     <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
@@ -1728,7 +2086,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                 ) : alunosReincidentes.length === 0 ? (
                   <div className="bg-ms-card rounded-2xl border border-ms-border p-8 text-center">
                     <CheckCheck className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-                    <p className="text-gray-400 text-sm font-semibold">Nenhum aluno com 3 ou mais ocorrências.</p>
+                    <p className="text-gray-400 text-sm font-semibold">Nenhum aluno com {limiarReincidencia} ou mais ocorrências.</p>
                   </div>
                 ) : (
                   <div className="bg-ms-card rounded-2xl border border-amber-500/30 shadow-xl overflow-hidden animate-in slide-in-from-top duration-200">
@@ -1740,33 +2098,136 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                     </div>
                     <div className="divide-y divide-ms-border/30">
                       {alunosReincidentes.map((item, idx) => (
-                        <div key={item.id} className="flex items-center justify-between px-5 py-3 hover:bg-amber-500/5 transition-colors">
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs font-black text-gray-500 w-5 text-right">{idx + 1}.</span>
+                        <div
+                          key={item.id}
+                          onClick={() => (modoSelecaoReincidentes ? toggleSelecaoReincidente(item.id) : handleVerRegistrosAluno(item))}
+                          className={`flex items-center justify-between px-5 py-3 transition-colors cursor-pointer ${
+                            modoSelecaoReincidentes && reincidentesSelecionados.has(item.id)
+                              ? 'bg-amber-500/10'
+                              : 'hover:bg-amber-500/5'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            {modoSelecaoReincidentes ? (
+                              <input
+                                type="checkbox"
+                                checked={reincidentesSelecionados.has(item.id)}
+                                onChange={() => toggleSelecaoReincidente(item.id)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-4 h-4 accent-amber-500 shrink-0"
+                              />
+                            ) : (
+                              <span className="text-xs font-black text-gray-500 w-5 text-right shrink-0">{idx + 1}.</span>
+                            )}
                             <div className="w-8 h-8 rounded-lg bg-amber-500/10 flex items-center justify-center text-xs font-black text-amber-400 border border-amber-500/20 shrink-0">
                               {(item.aluno?.nome || '?').charAt(0)}
                             </div>
-                            <div>
-                              <p className="text-sm font-bold text-white leading-tight">{item.aluno?.nome}</p>
+                            <div className="min-w-0">
+                              <p className="text-sm font-bold text-white leading-tight truncate">{item.aluno?.nome}</p>
                               <p className="text-[10px] font-black text-ms-blueText uppercase">
                                 {item.aluno?.aluno_numero ? `Nº ${item.aluno.aluno_numero} · ` : ''}{item.aluno?.turmas?.nome || '—'}
                               </p>
                             </div>
                           </div>
-                          <span className={`px-3 py-1 rounded-full text-xs font-black border ${
-                            item.count >= 5
-                              ? 'bg-red-500/15 text-red-400 border-red-500/30'
-                              : item.count >= 4
-                              ? 'bg-orange-500/15 text-orange-400 border-orange-500/30'
-                              : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
-                          }`}>
-                            {item.count} ocorrência{item.count > 1 ? 's' : ''}
-                          </span>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className={`px-3 py-1 rounded-full text-xs font-black border ${
+                              item.count >= 5
+                                ? 'bg-red-500/15 text-red-400 border-red-500/30'
+                                : item.count >= 4
+                                ? 'bg-orange-500/15 text-orange-400 border-orange-500/30'
+                                : 'bg-amber-500/15 text-amber-400 border-amber-500/30'
+                            }`}>
+                              {item.count} ocorrência{item.count > 1 ? 's' : ''}
+                            </span>
+                            {!modoSelecaoReincidentes && (
+                              <>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleVerRegistrosAluno(item); }}
+                                  title="Ver registros"
+                                  className="p-1.5 hover:bg-ms-blue/20 text-ms-blueText rounded-lg transition-all"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleArquivarAluno(item.id); }}
+                                  disabled={arquivandoId === item.id}
+                                  title="Remover da lista"
+                                  className="p-1.5 hover:bg-red-500/20 text-red-400 rounded-lg transition-all disabled:opacity-40"
+                                >
+                                  {arquivandoId === item.id ? <Loader2 className="w-4 h-4 animate-spin" /> : <Archive className="w-4 h-4" />}
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Registros do Aluno Modal */}
+            {verRegistrosAluno && (
+              <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm">
+                <div className="bg-ms-card rounded-3xl border border-ms-border w-full max-w-2xl overflow-hidden shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]">
+                  <div className="px-6 py-4 border-b border-ms-border flex items-center justify-between shrink-0">
+                    <div>
+                      <p className="text-white font-black text-base">{verRegistrosAluno.nome}</p>
+                      {verRegistrosAluno.turma && (
+                        <p className="text-[10px] font-black text-ms-blueText uppercase">{verRegistrosAluno.turma}</p>
+                      )}
+                    </div>
+                    <button onClick={() => setVerRegistrosAluno(null)} className="text-gray-500 hover:text-white">
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+                  <div className="flex-1 overflow-y-auto p-5 space-y-3">
+                    {loadingRegistrosAluno ? (
+                      <div className="py-12 flex items-center justify-center gap-3">
+                        <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
+                        <span className="text-gray-500 text-xs font-bold uppercase tracking-widest">Carregando registros...</span>
+                      </div>
+                    ) : registrosAlunoModal.length === 0 ? (
+                      <p className="text-gray-500 text-sm italic text-center py-8">Nenhum registro encontrado.</p>
+                    ) : (
+                      registrosAlunoModal.map((o: any) => (
+                        <div key={o.id} className="bg-ms-dark/50 border border-ms-border rounded-xl p-4 space-y-1.5">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {o.tipo && (
+                              <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full border ${
+                                o.tipo === 'Disciplinar' ? 'bg-red-500/10 text-red-400 border-red-500/30' :
+                                o.tipo === 'Pedagógica' ? 'bg-amber-500/10 text-amber-400 border-amber-500/30' :
+                                'bg-blue-500/10 text-blue-400 border-blue-500/30'
+                              }`}>
+                                {o.tipo}
+                              </span>
+                            )}
+                            <span className="text-[10px] text-gray-500 font-bold">{formatarDataOcorrencia(o.data || o.data_registro)}</span>
+                          </div>
+                          <p className="text-gray-300 text-sm leading-relaxed">{o.descricao || o.observacao || 'Sem descrição'}</p>
+                          <p className="text-[10px] text-gray-500 font-bold">Prof. {o.professor?.nome || o.registrado_por || 'Sistema'}</p>
+                          {o.devolutiva_coordenador && (
+                            <div className="mt-1 flex items-start gap-2 bg-emerald-500/8 border border-emerald-500/20 rounded-lg px-3 py-2">
+                              <MessageSquare className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
+                              <p className="text-xs text-emerald-300 leading-relaxed">{o.devolutiva_coordenador}</p>
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                  <div className="px-6 py-4 border-t border-ms-border shrink-0">
+                    <button
+                      onClick={handlePrintRegistrosAluno}
+                      disabled={printingRegistrosAluno || registrosAlunoModal.length === 0}
+                      className="w-full flex items-center justify-center gap-2 px-5 py-3 bg-ms-blue text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-blue-600 transition-all disabled:opacity-40"
+                    >
+                      {printingRegistrosAluno ? <Loader2 className="w-4 h-4 animate-spin" /> : <Printer className="w-4 h-4" />}
+                      Imprimir Registros
+                    </button>
+                  </div>
+                </div>
               </div>
             )}
 
