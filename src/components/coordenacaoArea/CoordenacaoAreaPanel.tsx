@@ -102,7 +102,7 @@ export function CoordenacaoAreaPanel({ professor, theme }: Props) {
         )}
         {abaAtiva === 'alunos' && (
           <div className="bg-ms-card border border-gray-800 rounded-2xl p-4">
-            <StudentManager theme={theme} />
+            <StudentManager theme={theme} professor={professor} />
           </div>
         )}
         {abaAtiva === 'site' && (

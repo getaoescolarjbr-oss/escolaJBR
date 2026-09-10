@@ -1,10 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Student, Turma, MatriculaStatus } from '../../types';
-import { Search, Plus, Edit2, Trash2, Loader2, Save, X, UserPlus, Filter, Calendar, AlertCircle, Camera } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Loader2, Save, X, UserPlus, Filter, Calendar, AlertCircle, Camera, FileText } from 'lucide-react';
 import { autoUpdateExpiredAbsences } from '../../utils/studentUtils';
+import { StudentProfileModal } from '../StudentProfileModal';
 
-export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
+interface StudentManagerProps {
+  theme: 'dark' | 'light';
+  /** Quando informado (ex.: aberto de dentro da Coordenação de Área), atribui
+   * ocorrências registradas pela ficha ao coordenador certo em vez de um genérico
+   * "Coordenação" — o botão "Ficha" aparece de qualquer forma. */
+  professor?: any;
+}
+
+export function StudentManager({ theme, professor }: StudentManagerProps) {
+  const [selectedStudent, setSelectedStudent] = useState<{ id: string; nome: string } | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [selectedTurma, setSelectedTurma] = useState<string>('');
@@ -435,7 +445,14 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center justify-center gap-2">
-                    <button 
+                    <button
+                      onClick={() => setSelectedStudent({ id: s.id, nome: s.nome })}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-ms-blue/10 text-ms-blueText rounded-lg text-[10px] font-black uppercase tracking-wider hover:bg-ms-blue hover:text-white transition-all"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      Ficha
+                    </button>
+                    <button
                       onClick={() => {
                         setEditingStudent(s);
                         setFormData({ ...s });
@@ -447,7 +464,7 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
                     >
                       <Edit2 className="w-4 h-4" />
                     </button>
-                    <button 
+                    <button
                       onClick={() => handleDelete(s)}
                       className="p-2 hover:bg-red-500/20 text-red-500 rounded-lg transition-all"
                     >
@@ -666,6 +683,18 @@ export function StudentManager({ theme }: { theme: 'dark' | 'light' }) {
             </div>
           </div>
         </div>
+      )}
+
+      {selectedStudent && (
+        <StudentProfileModal
+          isOpen={!!selectedStudent}
+          onClose={() => setSelectedStudent(null)}
+          studentId={selectedStudent.id}
+          studentName={selectedStudent.nome}
+          theme={theme}
+          isCoordinator={true}
+          professor={professor}
+        />
       )}
     </div>
   );
