@@ -22,6 +22,35 @@ interface CoordinatorDashboardProps {
   theme: 'dark' | 'light';
 }
 
+type FiltroSegmento = 'TODOS' | 'FUNDAMENTAL' | 'MEDIO';
+
+const SEGMENTO_LABEL: Record<FiltroSegmento, string> = {
+  TODOS: 'Todos',
+  FUNDAMENTAL: 'Fundamental (6º–9º)',
+  MEDIO: 'Médio (1º–3º)',
+};
+
+/** Botões de filtro por segmento, reaproveitados em Novas Ocorrências e Alunos
+ * Reincidentes — mesmo controle, dois estados independentes (cada painel filtra o que
+ * mostra, sem afetar o outro). */
+function FiltroSegmentoBotoes({ valor, onChange }: { valor: FiltroSegmento; onChange: (v: FiltroSegmento) => void }) {
+  return (
+    <div className="flex items-center gap-1 bg-ms-card border border-ms-border rounded-xl p-1">
+      {(Object.keys(SEGMENTO_LABEL) as FiltroSegmento[]).map((opt) => (
+        <button
+          key={opt}
+          onClick={() => onChange(opt)}
+          className={`px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all ${
+            valor === opt ? 'bg-ms-blue text-white shadow' : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          {SEGMENTO_LABEL[opt]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardProps) {
   const overviewTableRef = useRef<HTMLTableElement>(null);
   const painelTableRef = useRef<HTMLTableElement>(null);
@@ -73,6 +102,11 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   const [alunosArquivadosDetalhe, setAlunosArquivadosDetalhe] = useState<any[]>([]);
   const [loadingArquivados, setLoadingArquivados] = useState(false);
   const [restaurandoId, setRestaurandoId] = useState<string | null>(null);
+  // Filtro por segmento: turma "1º/2º/3º Ano X" é Médio, "6º/7º/8º/9º Ano X" é
+  // Fundamental — esta escola não tem Anos Iniciais, então o dígito inicial do nome
+  // da turma já basta, sem precisar de uma coluna de segmento no banco.
+  const [filtroSegmentoOcorrencias, setFiltroSegmentoOcorrencias] = useState<FiltroSegmento>('TODOS');
+  const [filtroSegmentoReincidentes, setFiltroSegmentoReincidentes] = useState<FiltroSegmento>('TODOS');
   const [avaliacoesAgenda, setAvaliacoesAgenda] = useState<any[]>([]);
   const [loadingAgenda, setLoadingAgenda] = useState(false);
   const agendaTableRef = useRef<HTMLTableElement>(null);
@@ -890,9 +924,9 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
 
   function toggleSelecionarTodosReincidentes() {
     setReincidentesSelecionados((atual) =>
-      atual.size === alunosReincidentes.length
+      atual.size === alunosReincidentesFiltrados.length
         ? new Set()
-        : new Set(alunosReincidentes.map((item) => item.id as string))
+        : new Set(alunosReincidentesFiltrados.map((item) => item.id as string))
     );
   }
 
@@ -1012,6 +1046,16 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
     }
   }
 
+  function segmentoDaTurma(nomeTurma: string | null | undefined): 'FUNDAMENTAL' | 'MEDIO' | null {
+    if (!nomeTurma) return null;
+    const m = nomeTurma.match(/^(\d)/);
+    if (!m) return null;
+    const digito = Number(m[1]);
+    if (digito >= 1 && digito <= 3) return 'MEDIO';
+    if (digito >= 6 && digito <= 9) return 'FUNDAMENTAL';
+    return null;
+  }
+
   function formatarDataOcorrencia(dateStr: string | null | undefined) {
     if (!dateStr) return '—';
     if (dateStr.includes('-') && !dateStr.includes('T')) {
@@ -1074,7 +1118,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
           </tr>
         </thead>
         <tbody>
-          ${alunosReincidentes.map((item) => `<tr>
+          ${alunosReincidentesFiltrados.map((item) => `<tr>
             <td style="text-align:left">${escapeHtmlReincidentes(item.aluno?.nome || '—')}</td>
             <td>${item.aluno?.aluno_numero ?? '—'}</td>
             <td>${escapeHtmlReincidentes(item.aluno?.turmas?.nome || '—')}</td>
@@ -1084,8 +1128,10 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
       `;
       printReport(table, {
         title: 'Alunos Reincidentes',
-        subtitle: `Alunos com ${limiarReincidencia} ou mais ocorrências registradas`,
-        info: [{ label: 'Total de Alunos', value: String(alunosReincidentes.length) }],
+        subtitle: `Alunos com ${limiarReincidencia} ou mais ocorrências registradas${
+          filtroSegmentoReincidentes === 'TODOS' ? '' : ` — ${filtroSegmentoReincidentes === 'FUNDAMENTAL' ? 'Ensino Fundamental' : 'Ensino Médio'}`
+        }`,
+        info: [{ label: 'Total de Alunos', value: String(alunosReincidentesFiltrados.length) }],
       });
     } finally {
       setPrintingListaReincidentes(false);
@@ -1142,9 +1188,9 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
 
   function toggleSelecionarTodas() {
     setOcorrenciasSelecionadas((atual) =>
-      atual.size === ocorrenciasPendentes.length
+      atual.size === ocorrenciasPendentesFiltradas.length
         ? new Set()
-        : new Set(ocorrenciasPendentes.map((oc) => oc.id as string))
+        : new Set(ocorrenciasPendentesFiltradas.map((oc: any) => oc.id as string))
     );
   }
 
@@ -1192,9 +1238,17 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
     }
   }, [activeTab]);
 
-  const filteredStudents = students.filter(s => 
+  const filteredStudents = students.filter(s =>
     s.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const ocorrenciasPendentesFiltradas = filtroSegmentoOcorrencias === 'TODOS'
+    ? ocorrenciasPendentes
+    : ocorrenciasPendentes.filter((oc: any) => segmentoDaTurma(oc.turma?.nome) === filtroSegmentoOcorrencias);
+
+  const alunosReincidentesFiltrados = filtroSegmentoReincidentes === 'TODOS'
+    ? alunosReincidentes
+    : alunosReincidentes.filter((item: any) => segmentoDaTurma(item.aluno?.turmas?.nome) === filtroSegmentoReincidentes);
 
   return (
     <div className="space-y-8">
@@ -1966,20 +2020,23 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                 </div>
 
                 <div className="flex items-center justify-between flex-wrap gap-2">
-                  <label className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
-                    Mínimo de ocorrências
-                    <input
-                      type="number"
-                      min={1}
-                      value={limiarReincidencia}
-                      onChange={(e) => handleMudarLimiarReincidencia(Number(e.target.value))}
-                      className="w-16 px-2 py-1.5 bg-ms-card border border-ms-border rounded-lg text-white text-xs font-bold text-center outline-none focus:ring-2 focus:ring-amber-500/50"
-                    />
-                  </label>
+                  <div className="flex items-center gap-3 flex-wrap">
+                    <label className="flex items-center gap-2 text-[10px] font-bold text-gray-400 uppercase tracking-wider">
+                      Mínimo de ocorrências
+                      <input
+                        type="number"
+                        min={1}
+                        value={limiarReincidencia}
+                        onChange={(e) => handleMudarLimiarReincidencia(Number(e.target.value))}
+                        className="w-16 px-2 py-1.5 bg-ms-card border border-ms-border rounded-lg text-white text-xs font-bold text-center outline-none focus:ring-2 focus:ring-amber-500/50"
+                      />
+                    </label>
+                    <FiltroSegmentoBotoes valor={filtroSegmentoReincidentes} onChange={setFiltroSegmentoReincidentes} />
+                  </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <button
                       onClick={handlePrintListaReincidentes}
-                      disabled={printingListaReincidentes || alunosReincidentes.length === 0}
+                      disabled={printingListaReincidentes || alunosReincidentesFiltrados.length === 0}
                       className="flex items-center gap-1.5 px-3 py-2 bg-ms-card border border-ms-border text-gray-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:text-white hover:border-ms-blueText/50 transition-all disabled:opacity-40"
                     >
                       {printingListaReincidentes ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Printer className="w-3.5 h-3.5" />}
@@ -2061,11 +2118,11 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                     <label className="flex items-center gap-2 text-xs font-bold text-white cursor-pointer">
                       <input
                         type="checkbox"
-                        checked={alunosReincidentes.length > 0 && reincidentesSelecionados.size === alunosReincidentes.length}
+                        checked={alunosReincidentesFiltrados.length > 0 && reincidentesSelecionados.size === alunosReincidentesFiltrados.length}
                         onChange={toggleSelecionarTodosReincidentes}
                         className="w-4 h-4 accent-amber-500"
                       />
-                      Selecionar todos ({reincidentesSelecionados.size}/{alunosReincidentes.length})
+                      Selecionar todos ({reincidentesSelecionados.size}/{alunosReincidentesFiltrados.length})
                     </label>
                     <button
                       onClick={handleArquivarLote}
@@ -2083,21 +2140,23 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                     <Loader2 className="w-6 h-6 animate-spin text-amber-400" />
                     <span className="text-gray-500 text-xs font-bold uppercase tracking-widest">Carregando...</span>
                   </div>
-                ) : alunosReincidentes.length === 0 ? (
+                ) : alunosReincidentesFiltrados.length === 0 ? (
                   <div className="bg-ms-card rounded-2xl border border-ms-border p-8 text-center">
                     <CheckCheck className="w-10 h-10 text-emerald-500 mx-auto mb-3" />
-                    <p className="text-gray-400 text-sm font-semibold">Nenhum aluno com {limiarReincidencia} ou mais ocorrências.</p>
+                    <p className="text-gray-400 text-sm font-semibold">
+                      Nenhum aluno com {limiarReincidencia} ou mais ocorrências{filtroSegmentoReincidentes !== 'TODOS' ? ` no ${SEGMENTO_LABEL[filtroSegmentoReincidentes]}` : ''}.
+                    </p>
                   </div>
                 ) : (
                   <div className="bg-ms-card rounded-2xl border border-amber-500/30 shadow-xl overflow-hidden animate-in slide-in-from-top duration-200">
                     <div className="px-5 py-3 bg-amber-500/10 border-b border-amber-500/20 flex items-center gap-2">
                       <BarChart2 className="w-4 h-4 text-amber-400" />
                       <span className="text-xs font-black text-amber-400 uppercase tracking-widest">
-                        {alunosReincidentes.length} aluno{alunosReincidentes.length > 1 ? 's' : ''} com múltiplas ocorrências
+                        {alunosReincidentesFiltrados.length} aluno{alunosReincidentesFiltrados.length > 1 ? 's' : ''} com múltiplas ocorrências
                       </span>
                     </div>
                     <div className="divide-y divide-ms-border/30">
-                      {alunosReincidentes.map((item, idx) => (
+                      {alunosReincidentesFiltrados.map((item, idx) => (
                         <div
                           key={item.id}
                           onClick={() => (modoSelecaoReincidentes ? toggleSelecaoReincidente(item.id) : handleVerRegistrosAluno(item))}
@@ -2324,7 +2383,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
              <div className="space-y-4">
                <div className="flex items-center justify-between flex-wrap gap-2">
                  <p className="text-xs font-black text-red-400 uppercase tracking-widest">
-                   {ocorrenciasPendentes.length} ocorrência{ocorrenciasPendentes.length > 1 ? 's' : ''} aguardando leitura
+                   {ocorrenciasPendentesFiltradas.length} ocorrência{ocorrenciasPendentesFiltradas.length > 1 ? 's' : ''} aguardando leitura
                  </p>
                  <button
                    onClick={() => (modoSelecaoLote ? sairDoModoLote() : setModoSelecaoLote(true))}
@@ -2339,17 +2398,19 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                  </button>
                </div>
 
+               <FiltroSegmentoBotoes valor={filtroSegmentoOcorrencias} onChange={setFiltroSegmentoOcorrencias} />
+
                {modoSelecaoLote && (
                  <div className="sticky top-0 z-10 bg-ms-card border border-ms-blueText/40 rounded-2xl p-4 space-y-3 shadow-lg">
                    <div className="flex items-center justify-between flex-wrap gap-2">
                      <label className="flex items-center gap-2 text-xs font-bold text-white cursor-pointer">
                        <input
                          type="checkbox"
-                         checked={ocorrenciasPendentes.length > 0 && ocorrenciasSelecionadas.size === ocorrenciasPendentes.length}
+                         checked={ocorrenciasPendentesFiltradas.length > 0 && ocorrenciasSelecionadas.size === ocorrenciasPendentesFiltradas.length}
                          onChange={toggleSelecionarTodas}
                          className="w-4 h-4 accent-ms-blueText"
                        />
-                       Selecionar todas ({ocorrenciasSelecionadas.size}/{ocorrenciasPendentes.length})
+                       Selecionar todas ({ocorrenciasSelecionadas.size}/{ocorrenciasPendentesFiltradas.length})
                      </label>
                      <button
                        onClick={handleConfirmarLote}
@@ -2370,7 +2431,15 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                  </div>
                )}
 
-               {ocorrenciasPendentes.map((oc) => (
+               {ocorrenciasPendentesFiltradas.length === 0 && (
+                 <div className="bg-ms-card rounded-2xl border border-ms-border p-8 text-center">
+                   <p className="text-gray-400 text-sm font-semibold">
+                     Nenhuma ocorrência pendente no {SEGMENTO_LABEL[filtroSegmentoOcorrencias]}.
+                   </p>
+                 </div>
+               )}
+
+               {ocorrenciasPendentesFiltradas.map((oc) => (
                  <div
                    key={oc.id}
                    onClick={() => modoSelecaoLote && toggleSelecaoOcorrencia(oc.id)}
