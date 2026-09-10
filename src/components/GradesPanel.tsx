@@ -220,26 +220,75 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
     }
   };
 
+  // Numa avaliação de área (um avaliacao_id por professor, ligados via
+  // prova_avaliacao_notas), digitar a nota manualmente aqui precisa espalhar o mesmo
+  // valor pros outros professores da cota — senão só quem editou vê a nota, e os
+  // demais continuam com a célula vazia mesmo a nota já tendo sido lançada por alguém.
+  // rpc_lancar_nota_manual_area cuida disso (e não mexe em nada se a avaliação for
+  // normal, sem vínculo de área).
   const handleUpdateNota = async (alunoId: string, avalId: string, notaVal: number) => {
-    // Buscar o valor máximo desta avaliação
     const aval = avaliacoes.find(a => a.id === avalId);
     let valorFinal = notaVal;
-    
+
     if (aval && notaVal > aval.valor_maximo) {
         valorFinal = aval.valor_maximo;
     }
 
+    const notaAnterior = notas[alunoId]?.[avalId];
     const updatedNotas = { ...notas };
     if (!updatedNotas[alunoId]) updatedNotas[alunoId] = {};
     updatedNotas[alunoId][avalId] = valorFinal;
     setNotas(updatedNotas);
 
-    await supabase.from('notas_avaliacoes').upsert({
-        avaliacao_id: avalId,
-        aluno_id: alunoId,
-        nota: valorFinal
-    }, { onConflict: 'avaliacao_id,aluno_id' });
+    try {
+      await lancarNotaManualComPropagacao(avalId, alunoId, valorFinal, false);
+    } catch (e: any) {
+      const msg = e?.message || '';
+      const m = msg.match(/^CONFIRMACAO_SUBSTITUICAO:(\d+)/);
+      if (m) {
+        const substituir = window.confirm(
+          `${m[1]} outro(s) professor(es) desta avaliação de área já tinha(m) nota diferente lançada pra este aluno. Substituir pela nota que você acabou de digitar?`
+        );
+        if (substituir) {
+          try {
+            await lancarNotaManualComPropagacao(avalId, alunoId, valorFinal, true);
+            return;
+          } catch (e2: any) {
+            console.error('Erro ao lançar nota (confirmado):', e2);
+            alert(e2?.message || 'Não foi possível salvar a nota.');
+          }
+        }
+        // Recusou substituir (ou a segunda tentativa falhou): nada foi de fato salvo —
+        // desfaz a atualização otimista da célula pra não mostrar um valor que só
+        // existe na tela.
+        setNotas((atual) => {
+          const revertido = { ...atual };
+          if (revertido[alunoId]) {
+            revertido[alunoId] = { ...revertido[alunoId], [avalId]: notaAnterior as number };
+          }
+          return revertido;
+        });
+      } else {
+        console.error('Erro ao lançar nota:', e);
+        alert(msg || 'Não foi possível salvar a nota.');
+      }
+    }
   };
+
+  async function lancarNotaManualComPropagacao(
+    avaliacaoId: string,
+    alunoId: string,
+    nota: number,
+    confirmarSubstituicao: boolean
+  ): Promise<void> {
+    const { error } = await supabase.rpc('rpc_lancar_nota_manual_area', {
+      p_avaliacao_id: avaliacaoId,
+      p_aluno_id: alunoId,
+      p_nota: nota,
+      p_confirmar_substituicao: confirmarSubstituicao,
+    });
+    if (error) throw error;
+  }
 
   const handleManualSaveFeedback = () => {
     setIsSavingConfirmation(true);
