@@ -371,7 +371,7 @@ export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLoc
                       {isExame && !impossivel && exameAvaliacao ? (
                         <DecimalInput 
                           value={notasExame[aluno.id] ?? ''}
-                          onChange={(val) => handleUpdateNotaExame(aluno.id, val)}
+                          onChange={(val) => handleUpdateNotaExame(aluno.id, val ?? 0)}
                           max={10}
                           disabled={isLocked}
                           className={`w-16 text-center p-1 rounded text-xs font-bold focus:border-blue-500 outline-none border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${

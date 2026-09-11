@@ -29,6 +29,19 @@ const CSS_LOTE = `
   .bloco-aluno .pagina + .pagina { break-before: page; page-break-before: always; }
   .pagina + .pagina { break-before: page; page-break-before: always; }
 
+  /* Garantia estrutural (não depende de eu acertar a estimativa de altura): quando o
+     modo de separação não é "contínuo", cada aluno tem que começar numa página ÍMPAR
+     (frente de folha nova, seja em frente-e-verso real ou em "2 páginas por folha").
+     break-before: right é regra nativa do motor de impressão — se a estimativa de
+     rascunho falhar e o aluno anterior sobrar com página ímpar, o navegador insere UMA
+     página em branco por conta própria pra corrigir, sem que isso jogue o aluno
+     seguinte pra dentro da folha de outro aluno. Sem isto, um erro de estimativa num
+     aluno desalinhava a sequência de TODOS os alunos depois dele. */
+  .bloco-aluno + .bloco-aluno:not([data-separador="CONTINUO"]) {
+    break-before: right;
+    page-break-before: right;
+  }
+
   .cartao-omr-folha { break-inside: avoid; }
 
   .bloco-aluno {

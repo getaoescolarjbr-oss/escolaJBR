@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 
 interface DecimalInputProps {
   value: number | string;
-  onChange: (val: number) => void;
+  onChange: (val: number | null) => void;
   max?: number;
   disabled?: boolean;
   className?: string;
@@ -42,7 +42,7 @@ export function DecimalInput({
 
   const handleBlur = () => {
     if (!tempValue) {
-      onChange(0);
+      onChange(null);
       setTempValue('');
       return;
     }

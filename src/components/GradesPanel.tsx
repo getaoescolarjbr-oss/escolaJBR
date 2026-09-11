@@ -226,18 +226,22 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
   // demais continuam com a célula vazia mesmo a nota já tendo sido lançada por alguém.
   // rpc_lancar_nota_manual_area cuida disso (e não mexe em nada se a avaliação for
   // normal, sem vínculo de área).
-  const handleUpdateNota = async (alunoId: string, avalId: string, notaVal: number) => {
+  const handleUpdateNota = async (alunoId: string, avalId: string, notaVal: number | null) => {
     const aval = avaliacoes.find(a => a.id === avalId);
     let valorFinal = notaVal;
 
-    if (aval && notaVal > aval.valor_maximo) {
+    if (aval && valorFinal !== null && valorFinal > aval.valor_maximo) {
         valorFinal = aval.valor_maximo;
     }
 
     const notaAnterior = notas[alunoId]?.[avalId];
     const updatedNotas = { ...notas };
     if (!updatedNotas[alunoId]) updatedNotas[alunoId] = {};
-    updatedNotas[alunoId][avalId] = valorFinal;
+    if (valorFinal === null) {
+      delete updatedNotas[alunoId][avalId];
+    } else {
+      updatedNotas[alunoId][avalId] = valorFinal;
+    }
     setNotas(updatedNotas);
 
     try {
@@ -278,7 +282,7 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
   async function lancarNotaManualComPropagacao(
     avaliacaoId: string,
     alunoId: string,
-    nota: number,
+    nota: number | null,
     confirmarSubstituicao: boolean
   ): Promise<void> {
     const { error } = await supabase.rpc('rpc_lancar_nota_manual_area', {
