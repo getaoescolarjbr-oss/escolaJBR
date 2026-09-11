@@ -540,7 +540,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                           : 'border-red-500/30 text-red-500 bg-red-500/5 hover:bg-red-500/10'
                       }`}
                     >
-                      <span className={`text-[8px] uppercase tracking-widest font-black opacity-70 mb-0.5 leading-tight text-center ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>Nota<br />Vistos</span>
+                      <span className={`text-[8px] uppercase tracking-widest font-black opacity-70 mb-0.5 leading-tight text-center ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>Média<br />Final</span>
                       <span className="text-xs md:text-sm leading-none font-black">{gradeBreakdown.mediaFinal.toFixed(1)}</span>
                     </button>
 
