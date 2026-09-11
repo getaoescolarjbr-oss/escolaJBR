@@ -259,12 +259,23 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
 
+    /* Largura fixa em mm igual à área útil real da página impressa (A4 = 210mm,
+       menos as margens de 5mm de cada lado do @page abaixo = 200mm). Sem isto, a
+       janela mede o texto/colunas na largura da JANELA (aberta com 1000px, bem mais
+       larga que o papel) — o texto quebra linha em pontos diferentes do que vai
+       quebrar no papel, e a contagem de páginas do script abaixo (que decide se
+       entra folha de rascunho) sai errada, mesmo em prova de uma coluna. Medir na
+       MESMA largura do papel é o que faz a estimativa bater com o impresso de
+       verdade. */
     body {
       font-family: Arial, Helvetica, sans-serif;
       font-size: 11pt;
       color: #1a1a2e;
       background: #fff;
-      padding: 8px;
+      width: 200mm;
+      max-width: 200mm;
+      margin: 0 auto;
+      padding: 4mm;
       border: 1.5px solid #002677;
     }
 
@@ -277,7 +288,6 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
     .no-print, [class*="no-print"] { display: none !important; }
 
     @media print {
-      body { padding: 4mm; }
       @page { margin: 6mm 5mm; size: A4 portrait; }
     }
   </style>
