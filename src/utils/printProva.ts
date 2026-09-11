@@ -296,6 +296,14 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
   ${clone.innerHTML}
   <script>
     window.onload = function() {
+      // As fontes do KaTeX (woff2) carregam de forma assíncrona — onload não espera
+      // elas terminarem. Medir a altura do conteúdo ANTES delas carregarem usa a
+      // fonte de fallback (métricas diferentes: linha mais baixa/alta), o que
+      // subestima ou sobrestima quantas páginas o conteúdo realmente ocupa —
+      // exatamente o que causava a folha de rascunho saindo no lugar errado em
+      // prova com fórmula/notação química. document.fonts.ready garante que toda
+      // fonte referenciada no CSS já carregou antes de medir.
+      var ajustarEImprimir = function() {
       try {
         var ruler = document.createElement('div');
         ruler.style.height = '277mm';
@@ -344,6 +352,13 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
 
       window.print();
       setTimeout(function() { window.close(); }, 500);
+      };
+
+      if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(ajustarEImprimir, ajustarEImprimir);
+      } else {
+        ajustarEImprimir();
+      }
     };
   </script>
 </body>
