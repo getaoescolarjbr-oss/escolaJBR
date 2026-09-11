@@ -306,7 +306,9 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
       var ajustarEImprimir = function() {
       try {
         var ruler = document.createElement('div');
-        ruler.style.height = '277mm';
+        // 297mm (A4) - 6mm de margem de cima - 6mm de baixo (@page abaixo) = 285mm de
+        // área útil vertical real por página impressa.
+        ruler.style.height = '285mm';
         ruler.style.position = 'absolute';
         ruler.style.visibility = 'hidden';
         document.body.appendChild(ruler);
@@ -326,6 +328,17 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
           if (cartao) paginasConteudo += 1;
 
           var modo = bloco.getAttribute('data-separador');
+
+          // Log temporário de diagnóstico — abra o DevTools (F12) antes de gerar o PDF
+          // pra ver, por aluno, a altura medida e quantas páginas o script concluiu.
+          console.log('[print-diag]', bloco.getAttribute('data-aluno'), {
+            aluno: (bloco.querySelector('.prova-aluno strong') || {}).textContent,
+            a4Height: a4Height,
+            alturaConteudoPx: h,
+            paginasConteudo: paginasConteudo,
+            temCartaoProprio: !!cartao,
+            temRascunhoNoDom: !!rascunho
+          });
 
           if (modo === 'RASCUNHO_VERSO' || modo === 'PAGINA_BRANCA') {
             // Se as páginas já forem pares (ex: 2 páginas):
