@@ -315,26 +315,116 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
         var a4Height = ruler.offsetHeight || 1047;
         document.body.removeChild(ruler);
 
+        // Divide o conteúdo de um aluno em páginas EXPLÍCITAS, medindo cada questão
+        // (elemento real, já carregado) e encaixando uma a uma — em vez de estimar o
+        // total via altura-total ÷ altura-da-página, que sistematicamente ficava
+        // errado (chegou a errar quase uma página inteira num caso real medido).
+        // Assim o número de páginas deixa de ser um palpite e passa a ser exatamente
+        // o tanto de blocos que este código monta.
+        function paginarConteudoExplicitamente(bloco, a4Height) {
+          var conteudo = bloco.querySelector('.pagina-conteudo');
+          if (!conteudo) return null;
+          var questoesColuna = conteudo.querySelector('.questoes-coluna');
+          if (!questoesColuna || questoesColuna.children.length === 0) return conteudo;
+
+          var numColunas = questoesColuna.classList.contains('duas-colunas') ? 2 : 1;
+          // Margem de segurança: encaixa um pouco antes do limite real da página, pra
+          // sobrar folga (troco de arredondamento, colapso de margem) e nunca estourar
+          // pra página seguinte por um pixel.
+          var capacidadeColuna = a4Height * 0.96;
+
+          var headerEls = [];
+          var headerH = 0;
+          var child = conteudo.firstElementChild;
+          while (child && child !== questoesColuna) {
+            headerEls.push(child);
+            headerH += child.offsetHeight;
+            child = child.nextElementSibling;
+          }
+
+          var footerEls = [];
+          var footerH = 0;
+          child = questoesColuna.nextElementSibling;
+          while (child) {
+            footerEls.push(child);
+            footerH += child.offsetHeight;
+            child = child.nextElementSibling;
+          }
+
+          var questoes = Array.prototype.slice.call(questoesColuna.children);
+
+          var paginasChunks = [[]];
+          var colunaAtual = 1;
+          var usadoNaColuna = headerH;
+          for (var qi = 0; qi < questoes.length; qi++) {
+            var el = questoes[qi];
+            var h = el.offsetHeight;
+            if (usadoNaColuna > 0 && usadoNaColuna + h > capacidadeColuna) {
+              if (colunaAtual < numColunas) {
+                colunaAtual++;
+              } else {
+                colunaAtual = 1;
+                paginasChunks.push([]);
+              }
+              usadoNaColuna = 0;
+            }
+            usadoNaColuna += h;
+            paginasChunks[paginasChunks.length - 1].push(el);
+          }
+
+          // Último "pedaço" (footer, ex.: cartão no fim) — se não couber na última
+          // coluna usada, abre mais uma página só pra ele.
+          if (footerH > 0 && usadoNaColuna + footerH > capacidadeColuna && colunaAtual >= numColunas) {
+            paginasChunks.push([]);
+          }
+
+          if (paginasChunks.length <= 1) return conteudo; // tudo cabe numa página só, nada a fazer
+
+          var novosBlocos = [];
+          for (var pi = 0; pi < paginasChunks.length; pi++) {
+            var novaPagina = document.createElement('div');
+            novaPagina.className = 'pagina pagina-conteudo';
+            if (pi === 0) {
+              headerEls.forEach(function(h) { novaPagina.appendChild(h); });
+            }
+            if (paginasChunks[pi].length > 0) {
+              var novaColuna = document.createElement('div');
+              novaColuna.className = questoesColuna.className;
+              paginasChunks[pi].forEach(function(q) { novaColuna.appendChild(q); });
+              novaPagina.appendChild(novaColuna);
+            }
+            if (pi === paginasChunks.length - 1) {
+              footerEls.forEach(function(f) { novaPagina.appendChild(f); });
+            }
+            novosBlocos.push(novaPagina);
+          }
+
+          var refNode = conteudo.nextSibling;
+          conteudo.remove();
+          novosBlocos.forEach(function(nb) { bloco.insertBefore(nb, refNode); });
+          return novosBlocos[novosBlocos.length - 1];
+        }
+
         var blocos = document.querySelectorAll('.bloco-aluno');
         blocos.forEach(function(bloco) {
-          var conteudo = bloco.querySelector('.pagina-conteudo');
+          var ultimaPaginaConteudo = paginarConteudoExplicitamente(bloco, a4Height);
+          if (!ultimaPaginaConteudo) return;
+
           var rascunho = bloco.querySelector('.pagina-rascunho');
           var emBranco = bloco.querySelector('.pagina-em-branco');
           var cartao = bloco.querySelector('.pagina-cartao');
-          if (!conteudo) return;
 
-          var h = conteudo.scrollHeight;
-          var paginasConteudo = Math.max(1, Math.ceil((h - 25) / a4Height));
+          // Agora é contagem exata: quantos .pagina-conteudo este aluno tem de fato,
+          // não mais uma estimativa por altura.
+          var paginasConteudo = bloco.querySelectorAll('.pagina-conteudo').length;
           if (cartao) paginasConteudo += 1;
 
           var modo = bloco.getAttribute('data-separador');
 
           // Log temporário de diagnóstico — abra o DevTools (F12) antes de gerar o PDF
-          // pra ver, por aluno, a altura medida e quantas páginas o script concluiu.
+          // pra ver, por aluno, quantas páginas reais o script montou.
           console.log('[print-diag]', bloco.getAttribute('data-aluno'), {
             aluno: (bloco.querySelector('.prova-aluno strong') || {}).textContent,
-            a4Height: a4Height,
-            alturaConteudoPx: h,
             paginasConteudo: paginasConteudo,
             temCartaoProprio: !!cartao,
             temRascunhoNoDom: !!rascunho
@@ -357,7 +447,7 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
               // desfaz na hora (senão o total vira ímpar de novo e o próximo aluno
               // volta a colar na mesma folha física deste).
               if (modo === 'RASCUNHO_VERSO') {
-                var questoesColuna = conteudo.querySelector('.questoes-coluna') || conteudo;
+                var questoesColuna = ultimaPaginaConteudo.querySelector('.questoes-coluna') || ultimaPaginaConteudo;
                 var inline = document.createElement('div');
                 inline.className = 'rascunho-inline';
                 inline.style.cssText =
@@ -371,10 +461,11 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
                   'padding-bottom:2mm; margin-bottom:3mm;">Espaço para Rascunho / Cálculos</span>';
                 questoesColuna.appendChild(inline);
 
-                var hDepois = conteudo.scrollHeight;
-                var paginasDepois = Math.max(1, Math.ceil((hDepois - 25) / a4Height));
-                if (cartao) paginasDepois += 1;
-                if (paginasDepois !== paginasConteudo) {
+                // Checagem direta: só essa ÚLTIMA página ficou mais alta que a área
+                // útil real? Isso substitui o cálculo por estimativa de antes — agora
+                // é uma altura só, comparada com o limite real, sem margem de erro
+                // acumulada de todo o documento.
+                if (ultimaPaginaConteudo.scrollHeight > a4Height) {
                   // Não coube sem empurrar pra outra página — desfaz e deixa a
                   // sobra em branco mesmo, pra não comprometer o alinhamento.
                   inline.remove();
