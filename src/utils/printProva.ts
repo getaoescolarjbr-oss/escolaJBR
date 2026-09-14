@@ -351,15 +351,55 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
             child = child.nextElementSibling;
           }
 
-          // Simula o encaixe SEM mexer no DOM (só lê offsetHeight) — usado primeiro
-          // com as questões inteiras, só pra saber se precisa mesmo mexer em algo.
-          function simularEncaixe(lista) {
+          // Mede SEMPRE com o elemento ainda anexado no documento — offsetHeight de
+          // elemento fora da árvore visível dá 0, e foi exatamente isso que
+          // quebrou a versão anterior: media os fragmentos DEPOIS de criá-los soltos
+          // (ainda não inseridos em lugar nenhum), então toda questão dividida
+          // entrava com altura 0 na simulação, fazendo tudo parecer que cabia numa
+          // página só. Aqui a medição de cada pedacinho acontece ENQUANTO ele ainda
+          // é filho do .questao original (que está na tela); só depois de já saber
+          // o resultado é que os pedaços são de fato desanexados e remontados.
+          function medirUnidades(dividir) {
+            var unidades = [];
+            Array.prototype.slice.call(questoesColuna.children).forEach(function(qEl) {
+              var subFilhos = qEl.children ? Array.prototype.slice.call(qEl.children) : [];
+              var podeDividir = dividir && qEl.classList && qEl.classList.contains('questao') && subFilhos.length > 1;
+              if (!podeDividir) {
+                unidades.push({ tipo: 'inteira', el: qEl, h: qEl.offsetHeight });
+                return;
+              }
+              var grupo1 = [];
+              var grupo2 = [];
+              var passouEnunciado = false;
+              var h1 = 0;
+              var h2 = 0;
+              subFilhos.forEach(function(sc) {
+                if (!passouEnunciado) {
+                  grupo1.push(sc);
+                  h1 += sc.offsetHeight;
+                  if (sc.classList && sc.classList.contains('questao-enunciado')) passouEnunciado = true;
+                } else {
+                  grupo2.push(sc);
+                  h2 += sc.offsetHeight;
+                }
+              });
+              if (grupo2.length === 0) {
+                unidades.push({ tipo: 'inteira', el: qEl, h: qEl.offsetHeight });
+                return;
+              }
+              unidades.push({ tipo: 'frag1', qEl: qEl, filhos: grupo1, h: h1 });
+              unidades.push({ tipo: 'frag2', qEl: qEl, filhos: grupo2, h: h2 });
+            });
+            return unidades;
+          }
+
+          function simularEncaixe(unidades) {
             var chunks = [[]];
             var coluna = 1;
             var usado = headerH;
-            for (var i = 0; i < lista.length; i++) {
-              var hEl = lista[i].offsetHeight;
-              if (usado > 0 && usado + hEl > capacidadeColuna) {
+            for (var i = 0; i < unidades.length; i++) {
+              var h = unidades[i].h;
+              if (usado > 0 && usado + h > capacidadeColuna) {
                 if (coluna < numColunas) {
                   coluna++;
                 } else {
@@ -368,8 +408,8 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
                 }
                 usado = 0;
               }
-              usado += hEl;
-              chunks[chunks.length - 1].push(lista[i]);
+              usado += h;
+              chunks[chunks.length - 1].push(unidades[i]);
             }
             if (footerH > 0 && usado + footerH > capacidadeColuna && coluna >= numColunas) {
               chunks.push([]);
@@ -377,63 +417,41 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
             return chunks;
           }
 
-          var questoesAtomicas = Array.prototype.slice.call(questoesColuna.children);
-          var paginasChunks = simularEncaixe(questoesAtomicas);
+          // 1ª tentativa: questões inteiras, sem dividir nada. Se já coube tudo
+          // numa página, acaba aqui — sem qualquer mutação no DOM.
+          var unidades = medirUnidades(false);
+          var paginasChunks = simularEncaixe(unidades);
 
-          if (paginasChunks.length <= 1) return conteudo; // tudo cabe numa página só, nada a fazer
+          if (paginasChunks.length > 1) {
+            // Não coube inteiro — mede de novo, agora separando enunciado de
+            // alternativas (só a parte que não coube muda de página, em vez da
+            // questão inteira pular fora e desperdiçar o espaço que sobrou). Essa
+            // medição ainda não mexe no DOM — só lê offsetHeight dos filhos, que
+            // continuam exatamente onde estavam.
+            unidades = medirUnidades(true);
+            paginasChunks = simularEncaixe(unidades);
+          }
 
-          // Não coube inteiro numa página — SÓ AGORA vale a pena separar cada
-          // .questao em até 2 pedaços — {texto-apoio + enunciado} e {alternativas ou
-          // linhas de resposta} — pra só a parte que não coube mudar de
-          // coluna/página (igual o break-inside:auto real faria), em vez da questão
-          // inteira pular fora e desperdiçar o espaço que sobrou. Só desmonta a
-          // .questao (move filhos pra fragmentos) quando vai reaproveitar o
-          // resultado — desmontar sem usar deixava a questão original vazia.
-          var questoes = [];
-          questoesAtomicas.forEach(function(qEl) {
-            var subFilhos = qEl.children ? Array.prototype.slice.call(qEl.children) : [];
-            if (!qEl.classList || !qEl.classList.contains('questao') || subFilhos.length <= 1) {
-              questoes.push(qEl);
-              return;
+          if (paginasChunks.length <= 1) return conteudo; // cabe numa página só, nada a fazer
+
+          // Só AGORA mexe no DOM de verdade: separa os fragmentos que a simulação
+          // decidiu usar e monta as páginas finais.
+          function materializar(unidade) {
+            if (unidade.tipo === 'inteira') return unidade.el;
+            var frag = document.createElement('div');
+            frag.className = unidade.qEl.className;
+            if (unidade.tipo === 'frag1') {
+              // Sem a margem/borda de separação da .questao aqui — quem fecha a
+              // questão (traço pontilhado embaixo) é sempre o 2º pedaço; senão
+              // sairia um traço duplicado entre enunciado e alternativas mesmo
+              // quando os dois ficam juntos na mesma página.
+              frag.style.marginBottom = '0';
+              frag.style.paddingBottom = '0';
+              frag.style.borderBottom = 'none';
             }
-            var grupo1 = [];
-            var grupo2 = [];
-            var passouEnunciado = false;
-            subFilhos.forEach(function(sc) {
-              if (!passouEnunciado) {
-                grupo1.push(sc);
-                if (sc.classList && sc.classList.contains('questao-enunciado')) passouEnunciado = true;
-              } else {
-                grupo2.push(sc);
-              }
-            });
-            if (grupo2.length === 0) {
-              questoes.push(qEl);
-              return;
-            }
-            var frag1 = document.createElement('div');
-            frag1.className = qEl.className;
-            // Sem a margem/borda de separação da .questao aqui — quem fecha a
-            // questão (traço pontilhado embaixo) é sempre o 2º pedaço; senão sairia
-            // um traço duplicado entre enunciado e alternativas mesmo quando os dois
-            // ficam juntos na mesma página (a imensa maioria dos casos).
-            frag1.style.marginBottom = '0';
-            frag1.style.paddingBottom = '0';
-            frag1.style.borderBottom = 'none';
-            grupo1.forEach(function(c) { frag1.appendChild(c); });
-            var frag2 = document.createElement('div');
-            frag2.className = qEl.className;
-            grupo2.forEach(function(c) { frag2.appendChild(c); });
-            questoes.push(frag1);
-            questoes.push(frag2);
-          });
-
-          // A partir daqui já mexeu no DOM (moveu filhos pra dentro de frag1/frag2) —
-          // não dá mais pra devolver "conteudo" como se nada tivesse acontecido, ou
-          // as .questao originais ficam vazias (conteúdo órfão nos fragmentos, sem
-          // nunca ser reanexado). Sempre reconstrói a partir daqui, mesmo que o
-          // reencaixe mais fino tenha dado 1 página só de novo.
-          paginasChunks = simularEncaixe(questoes);
+            unidade.filhos.forEach(function(c) { frag.appendChild(c); });
+            return frag;
+          }
 
           var novosBlocos = [];
           for (var pi = 0; pi < paginasChunks.length; pi++) {
@@ -445,7 +463,7 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
             if (paginasChunks[pi].length > 0) {
               var novaColuna = document.createElement('div');
               novaColuna.className = questoesColuna.className;
-              paginasChunks[pi].forEach(function(q) { novaColuna.appendChild(q); });
+              paginasChunks[pi].forEach(function(u) { novaColuna.appendChild(materializar(u)); });
               novaPagina.appendChild(novaColuna);
             }
             if (pi === paginasChunks.length - 1) {
