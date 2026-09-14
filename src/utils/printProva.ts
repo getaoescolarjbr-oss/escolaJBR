@@ -351,112 +351,33 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
             child = child.nextElementSibling;
           }
 
-          // Mede SEMPRE com o elemento ainda anexado no documento — offsetHeight de
-          // elemento fora da árvore visível dá 0, e foi exatamente isso que
-          // quebrou a versão anterior: media os fragmentos DEPOIS de criá-los soltos
-          // (ainda não inseridos em lugar nenhum), então toda questão dividida
-          // entrava com altura 0 na simulação, fazendo tudo parecer que cabia numa
-          // página só. Aqui a medição de cada pedacinho acontece ENQUANTO ele ainda
-          // é filho do .questao original (que está na tela); só depois de já saber
-          // o resultado é que os pedaços são de fato desanexados e remontados.
-          function medirUnidades(dividir) {
-            var unidades = [];
-            Array.prototype.slice.call(questoesColuna.children).forEach(function(qEl) {
-              var subFilhos = qEl.children ? Array.prototype.slice.call(qEl.children) : [];
-              var podeDividir = dividir && qEl.classList && qEl.classList.contains('questao') && subFilhos.length > 1;
-              if (!podeDividir) {
-                unidades.push({ tipo: 'inteira', el: qEl, h: qEl.offsetHeight });
-                return;
+          // Encaixa cada .questao INTEIRA (sem dividir enunciado/alternativas — essa
+          // divisão já causou mais de um bug e voltou pra versão simples, comprovada
+          // certa nos 27 alunos reais desta prova). Mede sempre com o elemento ainda
+          // anexado no documento (offsetHeight de elemento fora da árvore dá 0).
+          var questoes = Array.prototype.slice.call(questoesColuna.children);
+          var paginasChunks = [[]];
+          var coluna = 1;
+          var usado = headerH;
+          for (var qi = 0; qi < questoes.length; qi++) {
+            var h = questoes[qi].offsetHeight;
+            if (usado > 0 && usado + h > capacidadeColuna) {
+              if (coluna < numColunas) {
+                coluna++;
+              } else {
+                coluna = 1;
+                paginasChunks.push([]);
               }
-              var grupo1 = [];
-              var grupo2 = [];
-              var passouEnunciado = false;
-              var h1 = 0;
-              var h2 = 0;
-              subFilhos.forEach(function(sc) {
-                if (!passouEnunciado) {
-                  grupo1.push(sc);
-                  h1 += sc.offsetHeight;
-                  if (sc.classList && sc.classList.contains('questao-enunciado')) passouEnunciado = true;
-                } else {
-                  grupo2.push(sc);
-                  h2 += sc.offsetHeight;
-                }
-              });
-              if (grupo2.length === 0) {
-                unidades.push({ tipo: 'inteira', el: qEl, h: qEl.offsetHeight });
-                return;
-              }
-              unidades.push({ tipo: 'frag1', qEl: qEl, filhos: grupo1, h: h1 });
-              unidades.push({ tipo: 'frag2', qEl: qEl, filhos: grupo2, h: h2 });
-            });
-            return unidades;
-          }
-
-          function simularEncaixe(unidades) {
-            var chunks = [[]];
-            var coluna = 1;
-            var usado = headerH;
-            for (var i = 0; i < unidades.length; i++) {
-              var h = unidades[i].h;
-              if (usado > 0 && usado + h > capacidadeColuna) {
-                if (coluna < numColunas) {
-                  coluna++;
-                } else {
-                  coluna = 1;
-                  chunks.push([]);
-                }
-                usado = 0;
-              }
-              usado += h;
-              chunks[chunks.length - 1].push(unidades[i]);
+              usado = 0;
             }
-            // O rodapé (cartão no fim, largura cheia) não entra nessa conta: ele fica
-            // fora do layout de colunas, então comparar a altura dele com o espaço de
-            // UMA coluna só criava uma página extra em branco quase sempre — o
-            // cartão praticamente nunca cabe no que sobra de uma única coluna, mesmo
-            // quando a página inteira (as duas colunas juntas) teria espaço de sobra.
-            // Deixa ele fluir pro final da última página como sempre foi: se não
-            // couber de verdade, o break-inside:avoid do próprio cartão empurra pra
-            // a próxima página igual fazia antes desta reescrita.
-            return chunks;
+            usado += h;
+            paginasChunks[paginasChunks.length - 1].push(questoes[qi]);
           }
-
-          // 1ª tentativa: questões inteiras, sem dividir nada. Se já coube tudo
-          // numa página, acaba aqui — sem qualquer mutação no DOM.
-          var unidades = medirUnidades(false);
-          var paginasChunks = simularEncaixe(unidades);
-
-          if (paginasChunks.length > 1) {
-            // Não coube inteiro — mede de novo, agora separando enunciado de
-            // alternativas (só a parte que não coube muda de página, em vez da
-            // questão inteira pular fora e desperdiçar o espaço que sobrou). Essa
-            // medição ainda não mexe no DOM — só lê offsetHeight dos filhos, que
-            // continuam exatamente onde estavam.
-            unidades = medirUnidades(true);
-            paginasChunks = simularEncaixe(unidades);
-          }
+          // O rodapé (cartão no fim, largura cheia) fica fora do layout de colunas —
+          // deixa fluir pro final da última página como sempre foi: se não couber de
+          // verdade, o próprio break-inside:avoid do cartão empurra pra a próxima.
 
           if (paginasChunks.length <= 1) return conteudo; // cabe numa página só, nada a fazer
-
-          // Só AGORA mexe no DOM de verdade: separa os fragmentos que a simulação
-          // decidiu usar e monta as páginas finais.
-          function materializar(unidade) {
-            if (unidade.tipo === 'inteira') return unidade.el;
-            var frag = document.createElement('div');
-            frag.className = unidade.qEl.className;
-            if (unidade.tipo === 'frag1') {
-              // Sem a margem/borda de separação da .questao aqui — quem fecha a
-              // questão (traço pontilhado embaixo) é sempre o 2º pedaço; senão
-              // sairia um traço duplicado entre enunciado e alternativas mesmo
-              // quando os dois ficam juntos na mesma página.
-              frag.style.marginBottom = '0';
-              frag.style.paddingBottom = '0';
-              frag.style.borderBottom = 'none';
-            }
-            unidade.filhos.forEach(function(c) { frag.appendChild(c); });
-            return frag;
-          }
 
           var novosBlocos = [];
           for (var pi = 0; pi < paginasChunks.length; pi++) {
@@ -468,7 +389,7 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
             if (paginasChunks[pi].length > 0) {
               var novaColuna = document.createElement('div');
               novaColuna.className = questoesColuna.className;
-              paginasChunks[pi].forEach(function(u) { novaColuna.appendChild(materializar(u)); });
+              paginasChunks[pi].forEach(function(q) { novaColuna.appendChild(q); });
               novaPagina.appendChild(novaColuna);
             }
             if (pi === paginasChunks.length - 1) {
