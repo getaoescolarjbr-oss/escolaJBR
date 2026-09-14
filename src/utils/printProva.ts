@@ -351,7 +351,49 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
             child = child.nextElementSibling;
           }
 
-          var questoes = Array.prototype.slice.call(questoesColuna.children);
+          // Cada .questao inteira era tratada como um bloco indivisível: se não
+          // coubesse no que sobrava da coluna, ELA TODA ia pra próxima, desperdiçando
+          // o espaço que sobrou. Separa em até 2 pedaços — {texto-apoio + enunciado}
+          // e {alternativas ou linhas de resposta} — pra só a parte que não coube
+          // mudar de coluna/página, igual o break-inside:auto real faria.
+          var questoes = [];
+          Array.prototype.slice.call(questoesColuna.children).forEach(function(qEl) {
+            var subFilhos = qEl.children ? Array.prototype.slice.call(qEl.children) : [];
+            if (!qEl.classList || !qEl.classList.contains('questao') || subFilhos.length <= 1) {
+              questoes.push(qEl);
+              return;
+            }
+            var grupo1 = [];
+            var grupo2 = [];
+            var passouEnunciado = false;
+            subFilhos.forEach(function(sc) {
+              if (!passouEnunciado) {
+                grupo1.push(sc);
+                if (sc.classList && sc.classList.contains('questao-enunciado')) passouEnunciado = true;
+              } else {
+                grupo2.push(sc);
+              }
+            });
+            if (grupo2.length === 0) {
+              questoes.push(qEl);
+              return;
+            }
+            var frag1 = document.createElement('div');
+            frag1.className = qEl.className;
+            // Sem a margem/borda de separação da .questao aqui — quem fecha a
+            // questão (traço pontilhado embaixo) é sempre o 2º pedaço; senão sairia
+            // um traço duplicado entre enunciado e alternativas mesmo quando os dois
+            // ficam juntos na mesma página (a imensa maioria dos casos).
+            frag1.style.marginBottom = '0';
+            frag1.style.paddingBottom = '0';
+            frag1.style.borderBottom = 'none';
+            grupo1.forEach(function(c) { frag1.appendChild(c); });
+            var frag2 = document.createElement('div');
+            frag2.className = qEl.className;
+            grupo2.forEach(function(c) { frag2.appendChild(c); });
+            questoes.push(frag1);
+            questoes.push(frag2);
+          });
 
           var paginasChunks = [[]];
           var colunaAtual = 1;
