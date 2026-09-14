@@ -347,6 +347,39 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
             if (paginasConteudo % 2 === 0) {
               if (rascunho) rascunho.remove();
               if (emBranco) emBranco.remove();
+
+              // Já dá página par sem rascunho nenhum — sobra espaço em branco no
+              // final da última página à toa. Em vez de deixar em branco, tenta
+              // escrever "Espaço para Rascunho" ALI MESMO (dentro do fluxo normal do
+              // conteúdo, sem forçar página nova): se couber na sobra, não gasta
+              // papel extra nenhum. Só faz isso se NÃO mudar a contagem de páginas —
+              // se o texto do rascunho empurrar o conteúdo pra uma página a mais,
+              // desfaz na hora (senão o total vira ímpar de novo e o próximo aluno
+              // volta a colar na mesma folha física deste).
+              if (modo === 'RASCUNHO_VERSO') {
+                var questoesColuna = conteudo.querySelector('.questoes-coluna') || conteudo;
+                var inline = document.createElement('div');
+                inline.className = 'rascunho-inline';
+                inline.style.cssText =
+                  'column-span: all; break-inside: avoid; page-break-inside: avoid; ' +
+                  'margin-top: 6mm; padding: 4mm 6mm; border: 1.5px dashed #a0aec0; ' +
+                  'border-radius: 8px; min-height: 45mm;';
+                inline.innerHTML =
+                  '<span style="display:block; text-align:center; font-size:10.5pt; ' +
+                  'font-weight:800; color:#002677; text-transform:uppercase; ' +
+                  'letter-spacing:0.6px; border-bottom:1px solid #e2e8f0; ' +
+                  'padding-bottom:2mm; margin-bottom:3mm;">Espaço para Rascunho / Cálculos</span>';
+                questoesColuna.appendChild(inline);
+
+                var hDepois = conteudo.scrollHeight;
+                var paginasDepois = Math.max(1, Math.ceil((hDepois - 25) / a4Height));
+                if (cartao) paginasDepois += 1;
+                if (paginasDepois !== paginasConteudo) {
+                  // Não coube sem empurrar pra outra página — desfaz e deixa a
+                  // sobra em branco mesmo, pra não comprometer o alinhamento.
+                  inline.remove();
+                }
+              }
             } else if (!rascunho && !emBranco) {
               // Caso que faltava: a estimativa ANTES de renderizar (baseada em
               // contagem de caracteres, sem saber de fórmula/notação complexa) achou
