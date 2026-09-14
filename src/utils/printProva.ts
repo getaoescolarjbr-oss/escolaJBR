@@ -347,6 +347,26 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
             if (paginasConteudo % 2 === 0) {
               if (rascunho) rascunho.remove();
               if (emBranco) emBranco.remove();
+            } else if (!rascunho && !emBranco) {
+              // Caso que faltava: a estimativa ANTES de renderizar (baseada em
+              // contagem de caracteres, sem saber de fórmula/notação complexa) achou
+              // que ia dar página par e não colocou rascunho nenhum no HTML — mas a
+              // altura real, medida agora, é ímpar. Sem inserir a folha aqui, o total
+              // deste aluno fica ímpar e o próximo aluno começa colado na mesma folha
+              // física (era exatamente esse o bug: só existia lógica pra REMOVER um
+              // rascunho sobrando, nunca pra ADICIONAR um que faltava).
+              var extra = document.createElement('div');
+              extra.className = 'pagina ' + (modo === 'PAGINA_BRANCA' ? 'pagina-em-branco' : 'pagina-rascunho');
+              extra.style.minHeight = '260mm';
+              if (modo === 'RASCUNHO_VERSO') {
+                extra.innerHTML =
+                  '<div class="pagina-rascunho-box">' +
+                    '<div class="pagina-rascunho-header">' +
+                      '<span class="pagina-rascunho-titulo">Espaço para Rascunho / Cálculos</span>' +
+                    '</div>' +
+                  '</div>';
+              }
+              bloco.appendChild(extra);
             }
           } else if (modo === 'SEMPRE_RASCUNHO') {
             // Se o usuário quer sempre rascunho mesmo com páginas pares:
