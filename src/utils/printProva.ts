@@ -411,9 +411,14 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
               usado += h;
               chunks[chunks.length - 1].push(unidades[i]);
             }
-            if (footerH > 0 && usado + footerH > capacidadeColuna && coluna >= numColunas) {
-              chunks.push([]);
-            }
+            // O rodapé (cartão no fim, largura cheia) não entra nessa conta: ele fica
+            // fora do layout de colunas, então comparar a altura dele com o espaço de
+            // UMA coluna só criava uma página extra em branco quase sempre — o
+            // cartão praticamente nunca cabe no que sobra de uma única coluna, mesmo
+            // quando a página inteira (as duas colunas juntas) teria espaço de sobra.
+            // Deixa ele fluir pro final da última página como sempre foi: se não
+            // couber de verdade, o break-inside:avoid do próprio cartão empurra pra
+            // a próxima página igual fazia antes desta reescrita.
             return chunks;
           }
 
