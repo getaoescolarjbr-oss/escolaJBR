@@ -351,13 +351,46 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
             child = child.nextElementSibling;
           }
 
-          // Cada .questao inteira era tratada como um bloco indivisível: se não
-          // coubesse no que sobrava da coluna, ELA TODA ia pra próxima, desperdiçando
-          // o espaço que sobrou. Separa em até 2 pedaços — {texto-apoio + enunciado}
-          // e {alternativas ou linhas de resposta} — pra só a parte que não coube
-          // mudar de coluna/página, igual o break-inside:auto real faria.
+          // Simula o encaixe SEM mexer no DOM (só lê offsetHeight) — usado primeiro
+          // com as questões inteiras, só pra saber se precisa mesmo mexer em algo.
+          function simularEncaixe(lista) {
+            var chunks = [[]];
+            var coluna = 1;
+            var usado = headerH;
+            for (var i = 0; i < lista.length; i++) {
+              var hEl = lista[i].offsetHeight;
+              if (usado > 0 && usado + hEl > capacidadeColuna) {
+                if (coluna < numColunas) {
+                  coluna++;
+                } else {
+                  coluna = 1;
+                  chunks.push([]);
+                }
+                usado = 0;
+              }
+              usado += hEl;
+              chunks[chunks.length - 1].push(lista[i]);
+            }
+            if (footerH > 0 && usado + footerH > capacidadeColuna && coluna >= numColunas) {
+              chunks.push([]);
+            }
+            return chunks;
+          }
+
+          var questoesAtomicas = Array.prototype.slice.call(questoesColuna.children);
+          var paginasChunks = simularEncaixe(questoesAtomicas);
+
+          if (paginasChunks.length <= 1) return conteudo; // tudo cabe numa página só, nada a fazer
+
+          // Não coube inteiro numa página — SÓ AGORA vale a pena separar cada
+          // .questao em até 2 pedaços — {texto-apoio + enunciado} e {alternativas ou
+          // linhas de resposta} — pra só a parte que não coube mudar de
+          // coluna/página (igual o break-inside:auto real faria), em vez da questão
+          // inteira pular fora e desperdiçar o espaço que sobrou. Só desmonta a
+          // .questao (move filhos pra fragmentos) quando vai reaproveitar o
+          // resultado — desmontar sem usar deixava a questão original vazia.
           var questoes = [];
-          Array.prototype.slice.call(questoesColuna.children).forEach(function(qEl) {
+          questoesAtomicas.forEach(function(qEl) {
             var subFilhos = qEl.children ? Array.prototype.slice.call(qEl.children) : [];
             if (!qEl.classList || !qEl.classList.contains('questao') || subFilhos.length <= 1) {
               questoes.push(qEl);
@@ -395,32 +428,8 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
             questoes.push(frag2);
           });
 
-          var paginasChunks = [[]];
-          var colunaAtual = 1;
-          var usadoNaColuna = headerH;
-          for (var qi = 0; qi < questoes.length; qi++) {
-            var el = questoes[qi];
-            var h = el.offsetHeight;
-            if (usadoNaColuna > 0 && usadoNaColuna + h > capacidadeColuna) {
-              if (colunaAtual < numColunas) {
-                colunaAtual++;
-              } else {
-                colunaAtual = 1;
-                paginasChunks.push([]);
-              }
-              usadoNaColuna = 0;
-            }
-            usadoNaColuna += h;
-            paginasChunks[paginasChunks.length - 1].push(el);
-          }
-
-          // Último "pedaço" (footer, ex.: cartão no fim) — se não couber na última
-          // coluna usada, abre mais uma página só pra ele.
-          if (footerH > 0 && usadoNaColuna + footerH > capacidadeColuna && colunaAtual >= numColunas) {
-            paginasChunks.push([]);
-          }
-
-          if (paginasChunks.length <= 1) return conteudo; // tudo cabe numa página só, nada a fazer
+          paginasChunks = simularEncaixe(questoes);
+          if (paginasChunks.length <= 1) return conteudo;
 
           var novosBlocos = [];
           for (var pi = 0; pi < paginasChunks.length; pi++) {
