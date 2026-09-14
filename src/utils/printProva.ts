@@ -428,8 +428,12 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
             questoes.push(frag2);
           });
 
+          // A partir daqui já mexeu no DOM (moveu filhos pra dentro de frag1/frag2) —
+          // não dá mais pra devolver "conteudo" como se nada tivesse acontecido, ou
+          // as .questao originais ficam vazias (conteúdo órfão nos fragmentos, sem
+          // nunca ser reanexado). Sempre reconstrói a partir daqui, mesmo que o
+          // reencaixe mais fino tenha dado 1 página só de novo.
           paginasChunks = simularEncaixe(questoes);
-          if (paginasChunks.length <= 1) return conteudo;
 
           var novosBlocos = [];
           for (var pi = 0; pi < paginasChunks.length; pi++) {
