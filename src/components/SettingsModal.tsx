@@ -16,6 +16,14 @@ export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onT
   const [loading, setLoading] = useState(false);
   const [turmas, setTurmas] = useState<{ id: string; nome: string }[]>([]);
   const [selectedTurmaId, setSelectedTurmaId] = useState<string>('global');
+  const [saveError, setSaveError] = useState<string | null>(null);
+  // Rascunho local do campo "Valor Total Vistos": só grava no banco quando o campo
+  // perde o foco (onBlur) com um número válido. Antes, o onChange disparava uma
+  // gravação a CADA tecla — se o professor apagasse o campo pra digitar de novo,
+  // esse instante intermediário virava parseFloat('') = NaN, que ao virar JSON
+  // some e chega no banco como null, aceito sem erro nenhum (a coluna é nullable) e
+  // apagando o valor real em silêncio.
+  const [valorVistoDraft, setValorVistoDraft] = useState<string>('');
 
   useEffect(() => {
     if (isOpen && professor) {
@@ -31,11 +39,32 @@ export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onT
     }
   }, [isOpen, professor]);
 
+  // Sincroniza o rascunho do campo "Valor Total Vistos" sempre que o modal abre ou
+  // a turma selecionada muda — pra mostrar o valor certo sem herdar o que a pessoa
+  // estava digitando na turma anterior.
+  useEffect(() => {
+    if (!isOpen || !professor) return;
+    const valor = selectedTurmaId === 'global'
+      ? professor.config_visto_valor_total
+      : (professor.config_turmas?.[selectedTurmaId]?.config_visto_valor_total ?? professor.config_visto_valor_total);
+    setValorVistoDraft(valor != null ? String(valor) : '');
+    setSaveError(null);
+  }, [isOpen, professor, selectedTurmaId]);
+
   if (!isOpen || !professor) return null;
 
   const handleUpdateConfig = async (rawUpdates: Partial<Professor>) => {
+    // Trava de segurança: nunca manda um numero invalido pro banco — parseFloat('')
+    // ou de um campo apagado no meio da digitação vira NaN, que na serialização
+    // JSON vira null e apaga o valor real em silêncio (a coluna aceita null sem
+    // erro nenhum).
+    if ('config_visto_valor_total' in rawUpdates && (typeof rawUpdates.config_visto_valor_total !== 'number' || isNaN(rawUpdates.config_visto_valor_total) || rawUpdates.config_visto_valor_total <= 0)) {
+      setSaveError('Valor de vistos inválido — não foi salvo. Digite um número maior que zero.');
+      return;
+    }
+    setSaveError(null);
     setLoading(true);
-    
+
     let updates: Partial<Professor> = { ...rawUpdates };
     
     if (selectedTurmaId !== 'global') {
@@ -83,6 +112,7 @@ export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onT
       onUpdate({ ...professor, ...updates });
     } else {
       console.error('Error updating config', error);
+      setSaveError('Não foi possível salvar no servidor — verifique sua conexão e tente de novo.');
       // Mesmo com erro no banco, atualizamos a interface para o professor não perder o trabalho
       onUpdate({ ...professor, ...updates });
     }
@@ -162,17 +192,36 @@ export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onT
               <label className={`flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest mb-3 ${theme === 'light' ? 'text-blue-800 font-extrabold' : 'text-blue-200'}`}>
                 <Calculator className="w-3 h-3" /> Valor Total Vistos
               </label>
-              <input 
+              <input
                 type="number"
                 step="0.5"
-                value={currentValor}
-                onChange={(e) => handleUpdateConfig({ config_visto_valor_total: parseFloat(e.target.value) })}
+                value={valorVistoDraft}
+                onChange={(e) => setValorVistoDraft(e.target.value)}
+                onBlur={() => {
+                  const parsed = parseFloat(valorVistoDraft);
+                  if (isNaN(parsed) || parsed <= 0) {
+                    // Campo inválido ou vazio: não grava nada — volta a mostrar o
+                    // valor que já estava salvo, em vez de apagar.
+                    setValorVistoDraft(currentValor != null ? String(currentValor) : '');
+                    setSaveError(parsed <= 0 || valorVistoDraft.trim() !== '' ? 'Valor de vistos inválido — não foi salvo. Digite um número maior que zero.' : null);
+                    return;
+                  }
+                  if (parsed !== currentValor) {
+                    handleUpdateConfig({ config_visto_valor_total: parsed });
+                  }
+                }}
                 className={`w-full border rounded-lg p-2 text-sm outline-none focus:border-blue-500 transition-all ${
                   theme === 'light' ? 'bg-white border-blue-200 text-blue-900' : 'bg-ms-dark border-gray-700 text-white'
                 }`}
               />
             </div>
           </div>
+
+          {saveError && (
+            <div className={`px-4 py-2.5 rounded-xl border text-xs font-bold ${theme === 'light' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-red-950/40 border-red-800 text-red-300'}`}>
+              {saveError}
+            </div>
+          )}
 
           <div className="space-y-3">
             <h4 className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-blue-800 font-extrabold' : 'text-blue-200'}`}>Método de Lançamento de Vistos</h4>
