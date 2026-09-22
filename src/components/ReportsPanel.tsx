@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import type { Professor, ListaParaVistos } from '../types';
 import { AlertCircle, Printer, Settings2, Users, Calculator, ArrowLeft } from 'lucide-react';
 import { autoUpdateExpiredAbsences } from '../utils/studentUtils';
-import { arredondarNotaMS, getCorGradiente, estaAprovado, getBimestreFromDate } from '../utils/academicUtils';
+import { arredondarNotaMS, getCorGradiente, estaAprovado, getBimestreFromDate, pesoDoVisto } from '../utils/academicUtils';
 import { MatriculaModal } from './MatriculaModal';
 import { ExameFinalPanel } from './ExameFinalPanel';
 import { printReport } from '../utils/printUtils';
@@ -148,21 +148,19 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
       const matricula = dataMatricula?.find(m => String(m.aluno_id).trim() === currentAlunoId);
       const bimestreEntrada = matricula?.bimestre_entrada || 1;
 
-      const vistosAluno = vistos?.filter(v => String(v.aluno_id).trim() === currentAlunoId && v.valor !== '0' && v.valor !== '-') || [];
+      const vistosAluno = vistos?.filter(v => String(v.aluno_id).trim() === currentAlunoId) || [];
       const notasAluno = notas?.filter(n => String(n.aluno_id).trim() === currentAlunoId) || [];
       const somaNotas = notasAluno.filter(n => n.avaliacao_id !== ravAvalId).reduce((acc, curr) => acc + (curr.nota || 0), 0);
       const notaRav = notasAluno.find(n => n.avaliacao_id === ravAvalId)?.nota;
 
-      const pesosVisto = vistosAluno.reduce((acc, v) => {
-          if (v.valor === '1.0' || v.valor === '+' || v.valor === '.') return acc + 1;
-          if (v.valor === '0.5') return acc + 0.5;
-          return acc;
-      }, 0);
+      const pesosVisto = vistosAluno.reduce((acc, v) => acc + pesoDoVisto(v.valor), 0);
       const notaVistoFinal = totalAtiv > 0 ? (pesosVisto / totalAtiv) * (professor.config_visto_valor_total || 2.0) : 0;
       const mediaSemRav = somaNotas + notaVistoFinal;
 
       newStats[aluno.aluno_id] = {
-          totalVistos: vistosAluno.length,
+          // Peso somado, não contagem de linhas — um "viu, não fez" (peso 0) ou um
+          // 50% não podem contar como "atividade concluída" inteira no % realizado.
+          totalVistos: pesosVisto,
           totalAtiv: totalAtiv,
           media: notaRav !== undefined && notaRav > mediaSemRav ? notaRav : mediaSemRav,
           bimestreEntrada: bimestreEntrada
@@ -302,16 +300,11 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
           const totalAtivBim = ativIdsBim.length;
           let notaVistoFinal = 0;
           if (totalAtivBim > 0) {
-            const vistosBim = vistos.filter(v => 
-              String(v.aluno_id).trim() === currentAlunoId && 
-              ativIdsBim.includes(v.atividade_id) &&
-              v.valor !== '0' && v.valor !== '-'
+            const vistosBim = vistos.filter(v =>
+              String(v.aluno_id).trim() === currentAlunoId &&
+              ativIdsBim.includes(v.atividade_id)
             );
-            const pesosVisto = vistosBim.reduce((acc, v) => {
-              if (v.valor === '1.0' || v.valor === '+' || v.valor === '.') return acc + 1;
-              if (v.valor === '0.5') return acc + 0.5;
-              return acc;
-            }, 0);
+            const pesosVisto = vistosBim.reduce((acc, v) => acc + pesoDoVisto(v.valor), 0);
             notaVistoFinal = (pesosVisto / totalAtivBim) * (professor.config_visto_valor_total || 2.0);
           }
 
