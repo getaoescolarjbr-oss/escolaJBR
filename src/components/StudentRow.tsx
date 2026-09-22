@@ -171,12 +171,28 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
   }, [bulkAtividades, aluno.aluno_id, bulkRefreshTrigger]);
 
   // Salva visto individual de uma atividade específica (modo lote)
-  // "Ponto": 3 estados em ciclo — em branco → azul (100%) → laranja (50%) → em
-  // branco. Compartilhado entre o modo normal e o modo lote.
+  // "Ponto": 4 estados em ciclo — em branco → azul (visto, 100%) → laranja (visto,
+  // 50%) → vermelho (visto, aluno não tem nada — só controle do professor, não
+  // gera nota nem prejudica) → em branco de novo. Compartilhado entre o modo
+  // normal e o modo lote.
+  //
+  // Usa o PESO (não o texto bruto) pra decidir o estado atual: uma atividade
+  // marcada como "1,0" quando o método ainda era "Gradual" precisa continuar
+  // aparecendo azul depois de trocar pra "Ponto" — comparar só com '.' literal
+  // deixava esses registros antigos sem nenhuma cor marcada.
   const proximoPonto = (atual: string | null | undefined): string | null => {
-    if (atual === '.') return '0.5';
-    if (atual === '0.5') return null;
-    return '.';
+    if (atual === null || atual === undefined || atual === '') return '.';
+    const peso = pesoDoVisto(atual);
+    if (peso === 1) return '0.5';
+    if (peso === 0.5) return '0';
+    return null; // vermelho (peso 0, mas com registro) → desmarca
+  };
+  const estadoPonto = (atual: string | null | undefined): 'vazio' | 'azul' | 'ambar' | 'vermelho' => {
+    if (atual === null || atual === undefined || atual === '') return 'vazio';
+    const peso = pesoDoVisto(atual);
+    if (peso === 1) return 'azul';
+    if (peso === 0.5) return 'ambar';
+    return 'vermelho';
   };
 
   const handleBulkVistoAction = async (ativId: string, valor: string | null) => {
@@ -662,26 +678,35 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         }`} />
                       </div>
 
-                      {/* Ponto: em branco → azul (100%) → laranja (50%) → em branco */}
-                      {configEfetivo.config_visto_metodo === 'ponto' && (
+                      {/* Ponto: em branco → azul 100% → laranja 50% → vermelho (visto, sem nota) → em branco */}
+                      {configEfetivo.config_visto_metodo === 'ponto' && (() => {
+                        const estado = estadoPonto(val);
+                        const tituloPonto = estado === 'azul' ? 'Feito — 100% (clique pra 50%)'
+                          : estado === 'ambar' ? 'Feito — 50% (clique pra marcar sem nota)'
+                          : estado === 'vermelho' ? 'Visto, sem nota (clique pra desmarcar)'
+                          : 'Clique para marcar — 100%';
+                        return (
                         <button
-                          title={val === '.' ? 'Feito — 100% (clique pra 50%)' : val === '0.5' ? 'Feito — 50% (clique pra desmarcar)' : 'Clique para marcar — 100%'}
+                          title={tituloPonto}
                           onClick={() => handleBulkVistoAction(ativ.id, proximoPonto(val))}
                           disabled={isLdg || isLocked || isPosterior || isTransferido}
                           className={`w-6 md:w-8 h-6 md:h-8 rounded-full border-2 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
-                            val === '.'
+                            estado === 'azul'
                               ? 'bg-blue-600 border-blue-400 scale-110 shadow-lg shadow-blue-900/40'
-                              : val === '0.5'
+                              : estado === 'ambar'
                                 ? 'bg-amber-500 border-amber-400 scale-110 shadow-lg shadow-amber-900/40'
-                                : theme === 'light' ? 'bg-blue-50 border-blue-300 hover:bg-blue-100' : 'bg-gray-800 border-gray-600 hover:border-blue-500'
+                                : estado === 'vermelho'
+                                  ? 'bg-red-600 border-red-400 scale-110 shadow-lg shadow-red-900/40'
+                                  : theme === 'light' ? 'bg-blue-50 border-blue-300 hover:bg-blue-100' : 'bg-gray-800 border-gray-600 hover:border-blue-500'
                           }`}
                         >
                           {isLdg
                             ? <Loader2 className="w-2.5 h-2.5 md:w-3 md:h-3 animate-spin text-blue-400" />
-                            : <div className={`w-1.5 md:w-2.5 h-1.5 md:h-2.5 rounded-full ${val === '.' || val === '0.5' ? 'bg-white' : theme === 'light' ? 'bg-blue-400' : 'bg-blue-400'}`} />
+                            : <div className={`w-1.5 md:w-2.5 h-1.5 md:h-2.5 rounded-full ${estado !== 'vazio' ? 'bg-white' : theme === 'light' ? 'bg-blue-400' : 'bg-blue-400'}`} />
                           }
                         </button>
-                      )}
+                        );
+                      })()}
 
                       {/* Aberto */}
                       {configEfetivo.config_visto_metodo === 'aberto' && (
@@ -711,7 +736,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         </select>
                       )}
 
-                      {/* Gradual: 0,5 / 1,0 */}
+                      {/* Gradual: vazio (não viu) / 0 (viu, não fez) / 0,5 / 1,0 */}
                       {configEfetivo.config_visto_metodo === 'gradual' && (
                         <select
                           value={val || ''}
@@ -720,6 +745,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                           className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed py-0.5 md:py-1 px-0.5 md:px-1 w-12 md:w-14`}
                         >
                           <option value="">—</option>
+                          <option value="0">0</option>
                           <option value="0.5">0,5</option>
                           <option value="1.0">1,0</option>
                         </select>
@@ -759,8 +785,18 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
               <div className="flex items-center justify-center gap-1">
                 {configEfetivo.config_visto_metodo === 'gradual' && (
                     <div className="flex gap-1">
-                        {['0.5', '1.0'].map(v => (
-                            <button key={v} onClick={() => handleVistoAction(valorVisto === v ? null : v)} disabled={isLocked || isPosterior || isTransferido} className={`md:px-2 px-1 md:py-1.5 py-1 rounded-md text-[9px] md:text-[10px] font-black border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === v ? 'bg-blue-600 text-white border-blue-400' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}>{v}</button>
+                        {['0', '0.5', '1.0'].map(v => (
+                            <button
+                              key={v}
+                              title={v === '0' ? 'Viu o caderno, aluno não fez' : undefined}
+                              onClick={() => handleVistoAction(valorVisto === v ? null : v)}
+                              disabled={isLocked || isPosterior || isTransferido}
+                              className={`md:px-2 px-1 md:py-1.5 py-1 rounded-md text-[9px] md:text-[10px] font-black border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                                valorVisto === v
+                                  ? (v === '0' ? 'bg-red-600 text-white border-red-400' : 'bg-blue-600 text-white border-blue-400')
+                                  : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'
+                              }`}
+                            >{v}</button>
                         ))}
                     </div>
                 )}
@@ -770,24 +806,33 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         <button title="Feito — 50%" onClick={() => handleVistoAction(valorVisto === '-' ? null : '-')} disabled={isLocked || isPosterior || isTransferido} className={`p-1.5 md:p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '-' ? 'bg-amber-500 text-white border-amber-400 shadow-lg shadow-amber-900/50' : theme === 'light' ? 'bg-amber-500/25 text-amber-700 border-amber-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Minus className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
                     </div>
                 )}
-                {configEfetivo.config_visto_metodo === 'ponto' && (
+                {configEfetivo.config_visto_metodo === 'ponto' && (() => {
+                    const estado = estadoPonto(valorVisto);
+                    const titulo = estado === 'azul' ? 'Feito — 100% (clique pra 50%)'
+                      : estado === 'ambar' ? 'Feito — 50% (clique pra marcar sem nota)'
+                      : estado === 'vermelho' ? 'Visto, sem nota (clique pra desmarcar)'
+                      : 'Clique para marcar — 100%';
+                    return (
                     <button
-                        title={valorVisto === '.' ? 'Feito — 100% (clique pra 50%)' : valorVisto === '0.5' ? 'Feito — 50% (clique pra desmarcar)' : 'Clique para marcar — 100%'}
-                        onClick={() => handleVistoAction(valorVisto === '.' ? '0.5' : valorVisto === '0.5' ? null : '.')}
+                        title={titulo}
+                        onClick={() => handleVistoAction(proximoPonto(valorVisto))}
                         disabled={isLocked || isPosterior || isTransferido}
                         className={`w-8 md:w-10 h-8 md:h-10 rounded-full border-2 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
-                            valorVisto === '.'
+                            estado === 'azul'
                                 ? 'bg-blue-600 text-white border-blue-400 scale-110 shadow-lg'
-                                : valorVisto === '0.5'
+                                : estado === 'ambar'
                                     ? 'bg-amber-500 text-white border-amber-400 scale-110 shadow-lg'
-                                    : theme === 'light'
-                                        ? 'bg-blue-500/10 border-blue-500/20 text-blue-600'
-                                        : 'bg-gray-800 text-blue-200 border-gray-700'
+                                    : estado === 'vermelho'
+                                        ? 'bg-red-600 text-white border-red-400 scale-110 shadow-lg'
+                                        : theme === 'light'
+                                            ? 'bg-blue-500/10 border-blue-500/20 text-blue-600'
+                                            : 'bg-gray-800 text-blue-200 border-gray-700'
                         }`}
                     >
-                        <div className={`w-1.5 md:w-2 h-1.5 md:h-2 rounded-full ${valorVisto === '.' || valorVisto === '0.5' ? 'bg-white' : theme === 'light' ? 'bg-blue-400' : 'bg-blue-300'}`}></div>
+                        <div className={`w-1.5 md:w-2 h-1.5 md:h-2 rounded-full ${estado !== 'vazio' ? 'bg-white' : theme === 'light' ? 'bg-blue-400' : 'bg-blue-300'}`}></div>
                     </button>
-                )}
+                    );
+                })()}
                 {configEfetivo.config_visto_metodo === 'aberto' && (
                     <div className="relative w-14 md:w-20">
                         <DecimalInput
