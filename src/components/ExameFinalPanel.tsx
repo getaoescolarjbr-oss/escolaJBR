@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, Avaliacao, Student } from '../types';
 import { Calculator, Save, AlertCircle, TrendingUp, Printer } from 'lucide-react';
-import { arredondarNotaMS, getCorGradiente, calcularMediaAnual, calcularNotaNecessariaExame, calcularFrequenciaAnual, calcularMediaFinalPosExame } from '../utils/academicUtils';
+import { arredondarNotaMS, getCorGradiente, calcularMediaAnual, calcularNotaNecessariaExame, calcularFrequenciaAnual, calcularMediaFinalPosExame, pesoDoVisto } from '../utils/academicUtils';
 import { printReport } from '../utils/printUtils';
 import { DecimalInput } from './DecimalInput';
 
@@ -114,13 +114,7 @@ export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLoc
           ativsDoBimestre.forEach(at => {
             const visto = vistosData.find(v => v.atividade_id === at.id && String(v.aluno_id) === String(aluno.id));
             if (visto) {
-              const val = String(visto.valor).trim();
-              if (val === '1.0' || val === '+' || val === '.' || val === 'checked') somaPesosVistos += 1.0;
-              else if (val === '0.5' || val === 'half') somaPesosVistos += 0.5;
-              else if (!isNaN(parseFloat(val))) {
-                const num = parseFloat(val);
-                somaPesosVistos += num > 1 ? num / 10 : num;
-              }
+              somaPesosVistos += pesoDoVisto(visto.valor);
             }
           });
           

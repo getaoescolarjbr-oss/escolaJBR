@@ -4,6 +4,7 @@ import { X, Calendar, ClipboardList, AlertTriangle, LogOut, FileText, Loader2, C
 import { AtaModal } from './AtaModal';
 import { OcorrenciaModal } from './OcorrenciaModal';
 import { printReport } from '../utils/printUtils';
+import { pesoDoVisto } from '../utils/academicUtils';
 
 interface StudentProfileModalProps {
   isOpen: boolean;
@@ -453,15 +454,7 @@ export function StudentProfileModal({
   vistos.forEach((v: any) => {
      const disc = v.atividade_id?.disciplinas?.nome || v.atividade_id?.disciplina_nome;
      if (disc) {
-         let peso = 0;
-         const val = String(v.valor).trim();
-         if (val === '1.0' || val === '+' || val === '.' || val === 'checked') peso = 1.0;
-         else if (val === '0.5' || val === 'half') peso = 0.5;
-         else if (!isNaN(parseFloat(val))) {
-             const num = parseFloat(val);
-             peso = num > 1 ? num / 10 : num;
-         }
-         vistosPorDisciplina[disc] = (vistosPorDisciplina[disc] || 0) + peso;
+         vistosPorDisciplina[disc] = (vistosPorDisciplina[disc] || 0) + pesoDoVisto(v.valor);
      }
   });
 

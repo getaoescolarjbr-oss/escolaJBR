@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Student, AtividadeDiaria, Avaliacao } from '../types';
 import { X, Loader2, BookOpen, AlertCircle, BarChart2, ClipboardList } from 'lucide-react';
-import { arredondarNotaMS, getCorGradiente } from '../utils/academicUtils';
+import { arredondarNotaMS, getCorGradiente, pesoDoVisto } from '../utils/academicUtils';
 
 interface TeacherDiaryModalProps {
   isOpen: boolean;
@@ -99,7 +99,7 @@ export function TeacherDiaryModal({
         const pesosAluno: Record<string, number> = {};
         (vistosData || []).forEach((v: any) => {
           const aId = String(v.aluno_id).trim();
-          pesosAluno[aId] = (pesosAluno[aId] || 0) + getPeso(String(v.valor));
+          pesosAluno[aId] = (pesosAluno[aId] || 0) + pesoDoVisto(String(v.valor));
         });
 
         const notasVistos: Record<string, number> = {};
@@ -150,19 +150,9 @@ export function TeacherDiaryModal({
     }
   }
 
-  const getPeso = (val: string | undefined): number => {
-    if (!val) return 0;
-    const v = val.trim();
-    if (v === '1.0' || v === '+' || v === '.' || v === 'checked') return 1.0;
-    if (v === '0.5' || v === 'half') return 0.5;
-    const num = parseFloat(v);
-    if (isNaN(num)) return 0;
-    return num > 1 ? num / 10 : num;
-  };
-
   const getVistoBadge = (val: string | undefined) => {
     if (!val) return <span className="text-gray-500 font-bold opacity-30">—</span>;
-    const peso = getPeso(val);
+    const peso = pesoDoVisto(val);
     if (peso === 1.0) {
       return (
         <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 border border-emerald-300 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30 text-xs font-black shadow-sm" title="Visto Completo">✓</span>
@@ -356,7 +346,7 @@ export function TeacherDiaryModal({
                           const cleanStudentId = String(student.id).trim();
                           const studentVistos = vistos[cleanStudentId] || {};
                           let somaVistos = 0;
-                          activities.forEach(act => { somaVistos += getPeso(studentVistos[act.id]); });
+                          activities.forEach(act => { somaVistos += pesoDoVisto(studentVistos[act.id]); });
                           const totalAtiv = activities.length;
                           const percentual = totalAtiv > 0 ? Math.min(100, Math.round((somaVistos / totalAtiv) * 100)) : 0;
                           let scoreColor = 'text-red-500 bg-red-500/10 border-red-500/20';

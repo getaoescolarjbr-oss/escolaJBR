@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, ListaParaVistos } from '../types';
 import { X, Printer, Sparkles, AlertCircle, FileText, CheckCircle2, AlertTriangle, HelpCircle, Save, Loader2, CheckCheck } from 'lucide-react';
-import { arredondarNotaMS, getCorGradiente } from '../utils/academicUtils';
+import { arredondarNotaMS, getCorGradiente, pesoDoVisto } from '../utils/academicUtils';
 import { printReport } from '../utils/printUtils';
 import { DecimalInput } from './DecimalInput';
 
@@ -218,19 +218,9 @@ export function RAVListModal({
             if (ativIdsBim.length > 0) {
               const vistosBim = vistosList.filter(v => ativIdsBim.includes(v.atividade_id) && String(v.aluno_id).trim() === aId);
               let somaPesos = 0;
-              
+
               vistosBim.forEach(v => {
-                let peso = 0;
-                const val = String(v.valor).trim();
-                
-                if (val === '1.0' || val === '+' || val === '.' || val === 'checked') peso = 1.0;
-                else if (val === '0.5' || val === 'half') peso = 0.5;
-                else if (!isNaN(parseFloat(val))) {
-                  const num = parseFloat(val);
-                  peso = num > 1 ? num / 10 : num;
-                }
-                
-                somaPesos += peso;
+                somaPesos += pesoDoVisto(v.valor);
               });
 
               const realizacao = somaPesos / ativIdsBim.length;

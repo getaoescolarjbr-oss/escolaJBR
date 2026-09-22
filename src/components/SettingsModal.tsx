@@ -178,10 +178,10 @@ export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onT
             <h4 className={`text-[10px] font-bold uppercase tracking-widest ${theme === 'light' ? 'text-blue-800 font-extrabold' : 'text-blue-200'}`}>Método de Lançamento de Vistos</h4>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {[
-                { id: 'gradual', label: 'Gradual (0 / 0,5 / 1,0)', desc: 'Para atividades parciais' },
-                { id: 'simbolico', label: 'Simbólico (+ / -)', desc: '+ feito, - não realizado' },
+                { id: 'gradual', label: 'Gradual (0,5 / 1,0)', desc: '0,5 = 50%, 1,0 = 100%' },
+                { id: 'simbolico', label: 'Simbólico (+ / -)', desc: '+ feito 100%, − feito 50%' },
                 { id: 'aberto', label: 'Campo Aberto (0-10)', desc: 'Notas numéricas diretas' },
-                { id: 'ponto', label: 'Ponto (.)', desc: '. feito, vazio não realizado' },
+                { id: 'ponto', label: 'Ponto (·)', desc: 'Azul 100%, laranja 50%, clique de novo desmarca' },
               ].map((metodo) => (
                 <button
                   key={metodo.id}

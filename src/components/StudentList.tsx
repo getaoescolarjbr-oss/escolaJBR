@@ -3,7 +3,7 @@ import type { Professor, ListaParaVistos } from '../types';
 import { supabase } from '../lib/supabase';
 import { StudentRow } from './StudentRow';
 import { OcorrenciaLoteModal } from './OcorrenciaLoteModal';
-import { getBimestreFromDate, getConfigPorTurma } from '../utils/academicUtils';
+import { getBimestreFromDate, getConfigPorTurma, pesoDoVisto } from '../utils/academicUtils';
 import { AlertTriangle, Info, Loader2, Save, ShieldAlert } from 'lucide-react';
 import { autoUpdateExpiredAbsences } from '../utils/studentUtils';
 
@@ -247,14 +247,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
             if (seenPairs.has(pairKey)) return; // ignora duplicatas
             seenPairs.add(pairKey);
 
-            let peso = 0;
-            const val = String(v.valor).trim();
-            if (val === '1.0' || val === '+' || val === '.' || val === 'checked') peso = 1.0;
-            else if (val === '0.5' || val === 'half') peso = 0.5;
-            else if (!isNaN(parseFloat(val))) {
-                const num = parseFloat(val);
-                peso = num > 1 ? num / 10 : num;
-            }
+            const peso = pesoDoVisto(v.valor);
             if (peso > 0) {
                stats[cleanAlunoId] = (stats[cleanAlunoId] || 0) + peso;
             }
@@ -374,18 +367,8 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
   }, [turmaId]);
 
   const handleUpdateVistoStat = (alunoId: string, valorAntigo: string | null, novoValor: string | null) => {
-    const getPeso = (v: string | null) => {
-        if (!v) return 0;
-        const val = String(v).trim();
-        if (val === '1.0' || val === '+' || val === '.' || val === 'checked') return 1.0;
-        if (val === '0.5' || val === 'half') return 0.5;
-        const num = parseFloat(val);
-        if (isNaN(num)) return 0;
-        return num > 1 ? num / 10 : num;
-    };
-
-    const pesoAntigo = getPeso(valorAntigo);
-    const pesoNovo = getPeso(novoValor);
+    const pesoAntigo = pesoDoVisto(valorAntigo);
+    const pesoNovo = pesoDoVisto(novoValor);
 
     if (pesoAntigo === pesoNovo) return;
 

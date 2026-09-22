@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import type { Professor, Turma, Student } from '../types';
 import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer, AlertTriangle, CheckCheck, Clock, Mail, MessageSquare, BarChart2, Send, X, Cake, Pencil, Lock, Archive, ArchiveRestore, Eye } from 'lucide-react';
 import { printReport } from '../utils/printUtils';
-import { getCurrentBimestre, getBimestreFromDate } from '../utils/academicUtils';
+import { getCurrentBimestre, getBimestreFromDate, pesoDoVisto } from '../utils/academicUtils';
 import { autoUpdateExpiredAbsences } from '../utils/studentUtils';
 import { StudentProfileModal } from './StudentProfileModal';
 import { TeacherDiaryModal } from './TeacherDiaryModal';
@@ -365,17 +365,8 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                      const disc = v.atividade_id?.disciplinas?.nome;
                      const alunoId = v.aluno_id;
                      if (disc && alunoId) {
-                         let peso = 0;
-                         const val = String(v.valor).trim();
-                         if (val === '1.0' || val === '+' || val === '.' || val === 'checked') peso = 1.0;
-                         else if (val === '0.5' || val === 'half') peso = 0.5;
-                         else if (!isNaN(parseFloat(val))) {
-                             const num = parseFloat(val);
-                             peso = num > 1 ? num / 10 : num;
-                         }
-
                          if (!vistosAcumulados[alunoId]) vistosAcumulados[alunoId] = {};
-                         vistosAcumulados[alunoId][disc] = (vistosAcumulados[alunoId][disc] || 0) + peso;
+                         vistosAcumulados[alunoId][disc] = (vistosAcumulados[alunoId][disc] || 0) + pesoDoVisto(v.valor);
                      }
                   });
               }

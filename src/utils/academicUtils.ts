@@ -66,6 +66,28 @@ export function getCorGradiente(media: number, theme: 'light' | 'dark' = 'dark')
 }
 
 /**
+ * Converte o valor bruto gravado em vistos_v2 (varia por método de lançamento —
+ * gradual, simbólico, ponto, campo aberto, além de valores legados) no peso
+ * numérico (0 a 1) que entra na conta da nota de vistos. Era reimplementada de
+ * forma idêntica em 8+ arquivos diferentes; centralizada aqui pra não desviar.
+ *
+ * "-" (simbólico) e o pedaço laranja do "ponto" valem 50%, não zero — mudança de
+ * regra: antes "-" significava "não feito" (peso 0); agora os métodos só têm dois
+ * estados marcados (100% ou 50%) mais o não marcado (sem linha em vistos_v2, que
+ * nunca chega aqui).
+ */
+export function pesoDoVisto(valorBruto: string | null | undefined): number {
+  if (!valorBruto) return 0;
+  const val = String(valorBruto).trim();
+  if (val === '1.0' || val === '+' || val === '.' || val === 'checked') return 1.0;
+  if (val === '0.5' || val === '-' || val === 'half') return 0.5;
+  if (val === '0') return 0;
+  const num = parseFloat(val);
+  if (isNaN(num)) return 0;
+  return num > 1 ? num / 10 : num;
+}
+
+/**
  * Calcula a nota dos vistos baseada na nota total do bimestre e participação
  */
 export function calcularNotaVistos(vistosRealizados: number, totalAtividades: number, valorBimestre: number): number {

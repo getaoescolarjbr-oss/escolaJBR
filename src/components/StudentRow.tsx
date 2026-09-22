@@ -6,7 +6,7 @@ import { OcorrenciaModal } from './OcorrenciaModal';
 import { StudentProfileModal } from './StudentProfileModal';
 import { DecimalInput } from './DecimalInput';
 import type { StudentGradeBreakdown } from './StudentList';
-import { getBimestreFromDate, getConfigPorTurma } from '../utils/academicUtils';
+import { getBimestreFromDate, getConfigPorTurma, pesoDoVisto } from '../utils/academicUtils';
 import { isStudentAbsentOnDate } from '../utils/studentUtils';
 
 interface StudentRowProps {
@@ -171,7 +171,15 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
   }, [bulkAtividades, aluno.aluno_id, bulkRefreshTrigger]);
 
   // Salva visto individual de uma atividade específica (modo lote)
-  const handleBulkVistoAction = async (ativId: string, valor: string) => {
+  // "Ponto": 3 estados em ciclo — em branco → azul (100%) → laranja (50%) → em
+  // branco. Compartilhado entre o modo normal e o modo lote.
+  const proximoPonto = (atual: string | null | undefined): string | null => {
+    if (atual === '.') return '0.5';
+    if (atual === '0.5') return null;
+    return '.';
+  };
+
+  const handleBulkVistoAction = async (ativId: string, valor: string | null) => {
     setBulkVistoLoading(prev => ({ ...prev, [ativId]: true }));
     const alunoId = String(aluno.aluno_id).trim();
     const prevVal = bulkVistos[ativId] ?? null;
@@ -259,7 +267,10 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
     setIsVistoLoading(false);
   };
 
-  const handleVistoAction = async (valor: string) => {
+  // valor=null desmarca. Métodos de 2 estados (gradual/simbólico) chamam isto com
+  // valorVisto === v ? null : v pra virar toggle; o "ponto" (3 estados: em branco →
+  // azul 100% → laranja 50% → em branco) passa o próximo estado já calculado.
+  const handleVistoAction = async (valor: string | null) => {
     if (!descricaoAtividade) {
         alert('Descreva a atividade no topo primeiro para poder lançar os vistos!');
         return;
@@ -268,8 +279,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
     const prevValor = valorVisto;
     const alunoId = String(aluno.aluno_id).trim();
 
-    // Se clicar no mesmo valor, desmarca
-    if (valorVisto === valor) {
+    if (valor === null) {
         setValorVisto(null);
         if (atividadeId) {
             await supabase.from('vistos_v2').delete()
@@ -371,18 +381,8 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
 
   // Cálculo do percentual em tempo real
   const percentual = useMemo(() => {
-    const getPeso = (v: string | null) => {
-        if (!v) return 0;
-        const val = String(v).trim();
-        if (val === '1.0' || val === '+' || val === '.' || val === 'checked') return 1.0;
-        if (val === '0.5' || val === 'half') return 0.5;
-        const num = parseFloat(val);
-        if (isNaN(num)) return 0;
-        return num > 1 ? num / 10 : num;
-    };
-
-    const pesoAntigo = getPeso(initialVisto || null);
-    const pesoNovo = getPeso(valorVisto);
+    const pesoAntigo = pesoDoVisto(initialVisto || null);
+    const pesoNovo = pesoDoVisto(valorVisto);
     const diff = pesoNovo - pesoAntigo;
     const realizadas = Math.max(0, atividadesRealizadas + diff);
     const total = totalAtividades;
@@ -662,20 +662,23 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         }`} />
                       </div>
 
-                      {/* Ponto */}
+                      {/* Ponto: em branco → azul (100%) → laranja (50%) → em branco */}
                       {configEfetivo.config_visto_metodo === 'ponto' && (
                         <button
-                          onClick={() => handleBulkVistoAction(ativ.id, '.')}
+                          title={val === '.' ? 'Feito — 100% (clique pra 50%)' : val === '0.5' ? 'Feito — 50% (clique pra desmarcar)' : 'Clique para marcar — 100%'}
+                          onClick={() => handleBulkVistoAction(ativ.id, proximoPonto(val))}
                           disabled={isLdg || isLocked || isPosterior || isTransferido}
                           className={`w-6 md:w-8 h-6 md:h-8 rounded-full border-2 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
                             val === '.'
                               ? 'bg-blue-600 border-blue-400 scale-110 shadow-lg shadow-blue-900/40'
-                              : theme === 'light' ? 'bg-blue-50 border-blue-300 hover:bg-blue-100' : 'bg-gray-800 border-gray-600 hover:border-blue-500'
+                              : val === '0.5'
+                                ? 'bg-amber-500 border-amber-400 scale-110 shadow-lg shadow-amber-900/40'
+                                : theme === 'light' ? 'bg-blue-50 border-blue-300 hover:bg-blue-100' : 'bg-gray-800 border-gray-600 hover:border-blue-500'
                           }`}
                         >
                           {isLdg
                             ? <Loader2 className="w-2.5 h-2.5 md:w-3 md:h-3 animate-spin text-blue-400" />
-                            : <div className={`w-1.5 md:w-2.5 h-1.5 md:h-2.5 rounded-full ${val === '.' ? 'bg-white' : theme === 'light' ? 'bg-blue-400' : 'bg-blue-400'}`} />
+                            : <div className={`w-1.5 md:w-2.5 h-1.5 md:h-2.5 rounded-full ${val === '.' || val === '0.5' ? 'bg-white' : theme === 'light' ? 'bg-blue-400' : 'bg-blue-400'}`} />
                           }
                         </button>
                       )}
@@ -684,7 +687,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                       {configEfetivo.config_visto_metodo === 'aberto' && (
                         <DecimalInput
                           value={val || ''}
-                          onChange={(num) => handleBulkVistoAction(ativ.id, String(num))}
+                          onChange={(num) => handleBulkVistoAction(ativ.id, num === null ? null : String(num))}
                           max={10}
                           disabled={isLdg || isLocked || isPosterior || isTransferido}
                           className={`w-10 md:w-12 text-center py-0.5 md:py-1 px-0.5 md:px-1 rounded border outline-none font-bold text-[10px] md:text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-blue-500 ${
@@ -694,30 +697,29 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         />
                       )}
 
-                      {/* Simbólico: + / - */}
+                      {/* Simbólico: + Feito 100% / - Feito 50% */}
                       {configEfetivo.config_visto_metodo === 'simbolico' && (
                         <select
                           value={val || ''}
-                          onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value)}
+                          onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value || null)}
                           disabled={isLdg || isLocked || isPosterior || isTransferido}
                           className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed py-0.5 md:py-1 px-0.5 md:px-1 w-10 md:w-12`}
                         >
                           <option value="">—</option>
-                          <option value="+">+</option>
-                          <option value="-">−</option>
+                          <option value="+">+ (100%)</option>
+                          <option value="-">− (50%)</option>
                         </select>
                       )}
 
-                      {/* Gradual: 0 / 0.5 / 1.0 */}
+                      {/* Gradual: 0,5 / 1,0 */}
                       {configEfetivo.config_visto_metodo === 'gradual' && (
                         <select
                           value={val || ''}
-                          onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value)}
+                          onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value || null)}
                           disabled={isLdg || isLocked || isPosterior || isTransferido}
                           className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed py-0.5 md:py-1 px-0.5 md:px-1 w-12 md:w-14`}
                         >
                           <option value="">—</option>
-                          <option value="0">0</option>
                           <option value="0.5">0,5</option>
                           <option value="1.0">1,0</option>
                         </select>
@@ -757,37 +759,40 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
               <div className="flex items-center justify-center gap-1">
                 {configEfetivo.config_visto_metodo === 'gradual' && (
                     <div className="flex gap-1">
-                        {['0', '0.5', '1.0'].map(v => (
-                            <button key={v} onClick={() => handleVistoAction(v)} disabled={isLocked || isPosterior || isTransferido} className={`md:px-2 px-1 md:py-1.5 py-1 rounded-md text-[9px] md:text-[10px] font-black border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === v ? 'bg-blue-600 text-white border-blue-400' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}>{v}</button>
+                        {['0.5', '1.0'].map(v => (
+                            <button key={v} onClick={() => handleVistoAction(valorVisto === v ? null : v)} disabled={isLocked || isPosterior || isTransferido} className={`md:px-2 px-1 md:py-1.5 py-1 rounded-md text-[9px] md:text-[10px] font-black border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === v ? 'bg-blue-600 text-white border-blue-400' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}>{v}</button>
                         ))}
                     </div>
                 )}
                 {configEfetivo.config_visto_metodo === 'simbolico' && (
                     <div className="flex gap-1">
-                        <button onClick={() => handleVistoAction('+')} disabled={isLocked || isPosterior || isTransferido} className={`p-1.5 md:p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '+' ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-900/50' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
-                        <button onClick={() => handleVistoAction('-')} disabled={isLocked || isPosterior || isTransferido} className={`p-1.5 md:p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '-' ? 'bg-red-600 text-white border-red-400 shadow-lg shadow-red-900/50' : theme === 'light' ? 'bg-red-500/25 text-red-700 border-red-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Minus className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
+                        <button title="Feito — 100%" onClick={() => handleVistoAction(valorVisto === '+' ? null : '+')} disabled={isLocked || isPosterior || isTransferido} className={`p-1.5 md:p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '+' ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-900/50' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
+                        <button title="Feito — 50%" onClick={() => handleVistoAction(valorVisto === '-' ? null : '-')} disabled={isLocked || isPosterior || isTransferido} className={`p-1.5 md:p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '-' ? 'bg-amber-500 text-white border-amber-400 shadow-lg shadow-amber-900/50' : theme === 'light' ? 'bg-amber-500/25 text-amber-700 border-amber-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Minus className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
                     </div>
                 )}
                 {configEfetivo.config_visto_metodo === 'ponto' && (
                     <button
-                        onClick={() => handleVistoAction('.')}
+                        title={valorVisto === '.' ? 'Feito — 100% (clique pra 50%)' : valorVisto === '0.5' ? 'Feito — 50% (clique pra desmarcar)' : 'Clique para marcar — 100%'}
+                        onClick={() => handleVistoAction(valorVisto === '.' ? '0.5' : valorVisto === '0.5' ? null : '.')}
                         disabled={isLocked || isPosterior || isTransferido}
                         className={`w-8 md:w-10 h-8 md:h-10 rounded-full border-2 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
                             valorVisto === '.'
                                 ? 'bg-blue-600 text-white border-blue-400 scale-110 shadow-lg'
-                                : theme === 'light'
-                                    ? 'bg-blue-500/10 border-blue-500/20 text-blue-600'
-                                    : 'bg-gray-800 text-blue-200 border-gray-700'
+                                : valorVisto === '0.5'
+                                    ? 'bg-amber-500 text-white border-amber-400 scale-110 shadow-lg'
+                                    : theme === 'light'
+                                        ? 'bg-blue-500/10 border-blue-500/20 text-blue-600'
+                                        : 'bg-gray-800 text-blue-200 border-gray-700'
                         }`}
                     >
-                        <div className={`w-1.5 md:w-2 h-1.5 md:h-2 rounded-full ${valorVisto === '.' ? 'bg-white' : theme === 'light' ? 'bg-blue-400' : 'bg-blue-300'}`}></div>
+                        <div className={`w-1.5 md:w-2 h-1.5 md:h-2 rounded-full ${valorVisto === '.' || valorVisto === '0.5' ? 'bg-white' : theme === 'light' ? 'bg-blue-400' : 'bg-blue-300'}`}></div>
                     </button>
                 )}
                 {configEfetivo.config_visto_metodo === 'aberto' && (
                     <div className="relative w-14 md:w-20">
                         <DecimalInput
                             value={valorVisto || ''}
-                            onChange={(num) => handleVistoAction(String(num))}
+                            onChange={(num) => handleVistoAction(num === null ? null : String(num))}
                             max={10}
                             disabled={isLocked || isPosterior || isTransferido}
                             className={`w-full text-center p-1 md:p-2 rounded-lg border outline-none font-bold text-xs md:text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${

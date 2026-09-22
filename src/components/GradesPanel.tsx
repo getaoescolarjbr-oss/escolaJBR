@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import type { Professor, Avaliacao, NotaAvaliacao, ListaParaVistos } from '../types';
 import { Plus, Save, Trash2, Calculator, Info, TrendingUp, X, Sparkles, CheckCheck, Loader2 } from 'lucide-react';
 import { autoUpdateExpiredAbsences, isStudentAbsentOnDate } from '../utils/studentUtils';
-import { arredondarNotaMS, getCorGradiente, getBimestreFromDate } from '../utils/academicUtils';
+import { arredondarNotaMS, getCorGradiente, getBimestreFromDate, pesoDoVisto } from '../utils/academicUtils';
 import { RAVListModal } from './RAVListModal';
 import { DecimalInput } from './DecimalInput';
 
@@ -129,18 +129,8 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
         if (vistos) {
             const pesosAluno: Record<string, number> = {};
             vistos.forEach(v => {
-                let peso = 0;
-                const val = String(v.valor).trim();
                 const aId = String(v.aluno_id).trim();
-                
-                if (val === '1.0' || val === '+' || val === '.' || val === 'checked') peso = 1.0;
-                else if (val === '0.5' || val === 'half') peso = 0.5;
-                else if (!isNaN(parseFloat(val))) {
-                    const num = parseFloat(val);
-                    peso = num > 1 ? num / 10 : num;
-                }
-                
-                pesosAluno[aId] = (pesosAluno[aId] || 0) + peso;
+                pesosAluno[aId] = (pesosAluno[aId] || 0) + pesoDoVisto(v.valor);
             });
 
             const notasVistos: Record<string, number> = {};
