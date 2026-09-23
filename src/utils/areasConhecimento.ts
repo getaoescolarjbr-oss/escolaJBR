@@ -31,3 +31,13 @@ export function disciplinaPertenceAArea(disciplinaNome: string, area: AreaConhec
   const dLower = disciplinaNome.toLowerCase();
   return lista.some((d) => dLower.includes(d.toLowerCase()) || d.toLowerCase().includes(dLower));
 }
+
+// Como disciplinaPertenceAArea, mas uma disciplina cujo nome é exatamente o de outra área
+// fica só nela ("Física" não entra em Linguagens por causa de "Educação Física").
+export function disciplinaPertenceAAreaEstrita(disciplinaNome: string, area: AreaConhecimento): boolean {
+  const nome = disciplinaNome.toLowerCase().trim();
+  const exataEmOutra = AREAS_CONHECIMENTO.some(
+    (outra) => outra !== area && DISCIPLINAS_POR_AREA[outra].some((d) => d.toLowerCase() === nome)
+  );
+  return !exataEmOutra && disciplinaPertenceAArea(disciplinaNome, area);
+}

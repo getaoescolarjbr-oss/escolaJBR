@@ -17,6 +17,8 @@ import type {
   StatusAvaliacao,
   AvaliacaoArea,
   NovaAvaliacaoAreaInput,
+  NovaAvaliacaoGeralInput,
+  FiltroSorteio,
 } from '../types/avaliacoes';
 import { QUESTION_SELECT_FIELDS, type Question } from '../types/bancoQuestoes';
 
@@ -673,6 +675,135 @@ export async function obterQuestoesCotaArea(
   });
   if (error) throw error;
   return (data ?? []) as { question_id: string; ordem: number; valor: number }[];
+}
+
+// ---- Avaliação Geral (simulado multiárea — ver create_avaliacao_geral.sql) ----
+
+export async function criarAvaliacaoGeral(dados: NovaAvaliacaoGeralInput): Promise<string> {
+  const { data, error } = await supabase.rpc('rpc_criar_avaliacao_geral', paramsAvaliacaoGeral(dados));
+  if (error) throw error;
+  return data as string;
+}
+
+// Só antes de publicar. Área nova entra vazia; as questões já sorteadas/inseridas ficam.
+export async function editarAvaliacaoGeral(provaId: string, dados: NovaAvaliacaoGeralInput): Promise<void> {
+  const { error } = await supabase.rpc('rpc_editar_avaliacao_geral', {
+    p_prova_id: provaId,
+    ...paramsAvaliacaoGeral(dados),
+    p_areas: dados.areas.map((a) => ({ area: a.area, qtd_questoes: a.qtd_questoes })),
+  });
+  if (error) throw error;
+}
+
+function paramsAvaliacaoGeral(dados: NovaAvaliacaoGeralInput) {
+  return {
+    p_titulo: dados.titulo,
+    p_bimestre_id: dados.bimestre_id,
+    p_valor_total: dados.valor_total,
+    p_modo: dados.modo,
+    p_tipo: dados.tipo,
+    p_lancar_no_boletim: dados.lancar_no_boletim,
+    p_data_aplicacao: dados.data_aplicacao || null,
+    p_prazo_entrega: dados.prazo_entrega || null,
+    p_instrucoes: dados.instrucoes || null,
+    p_turma_ids: dados.turma_ids,
+    p_areas: dados.areas,
+    p_embaralhar: dados.embaralhar,
+    p_qtd_versoes: dados.qtd_versoes,
+    p_cartao_separado: dados.cartao_separado,
+    p_cartao_posicao: dados.cartao_posicao,
+  };
+}
+
+// Sorteio no servidor (só objetivas). Pode devolver menos que `qtd` se o banco não tiver
+// questões suficientes com esses filtros — quem chama avisa o usuário.
+export async function sortearQuestoes(filtro: FiltroSorteio): Promise<Question[]> {
+  const { data, error } = await supabase.rpc('rpc_sortear_questoes', {
+    p_qtd: filtro.qtd,
+    p_disciplinas: filtro.disciplinas && filtro.disciplinas.length > 0 ? filtro.disciplinas : null,
+    p_assunto: filtro.assunto || null,
+    p_topico: filtro.topico || null,
+    p_banca: filtro.banca || null,
+    p_excluir: filtro.excluir ?? [],
+  });
+  if (error) throw error;
+  const ids = ((data ?? []) as string[]);
+  if (ids.length === 0) return [];
+  const { data: questoes, error: errQ } = await supabase
+    .from('questions')
+    .select(QUESTION_SELECT_FIELDS)
+    .in('id', ids);
+  if (errQ) throw errQ;
+  const porId = new Map(((questoes ?? []) as unknown as Question[]).map((q) => [q.id, q]));
+  return ids.map((id) => porId.get(id)).filter((q): q is Question => !!q);
+}
+
+export async function configurarAreaAvaliacaoGeral(
+  provaId: string,
+  area: string,
+  notas: { professor_id: string; disciplina_id: string }[],
+  cotas: { professor_id: string; disciplina_id: string; qtd_questoes: number }[],
+  questoesSorteadas: string[] | null
+): Promise<void> {
+  const { error } = await supabase.rpc('rpc_configurar_area_avaliacao_geral', {
+    p_prova_id: provaId,
+    p_area: area,
+    p_notas: notas,
+    p_cotas: cotas,
+    p_questoes_sorteadas: questoesSorteadas,
+  });
+  if (error) throw error;
+}
+
+export async function inserirQuestoesCotaGeral(cotaId: string, questoes: { question_id: string }[]): Promise<void> {
+  const { error } = await supabase.rpc('rpc_inserir_questoes_cota_geral', {
+    p_cota_id: cotaId,
+    p_questoes: questoes,
+  });
+  if (error) throw error;
+}
+
+export async function obterQuestoesCotaGeral(cotaId: string): Promise<{ question_id: string; ordem: number; valor: number }[]> {
+  const { data, error } = await supabase.rpc('rpc_obter_questoes_cota_geral', { p_cota_id: cotaId });
+  if (error) throw error;
+  return (data ?? []) as { question_id: string; ordem: number; valor: number }[];
+}
+
+export interface ProfessorDisciplinaTurmas {
+  professor_id: string;
+  professor_nome: string;
+  area_conhecimento: string | null;
+  disciplina_id: string;
+  disciplina_nome: string;
+}
+
+// Professor+disciplina de quem dá aula em pelo menos uma das turmas (qualquer área) —
+// base das listas "recebe nota" e "insere questões" da Avaliação Geral.
+export async function listarProfessoresDasTurmas(turmaIds: string[]): Promise<ProfessorDisciplinaTurmas[]> {
+  if (turmaIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('alocacoes_v2')
+    // alocacoes_v2 tem duas FKs para professores (professor_id e professor_original_id,
+    // do substituto) — o embed precisa dizer qual.
+    .select('professor_id, disciplina_id, professores!alocacoes_v2_professor_id_fkey(nome, area_conhecimento), disciplinas(nome)')
+    .in('turma_id', turmaIds);
+  if (error) throw error;
+  const mapa = new Map<string, ProfessorDisciplinaTurmas>();
+  for (const row of (data ?? []) as any[]) {
+    if (!row.professores || !row.disciplinas || !row.disciplina_id) continue;
+    const key = `${row.professor_id}-${row.disciplina_id}`;
+    if (mapa.has(key)) continue;
+    mapa.set(key, {
+      professor_id: row.professor_id,
+      professor_nome: row.professores.nome,
+      area_conhecimento: row.professores.area_conhecimento ?? null,
+      disciplina_id: row.disciplina_id,
+      disciplina_nome: row.disciplinas.nome,
+    });
+  }
+  return Array.from(mapa.values()).sort(
+    (a, b) => a.professor_nome.localeCompare(b.professor_nome) || a.disciplina_nome.localeCompare(b.disciplina_nome)
+  );
 }
 
 // Só COORDENACAO_AREA/COORDENACAO/GESTAO. p_prazo null limpa o prazo automático.

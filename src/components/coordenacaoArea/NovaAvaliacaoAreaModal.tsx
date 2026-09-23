@@ -1,24 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Loader2, Plus, Trash2, X, AlertCircle, CheckSquare, Square, Check } from 'lucide-react';
+import { Loader2, X, AlertCircle, Check } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import type { Turma } from '../../types';
 import type { AreaConhecimento } from '../../utils/areasConhecimento';
-import { DISCIPLINAS_POR_AREA, disciplinaPertenceAArea, normalizarArea } from '../../utils/areasConhecimento';
-import type { AvaliacaoArea, CotaProfessorInput, ModoAvaliacao, NovaAvaliacaoAreaInput, TipoAvaliacao } from '../../types/avaliacoes';
+import { disciplinaPertenceAArea, normalizarArea } from '../../utils/areasConhecimento';
+import type { AvaliacaoArea, CotaProfessorInput, NovaAvaliacaoAreaInput } from '../../types/avaliacoes';
 import type { ModoEmbaralhar } from '../../types/correcaoOmr';
-import { MODO_EMBARALHAR_LABEL } from '../../types/correcaoOmr';
-import { criarAvaliacaoArea, editarAvaliacaoArea, buscarInstrucoesPadrao, salvarInstrucoesPadrao } from '../../services/avaliacoesService';
-import { contarAlunosAtivosTurmas } from '../../services/correcaoOmrService';
+import { criarAvaliacaoArea, editarAvaliacaoArea, buscarInstrucoesPadrao } from '../../services/avaliacoesService';
 import { getCurrentBimestre } from '../../utils/academicUtils';
-
-type ModoVersoes = 'FIXO' | 'POR_ALUNO';
-type PosicaoCartao = 'INICIO' | 'FIM' | 'SEPARADO';
-
-const POSICAO_CARTAO_LABEL: Record<PosicaoCartao, string> = {
-  INICIO: 'Junto, antes das questões',
-  FIM: 'Junto, no fim da prova',
-  SEPARADO: 'Em folha separada',
-};
+import { CamposAvaliacaoComuns, versoesEfetivas, type ValoresCamposAvaliacao } from './CamposAvaliacaoComuns';
 
 interface Props {
   area: AreaConhecimento;
@@ -37,22 +27,22 @@ interface ProfessorDisciplina {
 
 export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExistente }: Props) {
   const editando = !!avaliacaoExistente;
-  const [titulo, setTitulo] = useState(avaliacaoExistente?.titulo ?? `Avaliação da Área — ${area}`);
-  const [bimestre, setBimestre] = useState<number>(avaliacaoExistente?.bimestre_id ?? (() => getCurrentBimestre()));
-  const [valorTotal, setValorTotal] = useState<number>(avaliacaoExistente ? Number(avaliacaoExistente.valor_total) : 10);
-  const [modo, setModo] = useState<ModoAvaliacao>(avaliacaoExistente?.modo ?? 'IMPRESSA');
-  const [tipo, setTipo] = useState<TipoAvaliacao>(avaliacaoExistente?.tipo ?? 'AVALIACAO');
-  const [dataAplicacao, setDataAplicacao] = useState(avaliacaoExistente?.data_aplicacao ?? '');
-  const [prazoEntrega, setPrazoEntrega] = useState('');
-  const [instrucoes, setInstrucoes] = useState(avaliacaoExistente?.instrucoes ?? '');
-  const [salvandoPadrao, setSalvandoPadrao] = useState(false);
-  const [embaralhar, setEmbaralhar] = useState<ModoEmbaralhar>((avaliacaoExistente?.embaralhar as ModoEmbaralhar) ?? 'NENHUM');
-  const [qtdVersoes, setQtdVersoes] = useState<number>(avaliacaoExistente?.qtd_versoes ?? 1);
-  const [modoVersoes, setModoVersoes] = useState<ModoVersoes>('FIXO');
-  const [contandoAlunos, setContandoAlunos] = useState(false);
-  const [posicaoCartao, setPosicaoCartao] = useState<PosicaoCartao>(
-    avaliacaoExistente?.cartao_separado ? 'SEPARADO' : (avaliacaoExistente?.cartao_posicao ?? 'FIM')
-  );
+  const [campos, setCampos] = useState<ValoresCamposAvaliacao>(() => ({
+    titulo: avaliacaoExistente?.titulo ?? `Avaliação da Área — ${area}`,
+    bimestre: avaliacaoExistente?.bimestre_id ?? getCurrentBimestre(),
+    valorTotal: avaliacaoExistente ? Number(avaliacaoExistente.valor_total) : 10,
+    modo: avaliacaoExistente?.modo ?? 'IMPRESSA',
+    tipo: avaliacaoExistente?.tipo ?? 'AVALIACAO',
+    dataAplicacao: avaliacaoExistente?.data_aplicacao ?? '',
+    prazoEntrega: '',
+    instrucoes: avaliacaoExistente?.instrucoes ?? '',
+    embaralhar: (avaliacaoExistente?.embaralhar as ModoEmbaralhar) ?? 'NENHUM',
+    qtdVersoes: avaliacaoExistente?.qtd_versoes ?? 1,
+    modoVersoes: 'FIXO',
+    posicaoCartao: avaliacaoExistente?.cartao_separado ? 'SEPARADO' : (avaliacaoExistente?.cartao_posicao ?? 'FIM'),
+  }));
+  const atualizarCampos = (patch: Partial<ValoresCamposAvaliacao>) => setCampos((prev) => ({ ...prev, ...patch }));
+  const { titulo, bimestre, valorTotal, modo, tipo, dataAplicacao, prazoEntrega, instrucoes, embaralhar, posicaoCartao } = campos;
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>([]);
   
@@ -84,12 +74,12 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
           if (avaliacaoExistente.prazo_entrega) {
             const d = new Date(avaliacaoExistente.prazo_entrega);
             const pad = (n: number) => String(n).padStart(2, '0');
-            setPrazoEntrega(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`);
+            atualizarCampos({ prazoEntrega: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}` });
           }
         } else {
           // Criando: pré-preenche com o texto padrão configurado (poupa digitar de novo).
           buscarInstrucoesPadrao()
-            .then((texto) => texto && setInstrucoes(texto))
+            .then((texto) => texto && atualizarCampos({ instrucoes: texto }))
             .catch(() => {});
         }
 
@@ -219,34 +209,6 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
     return mapa;
   }, [avaliacaoExistente]);
 
-  async function handleSalvarInstrucoesPadrao() {
-    setSalvandoPadrao(true);
-    try {
-      await salvarInstrucoesPadrao(instrucoes.trim());
-    } catch (e: any) {
-      setErro(e.message || 'Erro ao salvar instruções padrão.');
-    } finally {
-      setSalvandoPadrao(false);
-    }
-  }
-
-  // "Uma versão por aluno": mesma regra do gerador de avaliação normal (ConfigAvaliacaoForm) —
-  // sem embaralhar, versão além da A sai idêntica à original, então empurra pra QUESTOES ao
-  // entrar nesse modo, sem travar o seletor.
-  useEffect(() => {
-    if (modoVersoes !== 'POR_ALUNO') return;
-    if (embaralhar === 'NENHUM') setEmbaralhar('QUESTOES');
-    if (turmasSelecionadas.length === 0) { setQtdVersoes(1); return; }
-    setContandoAlunos(true);
-    contarAlunosAtivosTurmas(turmasSelecionadas)
-      .then((n) => setQtdVersoes(Math.max(1, n)))
-      .catch(() => {})
-      .finally(() => setContandoAlunos(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [modoVersoes, turmasSelecionadas]);
-
-  const versoesEfetivas = embaralhar === 'NENHUM' ? qtdVersoes : Math.max(2, qtdVersoes);
-
   function toggleTurma(turmaId: string) {
     setTurmasSelecionadas((prev) =>
       prev.includes(turmaId) ? prev.filter((id) => id !== turmaId) : [...prev, turmaId]
@@ -322,7 +284,7 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
         turma_ids: turmasSelecionadas,
         cotas: cotasPayload,
         embaralhar,
-        qtd_versoes: versoesEfetivas,
+        qtd_versoes: versoesEfetivas(campos),
         cartao_separado: posicaoCartao === 'SEPARADO',
         cartao_posicao: posicaoCartao === 'INICIO' ? 'INICIO' : 'FIM',
       };
@@ -373,171 +335,12 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
             </div>
           ) : (
             <>
-              {/* Informações Gerais */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                <div className="sm:col-span-2">
-                  <label className="block text-xs font-bold text-ms-muted mb-1">Título da Avaliação *</label>
-                  <input
-                    type="text"
-                    value={titulo}
-                    onChange={(e) => setTitulo(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-ms-muted mb-1">Bimestre (Vigente Automático)</label>
-                  <select
-                    value={bimestre}
-                    onChange={(e) => setBimestre(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm font-bold text-ms-main outline-none focus:ring-2 focus:ring-ms-blue cursor-pointer"
-                  >
-                    <option value={1}>1º Bimestre</option>
-                    <option value={2}>2º Bimestre</option>
-                    <option value={3}>3º Bimestre</option>
-                    <option value={4}>4º Bimestre</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-ms-muted mb-1">Tipo</label>
-                  <select
-                    value={tipo}
-                    onChange={(e) => setTipo(e.target.value as TipoAvaliacao)}
-                    className="w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
-                  >
-                    <option value="AVALIACAO">Avaliação (gera nota no boletim)</option>
-                    <option value="SIMULADO">Simulado (sem nota no boletim)</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-ms-muted mb-1">Modo de Aplicação</label>
-                  <select
-                    value={modo}
-                    onChange={(e) => setModo(e.target.value as ModoAvaliacao)}
-                    className="w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
-                  >
-                    <option value="IMPRESSA">Impressa</option>
-                    <option value="ONLINE">Online</option>
-                    <option value="AMBAS">Impressa e Online</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-ms-muted mb-1">Valor Total (Pontos)</label>
-                  <input
-                    type="number"
-                    step="0.5"
-                    value={valorTotal}
-                    onChange={(e) => setValorTotal(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-ms-muted mb-1">Data de Aplicação</label>
-                  <input
-                    type="date"
-                    value={dataAplicacao}
-                    onChange={(e) => setDataAplicacao(e.target.value)}
-                    className="w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
-                  />
-                </div>
-
-                {modo !== 'IMPRESSA' && (
-                  <div className="sm:col-span-2">
-                    <label className="block text-xs font-bold text-ms-muted mb-1">Prazo de Entrega (Online)</label>
-                    <input
-                      type="datetime-local"
-                      value={prazoEntrega}
-                      onChange={(e) => setPrazoEntrega(e.target.value)}
-                      className="w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
-                    />
-                  </div>
-                )}
-              </div>
-
-              {/* Instruções */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="block text-xs font-bold text-ms-muted">Instruções (opcional)</label>
-                  <button
-                    type="button"
-                    onClick={handleSalvarInstrucoesPadrao}
-                    disabled={salvandoPadrao}
-                    className="text-[11px] font-bold text-ms-blueText hover:underline disabled:opacity-40"
-                    title="Usar este texto como padrão para as próximas avaliações"
-                  >
-                    {salvandoPadrao ? 'Salvando...' : 'Salvar como padrão'}
-                  </button>
-                </div>
-                <textarea
-                  value={instrucoes}
-                  onChange={(e) => setInstrucoes(e.target.value)}
-                  rows={2}
-                  placeholder="Ex.: Leia atentamente cada questão antes de responder."
-                  className="w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue resize-y"
-                />
-              </div>
-
-              {/* Embaralhamento / versões / cartão-resposta (aplicação impressa) */}
-              {modo !== 'ONLINE' && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-gray-200 dark:border-gray-800">
-                  <div>
-                    <label className="text-xs font-bold text-ms-muted">Embaralhamento</label>
-                    <select
-                      value={embaralhar}
-                      onChange={(e) => setEmbaralhar(e.target.value as ModoEmbaralhar)}
-                      className="w-full mt-1 px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
-                    >
-                      {(Object.keys(MODO_EMBARALHAR_LABEL) as ModoEmbaralhar[]).map((m) => (
-                        <option key={m} value={m}>{MODO_EMBARALHAR_LABEL[m]}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-ms-muted">Versões da prova</label>
-                    <select
-                      value={modoVersoes === 'POR_ALUNO' ? 'POR_ALUNO' : versoesEfetivas}
-                      onChange={(e) => {
-                        if (e.target.value === 'POR_ALUNO') { setModoVersoes('POR_ALUNO'); return; }
-                        setModoVersoes('FIXO');
-                        setQtdVersoes(Number(e.target.value));
-                      }}
-                      className="w-full mt-1 px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
-                    >
-                      {[1, 2, 3, 4].map((n) => (
-                        <option key={n} value={n} disabled={embaralhar !== 'NENHUM' && n < 2}>
-                          {n === 1 ? 'Versão única (A)' : `${n} versões (A–${String.fromCharCode(64 + n)})`}
-                        </option>
-                      ))}
-                      <option value="POR_ALUNO">Uma versão por aluno da turma</option>
-                    </select>
-                    {modoVersoes === 'POR_ALUNO' && (
-                      <p className="text-xs text-ms-muted mt-1">
-                        {contandoAlunos
-                          ? 'Contando alunos ativos...'
-                          : turmasSelecionadas.length === 0
-                          ? 'Selecione a(s) turma(s) abaixo para calcular.'
-                          : `${qtdVersoes} versão(ões) — uma por aluno ativo (transferido/remanejado não conta).`}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-ms-muted">Cartão-resposta</label>
-                    <select
-                      value={posicaoCartao}
-                      onChange={(e) => setPosicaoCartao(e.target.value as PosicaoCartao)}
-                      className="w-full mt-1 px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
-                    >
-                      {(Object.keys(POSICAO_CARTAO_LABEL) as PosicaoCartao[]).map((p) => (
-                        <option key={p} value={p}>{POSICAO_CARTAO_LABEL[p]}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
+              <CamposAvaliacaoComuns
+                valores={campos}
+                onChange={atualizarCampos}
+                turmasSelecionadas={turmasSelecionadas}
+                onErro={setErro}
+              />
 
               {/* Turmas Participantes */}
               <div>

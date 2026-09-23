@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText, Lock, Unlock, Pencil, QrCode, Settings, Undo2 } from 'lucide-react';
+import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText, Lock, Unlock, Pencil, QrCode, Settings, Undo2, Layers, Link2, SlidersHorizontal } from 'lucide-react';
 import type { AvaliacaoArea, ProvaAreaCota } from '../../types/avaliacoes';
 import type { AreaConhecimento } from '../../utils/areasConhecimento';
-import { listarAvaliacoesArea, publicarAvaliacaoArea, excluirAvaliacao, contarImpressaoELeituraAvaliacao, definirBloqueioAvaliacaoArea, despublicarAvaliacao } from '../../services/avaliacoesService';
+import { listarAvaliacoesArea, publicarAvaliacaoArea, excluirAvaliacao, contarImpressaoELeituraAvaliacao, definirBloqueioAvaliacaoArea, despublicarAvaliacao, linkPublicoSimulado } from '../../services/avaliacoesService';
 import { NovaAvaliacaoAreaModal } from './NovaAvaliacaoAreaModal';
+import { NovaAvaliacaoGeralModal } from './NovaAvaliacaoGeralModal';
+import { ConfigurarAreaGeralModal } from './ConfigurarAreaGeralModal';
 import { InserirQuestoesAreaModal } from './InserirQuestoesAreaModal';
 import { ReimprimirAvaliacaoModal } from '../bancoQuestoes/avaliacoes/ReimprimirAvaliacaoModal';
 import { ImprimirFolhasModal } from '../bancoQuestoes/avaliacoes/ImprimirFolhasModal';
@@ -29,6 +31,9 @@ export function AvaliacoesAreaTab({ area }: Props) {
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [showNovaModal, setShowNovaModal] = useState(false);
+  const [showNovaGeral, setShowNovaGeral] = useState(false);
+  const [configurandoGeral, setConfigurandoGeral] = useState<AvaliacaoArea | null>(null);
+  const [editandoGeral, setEditandoGeral] = useState<AvaliacaoArea | null>(null);
   const [editandoAvaliacao, setEditandoAvaliacao] = useState<AvaliacaoArea | null>(null);
   const [inserindoCota, setInserindoCota] = useState<{ avaliacao: AvaliacaoArea; cota: ProvaAreaCota } | null>(null);
   const [reimprimirDe, setReimprimirDe] = useState<AvaliacaoArea | null>(null);
@@ -69,8 +74,12 @@ export function AvaliacoesAreaTab({ area }: Props) {
     carregar();
   }, [carregar]);
 
-  async function handlePublicar(id: string) {
-    if (!confirm('Publicar esta avaliação de área? Ao publicar, os campos de nota serão criados automaticamente no diário de cada professor da área correspondente.')) {
+  async function handlePublicar(av: AvaliacaoArea) {
+    const id = av.id;
+    const msg = av.eh_prova_geral
+      ? 'Publicar esta avaliação geral? Os campos de nota serão criados no diário dos professores escolhidos por cada área, só nas turmas em que eles dão aula.'
+      : 'Publicar esta avaliação de área? Ao publicar, os campos de nota serão criados automaticamente no diário de cada professor da área correspondente.';
+    if (!confirm(msg)) {
       return;
     }
     setPublicandoId(id);
@@ -182,12 +191,21 @@ export function AvaliacoesAreaTab({ area }: Props) {
             Elabore avaliações interdisciplinares com cotas de questões distribuídas para os professores da área.
           </p>
         </div>
-        <button
-          onClick={() => setShowNovaModal(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-ms-blue text-white rounded-xl text-xs font-bold hover:bg-blue-600 shadow transition-all"
-        >
-          <Plus className="w-4 h-4" /> Nova Avaliação da Área
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            onClick={() => setShowNovaGeral(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-ms-dark border border-ms-blue text-ms-blueText rounded-xl text-xs font-bold hover:bg-blue-50 dark:hover:bg-ms-blue/10 shadow-sm transition-all"
+            title="Simulado único com várias áreas e um só gabarito"
+          >
+            <Layers className="w-4 h-4" /> Criar Avaliação Geral
+          </button>
+          <button
+            onClick={() => setShowNovaModal(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-ms-blue text-white rounded-xl text-xs font-bold hover:bg-blue-600 shadow transition-all"
+          >
+            <Plus className="w-4 h-4" /> Nova Avaliação da Área
+          </button>
+        </div>
       </div>
 
       {erro && <p className="text-sm text-red-400 font-bold">{erro}</p>}
@@ -207,10 +225,29 @@ export function AvaliacoesAreaTab({ area }: Props) {
       ) : (
         <div className="space-y-4">
           {avaliacoes.map((av) => {
-            const cotas = av.cotas || [];
-            const totalPrevisto = cotas.reduce((s, c) => s + c.qtd_questoes, 0);
-            const totalInserido = cotas.reduce((s, c) => s + c.qtd_inserida, 0);
-            const todasPreenchidas = totalPrevisto > 0 && totalInserido >= totalPrevisto;
+            const geral = !!av.eh_prova_geral;
+            const areasGeral = av.areas ?? [];
+            // Na geral, o card mostra só as cotas da área aberta; o andamento das outras
+            // áreas aparece resumido nos selos de área.
+            const cotas = (av.cotas || []).filter((c) => !geral || c.area_conhecimento === area);
+            const totalPrevisto = geral
+              ? areasGeral.reduce((s, a) => s + a.qtd_questoes, 0)
+              : cotas.reduce((s, c) => s + c.qtd_questoes, 0);
+            const totalInserido = geral
+              ? areasGeral.reduce((s, a) => s + a.qtd_inserida, 0)
+              : cotas.reduce((s, c) => s + c.qtd_inserida, 0);
+            const todasPreenchidas = geral
+              ? areasGeral.length > 0 && areasGeral.every((a) => a.qtd_inserida === a.qtd_questoes)
+              : totalPrevisto > 0 && totalInserido >= totalPrevisto;
+            const podePublicar = todasPreenchidas && (!geral || !!av.criado_por_mim);
+            const motivoNaoPublica = !todasPreenchidas
+              ? geral ? 'Aguardando todas as áreas completarem as questões' : 'Aguardando preenchimento das cotas de questões'
+              : 'Somente quem criou a avaliação geral pode publicá-la';
+            const descricaoTipo = geral
+              ? av.tipo === 'AVALIACAO'
+                ? 'Simulado com nota'
+                : `Simulado público ${av.lancar_no_boletim ? 'com' : 'sem'} nota`
+              : av.tipo === 'AVALIACAO' ? 'Avaliação com nota' : 'Simulado';
 
             return (
               <div key={av.id} className="bg-ms-card border border-gray-800 rounded-xl p-5 space-y-4">
@@ -218,6 +255,11 @@ export function AvaliacoesAreaTab({ area }: Props) {
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-sm font-bold text-ms-main">{av.titulo}</h3>
+                      {geral && (
+                        <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-900 border border-violet-300 dark:bg-violet-950 dark:text-violet-300 dark:border-violet-800">
+                          <Layers className="w-3 h-3" /> Avaliação Geral
+                        </span>
+                      )}
                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
                         {av.bimestre_id}º Bimestre
                       </span>
@@ -240,7 +282,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                       )}
                     </div>
                     <p className="text-xs text-ms-muted mt-1">
-                      {av.tipo === 'AVALIACAO' ? 'Avaliação com nota' : 'Simulado'} · Valor {Number(av.valor_total).toFixed(2)} pts · Modo {av.modo}
+                      {descricaoTipo} · Valor {Number(av.valor_total).toFixed(2)} pts · Modo {av.modo}
                       {av.turma_nomes && av.turma_nomes.length > 0 ? ` · Turmas: ${av.turma_nomes.join(', ')}` : ''}
                     </p>
                   </div>
@@ -248,9 +290,9 @@ export function AvaliacoesAreaTab({ area }: Props) {
                   <div className="flex items-center gap-2 flex-wrap">
                     {av.status !== 'PUBLICADA' && (
                       <button
-                        onClick={() => handlePublicar(av.id)}
-                        disabled={publicandoId === av.id || !todasPreenchidas}
-                        title={!todasPreenchidas ? 'Aguardando preenchimento das cotas de questões' : undefined}
+                        onClick={() => handlePublicar(av)}
+                        disabled={publicandoId === av.id || !podePublicar}
+                        title={!podePublicar ? motivoNaoPublica : undefined}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold disabled:opacity-40 shadow-sm transition-colors"
                       >
                         {publicandoId === av.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
@@ -268,9 +310,29 @@ export function AvaliacoesAreaTab({ area }: Props) {
                         Despublicar
                       </button>
                     )}
+                    {geral && av.status !== 'PUBLICADA' && areasGeral.some((a) => a.area_conhecimento === area) && (
+                      <button
+                        onClick={() => setConfigurandoGeral(av)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-blue text-white rounded-lg text-xs font-bold hover:bg-blue-600 shadow-sm transition-colors"
+                        title="Escolher quem recebe a nota e quem insere as questões desta área"
+                      >
+                        <SlidersHorizontal className="w-3.5 h-3.5" /> Configurar {area}
+                      </button>
+                    )}
+                    {geral && av.tipo === 'SIMULADO' && av.status === 'PUBLICADA' && av.token_publico && (
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(linkPublicoSimulado(av.token_publico!));
+                          alert('Link do simulado copiado. O aluno abre o link e digita o código do SGDE.');
+                        }}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors"
+                      >
+                        <Link2 className="w-3.5 h-3.5" /> Copiar link do simulado
+                      </button>
+                    )}
                     {av.status !== 'PUBLICADA' && (
                       <button
-                        onClick={() => setEditandoAvaliacao(av)}
+                        onClick={() => (geral ? setEditandoGeral(av) : setEditandoAvaliacao(av))}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors"
                         title="Editar título, valor, datas, turmas e cotas da avaliação"
                       >
@@ -372,6 +434,33 @@ export function AvaliacoesAreaTab({ area }: Props) {
                     )}
                   </div>
 
+                  {geral && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {areasGeral.map((a) => {
+                        const completa = a.qtd_inserida === a.qtd_questoes;
+                        return (
+                          <span
+                            key={a.area_conhecimento}
+                            className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+                              completa
+                                ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                                : 'bg-amber-950 text-amber-300 border-amber-800'
+                            } ${a.area_conhecimento === area ? 'ring-2 ring-ms-blueText' : ''}`}
+                            title={a.configurada ? 'Área já configurada pelo PCA' : 'O PCA desta área ainda não configurou'}
+                          >
+                            {a.area_conhecimento}: {a.qtd_inserida}/{a.qtd_questoes}
+                            {!a.configurada && ' · aguardando PCA'}
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+                  {geral && cotas.length === 0 && areasGeral.some((a) => a.area_conhecimento === area && a.qtd_inserida < a.qtd_questoes) && (
+                    <p className="text-[11px] text-ms-muted">
+                      Nenhum professor de {area} com cota ainda. Use "Configurar {area}" para distribuir as questões ou sortear.
+                    </p>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
                     {cotas.map((c) => {
                       const preenchida = c.qtd_inserida >= c.qtd_questoes;
@@ -419,6 +508,39 @@ export function AvaliacoesAreaTab({ area }: Props) {
           onClose={() => setShowNovaModal(false)}
           onCriada={() => {
             setShowNovaModal(false);
+            carregar();
+          }}
+        />
+      )}
+
+      {showNovaGeral && (
+        <NovaAvaliacaoGeralModal
+          onClose={() => setShowNovaGeral(false)}
+          onCriada={() => {
+            setShowNovaGeral(false);
+            carregar();
+          }}
+        />
+      )}
+
+      {editandoGeral && (
+        <NovaAvaliacaoGeralModal
+          avaliacaoExistente={editandoGeral}
+          onClose={() => setEditandoGeral(null)}
+          onCriada={() => {
+            setEditandoGeral(null);
+            carregar();
+          }}
+        />
+      )}
+
+      {configurandoGeral && (
+        <ConfigurarAreaGeralModal
+          avaliacao={configurandoGeral}
+          area={area}
+          onClose={() => setConfigurandoGeral(null)}
+          onSalvo={() => {
+            setConfigurandoGeral(null);
             carregar();
           }}
         />

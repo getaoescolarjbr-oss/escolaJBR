@@ -259,6 +259,8 @@ export interface ProvaAreaCota {
   qtd_questoes: number;
   qtd_inserida: number;
   eh_minha_cota?: boolean;
+  /** Só na Avaliação Geral: em qual bloco de área esta cota fica. */
+  area_conhecimento?: string | null;
 }
 
 export interface CotaProfessorInput {
@@ -310,4 +312,67 @@ export interface AvaliacaoArea {
   prazo_edicao_area: string | null;
   /** Já calculado no backend: !edicao_bloqueada && (sem prazo ou prazo no futuro). */
   edicao_permitida: boolean;
+
+  // ---- Avaliação Geral (create_avaliacao_geral.sql) ----
+  eh_prova_geral?: boolean;
+  qtd_questoes_total?: number | null;
+  lancar_no_boletim?: boolean;
+  token_publico?: string;
+  criado_por_mim?: boolean;
+  turma_ids?: string[];
+  areas?: AreaAvaliacaoGeral[];
+  notas_professores?: NotaProfessorGeral[];
+}
+
+// Uma área participante da Avaliação Geral. qtd_inserida conta cotas + sorteadas.
+export interface AreaAvaliacaoGeral {
+  area_conhecimento: string;
+  qtd_questoes: number;
+  ordem: number;
+  configurada: boolean;
+  qtd_inserida: number;
+  questoes_sorteadas: string[];
+}
+
+// Quem recebe o campo de nota no diário (independente de quem insere questões).
+export interface NotaProfessorGeral {
+  professor_id: string;
+  professor_nome?: string;
+  disciplina_id: string;
+  disciplina_nome?: string;
+  area_conhecimento: string;
+}
+
+export interface AreaNovaAvaliacaoGeralInput {
+  area: string;
+  qtd_questoes: number;
+  /** Questões já sorteadas na criação (opcional). */
+  questoes: string[];
+}
+
+export interface NovaAvaliacaoGeralInput {
+  titulo: string;
+  bimestre_id: number;
+  valor_total: number;
+  modo: ModoAvaliacao;
+  tipo: TipoAvaliacao;
+  lancar_no_boletim: boolean;
+  data_aplicacao: string | null;
+  prazo_entrega: string | null;
+  instrucoes: string | null;
+  turma_ids: string[];
+  areas: AreaNovaAvaliacaoGeralInput[];
+  embaralhar: string;
+  qtd_versoes: number;
+  cartao_separado: boolean;
+  cartao_posicao: 'INICIO' | 'FIM';
+}
+
+export interface FiltroSorteio {
+  qtd: number;
+  disciplinas?: string[];
+  assunto?: string;
+  topico?: string;
+  banca?: string;
+  excluir?: string[];
 }

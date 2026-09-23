@@ -3,7 +3,7 @@ import { Loader2, X, Check, AlertCircle } from 'lucide-react';
 import type { Question } from '../../types/bancoQuestoes';
 import type { AvaliacaoArea, ProvaAreaCota } from '../../types/avaliacoes';
 import { QuestionPicker } from '../bancoQuestoes/QuestionPicker';
-import { inserirQuestoesCotaArea, obterQuestoesCotaArea } from '../../services/avaliacoesService';
+import { inserirQuestoesCotaArea, inserirQuestoesCotaGeral, obterQuestoesCotaArea, obterQuestoesCotaGeral } from '../../services/avaliacoesService';
 import { buscarQuestoesPorIds } from '../../services/bancoQuestoesService';
 
 interface Props {
@@ -23,9 +23,13 @@ export function InserirQuestoesAreaModal({ avaliacao, cota, onClose, onSalvo }: 
   // Pré-carrega o que este professor (ou o coordenador em nome dele) já gravou pra essa
   // disciplina — sem isso o modal sempre abria vazio e reenviar apagava o que já tinha,
   // porque salvar substitui por completo a seleção da disciplina.
+  // Na Avaliação Geral a cota é identificada pelo id (dois professores da mesma disciplina
+  // podem ter cota); na de área, continua pela disciplina.
+  const ehGeral = !!avaliacao.eh_prova_geral && !!cota.id;
+
   useEffect(() => {
     let cancelado = false;
-    obterQuestoesCotaArea(avaliacao.id, cota.disciplina_id)
+    (ehGeral ? obterQuestoesCotaGeral(cota.id!) : obterQuestoesCotaArea(avaliacao.id, cota.disciplina_id))
       .then(async (linhas) => {
         if (linhas.length === 0) return;
         const questoes = await buscarQuestoesPorIds(linhas.map((l) => l.question_id));
@@ -45,7 +49,7 @@ export function InserirQuestoesAreaModal({ avaliacao, cota, onClose, onSalvo }: 
       .catch(() => {})
       .finally(() => { if (!cancelado) setCarregandoAtuais(false); });
     return () => { cancelado = true; };
-  }, [avaliacao.id, cota.disciplina_id]);
+  }, [avaliacao.id, cota.disciplina_id, cota.id, ehGeral]);
 
   function toggleSelecionar(q: Question) {
     setSelecionadas((prev) => {
@@ -74,7 +78,9 @@ export function InserirQuestoesAreaModal({ avaliacao, cota, onClose, onSalvo }: 
   // configurado. Divide o valor_total igualmente pelo total de questões PLANEJADO em todas as
   // cotas da área (soma de qtd_questoes) — estável entre disciplinas, independente da ordem em
   // que cada professor insere as suas.
-  const totalQuestoesPlanejado = (avaliacao.cotas ?? []).reduce((soma, c) => soma + c.qtd_questoes, 0);
+  const totalQuestoesPlanejado = ehGeral
+    ? avaliacao.qtd_questoes_total ?? 0
+    : (avaliacao.cotas ?? []).reduce((soma, c) => soma + c.qtd_questoes, 0);
   const valorPorQuestaoPadrao = totalQuestoesPlanejado > 0 ? avaliacao.valor_total / totalQuestoesPlanejado : 1.0;
 
   async function handleSalvar() {
@@ -91,7 +97,11 @@ export function InserirQuestoesAreaModal({ avaliacao, cota, onClose, onSalvo }: 
         valor: valores[q.id] ?? valorPorQuestaoPadrao,
       }));
 
-      await inserirQuestoesCotaArea(avaliacao.id, cota.disciplina_id, questoesPayload);
+      if (ehGeral) {
+        await inserirQuestoesCotaGeral(cota.id!, questoesPayload);
+      } else {
+        await inserirQuestoesCotaArea(avaliacao.id, cota.disciplina_id, questoesPayload);
+      }
       onSalvo();
     } catch (e: any) {
       setErro(e.message || 'Erro ao inserir questões na avaliação da área.');
