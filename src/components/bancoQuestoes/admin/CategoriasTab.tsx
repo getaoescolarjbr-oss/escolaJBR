@@ -108,7 +108,7 @@ export function CategoriasTab() {
     const confirmado =
       n > 0
         ? confirm(
-            `A disciplina "${termo.value}" tem ${n} questão${n === 1 ? '' : 'ões'} cadastrada${n === 1 ? '' : 's'} no banco.\n\n` +
+            `A disciplina "${termo.value}" tem ${n} ${n === 1 ? 'questão' : 'questões'} cadastrada${n === 1 ? '' : 's'} no banco.\n\n` +
               `Excluir vai apagar essa disciplina E todas as questões dela permanentemente. Confirma?`
           )
         : confirm(`Excluir a disciplina "${termo.value}"?`);
@@ -159,7 +159,7 @@ export function CategoriasTab() {
     const totalQuestoes = alvos.reduce((soma, t) => soma + (contagens[t.value] ?? 0), 0);
     const confirmado = confirm(
       `Excluir ${alvos.length} disciplina${alvos.length === 1 ? '' : 's'} (${alvos.map((t) => t.value).join(', ')})?\n\n` +
-        `Isso vai apagar ${totalQuestoes} questão${totalQuestoes === 1 ? '' : 'ões'} permanentemente.`
+        `Isso vai apagar ${totalQuestoes} ${totalQuestoes === 1 ? 'questão' : 'questões'} permanentemente.`
     );
     if (!confirmado) return;
 
@@ -290,7 +290,7 @@ export function CategoriasTab() {
                       <p className="text-sm font-bold text-ms-main">{t.value}</p>
                       {campo === 'discipline' && (
                         <span className="text-xs text-ms-muted">
-                          {contagens[t.value] ?? 0} questão{(contagens[t.value] ?? 0) === 1 ? '' : 'ões'}
+                          {contagens[t.value] ?? 0} {(contagens[t.value] ?? 0) === 1 ? 'questão' : 'questões'}
                         </span>
                       )}
                     </div>

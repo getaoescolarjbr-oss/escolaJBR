@@ -260,6 +260,10 @@ export function MinhasAvaliacoesTab() {
         <div className="space-y-3">
           {proprias.map((a) => {
             const faixa = a.eh_prova_area ? faixaDoTipo(a) : faixaIndividual(a.disciplina, a.tipo === 'SIMULADO');
+            // Avaliação de área/geral: configurar (embaralhar, versões, turmas), imprimir,
+            // publicar, despublicar e excluir são da Coordenação de Área. Aqui o professor
+            // só insere as questões da sua cota, vê como aluno, corrige e lança a nota.
+            const daCoordenacao = !!a.eh_prova_area;
             return (
             <div key={a.id} className="bg-ms-card border border-gray-200 dark:border-gray-800 rounded-xl px-5 py-4 space-y-2 shadow-sm">
               <div className={`-mx-5 -mt-4 mb-1 px-5 py-2 rounded-t-xl flex items-center gap-2 text-white text-xs font-black uppercase tracking-wider ${faixa.cor}`}>
@@ -289,19 +293,13 @@ export function MinhasAvaliacoesTab() {
                 </div>
 
                 <div className="flex items-center gap-2 flex-wrap">
+                  {!daCoordenacao && (
                   <button
                     onClick={() => setEditandoDe(a)}
                     className={btnSecondary}
                   >
                     <Pencil className="w-3.5 h-3.5" /> Editar
                   </button>
-                  {/* Avaliação de área é publicada só pela aba Coordenação de Área — o botão
-                      genérico daqui não sabe distribuir a nota por professor/turma (ver
-                      rpc_publicar_avaliacao_area vs. atualizarStatusAvaliacao). */}
-                  {a.status === 'RASCUNHO' && a.eh_prova_area && (
-                    <span className={btnSecondary + ' cursor-default hover:bg-transparent dark:hover:bg-transparent'} title="Esta é uma avaliação colaborativa de área: publique pela aba Coordenação de Área > Avaliações da Área, que lança a nota certa para cada professor/turma.">
-                      <Send className="w-3.5 h-3.5" /> Publique pela Coordenação de Área
-                    </span>
                   )}
                   {a.status === 'RASCUNHO' && !a.eh_prova_area && (
                     <button
@@ -312,7 +310,7 @@ export function MinhasAvaliacoesTab() {
                       <Send className="w-3.5 h-3.5" /> Publicar
                     </button>
                   )}
-                  {a.status === 'PUBLICADA' && (
+                  {a.status === 'PUBLICADA' && !daCoordenacao && (
                     <button
                       disabled={processando === a.id}
                       onClick={() => mudarStatus(a.id, 'ENCERRADA')}
@@ -321,7 +319,7 @@ export function MinhasAvaliacoesTab() {
                       <Square className="w-3.5 h-3.5" /> Encerrar
                     </button>
                   )}
-                  {a.status === 'PUBLICADA' && (
+                  {a.status === 'PUBLICADA' && !daCoordenacao && (
                     <button
                       disabled={processando === a.id}
                       onClick={() => despublicar(a)}
@@ -348,7 +346,7 @@ export function MinhasAvaliacoesTab() {
                       <Eye className="w-3.5 h-3.5" /> Ver como aluno
                     </button>
                   )}
-                  {(a.modo === 'IMPRESSA' || a.modo === 'AMBAS' || a.tipo === 'SIMULADO') && (
+                  {!daCoordenacao && (a.modo === 'IMPRESSA' || a.modo === 'AMBAS' || a.tipo === 'SIMULADO') && (
                     <button
                       onClick={() => setReimprimirDe(a)}
                       className={btnSecondary}
@@ -356,7 +354,7 @@ export function MinhasAvaliacoesTab() {
                       <Printer className="w-3.5 h-3.5" /> Reimprimir
                     </button>
                   )}
-                  {(a.modo === 'IMPRESSA' || a.modo === 'AMBAS') && (a.total_questoes ?? 0) > 0 && (
+                  {!daCoordenacao && (a.modo === 'IMPRESSA' || a.modo === 'AMBAS') && (a.total_questoes ?? 0) > 0 && (
                     <button
                       onClick={() => setFolhasDe(a)}
                       className={btnSecondary}
@@ -402,6 +400,7 @@ export function MinhasAvaliacoesTab() {
                       <Users className="w-3.5 h-3.5" /> Resultados
                     </button>
                   )}
+                  {!daCoordenacao && (
                   <button
                     disabled={processando === a.id}
                     onClick={() => excluir(a)}
@@ -409,8 +408,14 @@ export function MinhasAvaliacoesTab() {
                   >
                     <Trash2 className="w-3.5 h-3.5" /> Excluir
                   </button>
+                  )}
                 </div>
               </div>
+              {daCoordenacao && (
+                <p className="text-[11px] text-ms-muted">
+                  {a.status === 'RASCUNHO' ? 'Em elaboração. ' : ''}Configuração, impressão e publicação ficam com a Coordenação de Área.
+                </p>
+              )}
               <MinhasCotas
                 avaliacao={avaliacoesArea.find((x) => x.id === a.id)}
                 onInserir={(av, cota) => setInserindoCota({ avaliacao: av, cota })}
@@ -466,13 +471,13 @@ export function MinhasAvaliacoesTab() {
                     )}
                     {!av.edicao_permitida && (
                       <span
-                        className="text-xs font-bold px-2.5 py-1 bg-red-950/80 text-red-300 border border-red-800/80 rounded-full"
+                        className="text-xs font-bold px-2.5 py-1 bg-red-100 dark:bg-red-950/80 text-red-900 dark:text-red-300 border border-red-300 dark:border-red-800/80 rounded-full"
                         title={av.prazo_edicao_area ? `Prazo de edição: ${new Date(av.prazo_edicao_area).toLocaleString('pt-BR')}` : undefined}
                       >
                         Edição bloqueada
                       </span>
                     )}
-                    <span className="text-xs font-bold px-2.5 py-1 bg-amber-950/80 text-amber-300 border border-amber-800/80 rounded-full">
+                    <span className="text-xs font-bold px-2.5 py-1 bg-amber-100 dark:bg-amber-950/80 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800/80 rounded-full">
                       {av.status_colaboracao === 'PUBLICADA' ? 'Publicada' : 'Em Elaboração'}
                     </span>
                   </div>
@@ -496,8 +501,8 @@ export function MinhasAvaliacoesTab() {
                           <span
                             className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
                               preenchida
-                                ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                                : 'bg-amber-950 text-amber-300 border border-amber-800'
+                                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
+                                : 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
                             }`}
                           >
                             {cota.qtd_inserida}/{cota.qtd_questoes} q.

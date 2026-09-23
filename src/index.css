@@ -32,6 +32,19 @@
   /* Azul MS aplicado a texto/ícone/borda (não a fundo sólido) precisa ser mais claro
      no tema escuro — #002677 direto sobre --bg-card (#0d1117) fica quase ilegível. */
   --ms-blue-text: #5b9bf5;
+
+  /* Mesmas cores em canais RGB, para o Tailwind aplicar transparência (bg-ms-dark/60,
+     border-ms-border/50...). Com var() direto ele não gera essas classes — ficavam sem
+     cor nenhuma (ex.: campo de nota com fundo branco padrão do navegador no tema escuro).
+     Manter em sincronia com as variáveis acima. */
+  --bg-page-rgb: 0 4 10;
+  --bg-card-rgb: 13 17 23;
+  --text-main-rgb: 230 237 243;
+  --text-muted-rgb: 132 141 151;
+  --border-main-rgb: 48 54 61;
+  --header-bg-rgb: 0 38 119;
+  --accent-ms-rgb: 0 38 119;
+  --ms-blue-text-rgb: 91 155 245;
 }
 
 .light-theme {
@@ -47,6 +60,15 @@
   --header-text: #ffffff;
   --hover-row: #f3f4f6;
   --ms-blue-text: #002677; /* No tema claro o azul MS original já tem ótimo contraste */
+
+  --bg-page-rgb: 246 248 250;
+  --bg-card-rgb: 255 255 255;
+  --text-main-rgb: 31 35 40;
+  --text-muted-rgb: 101 109 118;
+  --border-main-rgb: 208 215 222;
+  --header-bg-rgb: 0 38 119;
+  --accent-ms-rgb: 33 115 46;
+  --ms-blue-text-rgb: 0 38 119;
 }
 
 @layer base {
@@ -359,4 +381,12 @@
 .light-theme .hover\:text-gray-200:hover,
 .light-theme .hover\:text-gray-300:hover {
   color: #003366 !important;
+}
+
+/* Tema escuro: texto em azul-marinho fixo (text-[#003366] / text-[#002677], ~80 usos sem
+   variante dark:) fica praticamente invisível sobre o fundo escuro (contraste ~1,5 — ex.:
+   nomes dos alunos em Gestão de Alunos, rótulos de Minha Conta). Troca pelo azul claro do
+   tema, exceto quando o elemento (ou um ancestral) tem fundo claro, onde o marinho é o certo. */
+html:not(.light-theme) :is(.text-\[\#003366\], .text-\[\#002677\]):not(:is(.bg-white, .bg-gray-50, .bg-gray-100, .bg-blue-50, .bg-slate-50, .bg-amber-50, .bg-emerald-50):not([class*="dark:bg-"])):not(:is(.bg-white, .bg-gray-50, .bg-gray-100, .bg-blue-50, .bg-slate-50):not([class*="dark:bg-"]) *) {
+  color: var(--ms-blue-text);
 }

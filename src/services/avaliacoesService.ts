@@ -757,6 +757,12 @@ export async function definirCorretores(provaId: string, corretores: { turma_id:
   if (error) throw error;
 }
 
+// Avaliação geral: quem criou define qual área corrige cada turma (area null = sem área).
+export async function definirDistribuicaoCorrecao(provaId: string, itens: { turma_id: string; area: string | null }[]): Promise<void> {
+  const { error } = await supabase.rpc('rpc_definir_distribuicao_correcao', { p_prova_id: provaId, p_itens: itens });
+  if (error) throw error;
+}
+
 /** Das avaliações informadas, as que o usuário logado não pode alterar, com o nome do corretor. */
 export async function buscarNotasBloqueadas(avaliacaoIds: string[]): Promise<Record<string, string>> {
   if (avaliacaoIds.length === 0) return {};

@@ -477,7 +477,7 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
                                   </td>
                                   <td className="py-2.5 px-3 text-center">
                                     {al.finalizado_em ? (
-                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-500/10 text-emerald-400">
+                                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 dark:bg-emerald-500/10 text-emerald-400">
                                         Enviada
                                       </span>
                                     ) : (
@@ -577,8 +577,8 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
                                         <span
                                           className={`inline-flex items-center justify-center w-6 h-6 rounded-md font-bold text-xs ${
                                             correta
-                                              ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
-                                              : 'bg-red-500/20 text-red-300 border border-red-500/40'
+                                              ? 'bg-emerald-100 dark:bg-emerald-500/20 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-500/40'
+                                              : 'bg-red-100 dark:bg-red-500/20 text-red-900 dark:text-red-300 border border-red-300 dark:border-red-500/40'
                                           }`}
                                           title={`Marcou: ${letra} · Gabarito: ${q.correct_letter || '—'}`}
                                         >

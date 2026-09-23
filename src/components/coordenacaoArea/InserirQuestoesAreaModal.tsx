@@ -130,7 +130,7 @@ export function InserirQuestoesAreaModal({ avaliacao, cota, onClose, onSalvo }: 
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
           {bloqueada && (
-            <div className="flex items-center gap-2 p-3 bg-amber-950/40 border border-amber-800 text-amber-300 rounded-xl text-xs">
+            <div className="flex items-center gap-2 p-3 bg-amber-100 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-300 rounded-xl text-xs">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>
                 A edição de questões desta avaliação está bloqueada pelo coordenador
@@ -140,7 +140,7 @@ export function InserirQuestoesAreaModal({ avaliacao, cota, onClose, onSalvo }: 
             </div>
           )}
           {erro && (
-            <div className="flex items-center gap-2 p-3 bg-red-950/40 border border-red-800 text-red-300 rounded-xl text-xs">
+            <div className="flex items-center gap-2 p-3 bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-800 text-red-900 dark:text-red-300 rounded-xl text-xs">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{erro}</span>
             </div>
@@ -157,8 +157,8 @@ export function InserirQuestoesAreaModal({ avaliacao, cota, onClose, onSalvo }: 
               <span
                 className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                   cotaAtingida
-                    ? 'bg-emerald-700/30 text-emerald-300'
-                    : 'bg-amber-700/30 text-amber-300'
+                    ? 'bg-emerald-100 dark:bg-emerald-700/30 text-emerald-900 dark:text-emerald-300'
+                    : 'bg-amber-100 dark:bg-amber-700/30 text-amber-900 dark:text-amber-300'
                 }`}
               >
                 {qtdSelecionada} de {cota.qtd_questoes} selecionadas

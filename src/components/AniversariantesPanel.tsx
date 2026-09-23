@@ -95,7 +95,7 @@ export function AniversariantesPanel() {
         <div className="bg-ms-card border border-ms-border rounded-2xl p-12 text-center">
           <Cake className="w-12 h-12 text-gray-600 mx-auto mb-4" />
           <p className="text-gray-500 font-bold">Nenhum aniversariante neste mês.</p>
-          <p className="text-gray-600 text-xs mt-1">Cadastre as datas de nascimento dos servidores para exibir aqui.</p>
+          <p className="text-gray-600 dark:text-gray-400 text-xs mt-1">Cadastre as datas de nascimento dos servidores para exibir aqui.</p>
         </div>
       ) : (
         <div className="space-y-4">

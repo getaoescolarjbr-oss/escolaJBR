@@ -108,10 +108,10 @@ export function QuestionPicker({ selecionadas, onToggleSelecionar, onContinuar, 
         <div className="flex items-center justify-between">
           <p className="text-sm font-bold text-ms-main">
             {somenteSelecionadas
-              ? `Mostrando ${questoesSelecionadasLista.length} questão${questoesSelecionadasLista.length === 1 ? '' : 'ões'} selecionada${questoesSelecionadasLista.length === 1 ? '' : 's'}`
+              ? `Mostrando ${questoesSelecionadasLista.length} ${questoesSelecionadasLista.length === 1 ? 'questão' : 'questões'} selecionada${questoesSelecionadasLista.length === 1 ? '' : 's'}`
               : loading
               ? 'Buscando...'
-              : `${total} questão${total === 1 ? '' : 'ões'} encontrada${total === 1 ? '' : 's'}`}
+              : `${total} ${total === 1 ? 'questão' : 'questões'} encontrada${total === 1 ? '' : 's'}`}
           </p>
         </div>
         <div className="flex gap-3">

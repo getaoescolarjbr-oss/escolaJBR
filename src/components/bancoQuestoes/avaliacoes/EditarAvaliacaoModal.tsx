@@ -109,7 +109,7 @@ export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo }: Props) {
           {carregando && !erro && <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-400 my-12" />}
 
           {!carregando && !erro && respostasEnviadas > 0 && (
-            <div className="flex items-start gap-2 bg-amber-900/20 border border-amber-700/40 rounded-xl px-4 py-3 text-sm text-amber-300">
+            <div className="flex items-start gap-2 bg-amber-100 dark:bg-amber-900/20 border border-amber-300 dark:border-amber-700/40 rounded-xl px-4 py-3 text-sm text-amber-900 dark:text-amber-300">
               <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
               <p>
                 <strong>{respostasEnviadas} aluno(s)</strong> já enviaram resposta para {rotulo === 'simulado' ? 'este simulado' : 'esta avaliação'}.

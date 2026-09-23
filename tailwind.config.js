@@ -14,17 +14,19 @@ export default {
       colors: {
         ms: {
           blue: '#002677',   // Azul da Bandeira MS (uso em fundo sólido / marca)
-          blueText: 'var(--ms-blue-text)', // Azul MS para texto/ícone/borda — adapta contraste por tema
+          // Cores que mudam com o tema: canais RGB em src/index.css (--*-rgb), para que a
+          // transparência funcione (bg-ms-dark/60, border-ms-border/50...).
+          blueText: 'rgb(var(--ms-blue-text-rgb) / <alpha-value>)', // Azul MS para texto/ícone/borda — adapta contraste por tema
           green: '#21732e',  // Verde da Bandeira MS
           gold: '#fcc201',   // Dourado da Bandeira MS
           gray: '#f1f5f9',
-          dark: 'var(--bg-page)',   
-          card: 'var(--bg-card)',   
-          header: 'var(--header-bg)',
-          accent: 'var(--accent-ms)',
-          main: 'var(--text-main)',
-          muted: 'var(--text-muted)',
-          border: 'var(--border-main)',
+          dark: 'rgb(var(--bg-page-rgb) / <alpha-value>)',
+          card: 'rgb(var(--bg-card-rgb) / <alpha-value>)',
+          header: 'rgb(var(--header-bg-rgb) / <alpha-value>)',
+          accent: 'rgb(var(--accent-ms-rgb) / <alpha-value>)',
+          main: 'rgb(var(--text-main-rgb) / <alpha-value>)',
+          muted: 'rgb(var(--text-muted-rgb) / <alpha-value>)',
+          border: 'rgb(var(--border-main-rgb) / <alpha-value>)',
           yellow: '#f59e0b', 
           red: '#ef4444'     
         },

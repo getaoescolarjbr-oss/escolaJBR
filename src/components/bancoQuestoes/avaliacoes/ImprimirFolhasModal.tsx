@@ -531,20 +531,20 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
 
         <div className="flex-1 overflow-y-auto p-6 space-y-5">
           {erro && (
-            <div className="flex items-start gap-2 bg-red-950/40 border border-red-900 rounded-lg px-4 py-3">
+            <div className="flex items-start gap-2 bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-900 rounded-lg px-4 py-3">
               <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
-              <p className="text-sm text-red-300 font-medium">{erro}</p>
+              <p className="text-sm text-red-900 dark:text-red-300 font-medium">{erro}</p>
             </div>
           )}
 
           {discrepanciaQuestoes && (
-            <div className="flex items-start gap-3 bg-amber-950/40 border border-amber-800 rounded-xl px-4 py-3">
+            <div className="flex items-start gap-3 bg-amber-100 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800 rounded-xl px-4 py-3">
               <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
               <div className="space-y-1">
-                <p className="text-sm text-amber-200 font-bold">
+                <p className="text-sm text-amber-900 dark:text-amber-200 font-bold">
                   Atenção: A prova possui {discrepanciaQuestoes.totalProva} questões, mas o sorteio gravado tem {discrepanciaQuestoes.totalVersao} questões.
                 </p>
-                <p className="text-xs text-amber-300/90 leading-relaxed">
+                <p className="text-xs text-amber-900 dark:text-amber-300/90 leading-relaxed">
                   Questões foram adicionadas ou editadas após o sorteio das versões. O sistema já incluiu todas as {discrepanciaQuestoes.totalProva} questões nesta impressão para que nenhuma falte na prova, mas para sincronizar o gabarito oficial com perfeição, clique no botão <strong>Sortear de novo</strong> abaixo.
                 </p>
               </div>

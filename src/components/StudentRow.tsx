@@ -73,6 +73,9 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
 
   // ─── Controla o modal de Média Final ──────────────────────────────────────
   const [showGradeBreakdown, setShowGradeBreakdown] = useState(false);
+  // O popup abre para cima; perto do topo da tela (primeiros alunos) ele ficava cortado
+  // pelo cabeçalho — aí abre para baixo.
+  const [breakdownParaBaixo, setBreakdownParaBaixo] = useState(false);
 
   useEffect(() => {
     if (!showGradeBreakdown) return;
@@ -460,7 +463,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
       } ${isFora ? 'bg-amber-900/10' : 'hover:bg-ms-dark/5'}`}>
         <td className="md:px-6 px-1.5 md:py-5 py-2.5 whitespace-nowrap">
           <div className="flex items-center gap-1.5 md:gap-4">
-            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 font-black text-xs md:text-base flex-shrink-0 border border-blue-500/20 shadow-sm">
+            <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black text-xs md:text-base flex-shrink-0 border border-blue-500/20 shadow-sm">
               {index + 1}
             </div>
             <div className="truncate">
@@ -548,7 +551,12 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 {gradeBreakdown && !isPosterior && !isTransferido && (
                   <div className="relative mt-2" ref={gradeBreakdownRef}>
                     <button 
-                      onClick={() => setShowGradeBreakdown(!showGradeBreakdown)}
+                      onClick={(e) => {
+                        const topo = e.currentTarget.getBoundingClientRect().top;
+                        // cabeçalho fixo (~190px) + altura do popup (~260px)
+                        setBreakdownParaBaixo(topo < 450);
+                        setShowGradeBreakdown(!showGradeBreakdown);
+                      }}
 
                       className={`flex flex-col items-center justify-center md:px-3 px-1.5 md:py-1 py-0.5 rounded-lg border shadow-sm transition-all hover:scale-105 active:scale-95 ${
                         gradeBreakdown.mediaFinal >= 6.0 
@@ -557,15 +565,15 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                       }`}
                     >
                       <span className={`text-[8px] uppercase tracking-widest font-black opacity-70 mb-0.5 leading-tight text-center ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>Média<br />Final</span>
-                      <span className="text-xs md:text-sm leading-none font-black">{gradeBreakdown.mediaFinal.toFixed(1)}</span>
+                      <span className="text-xs md:text-sm leading-none font-black">{gradeBreakdown.mediaFinal.toFixed(2)}</span>
                     </button>
 
                     {/* Breakdown Modal/Popup */}
                     {showGradeBreakdown && (
-                      <div className={`absolute left-1/2 -translate-x-1/2 bottom-full mb-3 w-56 rounded-2xl shadow-2xl z-[100] border p-4 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200 ${
+                      <div className={`absolute left-1/2 -translate-x-1/2 ${breakdownParaBaixo ? 'top-full mt-3' : 'bottom-full mb-3'} w-56 rounded-2xl shadow-2xl z-[100] border p-4 backdrop-blur-md animate-in fade-in zoom-in-95 duration-200 ${
                         theme === 'light' ? 'bg-white/95 border-gray-200 shadow-blue-900/10' : 'bg-ms-card/95 border-gray-700 shadow-black/50'
                       }`}>
-                        <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 rotate-45 border-b border-r ${
+                        <div className={`absolute ${breakdownParaBaixo ? '-top-2 border-t border-l' : '-bottom-2 border-b border-r'} left-1/2 -translate-x-1/2 w-4 h-4 rotate-45 ${
                           theme === 'light' ? 'bg-white border-gray-200' : 'bg-ms-card border-gray-700'
                         }`} />
                         <div className="relative z-10">
@@ -578,12 +586,12 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                             {gradeBreakdown.avaliacoes.map((av, idx) => (
                               <div key={idx} className="flex justify-between items-center text-xs">
                                 <span className={`font-semibold ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'}`}>{av.nome}</span>
-                                <span className="font-black text-blue-600">{av.nota.toFixed(1)} <span className="text-[9px] font-bold text-gray-400">/ {av.valorMaximo}</span></span>
+                                <span className="font-black text-blue-600">{av.nota.toFixed(2)} <span className="text-[9px] font-bold text-gray-400">/ {av.valorMaximo}</span></span>
                               </div>
                             ))}
                             <div className="flex justify-between items-center text-xs">
                               <span className={`font-semibold ${theme === 'light' ? 'text-gray-600' : 'text-gray-300'}`}>Vistos na Rotina</span>
-                              <span className="font-black text-blue-600">{gradeBreakdown.notaVistos.toFixed(1)} <span className="text-[9px] font-bold text-gray-400">/ {gradeBreakdown.valorMaximoVistos}</span></span>
+                              <span className="font-black text-blue-600">{gradeBreakdown.notaVistos.toFixed(2)} <span className="text-[9px] font-bold text-gray-400">/ {gradeBreakdown.valorMaximoVistos}</span></span>
                             </div>
                           </div>
                           <div className={`mt-4 pt-3 border-t flex justify-between items-center ${
@@ -591,7 +599,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                           }`}>
                             <span className={`text-[11px] font-black uppercase ${theme === 'light' ? 'text-blue-900' : 'text-white'}`}>Média Final</span>
                             <span className={`text-base font-black ${gradeBreakdown.mediaFinal >= 6.0 ? 'text-green-500' : 'text-red-500'}`}>
-                              {gradeBreakdown.mediaFinal.toFixed(1)}
+                              {gradeBreakdown.mediaFinal.toFixed(2)}
                             </span>
                           </div>
                         </div>

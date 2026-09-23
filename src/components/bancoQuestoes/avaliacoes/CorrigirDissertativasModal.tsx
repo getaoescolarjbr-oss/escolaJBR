@@ -161,7 +161,7 @@ export function CorrigirDissertativasModal({ avaliacao, onClose, onCorrigido }: 
                         </span>
                         <span className="text-xs text-ms-muted font-bold">Vale {valorMaximo(item).toFixed(2)}</span>
                         {item.corrigido && (
-                          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-700/30 text-emerald-300 flex items-center gap-1">
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-700/30 text-emerald-900 dark:text-emerald-300 flex items-center gap-1">
                             <Check className="w-3 h-3" /> Corrigida
                           </span>
                         )}

@@ -66,7 +66,8 @@ export function AgendamentoPanel() {
                   ? 'bg-ms-blue text-white shadow-md shadow-blue-900/20'
                   : 'bg-white dark:bg-ms-card text-[#002677] dark:text-gray-300 hover:bg-ms-blue/10 border border-[#002677]/30 dark:border-gray-700 shadow-sm'
               }`}
-              style={aba !== a.id ? { color: '#002677' } : undefined}
+              // --ms-blue-text: #002677 no tema claro, azul claro no escuro (fundo do botão é escuro).
+              style={aba !== a.id ? { color: 'var(--ms-blue-text)' } : undefined}
             >
               {a.label}
             </button>

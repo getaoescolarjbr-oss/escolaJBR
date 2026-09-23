@@ -311,7 +311,10 @@ export function AvaliacoesAreaTab({ area }: Props) {
               : geral
               ? areasGeral.length > 0 && areasGeral.every((a) => a.qtd_inserida === a.qtd_questoes)
               : totalPrevisto > 0 && totalInserido >= totalPrevisto;
-            const podePublicar = todasPreenchidas && (!geral || !!av.criado_por_mim);
+            // Geral: publicar, despublicar, editar, travar, impressão e excluir são de quem criou
+            // (ou da coordenação geral) — o banco também recusa para os demais.
+            const dono = !geral || av.sou_dono !== false;
+            const podePublicar = todasPreenchidas && dono;
             const motivoNaoPublica = !todasPreenchidas
               ? soNota && !geral ? 'Escolha em "Editar" quem recebe a nota' : soNota ? 'Aguardando todas as áreas escolherem quem recebe a nota' : geral ? 'Aguardando todas as áreas completarem as questões' : 'Aguardando preenchimento das cotas de questões'
               : 'Somente quem criou a avaliação geral pode publicá-la';
@@ -380,7 +383,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                         Publicar e Sincronizar Notas
                       </button>
                     )}
-                    {av.status === 'PUBLICADA' && (
+                    {av.status === 'PUBLICADA' && dono && (
                       <button
                         onClick={() => handleDespublicar(av)}
                         disabled={despublicandoId === av.id}
@@ -411,7 +414,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                         <Link2 className="w-3.5 h-3.5" /> Copiar link da avaliação
                       </button>
                     )}
-                    {av.status !== 'PUBLICADA' && (
+                    {av.status !== 'PUBLICADA' && dono && (
                       <button
                         onClick={() => (geral ? setEditandoGeral(av) : setEditandoAvaliacao(av))}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors"
@@ -451,6 +454,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                     >
                       <QrCode className="w-3.5 h-3.5" /> Folhas com QR
                     </button>
+                    {dono && (
                     <button
                       onClick={() => setConfigImpressaoDe(av)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors"
@@ -458,6 +462,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                     >
                       <Settings className="w-3.5 h-3.5" /> Config. impressão
                     </button>
+                    )}
                     {av.status === 'PUBLICADA' && (
                       <button
                         onClick={() => setResultadosDe(av)}
@@ -468,7 +473,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                     )}
                     </>
                     )}
-                    {!soNota && (
+                    {!soNota && dono && (
                     <button
                       onClick={() => alternarBloqueio(av)}
                       disabled={bloqueandoId === av.id}
@@ -489,6 +494,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                       {av.edicao_bloqueada ? 'Destravar Edição' : 'Travar Edição'}
                     </button>
                     )}
+                    {dono && (
                     <button
                       onClick={() => handleExcluir(av)}
                       disabled={excluindoId === av.id || publicandoId === av.id}
@@ -498,6 +504,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                       {excluindoId === av.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Trash2 className="w-3.5 h-3.5" />}
                       Excluir
                     </button>
+                    )}
                   </div>
                 </div>
 
@@ -550,8 +557,8 @@ export function AvaliacoesAreaTab({ area }: Props) {
                             key={a.area_conhecimento}
                             className={`text-[11px] font-bold px-2.5 py-1 rounded-full border ${
                               completa
-                                ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                                : 'bg-amber-950 text-amber-300 border-amber-800'
+                                ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
+                                : 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 border-amber-300 dark:border-amber-800'
                             } ${a.area_conhecimento === area ? 'ring-2 ring-ms-blueText' : ''}`}
                             title={a.configurada ? 'Área já configurada pelo PCA' : 'O PCA desta área ainda não configurou'}
                           >
@@ -597,7 +604,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                           <div className="flex items-center gap-2">
                             <span
                               className={`px-2 py-0.5 rounded-full font-bold text-[10px] ${
-                                preenchida ? 'bg-emerald-950 text-emerald-300 border border-emerald-800' : 'bg-amber-950 text-amber-300 border border-amber-800'
+                                preenchida ? 'bg-emerald-100 dark:bg-emerald-950 text-emerald-900 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800' : 'bg-amber-100 dark:bg-amber-950 text-amber-900 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
                               }`}
                             >
                               {c.qtd_inserida}/{c.qtd_questoes} q.
@@ -670,6 +677,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
       {corretoresDe && (
         <CorretoresModal
           avaliacao={corretoresDe}
+          area={area}
           onClose={() => setCorretoresDe(null)}
           onSalvo={() => {
             setCorretoresDe(null);

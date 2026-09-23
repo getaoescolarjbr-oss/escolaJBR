@@ -8,6 +8,7 @@ import { AvaliacoesAreaTab } from './AvaliacoesAreaTab';
 import { GestaoMensagensPanel } from '../GestaoMensagensPanel';
 import { StudentManager } from '../admin/StudentManager';
 import { SiteManager } from '../admin/SiteManager';
+import { useAuth } from '../../hooks/useAuth';
 
 interface Props {
   professor: Professor;
@@ -17,6 +18,10 @@ interface Props {
 type TabCoordenacao = 'professores' | 'avaliacoes' | 'mensagens' | 'alunos' | 'site';
 
 export function CoordenacaoAreaPanel({ professor, theme }: Props) {
+  // Só a coordenação geral/gestão escolhe a área (acompanham todas). O PCA fica preso à
+  // área do próprio cadastro — trocar de área deixaria ele mexer nas avaliações de outra.
+  const { hasAnyRole } = useAuth();
+  const podeTrocarArea = hasAnyRole(['GESTAO', 'COORDENACAO']);
   const [areaSelecionada, setAreaSelecionada] = useState<AreaConhecimento>(() =>
     normalizarArea(professor?.area_conhecimento)
   );
@@ -46,7 +51,8 @@ export function CoordenacaoAreaPanel({ professor, theme }: Props) {
           </p>
         </div>
 
-        {/* Seletor de Área */}
+        {/* Seletor de Área (só coordenação geral/gestão) */}
+        {podeTrocarArea && (
         <div className="flex items-center gap-2 flex-wrap">
           <span className="text-xs font-bold text-ms-muted">Área:</span>
           <select
@@ -61,6 +67,7 @@ export function CoordenacaoAreaPanel({ professor, theme }: Props) {
             ))}
           </select>
         </div>
+        )}
       </div>
 
       {/* Navegação por Abas */}
