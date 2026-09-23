@@ -7,7 +7,9 @@ import type { Recurso, DisponibilidadeSlot } from '../types/agendamento';
 import { ReservaFormModal } from './agendamento/ReservaFormModal';
 
 interface AgendaPublicaModalProps {
-  recurso: Recurso | null;
+  // Só os campos usados aqui: aceita o Recurso completo (app logado) e o RecursoPublico
+  // da home sem login.
+  recurso: Pick<Recurso, 'id' | 'nome' | 'local' | 'cor'> | null;
   onClose: () => void;
   // Só relevante quando usado na home pública deslogada — abre a tela de login.
   // Dentro do app autenticado (ModuleShell) isto é omitido, pois já existe sessão.

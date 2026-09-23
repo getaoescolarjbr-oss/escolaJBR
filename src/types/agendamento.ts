@@ -16,6 +16,10 @@ export interface Recurso {
   criado_em: string;
 }
 
+// O que a agenda pública (home sem login) pode ver de um recurso — vem de
+// rpc_recursos_publicos, só recursos ativos.
+export type RecursoPublico = Pick<Recurso, 'id' | 'nome' | 'tipo' | 'local' | 'cor' | 'icone' | 'ordem'>;
+
 export interface BloqueioRecurso {
   id: string;
   recurso_id: string;

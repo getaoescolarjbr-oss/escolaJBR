@@ -12,8 +12,8 @@ import { ContatoModal } from './ContatoModal';
 import { MatriculaInfoModal } from './MatriculaInfoModal';
 import { EmBreveModal } from './EmBreveModal';
 import { AgendaPublicaModal } from './AgendaPublicaModal';
-import { listarRecursos } from '../services/agendamentoService';
-import type { Recurso } from '../types/agendamento';
+import { listarRecursosPublicos } from '../services/agendamentoService';
+import type { RecursoPublico } from '../types/agendamento';
 import { calendarData } from '../data/calendarData';
 import './LandingPage.css';
 
@@ -35,8 +35,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
   const [showContatoModal, setShowContatoModal] = React.useState(false);
   const [showMatriculaModal, setShowMatriculaModal] = React.useState(false);
   const [emBreveTitulo, setEmBreveTitulo] = React.useState<string | null>(null);
-  const [recursos, setRecursos] = React.useState<Recurso[]>([]);
-  const [recursoAgendaAberta, setRecursoAgendaAberta] = React.useState<Recurso | null>(null);
+  const [recursos, setRecursos] = React.useState<RecursoPublico[]>([]);
+  const [recursoAgendaAberta, setRecursoAgendaAberta] = React.useState<RecursoPublico | null>(null);
 
   React.useEffect(() => {
     fetchLandingData();
@@ -44,9 +44,10 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
 
   // Recursos (Lab. Ciências, Lab. Informática, Quadra Esportiva, ...) são públicos —
   // busca a lista para ligar os cards de Acesso Rápido à agenda de verdade, e para
-  // suportar o link direto ?modulo=agendamento&recurso=<id> (compartilhável).
+  // suportar o link direto ?modulo=agendamento&recurso=<id> (compartilhável). Vem de
+  // rpc_recursos_publicos: a tabela recursos é fechada ao anônimo.
   React.useEffect(() => {
-    listarRecursos()
+    listarRecursosPublicos()
       .then((lista) => {
         setRecursos(lista);
         const params = new URLSearchParams(window.location.search);

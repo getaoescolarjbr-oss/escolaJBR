@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import type {
   Recurso,
+  RecursoPublico,
   BloqueioRecurso,
   DisponibilidadeSlot,
   Reserva,
@@ -29,6 +30,14 @@ export async function listarRecursos(): Promise<Recurso[]> {
   const { data, error } = await supabase.from('recursos').select('*').order('ordem');
   if (error) throw error;
   return data ?? [];
+}
+
+// Para a home pública (sem login): a tabela recursos é fechada ao anônimo
+// (fechar_exposicao_anon.sql), então a lista vem de uma RPC com só os dados descritivos.
+export async function listarRecursosPublicos(): Promise<RecursoPublico[]> {
+  const { data, error } = await supabase.rpc('rpc_recursos_publicos');
+  if (error) throw error;
+  return (data ?? []) as RecursoPublico[];
 }
 
 export async function criarRecurso(dados: Omit<Recurso, 'id' | 'criado_em'>): Promise<Recurso> {
