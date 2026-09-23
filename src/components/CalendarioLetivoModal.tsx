@@ -111,11 +111,11 @@ export function CalendarioLetivoModal({ isOpen, onClose }: CalendarioLetivoModal
   const getCorCategoria = (categoria: string) => {
     switch (categoria) {
       case 'ferias': return 'bg-[#ffd700] text-black border-[#e6c200]';
-      case 'nao_letivo': return 'bg-[#e53935] text-white border-[#c62828]';
+      case 'nao_letivo': return 'bg-[#e53935] !text-white border-[#c62828]';
       case 'letivo': return 'bg-[#7cb342] text-black border-[#558b2f]';
       case 'em_apc': return 'bg-[#81c784] text-black border-[#388e3c]';
-      case 'inicio_ano': return 'bg-[#1565c0] text-white border-[#0d47a1]';
-      case 'exame_final': return 'bg-[#8e24aa] text-white border-[#6a1b9a]';
+      case 'inicio_ano': return 'bg-[#1565c0] !text-white border-[#0d47a1]';
+      case 'exame_final': return 'bg-[#8e24aa] !text-white border-[#6a1b9a]';
       default: return 'bg-transparent text-gray-700';
     }
   };
@@ -181,7 +181,7 @@ export function CalendarioLetivoModal({ isOpen, onClose }: CalendarioLetivoModal
         <div className="bg-white rounded-t-2xl p-6 md:p-8 flex items-center justify-between border-b border-gray-200">
           <div>
             <h1 className="text-5xl md:text-7xl font-black text-[#1565c0] tracking-tighter flex items-baseline gap-4">
-              CALENDÁRIO <span className="text-[#81c784]">2026</span>
+              CALENDÁRIO <span className="text-[#2e7d32]">2026</span>
             </h1>
             <h2 className="text-2xl font-black text-[#1565c0] tracking-widest ml-1 mt-[-10px]">ESCOLAR</h2>
           </div>

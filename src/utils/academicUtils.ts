@@ -53,10 +53,11 @@ export function estaAprovado(totalPontos: number, meta: number): boolean {
  */
 export function getCorGradiente(media: number, theme: 'light' | 'dark' = 'dark'): string {
   if (theme === 'light') {
-    if (media <= 3.0) return '#dc2626'; // Vermelho mais forte (Red-600)
-    if (media < 6.0) return '#d97706';  // Âmbar mais escuro (Amber-600)
-    if (media < 8.0) return '#16a34a';  // Verde médio/escuro legível no branco (Green-600)
-    return '#15803d'; // Verde floresta (Green-700)
+    // Tons 700/800: os 600 davam contraste ~3:1 no branco (âmbar, verde) — abaixo de 4,5.
+    if (media <= 3.0) return '#b91c1c'; // Red-700
+    if (media < 6.0) return '#b45309';  // Amber-700
+    if (media < 8.0) return '#15803d';  // Green-700
+    return '#166534'; // Green-800
   } else {
     if (media <= 3.0) return '#ef4444'; // Red-500
     if (media < 6.0) return '#f59e0b';  // Amber-500

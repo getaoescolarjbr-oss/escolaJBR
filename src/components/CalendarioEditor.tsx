@@ -83,11 +83,11 @@ function getContrastColor(hexColor: string) {
 function getCorCategoria(categoria: string) {
   switch (categoria) {
     case 'ferias':      return 'bg-[#ffd700] text-black border-[#e6c200]';
-    case 'nao_letivo':  return 'bg-[#e53935] text-white border-[#c62828]';
+    case 'nao_letivo':  return 'bg-[#e53935] !text-white border-[#c62828]';
     case 'letivo':      return 'bg-[#7cb342] text-black border-[#558b2f]';
     case 'em_apc':      return 'bg-[#81c784] text-black border-[#388e3c]';
-    case 'inicio_ano':  return 'bg-[#1565c0] text-white border-[#0d47a1]';
-    case 'exame_final': return 'bg-[#8e24aa] text-white border-[#6a1b9a]';
+    case 'inicio_ano':  return 'bg-[#1565c0] !text-white border-[#0d47a1]';
+    case 'exame_final': return 'bg-[#8e24aa] !text-white border-[#6a1b9a]';
     default:            return 'bg-transparent text-gray-700';
   }
 }
@@ -258,7 +258,7 @@ export function CalendarioEditor({ isOpen, onClose, professorNome }: CalendarioE
             <Edit3 className="w-6 h-6 text-[#1565c0]" />
             <div>
               <h1 className="text-xl font-black text-[#1565c0] tracking-tight">
-                Editor do Calendário Letivo <span className="text-[#81c784]">2026</span>
+                Editor do Calendário Letivo <span className="text-[#2e7d32]">2026</span>
               </h1>
               <p className="text-xs text-gray-500 font-semibold">
                 Clique em qualquer dia para adicionar ou editar um evento

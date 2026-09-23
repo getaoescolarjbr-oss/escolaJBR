@@ -60,7 +60,7 @@ export function PessoasPanel() {
         </button>
       </div>
 
-      <div className="bg-ms-card border border-gray-800 rounded-2xl overflow-hidden shadow-xl">
+      <div className="bg-ms-card border border-gray-800 rounded-2xl overflow-x-auto shadow-xl">
         <table className="w-full">
           <thead>
             <tr className="bg-[#003366] border-b border-blue-900 shadow-lg">

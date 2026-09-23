@@ -211,7 +211,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
 
   return (
     <div className="bg-ms-card rounded-3xl border border-ms-border overflow-hidden shadow-2xl">
-      <div className="px-8 py-6 border-b border-ms-border bg-ms-dark/30">
+      <div className="px-4 sm:px-8 py-6 border-b border-ms-border bg-ms-dark/30">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-2xl bg-ms-blue/20 flex items-center justify-center text-ms-blueText border border-ms-blueText/30 shadow-lg">
@@ -223,22 +223,22 @@ export function SiteManager({ theme }: SiteManagerProps) {
             </div>
           </div>
 
-          <div className="flex items-center bg-ms-dark p-1 rounded-2xl border border-ms-border">
+          <div className="flex flex-wrap items-center bg-ms-dark p-1 rounded-2xl border border-ms-border">
             <button 
               onClick={() => setActiveTab('noticias')}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'noticias' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/50' : 'text-gray-500 hover:text-white'}`}
+              className={`flex items-center gap-2 px-3 sm:px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'noticias' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/50' : 'text-gray-500 hover:text-ms-main'}`}
             >
               <Newspaper className="w-4 h-4" /> Notícias
             </button>
             <button 
               onClick={() => setActiveTab('eventos')}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'eventos' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/50' : 'text-gray-500 hover:text-white'}`}
+              className={`flex items-center gap-2 px-3 sm:px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'eventos' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/50' : 'text-gray-500 hover:text-ms-main'}`}
             >
               <Calendar className="w-4 h-4" /> Eventos
             </button>
             <button 
               onClick={() => setActiveTab('avisos')}
-              className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'avisos' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/50' : 'text-gray-500 hover:text-white'}`}
+              className={`flex items-center gap-2 px-3 sm:px-6 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${activeTab === 'avisos' ? 'bg-ms-blue text-white shadow-lg shadow-blue-900/50' : 'text-gray-500 hover:text-ms-main'}`}
             >
               <AlertCircle className="w-4 h-4" /> Avisos
             </button>
@@ -264,14 +264,14 @@ export function SiteManager({ theme }: SiteManagerProps) {
             </div>
 
             {activeTab === 'noticias' && (
-              <div className="bg-ms-dark/30 rounded-3xl border border-ms-border p-6 md:p-8 mb-8 shadow-inner transition-all hover:border-[#E1306C]/40">
+              <div className="bg-ms-dark/30 rounded-3xl border border-ms-border p-4 md:p-8 mb-8 shadow-inner transition-all hover:border-[#E1306C]/40">
                 <div className="flex flex-col md:flex-row gap-6 justify-between items-start md:items-center mb-6">
-                  <div className="flex gap-4">
+                  <div className="flex gap-4 min-w-0">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888] flex items-center justify-center text-white border border-white/10 shadow-lg flex-shrink-0">
                       <InstagramIcon className="w-6 h-6" />
                     </div>
-                    <div>
-                      <h3 className="text-lg font-black text-ms-main tracking-tight flex items-center gap-2">
+                    <div className="min-w-0">
+                      <h3 className="text-lg font-black text-ms-main tracking-tight flex flex-wrap items-center gap-2">
                         Integração com Instagram
                         <span className="bg-[#E1306C]/10 text-[#E1306C] text-[9px] font-black uppercase px-2 py-0.5 rounded-full border border-[#E1306C]/20">Automação</span>
                       </h3>
@@ -325,7 +325,7 @@ export function SiteManager({ theme }: SiteManagerProps) {
                         Siga os passos rápidos na plataforma deles para conectar a conta pública do Instagram da escola (<strong className="text-gray-400">@jbrautoria</strong>).
                       </li>
                       <li>
-                        Uma vez conectado, o Behold gerará um feed público. Copie a **URL do Feed JSON** (ela é parecida com: <code className="bg-ms-dark px-1.5 py-0.5 rounded text-gray-400">https://api.behold.so/v1/feeds/...</code>).
+                        Uma vez conectado, o Behold gerará um feed público. Copie a **URL do Feed JSON** (ela é parecida com: <code className="bg-ms-dark px-1.5 py-0.5 rounded text-gray-400 break-all">https://api.behold.so/v1/feeds/...</code>).
                       </li>
                       <li>
                         Cole a URL copiada no campo acima e clique em **Salvar Configuração**.

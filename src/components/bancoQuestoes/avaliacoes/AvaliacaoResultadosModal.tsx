@@ -299,7 +299,7 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
     return (
       <div className="overflow-x-auto">
         <table className="w-full text-left text-xs">
-          <thead>
+          <thead className="bg-ms-card">
             <tr className="border-b border-gray-800 text-ms-muted">
               <th className="py-2 px-3">Questão</th>
               <th className="py-2 px-2 text-center">Gabarito</th>
@@ -451,7 +451,7 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
                         </div>
                         <div className="overflow-x-auto border border-gray-800 rounded-xl">
                           <table className="w-full text-left text-sm">
-                            <thead>
+                            <thead className="bg-ms-card">
                               <tr className="border-b border-gray-800 text-xs text-ms-muted">
                                 <th className="py-2.5 px-3">Aluno</th>
                                 <th className="py-2.5 px-3 text-center">SGDE</th>
@@ -539,7 +539,7 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
                         </h3>
                         <div className="overflow-x-auto">
                           <table className="w-full text-left text-xs border-collapse">
-                            <thead>
+                            <thead className="bg-ms-card">
                               <tr className="border-b border-gray-800 text-ms-muted">
                                 <th className="py-2.5 px-3 sticky left-0 bg-ms-card z-10 font-bold min-w-[180px]">Aluno</th>
                                 <th className="py-2.5 px-2 text-center">Acertos</th>

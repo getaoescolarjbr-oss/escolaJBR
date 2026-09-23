@@ -399,7 +399,7 @@ export function GradeCellEditModal({
                         <button
                           onClick={handleCreateAvaliacao}
                           disabled={creatingLoader}
-                          className="w-full bg-[#d4af37] text-white py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-600 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-amber-900/10"
+                          className="w-full bg-[#d4af37] text-gray-900 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-amber-600 transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-amber-900/10"
                         >
                           {creatingLoader ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Criar Avaliação'}
                         </button>

@@ -237,7 +237,8 @@ export function HorarioManager({ theme }: { theme: 'dark' | 'light' }) {
             ) : (
                 <div className="overflow-x-auto overflow-y-auto max-h-[65vh] w-full">
                     <table className="w-full min-w-[800px] border-collapse bg-white">
-                        <thead className="sticky top-0 z-20 shadow-sm">
+                        {/* bg-ms-card: cabeçalho claro — escapa da regra ".light-theme thead *" (branco) do index.css. */}
+                        <thead className="sticky top-0 z-20 shadow-sm bg-ms-card">
                             <tr>
                                 <th className="border-b border-r border-black p-4 w-[120px] bg-[#f8fafc]"></th>
                                 {DAYS.map(d => (

@@ -533,7 +533,7 @@ export function InspetorDashboard({ professor, theme }: Props) {
               </button>
             </div>
           </div>
-          <div className={`border rounded-2xl overflow-hidden ${theme === 'light' ? 'bg-white border-blue-100 shadow-xl' : 'bg-ms-card border-ms-border'}`}>
+          <div className={`border rounded-2xl overflow-x-auto ${theme === 'light' ? 'bg-white border-blue-100 shadow-xl' : 'bg-ms-card border-ms-border'}`}>
             <table ref={monitorTableRef} className="w-full">
               <thead>
                 <tr className={`${theme === 'light' ? 'bg-[#003366]' : 'bg-[#0a1a3a]'} border-b border-ms-border`}>

@@ -1,5 +1,10 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  // As variantes dark: seguem o tema escolhido no portal (App.tsx põe .light-theme no
+  // <html>), não o tema do sistema operacional. No padrão ("media"), quem usa Windows/
+  // celular no modo escuro via os estilos escuros por cima do tema claro — botão cinza-
+  // escuro com texto escuro, texto cinza-claro em fundo claro.
+  darkMode: ['variant', 'html:not(.light-theme) &'],
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}",

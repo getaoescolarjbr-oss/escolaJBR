@@ -707,7 +707,7 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                     <div className="p-2 bg-red-500 text-white rounded-lg shadow-lg shadow-red-900/40"><AlertCircle className="w-5 h-5" /></div>
                     <div>
                         <h3 className="text-sm font-bold text-red-500 uppercase tracking-widest">Alunos em Estado Crítico</h3>
-                    <p className="text-[10px] text-red-400/60 uppercase font-black">Risco de evasão ou reprovação — atividades ≤35% e/ou nota &lt;3,5</p>
+                    <p className="text-[10px] text-red-700 dark:text-red-400/60 uppercase font-black">Risco de evasão ou reprovação — atividades ≤35% e/ou nota &lt;3,5</p>
                     </div>
                 </div>
               </div>
@@ -810,19 +810,20 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
                                     {aluno.aluno_numero || aluno.aluno_nome.charAt(0)}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <h4 className={`text-sm font-bold truncate ${
+                                    {/* Nome trunca sozinho; os selos ficam fora do truncate pra não sumirem no celular. */}
+                                    <h4 className={`text-sm font-bold flex items-center min-w-0 ${
                                       isPosterior
                                         ? 'line-through text-gray-500 opacity-60'
                                         : theme === 'light' ? 'text-blue-950' : 'text-white'
                                     }`}>
-                                        {aluno.aluno_nome}
+                                        <span className="truncate">{aluno.aluno_nome}</span>
                                         {isCritico && (
-                                            <span className="ml-2 text-[8px] bg-red-600 text-white px-2 py-0.5 rounded-full font-black uppercase tracking-tighter animate-pulse">
+                                            <span className="shrink-0 ml-2 text-[8px] bg-red-600 text-white px-2 py-0.5 rounded-full font-black uppercase tracking-tighter animate-pulse">
                                                 Crítico
                                             </span>
                                         )}
                                         {isPosterior && (
-                                            <span className={`ml-2 text-[8px] px-2 py-0.5 rounded-full font-black uppercase border tracking-normal ${
+                                            <span className={`shrink-0 ml-2 text-[8px] px-2 py-0.5 rounded-full font-black uppercase border tracking-normal ${
                                               aluno.status === 'Transferido' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
                                               aluno.status === 'Remanejado' ? 'bg-purple-500/20 text-purple-400 border-purple-500/30' :
                                               aluno.status === 'Atestado' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :

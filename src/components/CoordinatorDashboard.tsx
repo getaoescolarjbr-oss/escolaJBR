@@ -1359,7 +1359,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => setShowCalendarModal(true)}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-ms-card border border-ms-border text-[#d4af37] hover:bg-ms-dark/50 shadow-md"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest transition-all bg-ms-card border border-ms-border text-[#8a6500] dark:text-[#d4af37] hover:bg-ms-dark/50 shadow-md"
         >
           <Calendar className="w-4 h-4" /> Calendário 2026
         </button>
@@ -1456,7 +1456,7 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                   </div>
                   <div>
                     <p className="text-sm font-bold text-ms-blueText leading-tight group-hover:text-ms-blueText transition-colors">{a.professores?.nome}</p>
-                    <p className="text-[10px] font-black uppercase tracking-tighter" style={{ color: '#fbbf24' }}>{a.disciplinas?.nome}</p>
+                    <p className="text-[10px] font-black uppercase tracking-tighter text-amber-700 dark:text-[#fbbf24]">{a.disciplinas?.nome}</p>
                   </div>
                 </button>
               ))}
@@ -1726,12 +1726,12 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                              return (
                              <tr key={aluno.id} className={`${
                                isInactive
-                                 ? 'opacity-60 bg-gray-800/40 hover:opacity-80 hover:bg-gray-700/30'
+                                 ? 'opacity-60 bg-gray-100 dark:bg-gray-800/40 hover:opacity-80 hover:bg-gray-200 dark:hover:bg-gray-700/30'
                                  : idx % 2 !== 0 ? 'bg-ms-dark/10 hover:bg-ms-dark/30' : 'bg-transparent hover:bg-ms-dark/20'
                              }`}>
                                  <td className={`px-4 py-2 whitespace-nowrap sticky left-0 z-10 border-r border-ms-border/30 transition-colors ${
                                     isInactive
-                                      ? (idx % 2 !== 0 ? 'bg-gray-800/80' : 'bg-gray-800/60')
+                                      ? (idx % 2 !== 0 ? 'bg-gray-100 dark:bg-gray-800/80' : 'bg-gray-100 dark:bg-gray-800/60')
                                       : (idx % 2 !== 0 ? 'bg-ms-dark' : 'bg-ms-card')
                                  }`}>
                                    <div className="flex items-center gap-3">

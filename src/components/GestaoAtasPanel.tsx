@@ -354,7 +354,9 @@ export function GestaoAtasPanel() {
               </div>
             ) : (
               <table className="w-full text-left border-collapse">
-                <thead>
+                {/* bg-ms-card: cabeçalho claro — sem isso a regra global de index.css
+                    (".light-theme thead *" branco) deixava os títulos invisíveis no tema claro. */}
+                <thead className="bg-ms-card">
                   <tr className="border-b border-ms-border text-[10px] font-black uppercase tracking-widest text-gray-500 bg-ms-dark/5">
                     <th className="px-6 py-4 w-20">Nº Ata</th>
                     <th className="px-6 py-4 w-32">Data</th>

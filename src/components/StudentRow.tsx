@@ -507,7 +507,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                   percentual <= 35 ? (
                     <span className="flex items-center gap-1 text-[7px] md:text-[8px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded-full animate-pulse">CRÍTICO</span>
                   ) : percentual <= 59 ? (
-                    <span className="flex items-center gap-1 text-[7px] md:text-[8px] font-black bg-yellow-500 text-white px-1.5 py-0.5 rounded-full">ALERTA</span>
+                    <span className="flex items-center gap-1 text-[7px] md:text-[8px] font-black bg-yellow-500 text-yellow-950 px-1.5 py-0.5 rounded-full">ALERTA</span>
                   ) : percentual <= 79 ? (
                     <span className="flex items-center gap-1 text-[7px] md:text-[8px] font-black bg-blue-600 text-white px-1.5 py-0.5 rounded-full">BOM</span>
                   ) : (
