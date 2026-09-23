@@ -7,7 +7,7 @@ import type { AreaConhecimento } from '../../utils/areasConhecimento';
 import { AREAS_CONHECIMENTO } from '../../utils/areasConhecimento';
 import type { AvaliacaoArea, NovaAvaliacaoGeralInput } from '../../types/avaliacoes';
 import type { ModoEmbaralhar } from '../../types/correcaoOmr';
-import { buscarInstrucoesPadrao, criarAvaliacaoGeral, editarAvaliacaoGeral } from '../../services/avaliacoesService';
+import { buscarInstrucoesPadrao, buscarModoNota, criarAvaliacaoGeral, definirModoNota, editarAvaliacaoGeral } from '../../services/avaliacoesService';
 import { getCurrentBimestre } from '../../utils/academicUtils';
 import { CamposAvaliacaoComuns, versoesEfetivas, type ValoresCamposAvaliacao } from './CamposAvaliacaoComuns';
 import { SortearQuestoesPanel } from './SortearQuestoesPanel';
@@ -17,6 +17,8 @@ interface Props {
   onCriada: () => void;
   /** Presente = modo edição (só antes de publicar). */
   avaliacaoExistente?: AvaliacaoArea;
+  /** Avaliação geral só de nota: sem questões, só cria o campo de nota para os professores. */
+  somenteNota?: boolean;
 }
 
 // ISO (UTC) → valor de input datetime-local em hora local.
@@ -37,10 +39,11 @@ interface ConfigArea {
 
 const QTD_PADRAO_POR_AREA = 10;
 
-export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente: ex }: Props) {
+export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente: ex, somenteNota }: Props) {
   const editando = !!ex;
+  const soNota = ex ? !!ex.somente_nota : !!somenteNota;
   const [campos, setCampos] = useState<ValoresCamposAvaliacao>(() => ({
-    titulo: ex?.titulo ?? 'Simulado Geral',
+    titulo: ex?.titulo ?? (soNota ? 'Avaliação Geral (nota)' : 'Avaliação Geral'),
     bimestre: ex?.bimestre_id ?? getCurrentBimestre(),
     valorTotal: ex ? Number(ex.valor_total) : 10,
     modo: ex?.modo ?? 'IMPRESSA',
@@ -52,6 +55,8 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
     qtdVersoes: ex?.qtd_versoes ?? 1,
     modoVersoes: 'FIXO',
     posicaoCartao: ex?.cartao_separado ? 'SEPARADO' : (ex?.cartao_posicao ?? 'FIM'),
+    modoNota: 'DIRETA',
+    ponderadaEscopo: 'PROVA',
   }));
   const atualizarCampos = (patch: Partial<ValoresCamposAvaliacao>) => setCampos((prev) => ({ ...prev, ...patch }));
 
@@ -84,6 +89,9 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
         if (!editando) {
           const texto = await buscarInstrucoesPadrao().catch(() => '');
           if (texto) atualizarCampos({ instrucoes: texto });
+        } else if (!soNota) {
+          const salvo = await buscarModoNota(ex!.id).catch(() => null);
+          if (salvo) atualizarCampos({ modoNota: salvo.modo_nota, ponderadaEscopo: salvo.ponderada_escopo });
         }
       } finally {
         setLoading(false);
@@ -126,11 +134,11 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
   async function handleSalvar() {
     if (!campos.titulo.trim()) { setErro('Informe o título da avaliação.'); return; }
     if (areasAtivas.length === 0) { setErro('Selecione pelo menos uma área participante.'); return; }
-    if (areasAtivas.some((a) => !areas[a].qtd || areas[a].qtd < 1)) {
+    if (!soNota && areasAtivas.some((a) => !areas[a].qtd || areas[a].qtd < 1)) {
       setErro('Cada área participante precisa de pelo menos 1 questão.');
       return;
     }
-    if (somaAreas !== totalQuestoes) {
+    if (!soNota && somaAreas !== totalQuestoes) {
       setErro(`A soma das áreas (${somaAreas}) precisa ser igual ao total de questões (${totalQuestoes}).`);
       return;
     }
@@ -154,16 +162,20 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
         turma_ids: turmasSelecionadas,
         areas: areasAtivas.map((a) => ({
           area: a,
-          qtd_questoes: areas[a].qtd,
-          questoes: areas[a].gerarAuto ? areas[a].sorteadas.map((q) => q.id) : [],
+          qtd_questoes: soNota ? 0 : areas[a].qtd,
+          questoes: !soNota && areas[a].gerarAuto ? areas[a].sorteadas.map((q) => q.id) : [],
         })),
         embaralhar: campos.embaralhar,
         qtd_versoes: versoesEfetivas(campos),
         cartao_separado: campos.posicaoCartao === 'SEPARADO',
         cartao_posicao: campos.posicaoCartao === 'INICIO' ? 'INICIO' : 'FIM',
+        somente_nota: soNota,
       };
+      let provaId = ex?.id ?? '';
       if (editando) await editarAvaliacaoGeral(ex!.id, dados);
-      else await criarAvaliacaoGeral(dados);
+      else provaId = await criarAvaliacaoGeral(dados);
+      // Só de nota: a nota é digitada à mão, não há cálculo a escolher.
+      if (!soNota) await definirModoNota(provaId, campos.modoNota, campos.ponderadaEscopo);
       onCriada();
     } catch (e: any) {
       setErro(e.message || `Erro ao ${editando ? 'salvar' : 'criar'} avaliação geral.`);
@@ -198,9 +210,13 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
       <div className="bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden shadow-2xl">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
           <div>
-            <h2 className="text-lg font-bold text-ms-main">{editando ? 'Editar Avaliação Geral' : 'Criar Avaliação Geral'}</h2>
+            <h2 className="text-lg font-bold text-ms-main">
+              {editando ? 'Editar' : soNota ? 'Nova' : 'Criar'} Avaliação Geral{soNota ? ' só de Nota' : ''}
+            </h2>
             <p className="text-xs text-ms-muted">
-              {editando
+              {soNota
+                ? 'Sem questões: só cria o campo de nota no diário. Depois de criada, cada coordenador de área escolhe quais professores recebem a nota.'
+                : editando
                 ? 'Ajuste os dados, as turmas e as áreas. As questões já inseridas ou sorteadas continuam; área com questão não pode ser retirada.'
                 : 'Uma prova única, com um só gabarito, montada pelas áreas. Depois de criada, cada coordenador de área escolhe quem recebe a nota e quem insere as questões da sua parte.'}
             </p>
@@ -225,11 +241,12 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
           ) : (
             <>
               {/* 1. Modalidade */}
+              {!soNota && (
               <div>
                 <label className="block text-xs font-bold text-ms-muted mb-2">Modalidade *</label>
                 <div className="flex flex-col sm:flex-row gap-3">
-                  {cardModalidade('COM_NOTA', 'Simulado com nota', 'Cria o campo de nota no boletim das turmas selecionadas, para os professores escolhidos por cada área.')}
-                  {cardModalidade('PUBLICO', 'Simulado público sem login', 'O aluno responde pelo link digitando o código do SGDE.')}
+                  {cardModalidade('COM_NOTA', 'Avaliação com nota', 'Cria o campo de nota no boletim das turmas selecionadas, para os professores escolhidos por cada área.')}
+                  {cardModalidade('PUBLICO', 'Avaliação pública sem login', 'O aluno responde pelo link digitando o código do SGDE.')}
                 </div>
                 {modalidade === 'PUBLICO' && (
                   <label className="flex items-center gap-2 mt-3 text-sm text-ms-main cursor-pointer">
@@ -238,25 +255,33 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
                   </label>
                 )}
               </div>
+              )}
 
               {/* Dados da prova (mesmos da Avaliação de Área) */}
-              <CamposAvaliacaoComuns
-                valores={campos}
-                onChange={atualizarCampos}
-                turmasSelecionadas={turmasSelecionadas}
-                onErro={setErro}
-                mostrarTipo={false}
-              />
+              {soNota ? (
+                <CamposSoNota valores={campos} onChange={atualizarCampos} />
+              ) : (
+                <CamposAvaliacaoComuns
+                  valores={campos}
+                  onChange={atualizarCampos}
+                  turmasSelecionadas={turmasSelecionadas}
+                  onErro={setErro}
+                  mostrarTipo={false}
+                />
+              )}
 
               {/* 2. Áreas e distribuição */}
               <div className="space-y-3 pt-2 border-t border-gray-200 dark:border-gray-800">
                 <div className="flex items-end justify-between gap-3 flex-wrap">
                   <div>
-                    <h3 className="text-sm font-bold text-ms-main">Áreas participantes e questões</h3>
+                    <h3 className="text-sm font-bold text-ms-main">{soNota ? 'Áreas participantes' : 'Áreas participantes e questões'}</h3>
                     <p className="text-xs text-ms-muted">
-                      A prova sai em blocos, nesta ordem. Marque "Gerar automaticamente" para já sortear as questões de uma área.
+                      {soNota
+                        ? 'O coordenador de cada área marcada escolhe quais professores da área recebem a nota.'
+                        : 'A prova sai em blocos, nesta ordem. Marque "Gerar automaticamente" para já sortear as questões de uma área.'}
                     </p>
                   </div>
+                  {!soNota && (
                   <div className="flex items-center gap-2">
                     <label className="text-xs font-bold text-ms-muted">Total de questões</label>
                     <input
@@ -274,6 +299,7 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
                       Dividir igualmente
                     </button>
                   </div>
+                  )}
                 </div>
 
                 <div className="border border-gray-200 dark:border-gray-800 rounded-xl divide-y divide-gray-200 dark:divide-gray-800">
@@ -299,7 +325,7 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
                             </span>
                             <span className="text-sm font-bold text-ms-main">{a}</span>
                           </button>
-                          {cfg.ativa && (
+                          {cfg.ativa && !soNota && (
                             <div className="flex items-center gap-3 flex-wrap">
                               {editando ? (
                                 <span className="text-xs text-ms-muted">{inseridas} já na prova</span>
@@ -324,7 +350,7 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
                             </div>
                           )}
                         </div>
-                        {cfg.ativa && cfg.gerarAuto && (
+                        {cfg.ativa && !soNota && cfg.gerarAuto && (
                           <SortearQuestoesPanel
                             area={a}
                             qtdMaxima={cfg.qtd}
@@ -338,10 +364,12 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
                   })}
                 </div>
 
+                {!soNota && (
                 <p className={`text-xs font-bold ${somaAreas === totalQuestoes ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
                   Soma das áreas: {somaAreas} de {totalQuestoes} questões
                   {somaAreas !== totalQuestoes && ' — ajuste as quantidades ou use "Dividir igualmente".'}
                 </p>
+                )}
               </div>
 
               {/* 3. Turmas */}
@@ -395,9 +423,40 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
             className="flex items-center gap-2 px-5 py-2 bg-ms-blue text-white rounded-lg text-sm font-bold hover:bg-blue-600 disabled:opacity-40 shadow transition-all"
           >
             {salvando && <Loader2 className="w-4 h-4 animate-spin" />}
-            {editando ? 'Salvar Alterações' : 'Criar Avaliação Geral'}
+            {editando ? 'Salvar Alterações' : soNota ? 'Criar Avaliação só de Nota' : 'Criar Avaliação Geral'}
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Avaliação só de nota: título, bimestre, valor e data — o resto (modo de aplicação,
+// instruções, embaralhamento, cartão, cálculo da nota) não se aplica, a nota é digitada.
+function CamposSoNota({ valores, onChange }: { valores: ValoresCamposAvaliacao; onChange: (p: Partial<ValoresCamposAvaliacao>) => void }) {
+  const input = 'w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue';
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="sm:col-span-2">
+        <label className="block text-xs font-bold text-ms-muted mb-1">Título da Avaliação *</label>
+        <input type="text" value={valores.titulo} onChange={(e) => onChange({ titulo: e.target.value })} className={input} />
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-ms-muted mb-1">Bimestre (Vigente Automático)</label>
+        <select value={valores.bimestre} onChange={(e) => onChange({ bimestre: Number(e.target.value) })} className={`${input} font-bold cursor-pointer`}>
+          <option value={1}>1º Bimestre</option>
+          <option value={2}>2º Bimestre</option>
+          <option value={3}>3º Bimestre</option>
+          <option value={4}>4º Bimestre</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-ms-muted mb-1">Valor Total (Pontos)</label>
+        <input type="number" step="0.5" value={valores.valorTotal} onChange={(e) => onChange({ valorTotal: Number(e.target.value) })} className={input} />
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-ms-muted mb-1">Data de Aplicação</label>
+        <input type="date" value={valores.dataAplicacao} onChange={(e) => onChange({ dataAplicacao: e.target.value })} className={input} />
       </div>
     </div>
   );

@@ -7,6 +7,7 @@ interface DecimalInputProps {
   disabled?: boolean;
   className?: string;
   placeholder?: string;
+  title?: string;
 }
 
 export function DecimalInput({
@@ -15,7 +16,8 @@ export function DecimalInput({
   max = 10,
   disabled,
   className,
-  placeholder
+  placeholder,
+  title
 }: DecimalInputProps) {
   const [tempValue, setTempValue] = useState<string>('');
 
@@ -69,6 +71,7 @@ export function DecimalInput({
       disabled={disabled}
       className={className}
       placeholder={placeholder}
+      title={title}
     />
   );
 }

@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { X, Plus, Trash2, Save, BookOpen, User, Loader2, Sparkles, AlertCircle, Calendar } from 'lucide-react';
 import { getCorGradiente } from '../utils/academicUtils';
 import { DecimalInput } from './DecimalInput';
+import { buscarNotasBloqueadas } from '../services/avaliacoesService';
 
 interface GradeCellEditModalProps {
   isOpen: boolean;
@@ -42,6 +43,8 @@ export function GradeCellEditModal({
   const [disciplinaId, setDisciplinaId] = useState<string | null>(null);
   const [avaliacoes, setAvaliacoes] = useState<AvaliacaoComNota[]>([]);
   const [editedGrades, setEditedGrades] = useState<Record<string, number>>({});
+  // Avaliação de área/geral com corretor: este professor só vê a nota (avaliacao_id -> corretor).
+  const [bloqueadas, setBloqueadas] = useState<Record<string, string>>({});
   
   // States for creating a new assessment
   const [isCreatingAval, setIsCreatingAval] = useState(false);
@@ -129,6 +132,7 @@ export function GradeCellEditModal({
 
       setAvaliacoes(resolvedAvals);
       setEditedGrades(gradesMap);
+      setBloqueadas(await buscarNotasBloqueadas(resolvedAvals.map((a) => a.id)).catch(() => ({})));
     } catch (err: any) {
       console.error('Error loading cell edit data:', err);
       setErrorMsg(err.message || 'Erro ao carregar dados de notas.');
@@ -236,7 +240,8 @@ export function GradeCellEditModal({
     setErrorMsg(null);
     try {
       // Build batch upserts
-      const upsertData = Object.keys(editedGrades).map(avalId => ({
+      // Notas travadas pelo corretor ficam de fora — o banco recusaria e derrubaria o resto.
+      const upsertData = Object.keys(editedGrades).filter(avalId => !bloqueadas[avalId]).map(avalId => ({
         avaliacao_id: avalId,
         aluno_id: studentId,
         nota: editedGrades[avalId]
@@ -451,6 +456,8 @@ export function GradeCellEditModal({
                                     value={grade}
                                     onChange={val => handleGradeChange(av.id, String(val), av.valor_maximo)}
                                     max={av.valor_maximo}
+                                    disabled={!!bloqueadas[av.id]}
+                                    title={bloqueadas[av.id] ? `Nota lançada pelo corretor desta turma: ${bloqueadas[av.id]}` : undefined}
                                     className={`w-20 text-center p-2 rounded-xl text-xs font-black focus:border-blue-500 outline-none border transition-all ${
                                       theme === 'light' ? 'bg-white border-blue-200 text-blue-900' : 'bg-gray-800 border-gray-700 text-white'
                                     }`}

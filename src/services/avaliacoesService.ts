@@ -19,10 +19,12 @@ import type {
   NovaAvaliacaoAreaInput,
   NovaAvaliacaoGeralInput,
   FiltroSorteio,
+  NotaAlunoTurma,
 } from '../types/avaliacoes';
+import type { ModoNota, PonderadaEscopo } from '../types/correcaoOmr';
 import { QUESTION_SELECT_FIELDS, type Question } from '../types/bancoQuestoes';
 
-const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at, embaralhar, qtd_versoes, cartao_separado, cartao_posicao, modo_nota, ponderada_escopo, lancar_no_boletim, eh_prova_area';
+const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at, embaralhar, qtd_versoes, cartao_separado, cartao_posicao, modo_nota, ponderada_escopo, lancar_no_boletim, eh_prova_area, eh_prova_geral, somente_nota, area_conhecimento';
 
 function mapAvaliacaoRow(row: Record<string, unknown>): Avaliacao {
   const turmas = (row.prova_turmas as { turmas: { id: string; nome: string } | null }[] | undefined) ?? [];
@@ -680,7 +682,10 @@ export async function obterQuestoesCotaArea(
 // ---- Avaliação Geral (simulado multiárea — ver create_avaliacao_geral.sql) ----
 
 export async function criarAvaliacaoGeral(dados: NovaAvaliacaoGeralInput): Promise<string> {
-  const { data, error } = await supabase.rpc('rpc_criar_avaliacao_geral', paramsAvaliacaoGeral(dados));
+  const { data, error } = await supabase.rpc('rpc_criar_avaliacao_geral', {
+    ...paramsAvaliacaoGeral(dados),
+    p_somente_nota: !!dados.somente_nota,
+  });
   if (error) throw error;
   return data as string;
 }
@@ -713,6 +718,55 @@ function paramsAvaliacaoGeral(dados: NovaAvaliacaoGeralInput) {
     p_cartao_separado: dados.cartao_separado,
     p_cartao_posicao: dados.cartao_posicao,
   };
+}
+
+// ---- Corretor por turma, notas por turma e cálculo da nota (avaliações de área/geral) ----
+// Ver add_corretores_e_avaliacao_somente_nota.sql e add_modo_nota_avaliacao_area_geral.sql.
+
+/** Substitui a lista inteira; turma sem corretor = qualquer professor vinculado altera. */
+export async function definirCorretores(provaId: string, corretores: { turma_id: string; professor_id: string | null }[]): Promise<void> {
+  const { error } = await supabase.rpc('rpc_definir_corretores', { p_prova_id: provaId, p_corretores: corretores });
+  if (error) throw error;
+}
+
+/** Das avaliações informadas, as que o usuário logado não pode alterar, com o nome do corretor. */
+export async function buscarNotasBloqueadas(avaliacaoIds: string[]): Promise<Record<string, string>> {
+  if (avaliacaoIds.length === 0) return {};
+  const { data, error } = await supabase.rpc('rpc_notas_bloqueadas', { p_avaliacao_ids: avaliacaoIds });
+  if (error) throw error;
+  return Object.fromEntries(((data ?? []) as { avaliacao_id: string; corretor_nome: string }[]).map((r) => [r.avaliacao_id, r.corretor_nome]));
+}
+
+export async function listarNotasAvaliacaoTurma(provaId: string, turmaId: string): Promise<NotaAlunoTurma[]> {
+  const { data, error } = await supabase.rpc('rpc_notas_avaliacao_turma', { p_prova_id: provaId, p_turma_id: turmaId });
+  if (error) throw error;
+  return (data ?? []) as NotaAlunoTurma[];
+}
+
+/** Grava a nota num campo vinculado; o banco copia para os demais professores da turma. */
+export async function lancarNotaManual(avaliacaoId: string, alunoId: string, nota: number | null, confirmarSubstituicao = false): Promise<void> {
+  const { error } = await supabase.rpc('rpc_lancar_nota_manual_area', {
+    p_avaliacao_id: avaliacaoId,
+    p_aluno_id: alunoId,
+    p_nota: nota,
+    p_confirmar_substituicao: confirmarSubstituicao,
+  });
+  if (error) throw error;
+}
+
+export async function buscarModoNota(provaId: string): Promise<{ modo_nota: ModoNota; ponderada_escopo: PonderadaEscopo }> {
+  const { data, error } = await supabase.from('provas').select('modo_nota, ponderada_escopo').eq('id', provaId).single();
+  if (error) throw error;
+  return data as { modo_nota: ModoNota; ponderada_escopo: PonderadaEscopo };
+}
+
+export async function definirModoNota(provaId: string, modoNota: ModoNota, ponderadaEscopo: PonderadaEscopo): Promise<void> {
+  const { error } = await supabase.rpc('rpc_definir_modo_nota', {
+    p_prova_id: provaId,
+    p_modo_nota: modoNota,
+    p_ponderada_escopo: ponderadaEscopo,
+  });
+  if (error) throw error;
 }
 
 // Sorteio no servidor (só objetivas). Pode devolver menos que `qtd` se o banco não tiver

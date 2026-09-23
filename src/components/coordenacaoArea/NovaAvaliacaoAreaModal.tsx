@@ -6,7 +6,7 @@ import type { AreaConhecimento } from '../../utils/areasConhecimento';
 import { disciplinaPertenceAArea, normalizarArea } from '../../utils/areasConhecimento';
 import type { AvaliacaoArea, CotaProfessorInput, NovaAvaliacaoAreaInput } from '../../types/avaliacoes';
 import type { ModoEmbaralhar } from '../../types/correcaoOmr';
-import { criarAvaliacaoArea, editarAvaliacaoArea, buscarInstrucoesPadrao } from '../../services/avaliacoesService';
+import { criarAvaliacaoArea, editarAvaliacaoArea, buscarInstrucoesPadrao, buscarModoNota, definirModoNota } from '../../services/avaliacoesService';
 import { getCurrentBimestre } from '../../utils/academicUtils';
 import { CamposAvaliacaoComuns, versoesEfetivas, type ValoresCamposAvaliacao } from './CamposAvaliacaoComuns';
 
@@ -40,6 +40,8 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
     qtdVersoes: avaliacaoExistente?.qtd_versoes ?? 1,
     modoVersoes: 'FIXO',
     posicaoCartao: avaliacaoExistente?.cartao_separado ? 'SEPARADO' : (avaliacaoExistente?.cartao_posicao ?? 'FIM'),
+    modoNota: 'DIRETA',
+    ponderadaEscopo: 'PROVA',
   }));
   const atualizarCampos = (patch: Partial<ValoresCamposAvaliacao>) => setCampos((prev) => ({ ...prev, ...patch }));
   const { titulo, bimestre, valorTotal, modo, tipo, dataAplicacao, prazoEntrega, instrucoes, embaralhar, posicaoCartao } = campos;
@@ -70,6 +72,9 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
             .select('turma_id')
             .eq('prova_id', avaliacaoExistente.id);
           setTurmasSelecionadas((ptData ?? []).map((r: { turma_id: string }) => r.turma_id));
+
+          const salvo = await buscarModoNota(avaliacaoExistente.id).catch(() => null);
+          if (salvo) atualizarCampos({ modoNota: salvo.modo_nota, ponderadaEscopo: salvo.ponderada_escopo });
 
           if (avaliacaoExistente.prazo_entrega) {
             const d = new Date(avaliacaoExistente.prazo_entrega);
@@ -289,11 +294,10 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
         cartao_posicao: posicaoCartao === 'INICIO' ? 'INICIO' : 'FIM',
       };
 
-      if (editando) {
-        await editarAvaliacaoArea(avaliacaoExistente!.id, payload);
-      } else {
-        await criarAvaliacaoArea(payload);
-      }
+      const provaId = editando
+        ? await editarAvaliacaoArea(avaliacaoExistente!.id, payload)
+        : await criarAvaliacaoArea(payload);
+      await definirModoNota(provaId || avaliacaoExistente!.id, campos.modoNota, campos.ponderadaEscopo);
       onCriada();
     } catch (e: any) {
       setErro(e.message || `Erro ao ${editando ? 'salvar' : 'criar'} avaliação de área.`);

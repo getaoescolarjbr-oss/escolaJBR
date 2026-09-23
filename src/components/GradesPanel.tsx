@@ -6,6 +6,7 @@ import { autoUpdateExpiredAbsences, isStudentAbsentOnDate } from '../utils/stude
 import { arredondarNotaMS, getCorGradiente, getBimestreFromDate, pesoDoVisto } from '../utils/academicUtils';
 import { RAVListModal } from './RAVListModal';
 import { DecimalInput } from './DecimalInput';
+import { buscarNotasBloqueadas } from '../services/avaliacoesService';
 
 interface GradesPanelProps {
   professor: Professor;
@@ -20,6 +21,8 @@ interface GradesPanelProps {
 export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, theme, refreshKey = 0, isLocked = false }: GradesPanelProps) {
   const [alunos, setAlunos] = useState<ListaParaVistos[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
+  // avaliacao_id -> nome do corretor, para os campos que este professor só pode ver.
+  const [bloqueadas, setBloqueadas] = useState<Record<string, string>>({});
   const [subTab, setSubTab] = useState<'cadastro' | 'boletim'>('boletim');
   const [notas, setNotas] = useState<Record<string, Record<string, number>>>({});
   const [vistosCalculados, setVistosCalculados] = useState<Record<string, number>>({});
@@ -89,6 +92,10 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
         .eq('disciplina_id', disciplinaId)
         .eq('bimestre_id', bimestreId);
       if (dataAval) setAvaliacoes(dataAval);
+      // Avaliação de área/geral com corretor definido: só ele (e a coordenação) altera.
+      buscarNotasBloqueadas((dataAval ?? []).map((a: Avaliacao) => a.id))
+        .then(setBloqueadas)
+        .catch(() => setBloqueadas({}));
 
       // 3. Buscar Notas de Avaliações
       if (dataAval && dataAval.length > 0) {
@@ -264,7 +271,15 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
         });
       } else {
         console.error('Erro ao lançar nota:', e);
-        alert(msg || 'Não foi possível salvar a nota.');
+        alert((msg || 'Não foi possível salvar a nota.').replace(/^NOTA_BLOQUEADA:\s*/, ''));
+        // Nada foi salvo: volta a célula ao valor anterior.
+        setNotas((atual) => {
+          const revertido = { ...atual };
+          if (revertido[alunoId]) {
+            revertido[alunoId] = { ...revertido[alunoId], [avalId]: notaAnterior as number };
+          }
+          return revertido;
+        });
       }
     }
   };
@@ -610,11 +625,12 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                                     {isPosterior ? (
                                       <span className="text-xs text-gray-505 font-medium italic">N/A</span>
                                     ) : (
-                                      <DecimalInput 
+                                      <DecimalInput
                                           value={notas[aluno.aluno_id]?.[av.id] ?? ''}
                                           onChange={(val) => handleUpdateNota(aluno.aluno_id, av.id, val)}
                                           max={av.valor_maximo}
-                                          disabled={isLocked}
+                                          disabled={isLocked || !!bloqueadas[av.id]}
+                                          title={bloqueadas[av.id] ? `Nota lançada pelo corretor desta turma: ${bloqueadas[av.id]}` : undefined}
                                           className={`w-12 sm:w-16 text-center p-1 rounded text-xs font-bold focus:border-blue-500 outline-none border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                                               theme === 'light' ? 'bg-blue-50/30 border-blue-100 text-blue-900' : 'bg-ms-dark/5 border-ms-border/50 text-ms-main'
                                           }`}

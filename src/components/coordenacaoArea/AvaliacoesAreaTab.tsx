@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText, Lock, Unlock, Pencil, QrCode, Settings, Undo2, Layers, Link2, SlidersHorizontal } from 'lucide-react';
+import { Loader2, Plus, Send, Eye, CheckCircle, Clock, Trash2, Users, FileText, Lock, Unlock, Pencil, QrCode, Settings, Undo2, Layers, Link2, SlidersHorizontal, UserCheck, ClipboardList, FileSpreadsheet } from 'lucide-react';
 import type { AvaliacaoArea, ProvaAreaCota } from '../../types/avaliacoes';
 import type { AreaConhecimento } from '../../utils/areasConhecimento';
 import { listarAvaliacoesArea, publicarAvaliacaoArea, excluirAvaliacao, contarImpressaoELeituraAvaliacao, definirBloqueioAvaliacaoArea, despublicarAvaliacao, linkPublicoSimulado } from '../../services/avaliacoesService';
 import { NovaAvaliacaoAreaModal } from './NovaAvaliacaoAreaModal';
 import { NovaAvaliacaoGeralModal } from './NovaAvaliacaoGeralModal';
 import { ConfigurarAreaGeralModal } from './ConfigurarAreaGeralModal';
+import { CorretoresModal } from './CorretoresModal';
+import { NotasTurmaModal } from './NotasTurmaModal';
+import { faixaDoTipo } from './faixaAvaliacao';
 import { InserirQuestoesAreaModal } from './InserirQuestoesAreaModal';
 import { ReimprimirAvaliacaoModal } from '../bancoQuestoes/avaliacoes/ReimprimirAvaliacaoModal';
 import { ImprimirFolhasModal } from '../bancoQuestoes/avaliacoes/ImprimirFolhasModal';
@@ -34,6 +37,19 @@ export function AvaliacoesAreaTab({ area }: Props) {
   const [showNovaGeral, setShowNovaGeral] = useState(false);
   const [configurandoGeral, setConfigurandoGeral] = useState<AvaliacaoArea | null>(null);
   const [editandoGeral, setEditandoGeral] = useState<AvaliacaoArea | null>(null);
+  const [showNovaSoNota, setShowNovaSoNota] = useState(false);
+  const [corretoresDe, setCorretoresDe] = useState<AvaliacaoArea | null>(null);
+  const [notasDe, setNotasDe] = useState<AvaliacaoArea | null>(null);
+  const [grupo, setGrupo] = useState<GrupoAvaliacao>(() => {
+    try { return localStorage.getItem('coord-aval-grupo') === 'AREA' ? 'AREA' : 'GERAL'; } catch { return 'GERAL'; }
+  });
+  function escolherGrupo(g: GrupoAvaliacao) {
+    setGrupo(g);
+    try { localStorage.setItem('coord-aval-grupo', g); } catch { /* sem armazenamento: só não lembra */ }
+  }
+  const gerais = avaliacoes.filter((a) => a.eh_prova_geral);
+  const daArea = avaliacoes.filter((a) => !a.eh_prova_geral);
+  const lista = grupo === 'GERAL' ? gerais : daArea;
   const [editandoAvaliacao, setEditandoAvaliacao] = useState<AvaliacaoArea | null>(null);
   const [inserindoCota, setInserindoCota] = useState<{ avaliacao: AvaliacaoArea; cota: ProvaAreaCota } | null>(null);
   const [reimprimirDe, setReimprimirDe] = useState<AvaliacaoArea | null>(null);
@@ -184,27 +200,65 @@ export function AvaliacoesAreaTab({ area }: Props) {
 
   return (
     <div className="space-y-4">
+      {/* Grupos: cada tipo de avaliação tem sua cor e sua lista (mais recentes primeiro). */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {([
+          { id: 'GERAL', titulo: 'Avaliações Gerais', sub: 'Várias áreas, um só gabarito', qtd: gerais.length, Icone: Layers, ativo: 'bg-violet-700 border-violet-700 text-white', inativo: 'bg-violet-50 border-violet-300 text-violet-900 dark:bg-violet-950/40 dark:border-violet-800 dark:text-violet-200' },
+          { id: 'AREA', titulo: `Avaliações da Área`, sub: area, qtd: daArea.length, Icone: FileText, ativo: 'bg-emerald-700 border-emerald-700 text-white', inativo: 'bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-200' },
+        ] as const).map((g) => {
+          const sel = grupo === g.id;
+          return (
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => escolherGrupo(g.id)}
+              className={`flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border-2 text-left transition-all ${sel ? g.ativo + ' shadow-lg' : g.inativo + ' hover:shadow'}`}
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <g.Icone className="w-6 h-6 shrink-0" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-black">{g.titulo}</span>
+                  <span className="block text-xs font-bold opacity-80 truncate">{g.sub}</span>
+                </span>
+              </span>
+              <span className={`text-lg font-black px-3 py-0.5 rounded-full ${sel ? 'bg-white/20' : 'bg-white/70 dark:bg-black/20'}`}>{g.qtd}</span>
+            </button>
+          );
+        })}
+      </div>
+
       <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div>
-          <h2 className="text-base font-bold text-ms-main">Avaliações Colaborativas da Área</h2>
-          <p className="text-xs text-ms-muted">
-            Elabore avaliações interdisciplinares com cotas de questões distribuídas para os professores da área.
-          </p>
-        </div>
+        <p className="text-xs text-ms-muted">
+          {grupo === 'GERAL'
+            ? 'Avaliações montadas por várias áreas (com questões ou só de nota). Mais recentes primeiro.'
+            : `Avaliações colaborativas de ${area}, com cotas de questões por professor. Mais recentes primeiro.`}
+        </p>
         <div className="flex items-center gap-2 flex-wrap">
-          <button
-            onClick={() => setShowNovaGeral(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-ms-dark border border-ms-blue text-ms-blueText rounded-xl text-xs font-bold hover:bg-blue-50 dark:hover:bg-ms-blue/10 shadow-sm transition-all"
-            title="Simulado único com várias áreas e um só gabarito"
-          >
-            <Layers className="w-4 h-4" /> Criar Avaliação Geral
-          </button>
-          <button
-            onClick={() => setShowNovaModal(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-ms-blue text-white rounded-xl text-xs font-bold hover:bg-blue-600 shadow transition-all"
-          >
-            <Plus className="w-4 h-4" /> Nova Avaliação da Área
-          </button>
+          {grupo === 'GERAL' ? (
+            <>
+              <button
+                onClick={() => setShowNovaGeral(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-violet-700 text-white rounded-xl text-xs font-bold hover:bg-violet-800 shadow transition-all"
+                title="Avaliação única com várias áreas e um só gabarito"
+              >
+                <Layers className="w-4 h-4" /> Criar Avaliação Geral
+              </button>
+              <button
+                onClick={() => setShowNovaSoNota(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-indigo-700 text-white rounded-xl text-xs font-bold hover:bg-indigo-800 shadow transition-all"
+                title="Sem questões: só cria o campo de nota no diário dos professores escolhidos por cada área"
+              >
+                <FileSpreadsheet className="w-4 h-4" /> Nova Avaliação só de Nota
+              </button>
+            </>
+          ) : (
+            <button
+              onClick={() => setShowNovaModal(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-emerald-700 text-white rounded-xl text-xs font-bold hover:bg-emerald-800 shadow transition-all"
+            >
+              <Plus className="w-4 h-4" /> Nova Avaliação da Área
+            </button>
+          )}
         </div>
       </div>
 
@@ -214,18 +268,19 @@ export function AvaliacoesAreaTab({ area }: Props) {
         <div className="py-12 text-center">
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" />
         </div>
-      ) : avaliacoes.length === 0 ? (
+      ) : lista.length === 0 ? (
         <div className="text-center py-12 bg-ms-card border border-gray-800 rounded-2xl p-6">
           <FileText className="w-12 h-12 text-ms-muted mx-auto mb-2 opacity-50" />
-          <p className="text-ms-main font-bold text-sm">Nenhuma avaliação de área criada ainda.</p>
-          <p className="text-xs text-ms-muted mt-1">
-            Clique no botão acima para criar a primeira avaliação colaborativa de {area}.
+          <p className="text-ms-main font-bold text-sm">
+            {grupo === 'GERAL' ? 'Nenhuma avaliação geral ainda.' : `Nenhuma avaliação da área de ${area} ainda.`}
           </p>
+          <p className="text-xs text-ms-muted mt-1">Use o botão acima para criar a primeira.</p>
         </div>
       ) : (
         <div className="space-y-4">
-          {avaliacoes.map((av) => {
+          {lista.map((av) => {
             const geral = !!av.eh_prova_geral;
+            const soNota = !!av.somente_nota;
             const areasGeral = av.areas ?? [];
             // Na geral, o card mostra só as cotas da área aberta; o andamento das outras
             // áreas aparece resumido nos selos de área.
@@ -236,30 +291,35 @@ export function AvaliacoesAreaTab({ area }: Props) {
             const totalInserido = geral
               ? areasGeral.reduce((s, a) => s + a.qtd_inserida, 0)
               : cotas.reduce((s, c) => s + c.qtd_inserida, 0);
-            const todasPreenchidas = geral
+            const todasPreenchidas = soNota
+              ? areasGeral.length > 0 && areasGeral.every((a) => a.configurada)
+              : geral
               ? areasGeral.length > 0 && areasGeral.every((a) => a.qtd_inserida === a.qtd_questoes)
               : totalPrevisto > 0 && totalInserido >= totalPrevisto;
             const podePublicar = todasPreenchidas && (!geral || !!av.criado_por_mim);
             const motivoNaoPublica = !todasPreenchidas
-              ? geral ? 'Aguardando todas as áreas completarem as questões' : 'Aguardando preenchimento das cotas de questões'
+              ? soNota ? 'Aguardando todas as áreas escolherem quem recebe a nota' : geral ? 'Aguardando todas as áreas completarem as questões' : 'Aguardando preenchimento das cotas de questões'
               : 'Somente quem criou a avaliação geral pode publicá-la';
-            const descricaoTipo = geral
+            const descricaoTipo = soNota
+              ? 'Só nota (digitada pelo corretor)'
+              : geral
               ? av.tipo === 'AVALIACAO'
-                ? 'Simulado com nota'
-                : `Simulado público ${av.lancar_no_boletim ? 'com' : 'sem'} nota`
+                ? 'Avaliação com nota'
+                : `Avaliação pública ${av.lancar_no_boletim ? 'com' : 'sem'} nota`
               : av.tipo === 'AVALIACAO' ? 'Avaliação com nota' : 'Simulado';
+
+            const faixa = faixaDoTipo(av);
 
             return (
               <div key={av.id} className="bg-ms-card border border-gray-800 rounded-xl p-5 space-y-4">
+                <div className={`-mx-5 -mt-5 px-5 py-2 rounded-t-xl flex items-center gap-2 text-white text-xs font-black uppercase tracking-wider ${faixa.cor}`}>
+                  <faixa.Icone className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{faixa.rotulo}</span>
+                </div>
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-sm font-bold text-ms-main">{av.titulo}</h3>
-                      {geral && (
-                        <span className="flex items-center gap-1 text-xs font-bold px-2 py-0.5 rounded-full bg-violet-100 text-violet-900 border border-violet-300 dark:bg-violet-950 dark:text-violet-300 dark:border-violet-800">
-                          <Layers className="w-3 h-3" /> Avaliação Geral
-                        </span>
-                      )}
                       <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
                         {av.bimestre_id}º Bimestre
                       </span>
@@ -281,9 +341,15 @@ export function AvaliacoesAreaTab({ area }: Props) {
                         </span>
                       )}
                     </div>
-                    <p className="text-xs text-ms-muted mt-1">
-                      {descricaoTipo} · Valor {Number(av.valor_total).toFixed(2)} pts · Modo {av.modo}
-                      {av.turma_nomes && av.turma_nomes.length > 0 ? ` · Turmas: ${av.turma_nomes.join(', ')}` : ''}
+                    <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                      <span className="text-[11px] font-black uppercase tracking-wider text-ms-muted">{(av.turma_nomes?.length ?? 0) > 1 ? 'Turmas' : 'Turma'}:</span>
+                      {(av.turma_nomes ?? []).length === 0 && <span className="text-xs text-ms-muted">—</span>}
+                      {[...(av.turma_nomes ?? [])].sort().map((t) => (
+                        <span key={t} className="px-2.5 py-1 rounded-lg bg-blue-700 text-white text-sm font-black shadow-sm">{t}</span>
+                      ))}
+                    </div>
+                    <p className="text-xs text-ms-muted mt-1.5">
+                      {descricaoTipo} · Valor {Number(av.valor_total).toFixed(2)} pts{soNota ? '' : ` · Modo ${av.modo}`}
                     </p>
                   </div>
 
@@ -314,7 +380,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                       <button
                         onClick={() => setConfigurandoGeral(av)}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-blue text-white rounded-lg text-xs font-bold hover:bg-blue-600 shadow-sm transition-colors"
-                        title="Escolher quem recebe a nota e quem insere as questões desta área"
+                        title={soNota ? 'Escolher quem recebe a nota nesta área' : 'Escolher quem recebe a nota e quem insere as questões desta área'}
                       >
                         <SlidersHorizontal className="w-3.5 h-3.5" /> Configurar {area}
                       </button>
@@ -323,11 +389,11 @@ export function AvaliacoesAreaTab({ area }: Props) {
                       <button
                         onClick={() => {
                           navigator.clipboard.writeText(linkPublicoSimulado(av.token_publico!));
-                          alert('Link do simulado copiado. O aluno abre o link e digita o código do SGDE.');
+                          alert('Link da avaliação copiado. O aluno abre o link e digita o código do SGDE.');
                         }}
                         className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors"
                       >
-                        <Link2 className="w-3.5 h-3.5" /> Copiar link do simulado
+                        <Link2 className="w-3.5 h-3.5" /> Copiar link da avaliação
                       </button>
                     )}
                     {av.status !== 'PUBLICADA' && (
@@ -339,6 +405,24 @@ export function AvaliacoesAreaTab({ area }: Props) {
                         <Pencil className="w-3.5 h-3.5" /> Editar
                       </button>
                     )}
+                    <button
+                      onClick={() => setCorretoresDe(av)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors"
+                      title="Escolher o professor que corrige/lança a nota de cada turma — os demais só veem a nota"
+                    >
+                      <UserCheck className="w-3.5 h-3.5" /> Corretores{av.corretores?.length ? ` (${av.corretores.length})` : ''}
+                    </button>
+                    {av.status === 'PUBLICADA' && (
+                      <button
+                        onClick={() => setNotasDe(av)}
+                        className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors"
+                        title="Conferir e alterar as notas por turma"
+                      >
+                        <ClipboardList className="w-3.5 h-3.5" /> Notas
+                      </button>
+                    )}
+                    {!soNota && (
+                    <>
                     <button
                       onClick={() => setReimprimirDe(av)}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors"
@@ -366,6 +450,8 @@ export function AvaliacoesAreaTab({ area }: Props) {
                       >
                         <Users className="w-3.5 h-3.5" /> Resultados
                       </button>
+                    )}
+                    </>
                     )}
                     <button
                       onClick={() => alternarBloqueio(av)}
@@ -401,12 +487,15 @@ export function AvaliacoesAreaTab({ area }: Props) {
                 {/* Status das Cotas dos Professores */}
                 <div className="bg-ms-dark/60 rounded-xl p-3 border border-gray-800/80 space-y-2">
                   <div className="flex items-center justify-between text-xs font-bold text-ms-muted">
-                    <span>Acompanhamento das Cotas por Docente</span>
+                    <span>{soNota ? 'Áreas e professores que recebem a nota' : 'Acompanhamento das Cotas por Docente'}</span>
+                    {!soNota && (
                     <span className={todasPreenchidas ? 'text-emerald-400' : 'text-amber-400'}>
                       {totalInserido} de {totalPrevisto} questões inseridas
                     </span>
+                    )}
                   </div>
 
+                  {!soNota && (
                   <div className="flex items-center gap-2 flex-wrap text-[11px] text-ms-muted pb-1 border-b border-gray-800/80">
                     <Clock className="w-3.5 h-3.5 shrink-0" />
                     <span>Bloquear edição automaticamente a partir de:</span>
@@ -433,11 +522,12 @@ export function AvaliacoesAreaTab({ area }: Props) {
                       </button>
                     )}
                   </div>
+                  )}
 
                   {geral && (
                     <div className="flex items-center gap-2 flex-wrap">
                       {areasGeral.map((a) => {
-                        const completa = a.qtd_inserida === a.qtd_questoes;
+                        const completa = soNota ? a.configurada : a.qtd_inserida === a.qtd_questoes;
                         return (
                           <span
                             key={a.area_conhecimento}
@@ -448,14 +538,15 @@ export function AvaliacoesAreaTab({ area }: Props) {
                             } ${a.area_conhecimento === area ? 'ring-2 ring-ms-blueText' : ''}`}
                             title={a.configurada ? 'Área já configurada pelo PCA' : 'O PCA desta área ainda não configurou'}
                           >
-                            {a.area_conhecimento}: {a.qtd_inserida}/{a.qtd_questoes}
+                            {a.area_conhecimento}{soNota ? '' : `: ${a.qtd_inserida}/${a.qtd_questoes}`}
                             {!a.configurada && ' · aguardando PCA'}
+                            {soNota && a.configurada && ` · ${(av.notas_professores ?? []).filter((n) => n.area_conhecimento === a.area_conhecimento).length} prof.`}
                           </span>
                         );
                       })}
                     </div>
                   )}
-                  {geral && cotas.length === 0 && areasGeral.some((a) => a.area_conhecimento === area && a.qtd_inserida < a.qtd_questoes) && (
+                  {geral && !soNota && cotas.length === 0 && areasGeral.some((a) => a.area_conhecimento === area && a.qtd_inserida < a.qtd_questoes) && (
                     <p className="text-[11px] text-ms-muted">
                       Nenhum professor de {area} com cota ainda. Use "Configurar {area}" para distribuir as questões ou sortear.
                     </p>
@@ -522,6 +613,30 @@ export function AvaliacoesAreaTab({ area }: Props) {
           }}
         />
       )}
+
+      {showNovaSoNota && (
+        <NovaAvaliacaoGeralModal
+          somenteNota
+          onClose={() => setShowNovaSoNota(false)}
+          onCriada={() => {
+            setShowNovaSoNota(false);
+            carregar();
+          }}
+        />
+      )}
+
+      {corretoresDe && (
+        <CorretoresModal
+          avaliacao={corretoresDe}
+          onClose={() => setCorretoresDe(null)}
+          onSalvo={() => {
+            setCorretoresDe(null);
+            carregar();
+          }}
+        />
+      )}
+
+      {notasDe && <NotasTurmaModal avaliacao={notasDe} onClose={() => setNotasDe(null)} />}
 
       {editandoGeral && (
         <NovaAvaliacaoGeralModal
@@ -601,3 +716,6 @@ export function AvaliacoesAreaTab({ area }: Props) {
     </div>
   );
 }
+
+type GrupoAvaliacao = 'GERAL' | 'AREA';
+

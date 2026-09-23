@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BookUp, Camera, Check, ClipboardCheck, Copy, Eye, Loader2, Pencil, Printer, QrCode, Send, Square, Trash2, Undo2, Users, Layers } from 'lucide-react';
+import { BookUp, Camera, Check, ClipboardCheck, Copy, Eye, Loader2, Pencil, Printer, QrCode, Send, Square, Trash2, Undo2, Users, Layers, FileText, User } from 'lucide-react';
 import type { Avaliacao, AvaliacaoArea, ProvaAreaCota, StatusAvaliacao } from '../../../types/avaliacoes';
 import {
   atualizarStatusAvaliacao,
@@ -21,6 +21,7 @@ import { ModoCorrecaoPage } from '../../correcao/ModoCorrecaoPage';
 import { ConfirmacaoSubstituicaoError, lancarNotasNoBoletim } from '../../../services/correcaoOmrService';
 import { InserirQuestoesAreaModal } from '../../coordenacaoArea/InserirQuestoesAreaModal';
 import { useAuth } from '../../../hooks/useAuth';
+import { faixaDoTipo, faixaIndividual } from '../../coordenacaoArea/faixaAvaliacao';
 
 const STATUS_LABEL: Record<StatusAvaliacao, string> = {
   RASCUNHO: 'Rascunho',
@@ -56,6 +57,17 @@ export function MinhasAvaliacoesTab() {
   const [folhasDe, setFolhasDe] = useState<Avaliacao | null>(null);
   const [corrigindoCameraDe, setCorrigindoCameraDe] = useState<Avaliacao | null>(null);
   const [notasLancadas, setNotasLancadas] = useState<string | null>(null);
+  // Grupo aberto (geral / da área / individual) — lembrado no navegador.
+  const [grupo, setGrupo] = useState<GrupoProfessor>(() => {
+    try {
+      const g = localStorage.getItem('prof-aval-grupo');
+      return g === 'GERAL' || g === 'AREA' ? g : 'INDIVIDUAL';
+    } catch { return 'INDIVIDUAL'; }
+  });
+  function escolherGrupo(g: GrupoProfessor) {
+    setGrupo(g);
+    try { localStorage.setItem('prof-aval-grupo', g); } catch { /* sem armazenamento: só não lembra */ }
+  }
 
   async function copiarLinkSimulado(a: Avaliacao) {
     await navigator.clipboard.writeText(linkPublicoSimulado(a.token_publico));
@@ -184,6 +196,23 @@ export function MinhasAvaliacoesTab() {
 
   if (loading) return <div className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
 
+  const proprias = avaliacoes.filter((a) => grupoDe(a) === grupo);
+  // Cotas do professor nas avaliações de área/geral do grupo. A que ele mesmo criou já
+  // aparece acima com todas as ações — aqui entra só a parte de inserir questões dela.
+  const cotasDoGrupo = cotasDeOutros(grupo);
+
+  // Avaliações de área/geral em que o professor tem cota, criadas por OUTRA pessoa (as que
+  // ele criou já aparecem na lista própria, com a cota dentro do cartão).
+  function cotasDeOutros(g: GrupoProfessor) {
+    if (g === 'INDIVIDUAL') return [];
+    return avaliacoesArea.filter(
+      (av) =>
+        (g === 'GERAL') === !!av.eh_prova_geral &&
+        (av.cotas ?? []).some((c) => c.eh_minha_cota) &&
+        !avaliacoes.some((a) => a.id === av.id)
+    );
+  }
+
   const btnSecondary =
     'flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 text-gray-800 dark:text-ms-main rounded-lg text-xs font-bold hover:bg-gray-100 dark:hover:bg-gray-800 shadow-sm transition-colors';
 
@@ -191,28 +220,68 @@ export function MinhasAvaliacoesTab() {
     <div className="space-y-4">
       {erro && <p className="text-sm text-red-600 dark:text-red-400 font-bold">{erro}</p>}
 
-      {avaliacoes.length === 0 ? (
-        <p className="text-center text-ms-muted py-12">Nenhuma avaliação criada ainda. Use a aba "Nova Avaliação" para montar a primeira.</p>
-      ) : (
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        {([
+          { id: 'GERAL', titulo: 'Avaliações Gerais', sub: 'Várias áreas, um só gabarito', Icone: Layers, ativo: 'bg-violet-700 border-violet-700 text-white', inativo: 'bg-violet-50 border-violet-300 text-violet-900 dark:bg-violet-950/40 dark:border-violet-800 dark:text-violet-200' },
+          { id: 'AREA', titulo: 'Avaliações da Área', sub: 'Colaborativas, com cotas', Icone: FileText, ativo: 'bg-emerald-700 border-emerald-700 text-white', inativo: 'bg-emerald-50 border-emerald-300 text-emerald-900 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-200' },
+          { id: 'INDIVIDUAL', titulo: 'Avaliações Individuais', sub: 'Criadas por você', Icone: User, ativo: 'bg-amber-700 border-amber-700 text-white', inativo: 'bg-amber-50 border-amber-300 text-amber-900 dark:bg-amber-950/40 dark:border-amber-800 dark:text-amber-200' },
+        ] as const).map((g) => {
+          const sel = grupo === g.id;
+          const qtd = avaliacoes.filter((a) => grupoDe(a) === g.id).length + cotasDeOutros(g.id).length;
+          return (
+            <button
+              key={g.id}
+              type="button"
+              onClick={() => escolherGrupo(g.id)}
+              className={`flex items-center justify-between gap-3 px-4 py-3 rounded-2xl border-2 text-left transition-all ${sel ? g.ativo + ' shadow-lg' : g.inativo + ' hover:shadow'}`}
+            >
+              <span className="flex items-center gap-3 min-w-0">
+                <g.Icone className="w-6 h-6 shrink-0" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-black">{g.titulo}</span>
+                  <span className="block text-xs font-bold opacity-80 truncate">{g.sub}</span>
+                </span>
+              </span>
+              <span className={`text-lg font-black px-3 py-0.5 rounded-full ${sel ? 'bg-white/20' : 'bg-white/70 dark:bg-black/20'}`}>{qtd}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {proprias.length === 0 && cotasDoGrupo.length === 0 ? (
+        <p className="text-center text-ms-muted py-12">
+          {grupo === 'INDIVIDUAL'
+            ? 'Nenhuma avaliação individual ainda. Use a aba "Nova Avaliação" para montar a primeira.'
+            : grupo === 'GERAL'
+            ? 'Nenhuma avaliação geral para você ainda.'
+            : 'Nenhuma avaliação da área para você ainda.'}
+        </p>
+      ) : proprias.length === 0 ? null : (
         <div className="space-y-3">
-          {avaliacoes.map((a) => (
+          {proprias.map((a) => {
+            const faixa = a.eh_prova_area ? faixaDoTipo(a) : faixaIndividual(a.disciplina, a.tipo === 'SIMULADO');
+            return (
             <div key={a.id} className="bg-ms-card border border-gray-200 dark:border-gray-800 rounded-xl px-5 py-4 space-y-2 shadow-sm">
+              <div className={`-mx-5 -mt-4 mb-1 px-5 py-2 rounded-t-xl flex items-center gap-2 text-white text-xs font-black uppercase tracking-wider ${faixa.cor}`}>
+                <faixa.Icone className="w-4 h-4 shrink-0" />
+                <span className="truncate">{faixa.rotulo}</span>
+              </div>
               <div className="flex items-start justify-between gap-3 flex-wrap">
                 <div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <h3 className="text-sm font-bold text-ms-main">{a.titulo}</h3>
                     <span className={`text-xs px-2.5 py-0.5 rounded-full ${STATUS_CLASS[a.status]}`}>{STATUS_LABEL[a.status]}</span>
-                    {a.tipo === 'SIMULADO' && (
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-300 dark:bg-purple-950 dark:text-purple-300 dark:border-purple-800">Simulado · sem nota</span>
-                    )}
-                    {a.eh_prova_area && (
-                      <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-900 border border-blue-300 dark:bg-blue-950 dark:text-blue-300 dark:border-blue-800">Avaliação de área</span>
-                    )}
                   </div>
-                  <p className="text-xs text-ms-muted mt-1">
+                  <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-ms-muted">{(a.turma_nomes?.length ?? 0) > 1 ? 'Turmas' : 'Turma'}:</span>
+                    {(a.turma_nomes ?? []).length === 0 && <span className="text-xs text-ms-muted">—</span>}
+                    {[...(a.turma_nomes ?? [])].sort().map((t) => (
+                      <span key={t} className="px-2.5 py-1 rounded-lg bg-blue-700 text-white text-sm font-black shadow-sm">{t}</span>
+                    ))}
+                  </div>
+                  <p className="text-xs text-ms-muted mt-1.5">
                     {a.disciplina ? `${a.disciplina} · ` : ''}
                     {a.total_questoes ?? 0} questão(ões) · Valor {Number(a.valor_total).toFixed(2)} · {MODO_LABEL[a.modo]}
-                    {a.turma_nomes && a.turma_nomes.length > 0 ? ` · ${a.turma_nomes.join(', ')}` : ''}
                   </p>
                   {a.prazo_entrega && (
                     <p className="text-xs text-ms-muted">Prazo: {new Date(a.prazo_entrega).toLocaleString('pt-BR')}</p>
@@ -342,18 +411,23 @@ export function MinhasAvaliacoesTab() {
                   </button>
                 </div>
               </div>
+              <MinhasCotas
+                avaliacao={avaliacoesArea.find((x) => x.id === a.id)}
+                onInserir={(av, cota) => setInserindoCota({ avaliacao: av, cota })}
+              />
             </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
-      {/* Seção: Avaliações da Minha Área em Elaboração (Colaborativas) */}
-      {avaliacoesArea.length > 0 && (
-        <div className="bg-gradient-to-r from-blue-950/40 to-indigo-950/40 border border-blue-800/60 rounded-2xl p-5 space-y-3">
+      {/* Cotas de questões do professor nas avaliações do grupo aberto (área ou geral) */}
+      {cotasDoGrupo.length > 0 && (
+        <div className="bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl p-5 space-y-3">
           <div className="flex items-center gap-2">
             <Layers className="w-5 h-5 text-blue-400" />
             <div>
-              <h3 className="text-sm font-bold text-ms-main">Avaliações da Sua Área em Elaboração</h3>
+              <h3 className="text-sm font-bold text-ms-main">Suas cotas de questões</h3>
               <p className="text-xs text-ms-muted">
                 O coordenador de área disponibilizou cotas de questões para você inserir na prova colaborativa.
               </p>
@@ -361,14 +435,25 @@ export function MinhasAvaliacoesTab() {
           </div>
 
           <div className="space-y-2">
-            {avaliacoesArea.map((av) => (
-              <div key={av.id} className="bg-ms-dark/80 border border-gray-800 rounded-xl p-4 space-y-3">
+            {cotasDoGrupo.map((av) => {
+              const faixa = faixaDoTipo(av);
+              return (
+              <div key={av.id} className="bg-ms-dark/80 border border-gray-200 dark:border-gray-800 rounded-xl p-4 space-y-3">
+                <div className={`-mx-4 -mt-4 px-4 py-2 rounded-t-xl flex items-center gap-2 text-white text-xs font-black uppercase tracking-wider ${faixa.cor}`}>
+                  <faixa.Icone className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{faixa.rotulo}</span>
+                </div>
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div>
                     <h4 className="text-sm font-bold text-ms-main">{av.titulo}</h4>
-                    <p className="text-xs text-ms-muted">
-                      Área: {av.area_conhecimento} · {av.bimestre_id}º Bimestre · {av.turma_nomes?.join(', ') || 'Todas as turmas'}
-                    </p>
+                  <div className="flex items-center gap-1.5 flex-wrap mt-2">
+                    <span className="text-[11px] font-black uppercase tracking-wider text-ms-muted">{(av.turma_nomes?.length ?? 0) > 1 ? 'Turmas' : 'Turma'}:</span>
+                    {(av.turma_nomes ?? []).length === 0 && <span className="text-xs text-ms-muted">—</span>}
+                    {[...(av.turma_nomes ?? [])].sort().map((t) => (
+                      <span key={t} className="px-2.5 py-1 rounded-lg bg-blue-700 text-white text-sm font-black shadow-sm">{t}</span>
+                    ))}
+                  </div>
+                    <p className="text-xs text-ms-muted mt-1.5">{av.bimestre_id}º Bimestre</p>
                   </div>
                   <div className="flex items-center gap-2">
                     {(av.total_questoes ?? 0) > 0 && (
@@ -431,7 +516,8 @@ export function MinhasAvaliacoesTab() {
                   })}
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
@@ -478,6 +564,50 @@ export function MinhasAvaliacoesTab() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+type GrupoProfessor = 'GERAL' | 'AREA' | 'INDIVIDUAL';
+
+function grupoDe(a: Avaliacao): GrupoProfessor {
+  if (!a.eh_prova_area) return 'INDIVIDUAL';
+  return a.eh_prova_geral ? 'GERAL' : 'AREA';
+}
+
+// A(s) cota(s) do professor dentro do cartão de uma avaliação de área/geral que ele mesmo
+// criou — assim ela não aparece duplicada em "Suas cotas de questões".
+function MinhasCotas({ avaliacao, onInserir }: { avaliacao?: AvaliacaoArea; onInserir: (av: AvaliacaoArea, cota: ProvaAreaCota) => void }) {
+  const minhas = (avaliacao?.cotas ?? []).filter((c) => c.eh_minha_cota);
+  if (!avaliacao || minhas.length === 0) return null;
+  return (
+    <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-gray-200 dark:border-gray-800">
+      <span className="text-[11px] font-black uppercase tracking-wider text-ms-muted">Sua cota:</span>
+      {minhas.map((cota) => {
+        const preenchida = cota.qtd_inserida >= cota.qtd_questoes;
+        return (
+          <span key={`${cota.professor_id}-${cota.disciplina_id}`} className="flex items-center gap-2 text-xs">
+            <span className="font-bold text-ms-main">{cota.disciplina_nome || 'Disciplina'}</span>
+            <span
+              className={`px-2 py-0.5 rounded-full font-bold text-[10px] border ${
+                preenchida
+                  ? 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950 dark:text-emerald-300 dark:border-emerald-800'
+                  : 'bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950 dark:text-amber-300 dark:border-amber-800'
+              }`}
+            >
+              {cota.qtd_inserida}/{cota.qtd_questoes} q.
+            </span>
+            {avaliacao.status !== 'PUBLICADA' && avaliacao.edicao_permitida && (
+              <button
+                onClick={() => onInserir(avaliacao, cota)}
+                className="px-2.5 py-1 bg-ms-blue text-white hover:bg-blue-600 rounded font-bold text-[10px] shadow"
+              >
+                {cota.qtd_inserida > 0 ? 'Editar Questões' : 'Inserir Questões'}
+              </button>
+            )}
+          </span>
+        );
+      })}
     </div>
   );
 }

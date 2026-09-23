@@ -47,6 +47,10 @@ export interface Avaliacao {
    * professor/turma; o botão "Publicar" genérico daqui não sabe fazer isso.
    */
   eh_prova_area?: boolean;
+  /** Avaliação geral (várias áreas) — ver create_avaliacao_geral.sql. */
+  eh_prova_geral?: boolean;
+  somente_nota?: boolean;
+  area_conhecimento?: string | null;
 }
 
 export interface AvaliacaoQuestaoInput {
@@ -315,6 +319,10 @@ export interface AvaliacaoArea {
 
   // ---- Avaliação Geral (create_avaliacao_geral.sql) ----
   eh_prova_geral?: boolean;
+  /** Geral só de nota: sem questões, só cria o campo de nota para os professores. */
+  somente_nota?: boolean;
+  /** Quem corrige/lança a nota de cada turma (add_corretores_e_avaliacao_somente_nota.sql). */
+  corretores?: CorretorTurma[];
   qtd_questoes_total?: number | null;
   lancar_no_boletim?: boolean;
   token_publico?: string;
@@ -322,6 +330,25 @@ export interface AvaliacaoArea {
   turma_ids?: string[];
   areas?: AreaAvaliacaoGeral[];
   notas_professores?: NotaProfessorGeral[];
+}
+
+export interface CorretorTurma {
+  turma_id: string;
+  turma_nome?: string;
+  professor_id: string;
+  professor_nome?: string;
+}
+
+// Uma linha de rpc_notas_avaliacao_turma: nota de um aluno numa avaliação publicada.
+export interface NotaAlunoTurma {
+  aluno_id: string;
+  aluno_nome: string;
+  aluno_numero: number | null;
+  status: string | null;
+  nota: number | null;
+  avaliacao_id: string;
+  valor_maximo: number;
+  pode_editar: boolean;
 }
 
 // Uma área participante da Avaliação Geral. qtd_inserida conta cotas + sorteadas.
@@ -366,6 +393,8 @@ export interface NovaAvaliacaoGeralInput {
   qtd_versoes: number;
   cartao_separado: boolean;
   cartao_posicao: 'INICIO' | 'FIM';
+  /** Só na criação: avaliação geral sem questões, só com o campo de nota. */
+  somente_nota?: boolean;
 }
 
 export interface FiltroSorteio {

@@ -33,6 +33,8 @@ export function ConfigurarAreaGeralModal({ avaliacao, area, onClose, onSalvo }: 
     [cotasDaArea]
   );
   const somenteLeitura = avaliacao.status === 'PUBLICADA' || !avaliacao.edicao_permitida;
+  // Avaliação geral só de nota: sem questões — a área só escolhe quem recebe a nota.
+  const soNota = !!avaliacao.somente_nota;
 
   const [pool, setPool] = useState<ProfessorDisciplinaTurmas[]>([]);
   const [extras, setExtras] = useState<string[]>([]); // chaves de professores de outras áreas incluídos
@@ -103,10 +105,28 @@ export function ConfigurarAreaGeralModal({ avaliacao, area, onClose, onSalvo }: 
     .filter((a) => a.area_conhecimento !== area)
     .flatMap((a) => a.questoes_sorteadas);
 
+  // Quanto ainda cabe na área para a cota `k`, descontando as outras cotas e as sorteadas.
+  function maximoDaCota(k: string): number {
+    const outras = somaCotas - (insere[k] ? qtdCota[k] || 0 : 0);
+    return Math.max(0, qtdArea - outras - qtdSorteadas);
+  }
+
   function toggleInsere(k: string) {
     if ((qtdInseridaPorKey[k] ?? 0) > 0) return;
+    if (!insere[k] && maximoDaCota(k) < 1) {
+      setErro(`A área já está com todas as suas ${qtdArea} questão(ões) distribuídas. Diminua outra cota (ou as sorteadas) antes de incluir mais alguém.`);
+      return;
+    }
+    setErro(null);
     setInsere((prev) => ({ ...prev, [k]: !prev[k] }));
-    setQtdCota((prev) => ({ ...prev, [k]: prev[k] || 1 }));
+    setQtdCota((prev) => ({ ...prev, [k]: Math.min(prev[k] || 1, maximoDaCota(k)) || 1 }));
+  }
+
+  // Ao digitar, a cota não passa do que ainda cabe na área (nem fica abaixo do já inserido).
+  function alterarQtdCota(k: string, valor: number) {
+    const inserida = qtdInseridaPorKey[k] ?? 0;
+    const teto = Math.max(inserida, maximoDaCota(k));
+    setQtdCota((prev) => ({ ...prev, [k]: Math.min(teto, Math.max(1, inserida, valor || 1)) }));
   }
 
   function incluirProfessor() {
@@ -154,8 +174,14 @@ export function ConfigurarAreaGeralModal({ avaliacao, area, onClose, onSalvo }: 
           <div>
             <h2 className="text-lg font-bold text-ms-main">Configurar {area} — {avaliacao.titulo}</h2>
             <p className="text-xs text-ms-muted">
-              Esta área tem <strong className="text-ms-blueText">{qtdArea} questão(ões)</strong> na avaliação geral. Escolha quem
-              recebe a nota e quem insere as questões.
+              {soNota ? (
+                <>Avaliação só de nota: escolha quais professores recebem o campo de nota no diário.</>
+              ) : (
+                <>
+                  Esta área tem <strong className="text-ms-blueText">{qtdArea} questão(ões)</strong> na avaliação geral. Escolha quem
+                  recebe a nota e quem insere as questões.
+                </>
+              )}
             </p>
           </div>
           <button onClick={onClose} className="text-ms-muted hover:text-ms-main p-1 rounded-lg">
@@ -210,10 +236,10 @@ export function ConfigurarAreaGeralModal({ avaliacao, area, onClose, onSalvo }: 
               </div>
 
               <div className="border border-gray-200 dark:border-gray-800 rounded-xl overflow-hidden">
-                <div className="grid grid-cols-[1fr_auto_auto] gap-2 sm:gap-3 px-3 py-2 bg-gray-50 dark:bg-ms-dark/40 text-[11px] font-bold text-ms-muted">
+                <div className={`grid ${soNota ? 'grid-cols-[1fr_auto]' : 'grid-cols-[1fr_auto_auto]'} gap-2 sm:gap-3 px-3 py-2 bg-gray-50 dark:bg-ms-dark/40 text-[11px] font-bold text-ms-muted`}>
                   <span>Professor / disciplina</span>
                   <span className="w-16 sm:w-28 text-center">Recebe a nota</span>
-                  <span className="w-28 sm:w-44 text-center">Insere questões</span>
+                  {!soNota && <span className="w-28 sm:w-44 text-center">Insere questões</span>}
                 </div>
                 <div className="divide-y divide-gray-200 dark:divide-gray-800">
                   {lista.length === 0 && (
@@ -226,7 +252,7 @@ export function ConfigurarAreaGeralModal({ avaliacao, area, onClose, onSalvo }: 
                     const inserida = qtdInseridaPorKey[k] ?? 0;
                     const travado = inserida > 0;
                     return (
-                      <div key={k} className="grid grid-cols-[1fr_auto_auto] gap-2 sm:gap-3 items-center px-3 py-2">
+                      <div key={k} className={`grid ${soNota ? 'grid-cols-[1fr_auto]' : 'grid-cols-[1fr_auto_auto]'} gap-2 sm:gap-3 items-center px-3 py-2`}>
                         <div>
                           <p className="text-sm font-bold text-ms-main">
                             {p.professor_nome}
@@ -241,6 +267,7 @@ export function ConfigurarAreaGeralModal({ avaliacao, area, onClose, onSalvo }: 
                         >
                           {checkbox(!!recebeNota[k])}
                         </button>
+                        {!soNota && (
                         <div className="w-28 sm:w-44 flex items-center justify-center gap-2">
                           <button
                             type="button"
@@ -252,18 +279,22 @@ export function ConfigurarAreaGeralModal({ avaliacao, area, onClose, onSalvo }: 
                           <input
                             type="number"
                             min={Math.max(1, inserida)}
+                            max={Math.max(inserida, maximoDaCota(k))}
                             disabled={!insere[k]}
                             value={qtdCota[k] ?? 1}
-                            onChange={(e) => setQtdCota((prev) => ({ ...prev, [k]: Math.max(1, inserida, Number(e.target.value)) }))}
+                            onChange={(e) => alterarQtdCota(k, Number(e.target.value))}
                             className="w-14 sm:w-16 px-2 py-1 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-bold text-center text-ms-main outline-none focus:ring-2 focus:ring-ms-blue disabled:opacity-40"
                           />
                         </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               </div>
 
+              {!soNota && (
+              <>
               <div className="space-y-2">
                 <label className="flex items-center gap-2 text-sm font-bold text-ms-main cursor-pointer">
                   <input type="checkbox" checked={gerarAuto} onChange={(e) => setGerarAuto(e.target.checked)} />
@@ -292,6 +323,8 @@ export function ConfigurarAreaGeralModal({ avaliacao, area, onClose, onSalvo }: 
                 Distribuídas: {distribuido} de {qtdArea} ({somaCotas} por professores + {qtdSorteadas} sorteadas)
                 {distribuido < qtdArea && ' — dá para salvar assim e completar depois; a publicação só libera com a área completa.'}
               </p>
+              </>
+              )}
             </>
           )}
         </div>

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { ModoAvaliacao, TipoAvaliacao } from '../../types/avaliacoes';
-import type { ModoEmbaralhar } from '../../types/correcaoOmr';
-import { MODO_EMBARALHAR_LABEL } from '../../types/correcaoOmr';
+import type { ModoEmbaralhar, ModoNota, PonderadaEscopo } from '../../types/correcaoOmr';
+import { MODO_EMBARALHAR_LABEL, MODO_NOTA_LABEL } from '../../types/correcaoOmr';
 import { salvarInstrucoesPadrao } from '../../services/avaliacoesService';
 import { contarAlunosAtivosTurmas } from '../../services/correcaoOmrService';
 
@@ -27,6 +27,8 @@ export interface ValoresCamposAvaliacao {
   qtdVersoes: number;
   modoVersoes: ModoVersoes;
   posicaoCartao: PosicaoCartao;
+  modoNota: ModoNota;
+  ponderadaEscopo: PonderadaEscopo;
 }
 
 // Com embaralhamento, versão além da A sai diferente — então no mínimo 2 versões.
@@ -45,7 +47,7 @@ interface Props {
 
 // Campos compartilhados entre NovaAvaliacaoAreaModal e NovaAvaliacaoGeralModal.
 export function CamposAvaliacaoComuns({ valores, onChange, turmasSelecionadas, onErro, mostrarTipo = true }: Props) {
-  const { titulo, bimestre, tipo, modo, valorTotal, dataAplicacao, prazoEntrega, instrucoes, embaralhar, qtdVersoes, modoVersoes, posicaoCartao } = valores;
+  const { titulo, bimestre, tipo, modo, valorTotal, dataAplicacao, prazoEntrega, instrucoes, embaralhar, qtdVersoes, modoVersoes, posicaoCartao, modoNota, ponderadaEscopo } = valores;
   const [salvandoPadrao, setSalvandoPadrao] = useState(false);
   const [contandoAlunos, setContandoAlunos] = useState(false);
 
@@ -187,6 +189,48 @@ export function CamposAvaliacaoComuns({ valores, onChange, turmasSelecionadas, o
           placeholder="Ex.: Leia atentamente cada questão antes de responder."
           className="w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue resize-y"
         />
+      </div>
+
+      {/* Como calcular a nota — mesmas opções do gerador de provas comum (ConfigAvaliacaoForm). */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-200 dark:border-gray-800">
+        <div>
+          <label className="text-xs font-bold text-ms-muted">Como calcular a nota</label>
+          <select
+            value={modoNota}
+            onChange={(e) => onChange({ modoNota: e.target.value as ModoNota })}
+            className="w-full mt-1 px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
+          >
+            {(Object.keys(MODO_NOTA_LABEL) as ModoNota[]).map((m) => (
+              <option key={m} value={m}>{MODO_NOTA_LABEL[m]}</option>
+            ))}
+          </select>
+        </div>
+        {modoNota === 'PONDERADA' && (
+          <div>
+            <label className="text-xs font-bold text-ms-muted">Referencial da ponderada</label>
+            <select
+              value={ponderadaEscopo}
+              onChange={(e) => onChange({ ponderadaEscopo: e.target.value as PonderadaEscopo })}
+              className="w-full mt-1 px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
+            >
+              <option value="PROVA">O melhor de toda a avaliação</option>
+              <option value="TURMA">O melhor de cada turma</option>
+            </select>
+          </div>
+        )}
+        {modoNota === 'PONDERADA' && (
+          <p className="sm:col-span-2 text-xs text-ms-muted leading-relaxed">
+            O aluno de melhor desempenho {ponderadaEscopo === 'TURMA' ? 'em cada turma' : 'da avaliação'} recebe o valor
+            total ({Number(valorTotal || 0).toFixed(2)}) e os demais ficam proporcionais a ele. Se ninguém pontuar, todos
+            ficam com zero.
+          </p>
+        )}
+        {modoNota === 'SEM_NOTA' && (
+          <p className="sm:col-span-2 text-xs text-ms-muted">
+            Nada vai para o boletim: ao publicar, nenhum campo de nota é criado no diário. A correção e os relatórios
+            continuam normalmente.
+          </p>
+        )}
       </div>
 
       {/* Embaralhamento / versões / cartão-resposta (aplicação impressa) */}
