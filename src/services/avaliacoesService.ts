@@ -615,6 +615,34 @@ export async function criarAvaliacaoArea(dados: NovaAvaliacaoAreaInput): Promise
   return data as string;
 }
 
+// Avaliação da área só de nota: sem questões; cria (provaId null) ou edita e define quem
+// recebe a nota. Ao publicar, o campo é criado só nas turmas em que o professor dá aula.
+export async function salvarAvaliacaoAreaSoNota(
+  provaId: string | null,
+  dados: {
+    titulo: string;
+    area_conhecimento: string;
+    bimestre_id: number;
+    valor_total: number;
+    data_aplicacao: string | null;
+    turma_ids: string[];
+    notas: { professor_id: string; disciplina_id: string }[];
+  }
+): Promise<string> {
+  const { data, error } = await supabase.rpc('rpc_salvar_avaliacao_area_so_nota', {
+    p_prova_id: provaId,
+    p_titulo: dados.titulo,
+    p_area_conhecimento: dados.area_conhecimento,
+    p_bimestre_id: dados.bimestre_id,
+    p_valor_total: dados.valor_total,
+    p_data_aplicacao: dados.data_aplicacao || null,
+    p_turma_ids: dados.turma_ids,
+    p_notas: dados.notas,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
 export async function editarAvaliacaoArea(provaId: string, dados: NovaAvaliacaoAreaInput): Promise<string> {
   const { data, error } = await supabase.rpc('rpc_editar_avaliacao_area', {
     p_prova_id: provaId,

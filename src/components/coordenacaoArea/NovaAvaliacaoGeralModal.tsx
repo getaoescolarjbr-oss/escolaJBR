@@ -9,7 +9,7 @@ import type { AvaliacaoArea, NovaAvaliacaoGeralInput } from '../../types/avaliac
 import type { ModoEmbaralhar } from '../../types/correcaoOmr';
 import { buscarInstrucoesPadrao, buscarModoNota, criarAvaliacaoGeral, definirModoNota, editarAvaliacaoGeral } from '../../services/avaliacoesService';
 import { getCurrentBimestre } from '../../utils/academicUtils';
-import { CamposAvaliacaoComuns, versoesEfetivas, type ValoresCamposAvaliacao } from './CamposAvaliacaoComuns';
+import { CamposAvaliacaoComuns, CamposSoNota, versoesEfetivas, type ValoresCamposAvaliacao } from './CamposAvaliacaoComuns';
 import { SortearQuestoesPanel } from './SortearQuestoesPanel';
 
 interface Props {
@@ -266,7 +266,6 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
                   onChange={atualizarCampos}
                   turmasSelecionadas={turmasSelecionadas}
                   onErro={setErro}
-                  mostrarTipo={false}
                 />
               )}
 
@@ -426,37 +425,6 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
             {editando ? 'Salvar Alterações' : soNota ? 'Criar Avaliação só de Nota' : 'Criar Avaliação Geral'}
           </button>
         </div>
-      </div>
-    </div>
-  );
-}
-
-// Avaliação só de nota: título, bimestre, valor e data — o resto (modo de aplicação,
-// instruções, embaralhamento, cartão, cálculo da nota) não se aplica, a nota é digitada.
-function CamposSoNota({ valores, onChange }: { valores: ValoresCamposAvaliacao; onChange: (p: Partial<ValoresCamposAvaliacao>) => void }) {
-  const input = 'w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue';
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-      <div className="sm:col-span-2">
-        <label className="block text-xs font-bold text-ms-muted mb-1">Título da Avaliação *</label>
-        <input type="text" value={valores.titulo} onChange={(e) => onChange({ titulo: e.target.value })} className={input} />
-      </div>
-      <div>
-        <label className="block text-xs font-bold text-ms-muted mb-1">Bimestre (Vigente Automático)</label>
-        <select value={valores.bimestre} onChange={(e) => onChange({ bimestre: Number(e.target.value) })} className={`${input} font-bold cursor-pointer`}>
-          <option value={1}>1º Bimestre</option>
-          <option value={2}>2º Bimestre</option>
-          <option value={3}>3º Bimestre</option>
-          <option value={4}>4º Bimestre</option>
-        </select>
-      </div>
-      <div>
-        <label className="block text-xs font-bold text-ms-muted mb-1">Valor Total (Pontos)</label>
-        <input type="number" step="0.5" value={valores.valorTotal} onChange={(e) => onChange({ valorTotal: Number(e.target.value) })} className={input} />
-      </div>
-      <div>
-        <label className="block text-xs font-bold text-ms-muted mb-1">Data de Aplicação</label>
-        <input type="date" value={valores.dataAplicacao} onChange={(e) => onChange({ dataAplicacao: e.target.value })} className={input} />
       </div>
     </div>
   );

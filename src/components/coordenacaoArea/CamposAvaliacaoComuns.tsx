@@ -41,13 +41,11 @@ interface Props {
   onChange: (patch: Partial<ValoresCamposAvaliacao>) => void;
   turmasSelecionadas: string[];
   onErro: (msg: string) => void;
-  /** A Avaliação Geral troca o seletor "Tipo" pela escolha de modalidade. */
-  mostrarTipo?: boolean;
 }
 
 // Campos compartilhados entre NovaAvaliacaoAreaModal e NovaAvaliacaoGeralModal.
-export function CamposAvaliacaoComuns({ valores, onChange, turmasSelecionadas, onErro, mostrarTipo = true }: Props) {
-  const { titulo, bimestre, tipo, modo, valorTotal, dataAplicacao, prazoEntrega, instrucoes, embaralhar, qtdVersoes, modoVersoes, posicaoCartao, modoNota, ponderadaEscopo } = valores;
+export function CamposAvaliacaoComuns({ valores, onChange, turmasSelecionadas, onErro }: Props) {
+  const { titulo, bimestre, modo, valorTotal, dataAplicacao, prazoEntrega, instrucoes, embaralhar, qtdVersoes, modoVersoes, posicaoCartao, modoNota, ponderadaEscopo } = valores;
   const [salvandoPadrao, setSalvandoPadrao] = useState(false);
   const [contandoAlunos, setContandoAlunos] = useState(false);
 
@@ -107,18 +105,41 @@ export function CamposAvaliacaoComuns({ valores, onChange, turmasSelecionadas, o
           </select>
         </div>
 
-        {mostrarTipo && (
+        {/* Como calcular a nota — mesmas opções do gerador de provas comum (ConfigAvaliacaoForm).
+            Fica no topo, junto do valor: é o que decide se (e como) a nota vai para o boletim. */}
+        <div>
+          <label className="block text-xs font-bold text-ms-muted mb-1">Como calcular a nota</label>
+          <select
+            value={modoNota}
+            onChange={(e) => onChange({ modoNota: e.target.value as ModoNota })}
+            className="w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm font-bold text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
+          >
+            {(Object.keys(MODO_NOTA_LABEL) as ModoNota[]).map((m) => (
+              <option key={m} value={m}>{MODO_NOTA_LABEL[m]}</option>
+            ))}
+          </select>
+        </div>
+
+        {modoNota === 'PONDERADA' && (
           <div>
-            <label className="block text-xs font-bold text-ms-muted mb-1">Tipo</label>
+            <label className="block text-xs font-bold text-ms-muted mb-1">Referencial da ponderada</label>
             <select
-              value={tipo}
-              onChange={(e) => onChange({ tipo: e.target.value as TipoAvaliacao })}
+              value={ponderadaEscopo}
+              onChange={(e) => onChange({ ponderadaEscopo: e.target.value as PonderadaEscopo })}
               className="w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
             >
-              <option value="AVALIACAO">Avaliação (gera nota no boletim)</option>
-              <option value="SIMULADO">Simulado (sem nota no boletim)</option>
+              <option value="PROVA">O melhor de toda a avaliação</option>
+              <option value="TURMA">O melhor de cada turma</option>
             </select>
           </div>
+        )}
+
+        {modoNota !== 'DIRETA' && (
+          <p className="sm:col-span-2 md:col-span-3 -mt-2 text-xs text-ms-muted leading-relaxed">
+            {modoNota === 'PONDERADA'
+              ? `O aluno de melhor desempenho ${ponderadaEscopo === 'TURMA' ? 'em cada turma' : 'da avaliação'} recebe o valor total (${Number(valorTotal || 0).toFixed(2)}) e os demais ficam proporcionais a ele. Se ninguém pontuar, todos ficam com zero.`
+              : 'Nada vai para o boletim: ao publicar, nenhum campo de nota é criado no diário. A correção e os relatórios continuam normalmente.'}
+          </p>
         )}
 
         <div>
@@ -191,48 +212,6 @@ export function CamposAvaliacaoComuns({ valores, onChange, turmasSelecionadas, o
         />
       </div>
 
-      {/* Como calcular a nota — mesmas opções do gerador de provas comum (ConfigAvaliacaoForm). */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-gray-200 dark:border-gray-800">
-        <div>
-          <label className="text-xs font-bold text-ms-muted">Como calcular a nota</label>
-          <select
-            value={modoNota}
-            onChange={(e) => onChange({ modoNota: e.target.value as ModoNota })}
-            className="w-full mt-1 px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
-          >
-            {(Object.keys(MODO_NOTA_LABEL) as ModoNota[]).map((m) => (
-              <option key={m} value={m}>{MODO_NOTA_LABEL[m]}</option>
-            ))}
-          </select>
-        </div>
-        {modoNota === 'PONDERADA' && (
-          <div>
-            <label className="text-xs font-bold text-ms-muted">Referencial da ponderada</label>
-            <select
-              value={ponderadaEscopo}
-              onChange={(e) => onChange({ ponderadaEscopo: e.target.value as PonderadaEscopo })}
-              className="w-full mt-1 px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
-            >
-              <option value="PROVA">O melhor de toda a avaliação</option>
-              <option value="TURMA">O melhor de cada turma</option>
-            </select>
-          </div>
-        )}
-        {modoNota === 'PONDERADA' && (
-          <p className="sm:col-span-2 text-xs text-ms-muted leading-relaxed">
-            O aluno de melhor desempenho {ponderadaEscopo === 'TURMA' ? 'em cada turma' : 'da avaliação'} recebe o valor
-            total ({Number(valorTotal || 0).toFixed(2)}) e os demais ficam proporcionais a ele. Se ninguém pontuar, todos
-            ficam com zero.
-          </p>
-        )}
-        {modoNota === 'SEM_NOTA' && (
-          <p className="sm:col-span-2 text-xs text-ms-muted">
-            Nada vai para o boletim: ao publicar, nenhum campo de nota é criado no diário. A correção e os relatórios
-            continuam normalmente.
-          </p>
-        )}
-      </div>
-
       {/* Embaralhamento / versões / cartão-resposta (aplicação impressa) */}
       {modo !== 'ONLINE' && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2 border-t border-gray-200 dark:border-gray-800">
@@ -290,5 +269,36 @@ export function CamposAvaliacaoComuns({ valores, onChange, turmasSelecionadas, o
         </div>
       )}
     </>
+  );
+}
+
+// Avaliação só de nota: título, bimestre, valor e data — o resto (modo de aplicação,
+// instruções, embaralhamento, cartão, cálculo da nota) não se aplica, a nota é digitada.
+export function CamposSoNota({ valores, onChange }: { valores: ValoresCamposAvaliacao; onChange: (p: Partial<ValoresCamposAvaliacao>) => void }) {
+  const input = 'w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue';
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      <div className="sm:col-span-2">
+        <label className="block text-xs font-bold text-ms-muted mb-1">Título da Avaliação *</label>
+        <input type="text" value={valores.titulo} onChange={(e) => onChange({ titulo: e.target.value })} className={input} />
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-ms-muted mb-1">Bimestre (Vigente Automático)</label>
+        <select value={valores.bimestre} onChange={(e) => onChange({ bimestre: Number(e.target.value) })} className={`${input} font-bold cursor-pointer`}>
+          <option value={1}>1º Bimestre</option>
+          <option value={2}>2º Bimestre</option>
+          <option value={3}>3º Bimestre</option>
+          <option value={4}>4º Bimestre</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-ms-muted mb-1">Valor Total (Pontos)</label>
+        <input type="number" step="0.5" value={valores.valorTotal} onChange={(e) => onChange({ valorTotal: Number(e.target.value) })} className={input} />
+      </div>
+      <div>
+        <label className="block text-xs font-bold text-ms-muted mb-1">Data de Aplicação</label>
+        <input type="date" value={valores.dataAplicacao} onChange={(e) => onChange({ dataAplicacao: e.target.value })} className={input} />
+      </div>
+    </div>
   );
 }

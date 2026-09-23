@@ -38,6 +38,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
   const [configurandoGeral, setConfigurandoGeral] = useState<AvaliacaoArea | null>(null);
   const [editandoGeral, setEditandoGeral] = useState<AvaliacaoArea | null>(null);
   const [showNovaSoNota, setShowNovaSoNota] = useState(false);
+  const [showNovaAreaSoNota, setShowNovaAreaSoNota] = useState(false);
   const [corretoresDe, setCorretoresDe] = useState<AvaliacaoArea | null>(null);
   const [notasDe, setNotasDe] = useState<AvaliacaoArea | null>(null);
   const [grupo, setGrupo] = useState<GrupoAvaliacao>(() => {
@@ -92,7 +93,9 @@ export function AvaliacoesAreaTab({ area }: Props) {
 
   async function handlePublicar(av: AvaliacaoArea) {
     const id = av.id;
-    const msg = av.eh_prova_geral
+    const msg = av.somente_nota && !av.eh_prova_geral
+      ? 'Publicar esta avaliação só de nota? O campo de nota será criado no diário dos professores escolhidos, só nas turmas em que eles dão aula.'
+      : av.eh_prova_geral
       ? 'Publicar esta avaliação geral? Os campos de nota serão criados no diário dos professores escolhidos por cada área, só nas turmas em que eles dão aula.'
       : 'Publicar esta avaliação de área? Ao publicar, os campos de nota serão criados automaticamente no diário de cada professor da área correspondente.';
     if (!confirm(msg)) {
@@ -231,7 +234,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
         <p className="text-xs text-ms-muted">
           {grupo === 'GERAL'
             ? 'Avaliações montadas por várias áreas (com questões ou só de nota). Mais recentes primeiro.'
-            : `Avaliações colaborativas de ${area}, com cotas de questões por professor. Mais recentes primeiro.`}
+            : `Avaliações de ${area} (com cotas de questões por professor ou só de nota). Mais recentes primeiro.`}
         </p>
         <div className="flex items-center gap-2 flex-wrap">
           {grupo === 'GERAL' ? (
@@ -252,12 +255,21 @@ export function AvaliacoesAreaTab({ area }: Props) {
               </button>
             </>
           ) : (
-            <button
-              onClick={() => setShowNovaModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-700 text-white rounded-xl text-xs font-bold hover:bg-emerald-800 shadow transition-all"
-            >
-              <Plus className="w-4 h-4" /> Nova Avaliação da Área
-            </button>
+            <>
+              <button
+                onClick={() => setShowNovaModal(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-emerald-700 text-white rounded-xl text-xs font-bold hover:bg-emerald-800 shadow transition-all"
+              >
+                <Plus className="w-4 h-4" /> Nova Avaliação da Área
+              </button>
+              <button
+                onClick={() => setShowNovaAreaSoNota(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-teal-700 text-white rounded-xl text-xs font-bold hover:bg-teal-800 shadow transition-all"
+                title="Sem questões: só cria o campo de nota no diário dos professores da área que você escolher"
+              >
+                <FileSpreadsheet className="w-4 h-4" /> Nova Avaliação da Área só de Nota
+              </button>
+            </>
           )}
         </div>
       </div>
@@ -291,14 +303,17 @@ export function AvaliacoesAreaTab({ area }: Props) {
             const totalInserido = geral
               ? areasGeral.reduce((s, a) => s + a.qtd_inserida, 0)
               : cotas.reduce((s, c) => s + c.qtd_inserida, 0);
-            const todasPreenchidas = soNota
+            const notasArea = av.notas_professores ?? [];
+            const todasPreenchidas = soNota && !geral
+              ? notasArea.length > 0
+              : soNota
               ? areasGeral.length > 0 && areasGeral.every((a) => a.configurada)
               : geral
               ? areasGeral.length > 0 && areasGeral.every((a) => a.qtd_inserida === a.qtd_questoes)
               : totalPrevisto > 0 && totalInserido >= totalPrevisto;
             const podePublicar = todasPreenchidas && (!geral || !!av.criado_por_mim);
             const motivoNaoPublica = !todasPreenchidas
-              ? soNota ? 'Aguardando todas as áreas escolherem quem recebe a nota' : geral ? 'Aguardando todas as áreas completarem as questões' : 'Aguardando preenchimento das cotas de questões'
+              ? soNota && !geral ? 'Escolha em "Editar" quem recebe a nota' : soNota ? 'Aguardando todas as áreas escolherem quem recebe a nota' : geral ? 'Aguardando todas as áreas completarem as questões' : 'Aguardando preenchimento das cotas de questões'
               : 'Somente quem criou a avaliação geral pode publicá-la';
             const descricaoTipo = soNota
               ? 'Só nota (digitada pelo corretor)'
@@ -306,7 +321,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
               ? av.tipo === 'AVALIACAO'
                 ? 'Avaliação com nota'
                 : `Avaliação pública ${av.lancar_no_boletim ? 'com' : 'sem'} nota`
-              : av.tipo === 'AVALIACAO' ? 'Avaliação com nota' : 'Simulado';
+              : av.tipo === 'AVALIACAO' ? 'Avaliação com nota' : 'Avaliação sem nota (só relatório)';
 
             const faixa = faixaDoTipo(av);
 
@@ -453,6 +468,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                     )}
                     </>
                     )}
+                    {!soNota && (
                     <button
                       onClick={() => alternarBloqueio(av)}
                       disabled={bloqueandoId === av.id}
@@ -472,6 +488,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                       )}
                       {av.edicao_bloqueada ? 'Destravar Edição' : 'Travar Edição'}
                     </button>
+                    )}
                     <button
                       onClick={() => handleExcluir(av)}
                       disabled={excluindoId === av.id || publicandoId === av.id}
@@ -487,7 +504,7 @@ export function AvaliacoesAreaTab({ area }: Props) {
                 {/* Status das Cotas dos Professores */}
                 <div className="bg-ms-dark/60 rounded-xl p-3 border border-gray-800/80 space-y-2">
                   <div className="flex items-center justify-between text-xs font-bold text-ms-muted">
-                    <span>{soNota ? 'Áreas e professores que recebem a nota' : 'Acompanhamento das Cotas por Docente'}</span>
+                    <span>{soNota && !geral ? 'Professores que recebem a nota' : soNota ? 'Áreas e professores que recebem a nota' : 'Acompanhamento das Cotas por Docente'}</span>
                     {!soNota && (
                     <span className={todasPreenchidas ? 'text-emerald-400' : 'text-amber-400'}>
                       {totalInserido} de {totalPrevisto} questões inseridas
@@ -544,6 +561,19 @@ export function AvaliacoesAreaTab({ area }: Props) {
                           </span>
                         );
                       })}
+                    </div>
+                  )}
+                  {soNota && !geral && (
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {notasArea.length === 0 && <span className="text-[11px] text-ms-muted">Ninguém escolhido ainda — use "Editar".</span>}
+                      {notasArea.map((n) => (
+                        <span
+                          key={`${n.professor_id}-${n.disciplina_id}`}
+                          className="text-[11px] font-bold px-2.5 py-1 rounded-full border bg-teal-50 text-teal-900 border-teal-300 dark:bg-teal-950 dark:text-teal-300 dark:border-teal-800"
+                        >
+                          {n.professor_nome} · {n.disciplina_nome}
+                        </span>
+                      ))}
                     </div>
                   )}
                   {geral && !soNota && cotas.length === 0 && areasGeral.some((a) => a.area_conhecimento === area && a.qtd_inserida < a.qtd_questoes) && (
@@ -620,6 +650,18 @@ export function AvaliacoesAreaTab({ area }: Props) {
           onClose={() => setShowNovaSoNota(false)}
           onCriada={() => {
             setShowNovaSoNota(false);
+            carregar();
+          }}
+        />
+      )}
+
+      {showNovaAreaSoNota && (
+        <NovaAvaliacaoAreaModal
+          area={area}
+          somenteNota
+          onClose={() => setShowNovaAreaSoNota(false)}
+          onCriada={() => {
+            setShowNovaAreaSoNota(false);
             carregar();
           }}
         />

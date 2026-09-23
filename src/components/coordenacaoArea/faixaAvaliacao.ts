@@ -18,7 +18,8 @@ export interface FaixaAvaliacao {
 
 // Faixa colorida no topo do cartão: identifica o tipo de avaliação de relance.
 // Usada na Coordenação de Área e em "Minhas Avaliações" do professor, com as mesmas cores
-// dos botões de grupo (geral = roxo, área = verde, individual = âmbar).
+// dos botões de grupo (geral = roxo, área = verde, individual = âmbar). Só de nota: tom mais
+// escuro/azulado do grupo (anil na geral, verde-azulado na área).
 export function faixaDoTipo(av: TipoDaAvaliacao): FaixaAvaliacao {
   if (av.eh_prova_geral) {
     if (av.somente_nota) return { rotulo: 'Avaliação Geral · só nota (digitada)', cor: 'bg-indigo-700', Icone: FileSpreadsheet };
@@ -26,6 +27,9 @@ export function faixaDoTipo(av: TipoDaAvaliacao): FaixaAvaliacao {
     return av.lancar_no_boletim
       ? { rotulo: 'Avaliação Geral · pública com nota', cor: 'bg-purple-700', Icone: Link2 }
       : { rotulo: 'Avaliação Geral · pública sem nota', cor: 'bg-slate-600', Icone: Link2 };
+  }
+  if (av.somente_nota) {
+    return { rotulo: `Avaliação da Área · ${av.area_conhecimento} · só nota (digitada)`, cor: 'bg-teal-700', Icone: FileSpreadsheet };
   }
   return {
     rotulo: `Avaliação da Área · ${av.area_conhecimento}${av.tipo === 'SIMULADO' ? ' · sem nota' : ''}`,

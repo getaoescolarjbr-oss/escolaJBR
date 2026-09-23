@@ -6,9 +6,9 @@ import type { AreaConhecimento } from '../../utils/areasConhecimento';
 import { disciplinaPertenceAArea, normalizarArea } from '../../utils/areasConhecimento';
 import type { AvaliacaoArea, CotaProfessorInput, NovaAvaliacaoAreaInput } from '../../types/avaliacoes';
 import type { ModoEmbaralhar } from '../../types/correcaoOmr';
-import { criarAvaliacaoArea, editarAvaliacaoArea, buscarInstrucoesPadrao, buscarModoNota, definirModoNota } from '../../services/avaliacoesService';
+import { criarAvaliacaoArea, editarAvaliacaoArea, buscarInstrucoesPadrao, buscarModoNota, definirModoNota, salvarAvaliacaoAreaSoNota } from '../../services/avaliacoesService';
 import { getCurrentBimestre } from '../../utils/academicUtils';
-import { CamposAvaliacaoComuns, versoesEfetivas, type ValoresCamposAvaliacao } from './CamposAvaliacaoComuns';
+import { CamposAvaliacaoComuns, CamposSoNota, versoesEfetivas, type ValoresCamposAvaliacao } from './CamposAvaliacaoComuns';
 
 interface Props {
   area: AreaConhecimento;
@@ -16,6 +16,8 @@ interface Props {
   onCriada: () => void;
   /** Presente = modo edição (só permitido enquanto a avaliação não foi publicada). */
   avaliacaoExistente?: AvaliacaoArea;
+  /** Avaliação da área só de nota: sem questões, só escolhe quem recebe o campo de nota. */
+  somenteNota?: boolean;
 }
 
 interface ProfessorDisciplina {
@@ -25,10 +27,13 @@ interface ProfessorDisciplina {
   disciplina_nome: string;
 }
 
-export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExistente }: Props) {
+export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExistente, somenteNota }: Props) {
   const editando = !!avaliacaoExistente;
+  const soNota = avaliacaoExistente ? !!avaliacaoExistente.somente_nota : !!somenteNota;
+  // Simulado antigo (de antes do "Como calcular a nota") = sem nota.
+  const eraSimulado = avaliacaoExistente?.tipo === 'SIMULADO';
   const [campos, setCampos] = useState<ValoresCamposAvaliacao>(() => ({
-    titulo: avaliacaoExistente?.titulo ?? `Avaliação da Área — ${area}`,
+    titulo: avaliacaoExistente?.titulo ?? (soNota ? `Avaliação da Área (nota) — ${area}` : `Avaliação da Área — ${area}`),
     bimestre: avaliacaoExistente?.bimestre_id ?? getCurrentBimestre(),
     valorTotal: avaliacaoExistente ? Number(avaliacaoExistente.valor_total) : 10,
     modo: avaliacaoExistente?.modo ?? 'IMPRESSA',
@@ -40,11 +45,11 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
     qtdVersoes: avaliacaoExistente?.qtd_versoes ?? 1,
     modoVersoes: 'FIXO',
     posicaoCartao: avaliacaoExistente?.cartao_separado ? 'SEPARADO' : (avaliacaoExistente?.cartao_posicao ?? 'FIM'),
-    modoNota: 'DIRETA',
+    modoNota: eraSimulado ? 'SEM_NOTA' : 'DIRETA',
     ponderadaEscopo: 'PROVA',
   }));
   const atualizarCampos = (patch: Partial<ValoresCamposAvaliacao>) => setCampos((prev) => ({ ...prev, ...patch }));
-  const { titulo, bimestre, valorTotal, modo, tipo, dataAplicacao, prazoEntrega, instrucoes, embaralhar, posicaoCartao } = campos;
+  const { titulo, bimestre, valorTotal, modo, dataAplicacao, prazoEntrega, instrucoes, embaralhar, posicaoCartao } = campos;
   const [turmas, setTurmas] = useState<Turma[]>([]);
   const [turmasSelecionadas, setTurmasSelecionadas] = useState<string[]>([]);
   
@@ -74,7 +79,7 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
           setTurmasSelecionadas((ptData ?? []).map((r: { turma_id: string }) => r.turma_id));
 
           const salvo = await buscarModoNota(avaliacaoExistente.id).catch(() => null);
-          if (salvo) atualizarCampos({ modoNota: salvo.modo_nota, ponderadaEscopo: salvo.ponderada_escopo });
+          if (salvo) atualizarCampos({ modoNota: eraSimulado ? 'SEM_NOTA' : salvo.modo_nota, ponderadaEscopo: salvo.ponderada_escopo });
 
           if (avaliacaoExistente.prazo_entrega) {
             const d = new Date(avaliacaoExistente.prazo_entrega);
@@ -177,8 +182,10 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
         // Inicializar seleção e cotas: editando, parte do que já está salvo (cotas com
         // questão já inserida não podem ser desmarcadas — ver aviso no RPC de edição);
         // criando, marca todo mundo com 2 questões por padrão.
-        const cotasExistentes = new Map(
-          (avaliacaoExistente?.cotas ?? []).map((c) => [`${c.professor_id}-${c.disciplina_id}`, c])
+        const cotasExistentes = new Map<string, { qtd_questoes: number }>(
+          soNota
+            ? (avaliacaoExistente?.notas_professores ?? []).map((n) => [`${n.professor_id}-${n.disciplina_id}`, { qtd_questoes: 0 }])
+            : (avaliacaoExistente?.cotas ?? []).map((c) => [`${c.professor_id}-${c.disciplina_id}`, c])
         );
         const selIniciais: Record<string, boolean> = {};
         const cotasIniciais: Record<string, number> = {};
@@ -201,7 +208,7 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
         setLoading(false);
       }
     })();
-  }, [area, avaliacaoExistente]);
+  }, [area, avaliacaoExistente, soNota]);
 
   // Cota com questão já inserida não pode ser desmarcada nem ter a quantidade reduzida
   // abaixo do que já foi inserido — o RPC de edição recusa isso, então trava aqui também
@@ -259,6 +266,35 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
       return;
     }
 
+    if (soNota) {
+      const notas = professoresArea
+        .filter((p) => selecionados[`${p.professor_id}-${p.disciplina_id}`])
+        .map((p) => ({ professor_id: p.professor_id, disciplina_id: p.disciplina_id }));
+      if (notas.length === 0) {
+        setErro('Selecione pelo menos um professor para receber a nota.');
+        return;
+      }
+      setSalvando(true);
+      setErro(null);
+      try {
+        await salvarAvaliacaoAreaSoNota(avaliacaoExistente?.id ?? null, {
+          titulo: titulo.trim(),
+          area_conhecimento: area,
+          bimestre_id: bimestre,
+          valor_total: Number(valorTotal),
+          data_aplicacao: dataAplicacao || null,
+          turma_ids: turmasSelecionadas,
+          notas,
+        });
+        onCriada();
+      } catch (e: any) {
+        setErro(e.message || 'Erro ao salvar a avaliação só de nota.');
+      } finally {
+        setSalvando(false);
+      }
+      return;
+    }
+
     const cotasPayload: CotaProfessorInput[] = professoresArea
       .filter((item) => selecionados[`${item.professor_id}-${item.disciplina_id}`])
       .map((item) => ({
@@ -282,7 +318,8 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
         bimestre_id: bimestre,
         valor_total: Number(valorTotal),
         modo,
-        tipo,
+        // "Sem nota" continua gravado como simulado, como fazia o antigo seletor "Tipo".
+        tipo: campos.modoNota === 'SEM_NOTA' ? 'SIMULADO' : 'AVALIACAO',
         data_aplicacao: dataAplicacao || null,
         prazo_entrega: modo !== 'IMPRESSA' && prazoEntrega ? new Date(prazoEntrega).toISOString() : null,
         instrucoes: instrucoes.trim() || null,
@@ -312,10 +349,12 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200 dark:border-gray-800">
           <div>
             <h2 className="text-lg font-bold text-ms-main">
-              {editando ? 'Editar Avaliação da Área' : 'Elaborar Avaliação da Área'} — {area}
+              {editando ? 'Editar Avaliação da Área' : soNota ? 'Nova Avaliação da Área' : 'Elaborar Avaliação da Área'}{soNota ? ' só de Nota' : ''} — {area}
             </h2>
             <p className="text-xs text-ms-muted">
-              {editando
+              {soNota
+                ? 'Sem questões: só cria o campo de nota no diário dos professores marcados, nas turmas em que eles dão aula. A nota é digitada pelo corretor de cada turma.'
+                : editando
                 ? 'Ajuste os dados da avaliação. Professores que já inseriram questões não podem ser removidos nem ter a cota reduzida.'
                 : 'Crie a avaliação, selecione os docentes participantes da área e estipule o número de questões para cada um.'}
             </p>
@@ -339,12 +378,16 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
             </div>
           ) : (
             <>
-              <CamposAvaliacaoComuns
-                valores={campos}
-                onChange={atualizarCampos}
-                turmasSelecionadas={turmasSelecionadas}
-                onErro={setErro}
-              />
+              {soNota ? (
+                <CamposSoNota valores={campos} onChange={atualizarCampos} />
+              ) : (
+                <CamposAvaliacaoComuns
+                  valores={campos}
+                  onChange={atualizarCampos}
+                  turmasSelecionadas={turmasSelecionadas}
+                  onErro={setErro}
+                />
+              )}
 
               {/* Turmas Participantes */}
               <div>
@@ -375,10 +418,12 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <div>
                     <h3 className="text-sm font-bold text-ms-main">
-                      Professores da Área & Cota de Questões ({totalDocentesParticipantes} selecionados)
+                      {soNota ? 'Professores que recebem a nota' : 'Professores da Área & Cota de Questões'} ({totalDocentesParticipantes} selecionados)
                     </h3>
                     <p className="text-xs text-ms-muted">
-                      Marque quem participará desta avaliação e estipule a quantidade de questões que cada um deverá inserir.
+                      {soNota
+                        ? 'Marque quem recebe o campo de nota no diário. Cada um só recebe nas turmas em que dá aula da disciplina.'
+                        : 'Marque quem participará desta avaliação e estipule a quantidade de questões que cada um deverá inserir.'}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -396,9 +441,11 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
                     >
                       Desmarcar todos
                     </button>
+                    {!soNota && (
                     <span className="text-xs font-bold px-3 py-1 bg-blue-100 dark:bg-ms-blue/20 text-blue-900 dark:text-blue-300 rounded-full border border-blue-300 dark:border-blue-800">
                       Total previsto: {totalQuestoesPrevistas} questões
                     </span>
+                    )}
                   </div>
                 </div>
 
@@ -450,6 +497,7 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
                             </div>
                           </div>
 
+                          {!soNota && (
                           <div className="flex items-center gap-2">
                             <span className="text-xs text-ms-muted">Questões:</span>
                             <input
@@ -462,6 +510,7 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
                               className="w-16 px-2 py-1 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-bold text-center text-ms-main outline-none focus:ring-2 focus:ring-ms-blue disabled:opacity-40 disabled:bg-gray-200 dark:disabled:bg-gray-800"
                             />
                           </div>
+                          )}
                         </div>
                       );
                     })
@@ -487,7 +536,7 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
             className="flex items-center gap-2 px-5 py-2 bg-ms-blue text-white rounded-lg text-sm font-bold hover:bg-blue-600 disabled:opacity-40 shadow transition-all"
           >
             {salvando && <Loader2 className="w-4 h-4 animate-spin" />}
-            {editando ? 'Salvar Alterações' : 'Criar Avaliação de Área'}
+            {editando ? 'Salvar Alterações' : soNota ? 'Criar Avaliação só de Nota' : 'Criar Avaliação de Área'}
           </button>
         </div>
       </div>
