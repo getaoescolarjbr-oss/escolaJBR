@@ -38,11 +38,36 @@ têm de ser removidos pela API de Storage.
 Comportamento a saber: a questão é copiada para o banco principal quando entra numa prova e
 **nunca é sobrescrita**. Editar depois a questão no acervo não altera uma prova já montada.
 
-## Passo 7 (depois de dias estável)
+## Virada para o acervo novo (ordem obrigatória)
+
+Enquanto o site publicado for a versão ANTIGA, ele grava questões no banco principal e o acervo fica
+defasado (em 2026-09-24 já havia 5 linhas assim: 1 questão nova, 3 editadas e 1 texto de apoio
+editado). Por isso:
+
+1. **Publicar a versão nova do site** (acervo ligado por padrão).
+2. **Sincronizar logo depois**, para levar ao acervo o que o site antigo gravou até a virada:
+
+   ```bash
+   node supabase/acervo-projeto-b/backup-acervo.mjs
+   node supabase/acervo-projeto-b/sincronizar-principal-para-acervo.mjs            # só confere
+   node supabase/acervo-projeto-b/sincronizar-principal-para-acervo.mjs --aplicar  # grava
+   ```
+
+   O sincronizador nunca apaga; leva linhas só do principal e linhas **mais novas** no principal;
+   uma edição mais nova no acervo (feita no site novo) é IGNORADA e listada, nunca sobrescrita;
+   copia as imagens do bucket do principal que as linhas usem; e exige backup do acervo das últimas
+   24 h. Testado em 2026-09-24: levou as 5 linhas, ficou tudo idêntico, e preservou uma edição
+   simulada mais nova no acervo.
+3. Conferir de novo (o modo sem `--aplicar` deve dizer "0 linhas seriam levadas") e observar os logs:
+   não deve haver mais leituras de `/rest/v1/questions` vindas do site.
+
+## Passo 7 (só depois da virada e de dias estável)
 
 Só então remover do projeto principal as questões que nenhuma prova usa e as imagens do bucket
 que não são de questões em uso. O SQL fica proposto em `apagar_acervo_do_principal.sql`, com
-trava de conferência; ele **não** deve rodar sem um novo backup verificado.
+trava de conferência; ele **não** deve rodar sem um novo backup verificado e sem a sincronização
+acima estar zerada. Ensaio de 2026-09-24 (nada apagado): manteria 66 questões e 30 imagens (1,4 MB)
+e liberaria ~480 MB de Storage e ~46 MB de banco.
 
 ## O que a análise mostrou
 

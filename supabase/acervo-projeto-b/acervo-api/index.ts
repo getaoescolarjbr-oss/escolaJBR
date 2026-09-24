@@ -283,6 +283,46 @@ const OPS: Record<string, (a: Args, roles: string[], userId: string | null) => P
     return { path, signedUrl: data.signedUrl, publicUrl: bucket.getPublicUrl(path).data.publicUrl };
   },
 
+  // Sincronização do projeto principal -> acervo (supabase/acervo-projeto-b/sincronizar-principal-para-acervo.mjs).
+  // NÃO existe na lista do acervo-proxy: só quem tem o segredo compartilhado chama. Grava (upsert por id)
+  // as linhas que o script decidiu levar; nunca apaga.
+  async sincronizarLinhas(a) {
+    const TABELAS = ["questions", "support_texts", "question_taxonomy_terms"];
+    if (!TABELAS.includes(a.tabela)) throw new ErroHttp(400, "Tabela inválida");
+    const linhas = Array.isArray(a.linhas) ? a.linhas : [];
+    if (linhas.length > 200) throw new ErroHttp(400, "Lote grande demais (máx. 200)");
+    if (linhas.some((l: { id?: string }) => !l?.id)) throw new ErroHttp(400, "Linha sem id");
+    if (!linhas.length) return { gravadas: 0 };
+    const { error } = await supabase.from(a.tabela).upsert(linhas, { onConflict: "id" });
+    if (error) falha(error);
+    return { gravadas: linhas.length };
+  },
+
+  // Copia imagens do bucket do projeto principal para o deste projeto (para as linhas sincronizadas
+  // que apontam para imagens enviadas lá depois da migração). Idempotente (upsert); tenta de novo em 429.
+  async copiarImagensDoPrincipal(a) {
+    const ORIGEM = "https://hqonnxnwozfwkpqgabpf.supabase.co/storage/v1/object/public/imagens-questoes";
+    const caminhos: string[] = Array.isArray(a.caminhos) ? a.caminhos.slice(0, 50) : [];
+    const ok: string[] = [];
+    const falhas: { caminho: string; erro: string }[] = [];
+    for (const c of caminhos) {
+      if (typeof c !== "string" || c.includes("..") || c.startsWith("/") || !/^[\w\-./ ()%+]+$/.test(c)) { falhas.push({ caminho: String(c), erro: "caminho inválido" }); continue; }
+      let ultimo = "";
+      for (let t = 1; t <= 4; t++) {
+        try {
+          const r = await fetch(`${ORIGEM}/${c.split("/").map(encodeURIComponent).join("/")}`);
+          if (!r.ok) { ultimo = `origem HTTP ${r.status}`; if (r.status === 429) { await new Promise((res) => setTimeout(res, 1500 * t)); continue; } break; }
+          const bytes = new Uint8Array(await r.arrayBuffer());
+          const { error } = await supabase.storage.from("imagens-questoes").upload(c, bytes, { contentType: r.headers.get("content-type") ?? "application/octet-stream", upsert: true });
+          if (error) { ultimo = error.message; break; }
+          ultimo = ""; break;
+        } catch (e) { ultimo = e instanceof Error ? e.message : String(e); }
+      }
+      if (ultimo) falhas.push({ caminho: c, erro: ultimo }); else ok.push(c);
+    }
+    return { copiadas: ok.length, falhas };
+  },
+
   async ping() { return new Date().toISOString(); },
 };
 
