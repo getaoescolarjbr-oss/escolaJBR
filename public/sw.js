@@ -15,8 +15,8 @@ self.addEventListener('push', (event) => {
   const title = data.title || 'Portal Professor JBR';
   const options = {
     body: data.body || 'Você tem uma nova notificação.',
-    icon: data.icon || '/icon-192.png',
-    badge: data.badge || '/icon-192.png',
+    icon: data.icon || '/logo.png.png',
+    badge: data.badge || '/logo.png.png',
     tag: data.tag || 'portal-jbr',
     data: {
       url: data.url || '/',

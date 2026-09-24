@@ -29,3 +29,7 @@ supabase/.temp/
 .claude/
 .claude-flow/
 Imagens Questões/
+
+# Segredos e backups: nunca versionar
+chave do backup*
+backups-banco/

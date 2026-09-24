@@ -910,7 +910,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onEnterPortal }) => {
                      <div className="flex flex-col md:flex-row gap-8 relative z-10">
                          <div className="w-full md:w-[220px] flex-shrink-0">
                              <div className="bg-gray-100 p-2 rounded-2xl shadow-inner">
-                                 <img src="/patrono.png" alt="José Barbosa Rodrigues" className="w-full h-auto rounded-xl shadow-md object-cover md:aspect-[4/3]" />
+                                 <img src="/patrono.jpg" alt="José Barbosa Rodrigues" loading="lazy" className="w-full h-auto rounded-xl shadow-md object-cover md:aspect-[4/3]" />
                              </div>
                          </div>
                          <div className="w-full text-gray-600 text-sm flex flex-col justify-center">
