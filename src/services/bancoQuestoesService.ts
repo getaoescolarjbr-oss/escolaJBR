@@ -1,9 +1,15 @@
 import { supabase } from '../lib/supabase';
 import type { FilterOptions, FiltroQuestoes, Question, TaxonomyField, TaxonomyTerm } from '../types/bancoQuestoes';
 import { QUESTION_SELECT_FIELDS } from '../types/bancoQuestoes';
+import { ACERVO_EXTERNO, acervo } from './acervoClient';
+
+// Com VITE_ACERVO_EXTERNO=true cada função abaixo delega ao acervo (projeto jbr-acervo-questoes)
+// pela Edge Function acervo-proxy; sem a chave, tudo continua direto no banco principal.
 
 export async function buscarFilterOptions(): Promise<FilterOptions> {
-  const { data, error } = await supabase.rpc('question_bank_filter_options').single();
+  const { data, error } = ACERVO_EXTERNO
+    ? { data: await acervo<Record<string, unknown>>('filterOptions'), error: null }
+    : await supabase.rpc('question_bank_filter_options').single();
   if (error) throw error;
   const d = data as Record<string, unknown>;
   return {
@@ -21,12 +27,14 @@ export async function buscarFilterOptions(): Promise<FilterOptions> {
 }
 
 export async function buscarAssuntosPorDisciplina(discipline: string): Promise<string[]> {
+  if (ACERVO_EXTERNO) return (await acervo<string[]>('assuntosPorDisciplina', { discipline })) ?? [];
   const { data, error } = await supabase.rpc('question_bank_assuntos_by_discipline', { p_discipline: discipline });
   if (error) throw error;
   return (data as string[]) ?? [];
 }
 
 export async function buscarTopicosPorAssunto(assunto: string): Promise<string[]> {
+  if (ACERVO_EXTERNO) return (await acervo<string[]>('topicosPorAssunto', { assunto })) ?? [];
   const { data, error } = await supabase.rpc('question_bank_topicos_by_assunto', { p_assunto: assunto });
   if (error) throw error;
   return (data as string[]) ?? [];
@@ -38,6 +46,7 @@ export interface ListaQuestoes {
 }
 
 export async function listarQuestoes(filtro: FiltroQuestoes): Promise<ListaQuestoes> {
+  if (ACERVO_EXTERNO) return acervo<ListaQuestoes>('listarQuestoes', { filtro: { ...filtro } });
   const page = filtro.page ?? 0;
   const pageSize = filtro.pageSize ?? 20;
 
@@ -94,12 +103,20 @@ export async function buscarQuestoesPorIds(ids: string[]): Promise<Question[]> {
   if (ids.length === 0) return [];
   const { data, error } = await supabase.from('questions').select(QUESTION_SELECT_FIELDS).in('id', ids);
   if (error) throw error;
-  return (data as unknown as Question[]) ?? [];
+  const achadas = (data as unknown as Question[]) ?? [];
+  if (!ACERVO_EXTERNO) return achadas;
+  // Questões já usadas em provas existem no banco principal (fonte preferida: independe do
+  // acervo estar acordado). As que faltarem vêm do acervo.
+  const tem = new Set(achadas.map((q) => q.id));
+  const faltam = ids.filter((id) => !tem.has(id));
+  if (faltam.length === 0) return achadas;
+  return [...achadas, ...(await acervo<Question[]>('buscarPorIds', { ids: faltam }))];
 }
 
 // Cria ou atualiza o texto associado (passagem de apoio) de uma questão. Retorna o id
 // pra ser gravado em questions.support_text_id.
 export async function salvarTextoApoio(id: string | null, discipline: string, content: string): Promise<string> {
+  if (ACERVO_EXTERNO) return acervo<string>('salvarTextoApoio', { id, discipline, content });
   if (id) {
     const { data, error } = await supabase.from('support_texts').update({ discipline, content }).eq('id', id).select('id');
     if (error) throw error;
@@ -123,6 +140,7 @@ export async function salvarTextoApoio(id: string | null, discipline: string, co
 }
 
 export async function criarQuestao(dados: Partial<Question>): Promise<Question> {
+  if (ACERVO_EXTERNO) return acervo<Question>('criarQuestao', { dados: { ...dados } });
   const { data: userData } = await supabase.auth.getUser();
   const { data, error } = await supabase
     .from('questions')
@@ -134,6 +152,7 @@ export async function criarQuestao(dados: Partial<Question>): Promise<Question> 
 }
 
 export async function atualizarQuestao(id: string, dados: Partial<Question>): Promise<void> {
+  if (ACERVO_EXTERNO) { await acervo('atualizarQuestao', { id, dados: { ...dados } }); return; }
   // .select() aqui é essencial: sem ele, um update bloqueado pelo RLS (ou que não bate
   // com nenhuma linha) não gera erro nenhum — só silenciosamente não atualiza nada.
   const { data, error } = await supabase.from('questions').update(dados).eq('id', id).select('id');
@@ -144,11 +163,13 @@ export async function atualizarQuestao(id: string, dados: Partial<Question>): Pr
 }
 
 export async function excluirQuestao(id: string): Promise<void> {
+  if (ACERVO_EXTERNO) { await acervo('excluirQuestao', { id }); return; }
   const { error } = await supabase.from('questions').delete().eq('id', id);
   if (error) throw error;
 }
 
 export async function listarTermos(field?: TaxonomyField): Promise<TaxonomyTerm[]> {
+  if (ACERVO_EXTERNO) return acervo<TaxonomyTerm[]>('listarTermos', { field });
   let query = supabase.from('question_taxonomy_terms').select('*').order('value');
   if (field) query = query.eq('field', field);
   const { data, error } = await query;
@@ -157,12 +178,14 @@ export async function listarTermos(field?: TaxonomyField): Promise<TaxonomyTerm[
 }
 
 export async function criarTermo(field: TaxonomyField, value: string): Promise<TaxonomyTerm> {
+  if (ACERVO_EXTERNO) return acervo<TaxonomyTerm>('criarTermo', { field, value });
   const { data, error } = await supabase.from('question_taxonomy_terms').insert([{ field, value }]).select().single();
   if (error) throw error;
   return data;
 }
 
 export async function excluirTermo(id: string): Promise<void> {
+  if (ACERVO_EXTERNO) { await acervo('excluirTermo', { id }); return; }
   const { error } = await supabase.from('question_taxonomy_terms').delete().eq('id', id);
   if (error) throw error;
 }
@@ -171,6 +194,7 @@ export async function excluirTermo(id: string): Promise<void> {
 // pra não ficarem presas a um rótulo que sumiu da lista (ex.: juntar "Acento diacrítico" e
 // "Acentuação Diacrítica" num só, renomeando os dois pra "Acentuação").
 export async function renomearTermo(id: string, field: TaxonomyField, oldValue: string, newValue: string): Promise<void> {
+  if (ACERVO_EXTERNO) { await acervo('renomearTermo', { id, field, oldValue, newValue }); return; }
   const { error: cascadeError } = await supabase.from('questions').update({ [field]: newValue }).eq(field, oldValue);
   if (cascadeError) throw cascadeError;
 
@@ -188,6 +212,7 @@ export async function renomearTermo(id: string, field: TaxonomyField, oldValue: 
 }
 
 export async function contarQuestoesPorDisciplina(discipline: string): Promise<number> {
+  if (ACERVO_EXTERNO) return acervo<number>('contarPorDisciplina', { discipline });
   const { count, error } = await supabase
     .from('questions')
     .select('id', { count: 'exact', head: true })
@@ -200,6 +225,7 @@ export async function contarQuestoesPorDisciplina(discipline: string): Promise<n
 // (o RPC de filtros junta discipline de `questions` com `question_taxonomy_terms`, então só
 // excluir o termo não tira a disciplina do banco enquanto sobrarem questões com esse texto).
 export async function excluirDisciplinaComQuestoes(discipline: string, termoId?: string): Promise<void> {
+  if (ACERVO_EXTERNO) { await acervo('excluirDisciplina', { discipline, termoId }); return; }
   const { error: qErr } = await supabase.from('questions').delete().eq('discipline', discipline);
   if (qErr) throw qErr;
 

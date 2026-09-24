@@ -23,6 +23,7 @@ import type {
 } from '../types/avaliacoes';
 import type { ModoNota, PonderadaEscopo } from '../types/correcaoOmr';
 import { QUESTION_SELECT_FIELDS, type Question } from '../types/bancoQuestoes';
+import { ACERVO_EXTERNO, acervo, garantirQuestoesNoPrincipal } from './acervoClient';
 
 const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at, embaralhar, qtd_versoes, cartao_separado, cartao_posicao, modo_nota, ponderada_escopo, lancar_no_boletim, eh_prova_area, eh_prova_geral, somente_nota, area_conhecimento';
 
@@ -83,6 +84,9 @@ export async function obterQuestoesDaAvaliacao(id: string): Promise<{ question_i
 export async function criarAvaliacao(dados: NovaAvaliacaoInput, status: StatusAvaliacao = 'RASCUNHO'): Promise<string> {
   const { data: userData } = await supabase.auth.getUser();
   if (!userData.user) throw new Error('Sessão inválida.');
+
+  // Antes de criar a prova: se a importação falhar, não sobra rascunho pela metade.
+  await garantirQuestoesNoPrincipal(dados.questoes.map((q) => q.question_id));
 
   const { data: avaliacao, error: avErro } = await supabase
     .from('provas')
@@ -227,6 +231,8 @@ export async function contarRespostasEnviadas(avaliacaoId: string): Promise<numb
 // respostas já enviadas continuam registradas, mas podem ficar "fora de sincronia" se as
 // questões mudaram (por isso o aviso na tela antes de confirmar).
 export async function atualizarAvaliacao(id: string, dados: NovaAvaliacaoInput, status: StatusAvaliacao): Promise<void> {
+  await garantirQuestoesNoPrincipal(dados.questoes.map((q) => q.question_id));
+
   const { error: avErro } = await supabase
     .from('provas')
     .update({
@@ -678,6 +684,7 @@ export async function inserirQuestoesCotaArea(
   disciplinaId: string,
   questoes: { question_id: string; valor: number }[]
 ): Promise<void> {
+  await garantirQuestoesNoPrincipal(questoes.map((q) => q.question_id));
   const { error } = await supabase.rpc('rpc_inserir_questoes_cota_area', {
     p_prova_id: provaId,
     p_disciplina_id: disciplinaId,
@@ -806,6 +813,7 @@ export async function definirModoNota(provaId: string, modoNota: ModoNota, ponde
 // Sorteio no servidor (só objetivas). Pode devolver menos que `qtd` se o banco não tiver
 // questões suficientes com esses filtros — quem chama avisa o usuário.
 export async function sortearQuestoes(filtro: FiltroSorteio): Promise<Question[]> {
+  if (ACERVO_EXTERNO) return acervo<Question[]>('sortear', { filtro: { ...filtro } });
   const { data, error } = await supabase.rpc('rpc_sortear_questoes', {
     p_qtd: filtro.qtd,
     p_disciplinas: filtro.disciplinas && filtro.disciplinas.length > 0 ? filtro.disciplinas : null,
@@ -833,6 +841,7 @@ export async function configurarAreaAvaliacaoGeral(
   cotas: { professor_id: string; disciplina_id: string; qtd_questoes: number }[],
   questoesSorteadas: string[] | null
 ): Promise<void> {
+  if (questoesSorteadas) await garantirQuestoesNoPrincipal(questoesSorteadas);
   const { error } = await supabase.rpc('rpc_configurar_area_avaliacao_geral', {
     p_prova_id: provaId,
     p_area: area,
@@ -844,6 +853,7 @@ export async function configurarAreaAvaliacaoGeral(
 }
 
 export async function inserirQuestoesCotaGeral(cotaId: string, questoes: { question_id: string }[]): Promise<void> {
+  await garantirQuestoesNoPrincipal(questoes.map((q) => q.question_id));
   const { error } = await supabase.rpc('rpc_inserir_questoes_cota_geral', {
     p_cota_id: cotaId,
     p_questoes: questoes,
