@@ -248,6 +248,14 @@ const OPS: Record<string, (a: Args, roles: string[], userId: string | null) => P
     return { questions: questions ?? [], support_texts: textos };
   },
 
+  // Medidor de uso do projeto do acervo (Portal do Administrador). Só leitura.
+  async usoBanco(_a, roles) {
+    if (!roles.includes("GESTAO")) throw new ErroHttp(403, "Somente a gestão consulta o uso do banco");
+    const { data, error } = await supabase.rpc("rpc_uso_banco_dados");
+    if (error) falha(error);
+    return data;
+  },
+
   async ping() { return new Date().toISOString(); },
 };
 
