@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import type { Professor, AtestadoServidor } from '../types';
 import { supabase } from '../lib/supabase';
 import { StudentList } from './StudentList';
@@ -37,6 +37,15 @@ function getCurrentTempo(): number | null {
     }
   }
   return null;
+}
+
+// Titular cuja turma/disciplina foi espelhada para o professor logado (substituição vigente).
+interface TitularEspelho {
+  id: string;
+  nome: string;
+  config_visto_metodo: Professor['config_visto_metodo'];
+  config_visto_valor_total: number;
+  config_turmas?: Professor['config_turmas'];
 }
 
 interface DashboardProps {
@@ -86,7 +95,10 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   const [lockedBimestres, setLockedBimestres] = useState<number[]>([]);
   // --- Estado de Atestado ---
   const [atestadoAtivo, setAtestadoAtivo] = useState<AtestadoServidor | null>(null); // se o titular está de atestado
-  const [substituicaoAtiva, setSubstituicaoAtiva] = useState<{ atestado: AtestadoServidor; titularNome: string } | null>(null); // se é substituto
+  const [substituicaoAtiva, setSubstituicaoAtiva] = useState<{ atestado: Pick<AtestadoServidor, 'data_inicio' | 'data_fim'>; titularNome: string } | null>(null); // se é substituto
+  // `${turmaId}|${disciplinaId}` -> titular que o professor logado está substituindo nessa turma/disciplina.
+  const [espelhos, setEspelhos] = useState<Record<string, TitularEspelho>>({});
+  const [substitutoNome, setSubstitutoNome] = useState(''); // quando o titular está bloqueado: quem assumiu as turmas
 
   useEffect(() => {
     async function loadLockedBimestres() {
@@ -128,44 +140,48 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
 
       if (atestados) {
         setAtestadoAtivo(atestados);
+        if (atestados.bloquear_titular && atestados.substituto_id) {
+          const { data: sub } = await supabase.from('professores').select('nome').eq('id', atestados.substituto_id).maybeSingle();
+          setSubstitutoNome(sub?.nome ?? 'o professor substituto');
+        }
       } else {
         setAtestadoAtivo(null);
       }
 
-      // 2. Verificar se o professor ATUAL é substituto de alguém
-      const { data: espelhos } = await supabase
-        .from('alocacoes_v2')
-        .select('atestado_id, professor_original_id')
-        .eq('professor_id', professor.id)
-        .eq('is_espelho', true)
-        .limit(1)
-        .maybeSingle();
+      // 2. Verificar se o professor ATUAL é substituto de alguém: todas as turmas/disciplinas
+      // espelhadas com afastamento vigente hoje (uma substituição pode cobrir várias). Vem por RPC
+      // porque o substituto não pode ler atestados_servidores (dado de saúde, só titular/gestão/secretaria):
+      // a função devolve apenas turma, disciplina, titular, período e a configuração de vistos dele.
+      const { data: substituicoes } = await supabase.rpc('rpc_minhas_substituicoes');
+      const linhas = (substituicoes ?? []) as Array<{
+        turma_id: string;
+        disciplina_id: string;
+        titular_id: string;
+        titular_nome: string;
+        data_inicio: string;
+        data_fim: string;
+        config_visto_metodo: Professor['config_visto_metodo'];
+        config_visto_valor_total: number;
+        config_turmas: Professor['config_turmas'] | null;
+      }>;
 
-      if (espelhos?.atestado_id) {
-        // Buscar o atestado para pegar as datas
-        const { data: atestadoEspelho } = await supabase
-          .from('atestados_servidores')
-          .select('*')
-          .eq('id', espelhos.atestado_id)
-          .eq('ativo', true)
-          .lte('data_inicio', today)
-          .gte('data_fim', today)
-          .maybeSingle();
+      const mapa: Record<string, TitularEspelho> = {};
+      linhas.forEach((l) => {
+        mapa[`${l.turma_id}|${l.disciplina_id}`] = {
+          id: l.titular_id,
+          nome: l.titular_nome,
+          config_visto_metodo: l.config_visto_metodo,
+          config_visto_valor_total: l.config_visto_valor_total,
+          config_turmas: l.config_turmas ?? undefined,
+        };
+      });
+      setEspelhos(mapa);
 
-        if (atestadoEspelho && espelhos.professor_original_id) {
-          const { data: titular } = await supabase
-            .from('professores')
-            .select('nome')
-            .eq('id', espelhos.professor_original_id)
-            .maybeSingle();
-
-          setSubstituicaoAtiva({
-            atestado: atestadoEspelho,
-            titularNome: titular?.nome || 'Professor Titular'
-          });
-        } else {
-          setSubstituicaoAtiva(null);
-        }
+      if (linhas.length > 0) {
+        setSubstituicaoAtiva({
+          atestado: { data_inicio: linhas[0].data_inicio, data_fim: linhas[0].data_fim },
+          titularNome: linhas[0].titular_nome || 'Professor Titular',
+        });
       } else {
         setSubstituicaoAtiva(null);
       }
@@ -178,6 +194,26 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   const isTitularEmAtestado = !!atestadoAtivo;
   // Read-only efetivo: bimestre bloqueado OU titular em atestado
   const isEffectivelyLocked = isBimestreLocked || isTitularEmAtestado;
+
+  // Titular com bloqueio ligado no atestado (e substituto definido): não acessa as turmas no período.
+  const titularBloqueado = !!atestadoAtivo?.bloquear_titular && !!atestadoAtivo?.substituto_id;
+  const turmasDisponiveis = titularBloqueado ? [] : turmas;
+
+  // Professor "de dados": numa turma/disciplina que o professor logado assume como substituto, as
+  // atividades, avaliações, notas, vistos e chamadas continuam no diário do TITULAR (é um só conjunto
+  // por turma+disciplina; se cada um lançasse no seu nome a nota do bimestre ficaria partida em duas).
+  // Só o id e a configuração de vistos vêm do titular; nome, e-mail e cargo continuam os de quem está logado.
+  const professorDados = useMemo<Professor>(() => {
+    const titular = espelhos[`${selectedTurma}|${selectedDisciplina}`];
+    if (!titular) return professor;
+    return {
+      ...professor,
+      id: titular.id,
+      config_visto_metodo: titular.config_visto_metodo,
+      config_visto_valor_total: titular.config_visto_valor_total,
+      config_turmas: titular.config_turmas,
+    };
+  }, [espelhos, professor, selectedTurma, selectedDisciplina]);
 
   // O auto-retorno de alunos nos intervalos (09:10, 11:55, 15:40) roda no servidor:
   // job `auto-retorno-saidas-sala` do pg_cron (ver fix_auto_retorno_saidas_sala_pgcron.sql).
@@ -227,13 +263,13 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
     supabase
       .from('atividades_diárias')
       .select('id, data, descricao')
-      .eq('id_do_professor', professor.id)
+      .eq('id_do_professor', professorDados.id)
       .eq('turma_id', selectedTurma)
       .eq('disciplina_id', selectedDisciplina)
       .eq('bimestre_id', selectedBimestre)
       .order('data', { ascending: true })
       .then(({ data }) => { if (data) setRecentAtividades(data); });
-  }, [professor.id, selectedTurma, selectedDisciplina, selectedBimestre, atividadesRefreshKey]);
+  }, [professorDados.id, selectedTurma, selectedDisciplina, selectedBimestre, atividadesRefreshKey]);
 
   // Sincronização inteligente do modo lote ao mudar de turma, disciplina, bimestre ou quando novas atividades são criadas
   const prevContextRef = useRef({ turma: '', disciplina: '', bimestre: 0, length: 0 });
@@ -416,7 +452,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   useEffect(() => {
     async function autoSelectAula() {
       if (hasAutoSelected.current) return;
-      if (turmas.length === 0) return;
+      if (turmasDisponiveis.length === 0) return;
 
       const tempoAtual = getCurrentTempo();
       if (!tempoAtual) return; // Fora do horário de aula
@@ -437,7 +473,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
           const aulaAtual = horarios[0];
           
           // Verifica se a turma está na lista do professor
-          const turmaExiste = turmas.find(t => t.id === aulaAtual.turma_id);
+          const turmaExiste = turmasDisponiveis.find(t => t.id === aulaAtual.turma_id);
           if (turmaExiste) {
             setSelectedTurma(aulaAtual.turma_id);
             // Vamos tentar encontrar a disciplina correspondente
@@ -460,10 +496,10 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
     }
     
     // Roda quando a lista de turmas terminar de carregar
-    if (turmas.length > 0) {
+    if (turmasDisponiveis.length > 0) {
        autoSelectAula();
     }
-  }, [turmas, professor.id, disciplinas]);
+  }, [turmasDisponiveis, professor.id, disciplinas]);
 
   const handleBimestreChange = (b: number) => {
     setSelectedBimestre(b);
@@ -485,8 +521,8 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
     } else {
       // Cria nova atividade para a data selecionada (permite múltiplas atividades no mesmo dia)
       const { data } = await supabase.from('atividades_diárias').insert({
-        id_do_professor: professor.id,
-        professor_id: professor.id,
+        id_do_professor: professorDados.id,
+        professor_id: professorDados.id,
         turma_id: selectedTurma,
         disciplina_id: selectedDisciplina,
         bimestre_id: selectedBimestre,
@@ -544,7 +580,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   };
 
 
-  const turmaAtual = turmas.find(t => t.id === selectedTurma);
+  const turmaAtual = turmasDisponiveis.find(t => t.id === selectedTurma);
   const disciplinaAtual = disciplinas.find(d => d.id === selectedDisciplina);
 
   return (
@@ -715,7 +751,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                     }`}
                   >
                     <option value="" className={theme === 'light' ? 'bg-white text-blue-900' : 'bg-[#001a4d] text-blue-100'}>Selecione uma turma...</option>
-                    {turmas.map(turma => (
+                    {turmasDisponiveis.map(turma => (
                       <option 
                         key={turma.id} 
                         value={turma.id} 
@@ -935,6 +971,18 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
           <AniversariantesPanel />
         ) : activeTab === 'ocorrencias' ? (
           <MinhasOcorrenciasPanel professor={professor} theme={theme} />
+        ) : titularBloqueado ? (
+          <div className="bg-amber-500/10 border-2 border-amber-500/30 p-6 rounded-2xl flex items-start gap-3 shadow-md">
+            <ShieldAlert className="w-6 h-6 shrink-0 mt-0.5 text-amber-500" />
+            <div>
+              <h4 className="font-black text-sm uppercase tracking-wider text-amber-500">Acesso às turmas bloqueado durante o atestado</h4>
+              <p className="text-xs text-amber-400/90 font-bold mt-1">
+                Período: {new Date(atestadoAtivo!.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR')} a {new Date(atestadoAtivo!.data_fim + 'T12:00:00').toLocaleDateString('pt-BR')}.
+                Suas turmas estão com <span className="text-amber-300">{substitutoNome || 'o professor substituto'}</span>, que lança as atividades e notas no seu diário.
+                O acesso volta automaticamente ao fim do período.
+              </p>
+            </div>
+          </div>
         ) : !selectedTurma || !selectedDisciplina ? (
           <EmptyState />
         ) : (
@@ -947,7 +995,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                   <h4 className="font-black text-sm uppercase tracking-wider text-amber-400">Modo Substituto Ativo</h4>
                   <p className="text-xs text-amber-300/80 font-bold mt-1">
                     Você está substituindo <span className="text-amber-300">{substituicaoAtiva.titularNome}</span> até <span className="text-amber-300">{new Date(substituicaoAtiva.atestado.data_fim + 'T12:00:00').toLocaleDateString('pt-BR')}</span>.
-                    Todos os lançamentos realizados neste período serão de sua responsabilidade.
+                    Você trabalha sobre o diário dele: atividades, vistos, chamadas e notas ficam nos registros de {substituicaoAtiva.titularNome}.
                   </p>
                 </div>
               </div>
@@ -983,7 +1031,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
 
             {activeTab === 'aulas' && (
               <StudentList 
-                professor={professor} 
+                professor={professorDados} 
                 turmaId={selectedTurma} 
                 disciplinaId={selectedDisciplina}
                 dataAula={dataAula}
@@ -1009,7 +1057,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
             
             {activeTab === 'notas' && selectedBimestre !== 5 && (
               <GradesPanel 
-                professor={professor}
+                professor={professorDados}
                 turmaId={selectedTurma}
                 disciplinaId={selectedDisciplina}
                 bimestreId={selectedBimestre}
@@ -1021,7 +1069,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
 
             {activeTab === 'notas' && selectedBimestre === 5 && (
               <ExameFinalPanel 
-                professor={professor}
+                professor={professorDados}
                 turmaId={selectedTurma}
                 disciplinaId={selectedDisciplina}
                 theme={theme}
@@ -1031,7 +1079,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
 
             {activeTab === 'relatorios' && (
               <ReportsPanel
-                professor={professor}
+                professor={professorDados}
                 turmaId={selectedTurma}
                 disciplinaId={selectedDisciplina}
                 bimestreId={selectedBimestre}

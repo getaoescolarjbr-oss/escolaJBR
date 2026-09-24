@@ -1,3 +1,5 @@
+import { aplicarSubstituicoes } from '../utils/substituicoes';
+import type { EspelhoSubstituicao } from '../utils/substituicoes';
 import { supabase } from '../lib/supabase';
 import type {
   Avaliacao,
@@ -875,9 +877,43 @@ export interface ProfessorDisciplinaTurmas {
   disciplina_nome: string;
 }
 
+// Substituições em andamento: alocações espelhadas (atestado com substituto) em alocacoes_v2.
+export type { EspelhoSubstituicao } from '../utils/substituicoes';
+
+export async function listarEspelhosDeSubstituicao(): Promise<EspelhoSubstituicao[]> {
+  const { data, error } = await supabase
+    .from('alocacoes_v2')
+    .select('professor_id, professor_original_id, disciplina_id, substituto:professores!alocacoes_v2_professor_id_fkey(nome), titular:professores!alocacoes_v2_professor_original_id_fkey(nome)')
+    .eq('is_espelho', true);
+  if (error) throw error;
+  type LinhaEspelho = {
+    professor_id: string;
+    professor_original_id: string | null;
+    disciplina_id: string | null;
+    substituto: { nome: string } | null;
+    titular: { nome: string } | null;
+  };
+  const mapa = new Map<string, EspelhoSubstituicao>();
+  for (const row of (data ?? []) as unknown as LinhaEspelho[]) {
+    if (!row.professor_original_id || !row.disciplina_id) continue;
+    const key = `${row.professor_id}|${row.professor_original_id}|${row.disciplina_id}`;
+    if (mapa.has(key)) continue;
+    mapa.set(key, {
+      substituto_id: row.professor_id,
+      substituto_nome: row.substituto?.nome ?? 'Substituto',
+      titular_id: row.professor_original_id,
+      titular_nome: row.titular?.nome ?? 'titular',
+      disciplina_id: row.disciplina_id,
+    });
+  }
+  return Array.from(mapa.values());
+}
+
+export { aplicarSubstituicoes };
+
 // Professor+disciplina de quem dá aula em pelo menos uma das turmas (qualquer área) —
 // base das listas "recebe nota" e "insere questões" da Avaliação Geral.
-export async function listarProfessoresDasTurmas(turmaIds: string[]): Promise<ProfessorDisciplinaTurmas[]> {
+export async function listarProfessoresDasTurmas(turmaIds: string[], manter: Set<string> = new Set()): Promise<ProfessorDisciplinaTurmas[]> {
   if (turmaIds.length === 0) return [];
   const { data, error } = await supabase
     .from('alocacoes_v2')
@@ -899,7 +935,7 @@ export async function listarProfessoresDasTurmas(turmaIds: string[]): Promise<Pr
       disciplina_nome: row.disciplinas.nome,
     });
   }
-  return Array.from(mapa.values()).sort(
+  return aplicarSubstituicoes(Array.from(mapa.values()), await listarEspelhosDeSubstituicao(), manter).sort(
     (a, b) => a.professor_nome.localeCompare(b.professor_nome) || a.disciplina_nome.localeCompare(b.disciplina_nome)
   );
 }

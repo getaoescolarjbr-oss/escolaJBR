@@ -6,6 +6,7 @@ import {
   criarAusencia,
   atualizarStatusOficialAusencia,
   encerrarAusencia,
+  definirBloqueioTitular,
   enviarDocumentoAusencia,
   obterUrlDocumentoAusencia,
 } from '../../../services/rhService';
@@ -33,7 +34,7 @@ export function AusenciasTab() {
   const [erro, setErro] = useState<string | null>(null);
   const [enviandoDoc, setEnviandoDoc] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
-  const [novo, setNovo] = useState({ professor_id: '', tipo: 'ATESTADO' as TipoAusencia, data_inicio: today, data_fim: today, substituto_id: '', processo_sed_ref: '', observacoes: '' });
+  const [novo, setNovo] = useState({ professor_id: '', tipo: 'ATESTADO' as TipoAusencia, data_inicio: today, data_fim: today, substituto_id: '', bloquear_titular: false, processo_sed_ref: '', observacoes: '' });
 
   async function carregar() {
     setLoading(true);
@@ -64,13 +65,15 @@ export function AusenciasTab() {
         data_inicio: novo.data_inicio,
         data_fim: novo.data_fim,
         substituto_id: novo.substituto_id || null,
+        bloquear_titular: !!novo.substituto_id && novo.bloquear_titular,
         processo_sed_ref: novo.processo_sed_ref || null,
         observacoes: novo.observacoes || null,
       });
-      setNovo({ professor_id: '', tipo: 'ATESTADO', data_inicio: today, data_fim: today, substituto_id: '', processo_sed_ref: '', observacoes: '' });
+      setNovo({ professor_id: '', tipo: 'ATESTADO', data_inicio: today, data_fim: today, substituto_id: '', bloquear_titular: false, processo_sed_ref: '', observacoes: '' });
       await carregar();
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Erro ao registrar ausência.');
+      await carregar(); // a ausência pode ter sido gravada mesmo com falha no espelhamento
     }
   }
 
@@ -82,6 +85,16 @@ export function AusenciasTab() {
   async function handleProcessoSedRef(a: AusenciaServidor, processoSedRef: string) {
     await atualizarStatusOficialAusencia(a.id, a.status_oficial, processoSedRef || null);
     await carregar();
+  }
+
+  async function handleBloqueio(a: AusenciaServidor, bloquear: boolean) {
+    setErro(null);
+    try {
+      await definirBloqueioTitular(a.id, bloquear);
+      await carregar();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Erro ao alterar o bloqueio do titular.');
+    }
   }
 
   async function handleEncerrar(a: AusenciaServidor) {
@@ -142,12 +155,26 @@ export function AusenciasTab() {
           </select>
           <input type="date" value={novo.data_inicio} onChange={(e) => setNovo({ ...novo, data_inicio: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
           <input type="date" min={novo.data_inicio} value={novo.data_fim} onChange={(e) => setNovo({ ...novo, data_fim: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
-          <select value={novo.substituto_id} onChange={(e) => setNovo({ ...novo, substituto_id: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue">
+          <select value={novo.substituto_id} onChange={(e) => setNovo({ ...novo, substituto_id: e.target.value, bloquear_titular: e.target.value ? novo.bloquear_titular : false })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue">
             <option value="">Substituto (opcional)...</option>
             {professores.filter((p) => p.id !== novo.professor_id).map((p) => <option key={p.id} value={p.id}>{p.nome}</option>)}
           </select>
           <input placeholder="Processo SED (opcional)" value={novo.processo_sed_ref} onChange={(e) => setNovo({ ...novo, processo_sed_ref: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
         </div>
+        {novo.substituto_id && (
+          <label className="flex items-start gap-2 text-sm text-ms-main cursor-pointer">
+            <input
+              type="checkbox"
+              checked={novo.bloquear_titular}
+              onChange={(e) => setNovo({ ...novo, bloquear_titular: e.target.checked })}
+              className="mt-1 w-4 h-4"
+            />
+            <span>
+              <b>Bloquear o acesso do titular às turmas</b> durante o período: só o substituto trabalha nelas.
+              <span className="block text-xs text-gray-500">As turmas do servidor são espelhadas para o substituto ao registrar (e desfeitas ao encerrar). O substituto trabalha sobre as atividades e notas do titular.</span>
+            </span>
+          </label>
+        )}
         <textarea placeholder="Observações (opcional)" value={novo.observacoes} onChange={(e) => setNovo({ ...novo, observacoes: e.target.value })} className="w-full px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue h-20" />
         <button onClick={handleCriar} className="flex items-center gap-2 px-6 py-2.5 bg-ms-blue text-white rounded-xl font-bold hover:bg-blue-600 transition-all">
           <Plus className="w-4 h-4" /> Registrar
@@ -167,6 +194,12 @@ export function AusenciasTab() {
                     {new Date(a.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR')} — {new Date(a.data_fim + 'T12:00:00').toLocaleDateString('pt-BR')}
                     {a.substituto_id && ` · Substituto: ${nomeProfessor(a.substituto_id)}`}
                   </p>
+                  {a.substituto_id && a.ativo && (
+                    <label className="mt-1 flex items-center gap-1.5 text-xs text-amber-400 cursor-pointer">
+                      <input type="checkbox" checked={a.bloquear_titular} onChange={(e) => handleBloqueio(a, e.target.checked)} />
+                      Titular bloqueado (só o substituto acessa as turmas)
+                    </label>
+                  )}
                   {a.observacoes && <p className="text-xs text-gray-400 mt-1">{a.observacoes}</p>}
                 </div>
                 {a.ativo && (

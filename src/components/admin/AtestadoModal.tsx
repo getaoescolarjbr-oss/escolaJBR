@@ -38,6 +38,7 @@ export function AtestadoModal({ professor, allProfessors, onClose, onUpdate }: A
     data_inicio: today,
     data_fim: today,
     substituto_id: '',
+    bloquear_titular: false,
     observacoes: ''
   });
 
@@ -92,6 +93,7 @@ export function AtestadoModal({ professor, allProfessors, onClose, onUpdate }: A
       };
       if (isProfessor && formData.substituto_id) {
         payload.substituto_id = formData.substituto_id;
+        payload.bloquear_titular = formData.bloquear_titular;
       }
 
       const { data: novoAtestado, error: errInsert } = await supabase
@@ -132,7 +134,7 @@ export function AtestadoModal({ professor, allProfessors, onClose, onUpdate }: A
 
       alert('Atestado registrado com sucesso!' + (isProfessor && formData.substituto_id ? '\nAs turmas foram espelhadas para o professor substituto.' : ''));
       setShowForm(false);
-      setFormData({ data_inicio: today, data_fim: today, substituto_id: '', observacoes: '' });
+      setFormData({ data_inicio: today, data_fim: today, substituto_id: '', bloquear_titular: false, observacoes: '' });
       await fetchAtestados();
       onUpdate();
     } catch (err: any) {
@@ -269,7 +271,7 @@ export function AtestadoModal({ professor, allProfessors, onClose, onUpdate }: A
                   </label>
                   <select
                     value={formData.substituto_id}
-                    onChange={e => setFormData({ ...formData, substituto_id: e.target.value })}
+                    onChange={e => setFormData({ ...formData, substituto_id: e.target.value, bloquear_titular: e.target.value ? formData.bloquear_titular : false })}
                     className="w-full px-4 py-3 bg-ms-card border border-gray-700 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-amber-400/50 font-bold text-sm transition-all"
                   >
                     <option value="">— Sem substituto designado —</option>
@@ -281,6 +283,19 @@ export function AtestadoModal({ professor, allProfessors, onClose, onUpdate }: A
                     <p className="text-[10px] text-amber-400 font-bold ml-1">
                       ✓ As turmas de {professor.nome} serão espelhadas automaticamente para o substituto selecionado.
                     </p>
+                  )}
+                  {formData.substituto_id && (
+                    <label className="flex items-start gap-2 text-xs text-ms-main font-bold cursor-pointer pt-1">
+                      <input
+                        type="checkbox"
+                        checked={formData.bloquear_titular}
+                        onChange={e => setFormData({ ...formData, bloquear_titular: e.target.checked })}
+                        className="mt-0.5 w-4 h-4"
+                      />
+                      <span>
+                        Bloquear o acesso de {professor.nome} às turmas durante o período (só o substituto acessa).
+                      </span>
+                    </label>
                   )}
                 </div>
               )}

@@ -147,6 +147,8 @@ export interface AtestadoServidor {
   id: string;
   professor_id: string;
   substituto_id?: string | null;
+  // Com substituto, o titular fica sem acesso às turmas durante o período.
+  bloquear_titular?: boolean;
   data_inicio: string;
   data_fim: string;
   observacoes?: string | null;

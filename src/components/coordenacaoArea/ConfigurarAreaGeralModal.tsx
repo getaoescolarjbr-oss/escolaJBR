@@ -51,7 +51,12 @@ export function ConfigurarAreaGeralModal({ avaliacao, area, onClose, onSalvo }: 
   useEffect(() => {
     (async () => {
       try {
-        const lista = await listarProfessoresDasTurmas(avaliacao.turma_ids ?? []);
+        // Quem já tem nota/cota salva nesta área continua na lista (não dá para remover cota com questão inserida).
+        const manter = new Set<string>([
+          ...(avaliacao.notas_professores ?? []).filter((n) => n.area_conhecimento === area).map((n) => `${n.professor_id}|${n.disciplina_id}`),
+          ...cotasDaArea.map((c) => `${c.professor_id}|${c.disciplina_id}`),
+        ]);
+        const lista = await listarProfessoresDasTurmas(avaliacao.turma_ids ?? [], manter);
         setPool(lista);
         const daArea = new Set(lista.filter((p) => disciplinaPertenceAAreaEstrita(p.disciplina_nome, area)).map(chave));
 
