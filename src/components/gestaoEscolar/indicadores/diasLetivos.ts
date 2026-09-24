@@ -61,3 +61,21 @@ export function contarDiasLetivos(calendario: Record<string, { categoria: string
 
   return { geral, periodos };
 }
+
+export interface DiaLetivo {
+  data: string;
+  descricao: string;
+  cumprido: boolean;
+}
+
+// Datas que compõem a contagem dos períodos dados (mesmo critério de contarDiasLetivos).
+export function listarDias(calendario: Record<string, { categoria: string; descricao?: string }>, periodos: PeriodoLetivo[], hoje: string): DiaLetivo[] {
+  const dias: DiaLetivo[] = [];
+  for (const [data, dia] of Object.entries(calendario)) {
+    const categoria = dia.categoria.split(':')[0];
+    if (periodos.some((p) => p.categoria === categoria && data >= p.inicio && data <= p.fim)) {
+      dias.push({ data, descricao: dia.descricao ?? '', cumprido: data <= hoje });
+    }
+  }
+  return dias.sort((a, b) => a.data.localeCompare(b.data));
+}

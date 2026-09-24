@@ -14,15 +14,17 @@ interface OcorrenciasIndicadorProps {
 export function OcorrenciasIndicador({ versao = 0, onAlterado }: OcorrenciasIndicadorProps) {
   const [periodo, setPeriodo] = useState<PeriodoOcorrencias>('30d');
   const [aberto, setAberto] = useState(false);
+  const [turmaAberta, setTurmaAberta] = useState('');
   const [versaoLocal, setVersaoLocal] = useState(0);
 
   return (
     <>
-      <OcorrenciasTile periodo={periodo} onPeriodo={setPeriodo} versao={versao + versaoLocal} onAbrir={() => setAberto(true)} />
+      <OcorrenciasTile periodo={periodo} onPeriodo={setPeriodo} versao={versao + versaoLocal} onAbrir={(turmaId) => { setTurmaAberta(turmaId ?? ''); setAberto(true); }} />
       {aberto && (
         <OcorrenciasModal
           filtroInicial="todas"
           periodoInicial={periodo}
+          turmaInicial={turmaAberta}
           onClose={() => setAberto(false)}
           onAlterado={() => { setVersaoLocal((v) => v + 1); onAlterado?.(); }}
         />

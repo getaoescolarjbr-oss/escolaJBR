@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Database, RefreshCw } from 'lucide-react';
-import { LIMITE_BANCO_BYTES, LIMITE_STORAGE_BYTES, obterUsoBancoDados } from '../../services/usoBancoService';
+import { LIMITE_BANCO_BYTES, LIMITE_STORAGE_BYTES, obterUsoBancoAcervo, obterUsoBancoDados } from '../../services/usoBancoService';
 import type { UsoBancoDados as Uso } from '../../services/usoBancoService';
 
 const MB = 1024 * 1024;
@@ -34,9 +34,8 @@ function Barra({ titulo, usado, limite }: { titulo: string; usado: number; limit
   );
 }
 
-// Medidor de uso do banco e do Storage (cotas do plano gratuito do Supabase) para o
-// Portal do Administrador.
-export function UsoBancoDados() {
+// Uma medição de um projeto do Supabase (cada projeto tem a sua cota do plano gratuito).
+function useUso(obter: () => Promise<Uso>) {
   const [uso, setUso] = useState<Uso | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [carregando, setCarregando] = useState(true);
@@ -45,43 +44,32 @@ export function UsoBancoDados() {
     setCarregando(true);
     setErro(null);
     try {
-      setUso(await obterUsoBancoDados());
+      setUso(await obter());
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível medir o uso do banco.');
     } finally {
       setCarregando(false);
     }
-  }, []);
+  }, [obter]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     carregar();
   }, [carregar]);
 
+  return { uso, erro, carregando, carregar };
+}
+
+function BlocoProjeto({ titulo, uso, erro, primeiro }: { titulo: string; uso: Uso | null; erro: string | null; primeiro?: boolean }) {
   return (
-    <section className="bg-ms-card border border-gray-800 rounded-2xl p-4 sm:p-5" aria-label="Uso do banco de dados e do armazenamento">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-2 min-w-0">
-          <Database className="w-5 h-5 text-ms-blueText shrink-0" />
-          <h3 className="text-sm font-black text-ms-main truncate">Uso do banco de dados</h3>
-        </div>
-        <button
-          onClick={carregar}
-          disabled={carregando}
-          title="Atualizar"
-          aria-label="Atualizar uso do banco"
-          className="p-1.5 rounded-lg text-gray-500 hover:text-ms-main transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ms-blue"
-        >
-          <RefreshCw className={`w-4 h-4 ${carregando ? 'animate-spin' : ''}`} />
-        </button>
-      </div>
+    <div className={primeiro ? 'space-y-4' : 'space-y-4 pt-4 border-t border-gray-800'}>
+      <p className="text-xs font-black text-ms-blueText uppercase tracking-wider">{titulo}</p>
 
-      {erro && <p className="mt-3 text-xs text-red-500">{erro}</p>}
-
-      {!erro && !uso && <p className="mt-3 text-xs text-gray-500">Medindo…</p>}
+      {erro && <p className="text-xs text-red-500">{erro}</p>}
+      {!erro && !uso && <p className="text-xs text-gray-500">Medindo…</p>}
 
       {uso && (
-        <div className="mt-3 space-y-4">
+        <>
           <Barra titulo="Banco de dados" usado={uso.total_bytes} limite={LIMITE_BANCO_BYTES} />
           <Barra titulo="Armazenamento de arquivos (imagens)" usado={uso.storage_bytes} limite={LIMITE_STORAGE_BYTES} />
 
@@ -100,8 +88,46 @@ export function UsoBancoDados() {
               </li>
             </ul>
           </details>
-        </div>
+        </>
       )}
+    </div>
+  );
+}
+
+// Medidor de uso do banco e do Storage (cotas do plano gratuito do Supabase) para o
+// Portal do Administrador: projeto principal + projeto do banco de questões.
+export function UsoBancoDados() {
+  const principal = useUso(obterUsoBancoDados);
+  const acervo = useUso(obterUsoBancoAcervo);
+  const carregando = principal.carregando || acervo.carregando;
+
+  function atualizar() {
+    principal.carregar();
+    acervo.carregar();
+  }
+
+  return (
+    <section className="bg-ms-card border border-gray-800 rounded-2xl p-4 sm:p-5" aria-label="Uso do banco de dados e do armazenamento">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 min-w-0">
+          <Database className="w-5 h-5 text-ms-blueText shrink-0" />
+          <h3 className="text-sm font-black text-ms-main truncate">Uso do banco de dados</h3>
+        </div>
+        <button
+          onClick={atualizar}
+          disabled={carregando}
+          title="Atualizar"
+          aria-label="Atualizar uso do banco"
+          className="p-1.5 rounded-lg text-gray-500 hover:text-ms-main transition-colors disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ms-blue"
+        >
+          <RefreshCw className={`w-4 h-4 ${carregando ? 'animate-spin' : ''}`} />
+        </button>
+      </div>
+
+      <div className="mt-3 space-y-4">
+        <BlocoProjeto titulo="Projeto principal (portal)" uso={principal.uso} erro={principal.erro} primeiro />
+        <BlocoProjeto titulo="Banco de questões (jbr-acervo-questoes)" uso={acervo.uso} erro={acervo.erro} />
+      </div>
     </section>
   );
 }

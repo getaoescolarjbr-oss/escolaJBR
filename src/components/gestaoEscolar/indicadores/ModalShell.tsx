@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import type { ReactNode } from 'react';
 import { X } from 'lucide-react';
 
@@ -9,15 +9,28 @@ interface ModalShellProps {
   largura?: string;
 }
 
+// Pilha de pop-ups abertos: com pop-up dentro de pop-up, o Esc fecha só o de cima.
+const pilha: symbol[] = [];
+
 // Casca comum dos pop-ups dos indicadores: overlay, título, fechar por Esc/clique fora.
 export function ModalShell({ titulo, onClose, children, largura = 'max-w-4xl' }: ModalShellProps) {
+  const id = useRef(Symbol('modal'));
+  const fechar = useRef(onClose);
+  useEffect(() => { fechar.current = onClose; });
+
   useEffect(() => {
+    const meu = id.current;
+    pilha.push(meu);
     const aoTeclar = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape' && pilha[pilha.length - 1] === meu) fechar.current();
     };
     window.addEventListener('keydown', aoTeclar);
-    return () => window.removeEventListener('keydown', aoTeclar);
-  }, [onClose]);
+    return () => {
+      window.removeEventListener('keydown', aoTeclar);
+      const i = pilha.indexOf(meu);
+      if (i >= 0) pilha.splice(i, 1);
+    };
+  }, []);
 
   return (
     <div

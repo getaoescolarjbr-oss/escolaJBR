@@ -69,8 +69,10 @@ export function AlunosStatusModal({ status, onClose, onAlterado }: AlunosStatusM
         </div>
         {!loading && (
           <BarrasPorTurma
-            itens={turmas.map(([id, nome]) => ({ rotulo: nome, partes: [{ nome: status, valor: alunos.filter((a) => a.turma_id === id).length, cor: '#3b82f6' }] }))}
+            itens={turmas.map(([id, nome]) => ({ id, rotulo: nome, partes: [{ nome: status, valor: alunos.filter((a) => a.turma_id === id).length, cor: '#3b82f6' }] }))}
             vazio="Nenhum aluno com este status."
+            selecionado={turmas.find(([id]) => id === turmaFiltro)?.[1] ?? null}
+            onSelecionar={(item) => setTurmaFiltro(item && item.id !== turmaFiltro ? item.id ?? '' : '')}
           />
         )}
         {aviso && <p className="text-sm text-green-500">{aviso}</p>}

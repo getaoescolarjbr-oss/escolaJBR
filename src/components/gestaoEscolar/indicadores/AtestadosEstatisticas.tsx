@@ -2,10 +2,41 @@ import { useCallback, useEffect, useState } from 'react';
 import { Loader2, RefreshCw } from 'lucide-react';
 import { BarrasPorTurma } from './BarrasPorTurma';
 import { MESES, ROTULOS_TIPO_AUSENCIA, carregarEstatisticasAtestados } from './atestadosStats';
-import type { EstatisticasAtestados } from './atestadosStats';
+import type { EstatisticasAtestados, RegistroAtestado } from './atestadosStats';
+import { ModalShell } from './ModalShell';
 
 function formatarDias(n: number): string {
   return n.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
+}
+
+const fmtData = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString('pt-BR');
+
+// Registros por trás de um gráfico clicado (tipo, mês ou servidor).
+function DetalheModal({ titulo, registros, onClose }: { titulo: string; registros: RegistroAtestado[]; onClose: () => void }) {
+  return (
+    <ModalShell titulo={titulo} onClose={onClose} largura="max-w-3xl">
+      {registros.length === 0 ? (
+        <p className="py-6 text-center text-sm text-gray-500">Nenhum registro.</p>
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="text-left text-[11px] uppercase text-gray-500"><th className="py-1.5">Servidor</th><th>Tipo</th><th>Período</th><th className="text-right">Dias</th><th className="text-right">Situação</th></tr>
+          </thead>
+          <tbody>
+            {registros.map((r) => (
+              <tr key={r.id} className="border-t border-gray-800">
+                <td className="py-1.5 text-ms-main">{r.nome}</td>
+                <td className="text-gray-400">{ROTULOS_TIPO_AUSENCIA[r.tipo]}</td>
+                <td className="text-gray-400 whitespace-nowrap">{fmtData(r.dataInicio)} a {fmtData(r.dataFim)}</td>
+                <td className="text-right font-bold text-ms-main">{r.dias}</td>
+                <td className={`text-right text-xs font-bold ${r.ativo ? 'text-amber-400' : 'text-gray-500'}`}>{r.ativo ? 'Ativo' : 'Encerrado'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </ModalShell>
+  );
 }
 
 function Kpi({ rotulo, valor }: { rotulo: string; valor: string }) {
@@ -22,6 +53,7 @@ function Kpi({ rotulo, valor }: { rotulo: string; valor: string }) {
 export function AtestadosEstatisticas() {
   const [stats, setStats] = useState<EstatisticasAtestados | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [detalhe, setDetalhe] = useState<{ titulo: string; registros: RegistroAtestado[] } | null>(null);
 
   const carregar = useCallback(async () => {
     try {
@@ -66,20 +98,29 @@ export function AtestadosEstatisticas() {
         <div className="space-y-1">
           <p className="text-[11px] uppercase font-bold text-[#2563eb]">Por tipo</p>
           <BarrasPorTurma
-            itens={stats.porTipo.map((t) => ({ rotulo: ROTULOS_TIPO_AUSENCIA[t.tipo], partes: [{ nome: 'Registros', valor: t.total, cor: '#3b82f6' }] }))}
+            itens={stats.porTipo.map((t) => ({ id: t.tipo, rotulo: ROTULOS_TIPO_AUSENCIA[t.tipo], partes: [{ nome: 'Registros', valor: t.total, cor: '#3b82f6' }] }))}
+            onSelecionar={(item) => setDetalhe(item
+              ? { titulo: `Atestados — ${item.rotulo}`, registros: stats.lista.filter((r) => r.tipo === item.id) }
+              : { titulo: 'Todos os registros', registros: stats.lista })}
           />
         </div>
         <div className="space-y-1">
           <p className="text-[11px] uppercase font-bold text-[#2563eb]">Início dos afastamentos, por mês</p>
           <BarrasPorTurma
-            itens={MESES.slice(primeiroMes, mesAtual + 1).map((mes, i) => ({ rotulo: mes, partes: [{ nome: 'Registros', valor: stats.porMes[primeiroMes + i], cor: '#f59e0b' }] }))}
+            itens={MESES.slice(primeiroMes, mesAtual + 1).map((mes, i) => ({ id: String(primeiroMes + i), rotulo: mes, partes: [{ nome: 'Registros', valor: stats.porMes[primeiroMes + i], cor: '#f59e0b' }] }))}
+            onSelecionar={(item) => setDetalhe(item
+              ? { titulo: `Afastamentos iniciados em ${item.rotulo}`, registros: stats.lista.filter((r) => Number(r.dataInicio.slice(5, 7)) - 1 === Number(item.id)) }
+              : { titulo: 'Todos os registros', registros: stats.lista })}
           />
         </div>
         <div className="space-y-1">
           <p className="text-[11px] uppercase font-bold text-[#2563eb]">Dias de afastamento por servidor</p>
           <BarrasPorTurma
             rotuloTotal="Total (dias)"
-            itens={stats.porServidor.slice(0, 8).map((s) => ({ rotulo: s.nome.split(' ')[0], partes: [{ nome: 'Dias', valor: s.dias, cor: '#ef4444' }] }))}
+            itens={stats.porServidor.slice(0, 8).map((s) => ({ id: s.professorId, rotulo: s.nome.split(' ')[0], partes: [{ nome: 'Dias', valor: s.dias, cor: '#ef4444' }] }))}
+            onSelecionar={(item) => setDetalhe(item
+              ? { titulo: `Afastamentos — ${stats.porServidor.find((s) => s.professorId === item.id)?.nome ?? item.rotulo}`, registros: stats.lista.filter((r) => r.professorId === item.id) }
+              : { titulo: 'Todos os registros', registros: stats.lista })}
           />
         </div>
         <div className="space-y-1">
@@ -98,6 +139,7 @@ export function AtestadosEstatisticas() {
           )}
         </div>
       </div>
+      {detalhe && <DetalheModal titulo={detalhe.titulo} registros={detalhe.registros} onClose={() => setDetalhe(null)} />}
     </section>
   );
 }
