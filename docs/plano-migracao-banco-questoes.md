@@ -11,8 +11,9 @@ Claysson no mesmo dia.
 | Ping anti-pausa | **Feito**: job `ping-acervo-questoes` no projeto principal, seg e qui 12:00 UTC (`select public.ping()` no B) |
 | 2. Estrutura no B | **Feito**: `create_acervo_questoes_projeto_b.sql` (tabelas, índices, funções de busca/sorteio, RLS fechado) |
 | 3. Dados | **Feito e conferido**: 1.632 textos de apoio, 6.581 termos, 21.091 questões; conteúdo idêntico (checksum) |
-| 3. Imagens | Copiadas do bucket do projeto principal para o do B |
-| 4. Reescrita de URLs no B | Ver "Ativação" abaixo |
+| 3. Imagens | **Feito e conferido**: 3.399 arquivos, 484.208.687 bytes, checksum de nomes+tamanhos idêntico nos dois buckets |
+| 4. Reescrita de URLs no B | **Feito**: 2.544 questões e 162 textos de apoio passaram a apontar para o bucket do B (nenhuma URL antiga sobrou; o projeto principal não foi alterado) |
+| Função temporária de ingestão | **Desativada** (`acervo-ingest` responde 410; pode ser excluída no painel) |
 | 5. Ponte e portal | **Feito, com a chave DESLIGADA**: `acervo-proxy` (projeto principal), `acervo-api` (B), `VITE_ACERVO_EXTERNO` |
 | 6. Teste com a chave ligada | **Pendente: precisa de login no portal** (ver checklist) |
 | 7. Apagar do projeto principal | **Não feito**, de propósito (só depois de dias estável) |
