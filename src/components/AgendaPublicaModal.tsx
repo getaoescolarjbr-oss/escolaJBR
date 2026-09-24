@@ -3,6 +3,7 @@ import { X, CalendarClock, Loader2, ChevronLeft, ChevronRight, Lock, CalendarPlu
 import { obterDisponibilidade } from '../services/agendamentoService';
 import { useAuth } from '../hooks/useAuth';
 import { supabase } from '../lib/supabase';
+import { iniciarPolling } from '../utils/polling';
 import type { Recurso, DisponibilidadeSlot } from '../types/agendamento';
 import { ReservaFormModal } from './agendamento/ReservaFormModal';
 
@@ -80,8 +81,7 @@ export function AgendaPublicaModal({ recurso, onClose, onRequireLogin }: AgendaP
       };
     }
 
-    const interval = setInterval(() => setRefreshKey((k) => k + 1), 30000);
-    return () => clearInterval(interval);
+    return iniciarPolling(() => setRefreshKey((k) => k + 1), 30000);
   }, [recurso, session]);
 
   if (!recurso) return null;

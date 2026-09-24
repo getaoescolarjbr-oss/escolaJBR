@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Professor, ListaParaVistos } from '../types';
 import { supabase } from '../lib/supabase';
+import { iniciarPolling } from '../utils/polling';
 import { StudentRow } from './StudentRow';
 import { OcorrenciaLoteModal } from './OcorrenciaLoteModal';
 import { getBimestreFromDate, getConfigPorTurma, pesoDoVisto } from '../utils/academicUtils';
@@ -362,8 +363,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
       }
     };
     
-    const interval = setInterval(fetchSaidas, 15000); // sync a cada 15 segundos
-    return () => clearInterval(interval);
+    return iniciarPolling(fetchSaidas, 15000); // sync a cada 15 s, só com a aba visível
   }, [turmaId]);
 
   const handleUpdateVistoStat = (alunoId: string, valorAntigo: string | null, novoValor: string | null) => {

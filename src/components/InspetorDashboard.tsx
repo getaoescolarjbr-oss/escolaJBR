@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
+import { iniciarPolling } from '../utils/polling';
 import type { Professor, Turma, Student } from '../types';
 import { Clock, LogOut, Eye, AlertTriangle, CheckCircle, Loader2, ChevronDown, Users, Zap, Printer, Cake } from 'lucide-react';
 import { SignaturePad } from './SignaturePad';
@@ -94,10 +95,15 @@ export function InspetorDashboard({ professor, theme }: Props) {
     };
 
     const today = getLocalDateString();
-    
+
+    // Só as saídas de hoje (início do dia local em ISO). Antes baixava o histórico inteiro
+    // a cada 30 s e filtrava no navegador. Linhas sem hora_saida caem no created_at,
+    // igual ao filtro abaixo.
+    const inicioHoje = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate()).toISOString();
     const { data, error } = await supabase
       .from('saidas_sala')
       .select('*')
+      .or(`hora_saida.gte.${inicioHoje},and(hora_saida.is.null,created_at.gte.${inicioHoje})`)
       .order('hora_saida', { ascending: false });
 
     if (error) {
@@ -201,8 +207,7 @@ export function InspetorDashboard({ professor, theme }: Props) {
   // Auto-refresh monitor
   useEffect(() => {
     if (tab !== 'monitor') return;
-    const id = setInterval(fetchMonitor, 30000);
-    return () => clearInterval(id);
+    return iniciarPolling(fetchMonitor, 30000);
   }, [tab]);
 
   const saveAtraso = async () => {

@@ -117,6 +117,7 @@ function App() {
   // Quando a sessão aparece pela primeira vez, relê a URL para não perder o destino
   // (ex.: ?modulo=agendamento&recurso=<id>) que o usuário tinha antes de logar.
   const sincronizouViewPosLogin = useRef(false);
+  const ultimaSyncProfessor = useRef('');
   useEffect(() => {
     if (session?.user && !sincronizouViewPosLogin.current) {
       sincronizouViewPosLogin.current = true;
@@ -151,12 +152,21 @@ function App() {
       
       localStorage.setItem(configKey, JSON.stringify(updates));
 
-      supabase.from('professores')
-        .update(updates)
-        .eq('user_id', session.user.id)
-        .then(({ error }) => {
-          if (error) console.warn('Erro ao sincronizar banco:', error);
-        });
+      // Este efeito reexecuta a cada novo objeto `professor`/`session` (login, renovação
+      // de token, edição de perfil), mas o UPDATE só é necessário quando algo mudou.
+      const assinatura = `${session.user.id}|${JSON.stringify(updates)}`;
+      if (assinatura !== ultimaSyncProfessor.current) {
+        ultimaSyncProfessor.current = assinatura;
+        supabase.from('professores')
+          .update(updates)
+          .eq('user_id', session.user.id)
+          .then(({ error }) => {
+            if (error) {
+              ultimaSyncProfessor.current = ''; // falhou: tenta de novo na próxima mudança
+              console.warn('Erro ao sincronizar banco:', error);
+            }
+          });
+      }
     }
   }, [theme, professor, session]);
 
@@ -366,8 +376,6 @@ function App() {
   if (!professor && !isAdmin && papeis.length === 0) {
     return <Suspense fallback={<Carregando />}><CadastroPendenteScreen authUserId={session.user.id} onLogout={() => setView('dashboard')} /></Suspense>;
   }
-
-  console.log('App State:', { session: !!session, professor: !!professor, isAdmin, view, loading });
 
   // Rótulo de contexto do cabeçalho: derivado de rota/papel, nunca de professor.cargo
   // como se fosse nível de acesso (era a causa de um GESTAO aparecer "Coordenador" —

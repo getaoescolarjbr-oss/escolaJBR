@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase';
@@ -25,6 +25,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [papeis, setPapeis] = useState<Papel[]>([]);
   const [loading, setLoading] = useState(true);
+  const usuarioAtual = useRef<string | null>(null);
 
   const carregarPapeis = async (userId: string) => {
     setPapeis(await fetchMeusPapeis(userId));
@@ -34,6 +35,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       if (session?.user) {
+        usuarioAtual.current = session.user.id;
         carregarPapeis(session.user.id).finally(() => setLoading(false));
       } else {
         setLoading(false);
@@ -45,8 +47,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
       if (session?.user) {
-        carregarPapeis(session.user.id);
+        if (usuarioAtual.current !== session.user.id) {
+          // Login de outro usuário: mantém `loading` até os papéis chegarem. Sem isso o
+          // App decidia com `papeis` ainda vazio (ex.: aluno era tratado como professor
+          // e disparava buscas em `professores` à toa).
+          usuarioAtual.current = session.user.id;
+          setLoading(true);
+          carregarPapeis(session.user.id).finally(() => setLoading(false));
+        } else {
+          carregarPapeis(session.user.id);
+        }
       } else {
+        usuarioAtual.current = null;
         setPapeis([]);
       }
     });
