@@ -45,6 +45,7 @@ const PERMISSOES: Record<string, string[]> = {
   renomearTermo: TAXONOMIA,
   excluirDisciplina: ["GESTAO"],
   importar: LEITURA,
+  usoBanco: ["GESTAO"],
   ping: LEITURA,
 };
 
