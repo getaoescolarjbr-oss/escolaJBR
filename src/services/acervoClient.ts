@@ -24,6 +24,30 @@ export async function acervo<T>(op: string, args: Record<string, unknown> = {}):
   return (data as { data: T }).data;
 }
 
+// Envia uma imagem do editor de questões e devolve a URL pública. Com o acervo externo o arquivo
+// vai para o Storage do projeto novo, por uma URL de envio assinada que a Edge Function gera
+// (o navegador não tem credencial do outro projeto); sem ele, para o Storage do projeto principal.
+export async function enviarImagemQuestao(file: File, pasta: string): Promise<string> {
+  const ext = (file.name.split('.').pop() ?? 'jpg').toLowerCase();
+  if (!ACERVO_EXTERNO) {
+    const path = `${pasta}/${crypto.randomUUID()}.${ext}`;
+    const { error } = await supabase.storage.from('imagens-questoes').upload(path, file, { cacheControl: '3600', upsert: false });
+    if (error) throw new Error(error.message);
+    return supabase.storage.from('imagens-questoes').getPublicUrl(path).data.publicUrl;
+  }
+  const { signedUrl, publicUrl } = await acervo<{ signedUrl: string; publicUrl: string }>('urlUploadImagem', { extensao: ext });
+  // Mesmo formato que o storage-js usa em uploadToSignedUrl.
+  const corpo = new FormData();
+  corpo.append('cacheControl', '3600');
+  corpo.append('', file);
+  const r = await fetch(signedUrl, { method: 'PUT', headers: { 'x-upsert': 'false' }, body: corpo });
+  if (!r.ok) {
+    const detalhe = await r.json().catch(() => null);
+    throw new Error(detalhe?.message ?? `Falha ao enviar a imagem (HTTP ${r.status})`);
+  }
+  return publicUrl;
+}
+
 // As funções de prova/correção/simulado só conhecem questões que existem no banco principal
 // (chave estrangeira). Com o acervo externo, toda questão precisa ser copiada para cá ANTES de
 // entrar numa prova. É idempotente e nunca sobrescreve uma questão já importada. Sem a chave

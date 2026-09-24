@@ -45,6 +45,7 @@ const PERMISSOES: Record<string, string[]> = {
   renomearTermo: TAXONOMIA,
   excluirDisciplina: ["GESTAO"],
   importar: LEITURA,
+  urlUploadImagem: ESCRITA, // mesma regra do bucket antigo: GESTAO ou PROFESSOR
   usoBanco: ["GESTAO"],
   ping: LEITURA,
 };

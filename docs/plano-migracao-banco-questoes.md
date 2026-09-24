@@ -14,11 +14,15 @@ Claysson no mesmo dia.
 | 3. Imagens | **Feito e conferido**: 3.399 arquivos, 484.208.687 bytes, checksum de nomes+tamanhos idêntico nos dois buckets |
 | 4. Reescrita de URLs no B | **Feito**: 2.544 questões e 162 textos de apoio passaram a apontar para o bucket do B (nenhuma URL antiga sobrou; o projeto principal não foi alterado) |
 | Função temporária de ingestão | **Desativada** (`acervo-ingest` responde 410; pode ser excluída no painel) |
-| 5. Ponte e portal | **Feito, com a chave DESLIGADA**: `acervo-proxy` (projeto principal), `acervo-api` (B), `VITE_ACERVO_EXTERNO` |
-| 6. Teste com a chave ligada | **Pendente: precisa de login no portal** (ver checklist) |
-| 7. Apagar do projeto principal | **Não feito**, de propósito (só depois de dias estável) |
+| 5. Ponte e portal | **Feito**: `acervo-proxy` (projeto principal), `acervo-api` (B). Desde 2026-09-24 o acervo vem **ligado por padrão**; `VITE_ACERVO_EXTERNO=false` no build volta ao banco principal |
+| 6. Teste com a chave ligada | **Feito** (listar, filtrar, buscar, imagens, criar/editar/excluir, termos, sortear, avaliação com questão do acervo, permissões). Não testados na tela: impressão/reimpressão, aluno respondendo, correção OMR, modais da Coordenação de Área |
+| Imagens novas do editor | **Feito**: o editor envia para o Storage do B por URL assinada (`urlUploadImagem`), testado de ponta a ponta. Isto destrava o passo 7 quanto às imagens |
+| Backup do acervo | Manual: `node supabase/acervo-projeto-b/backup-acervo.mjs` (lê as 3 tabelas pela `acervo-api`, confere contagem e checksum) |
+| 7. Apagar do projeto principal | **Não feito**, de propósito (só depois de dias estável, com backup novo) |
 
-O projeto principal continua com a cópia completa: com a chave desligada nada mudou para os usuários.
+O projeto principal continua com a cópia completa das questões e das imagens até o passo 7.
+Atenção no passo 7 (Storage): o Supabase **bloqueia apagar `storage.objects` por SQL**; os arquivos
+têm de ser removidos pela API de Storage.
 
 ## Ativação e teste (passo 6)
 

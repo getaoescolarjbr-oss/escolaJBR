@@ -20,7 +20,7 @@ import {
   Underline,
 } from 'lucide-react';
 import katex from 'katex';
-import { supabase } from '../../lib/supabase';
+import { enviarImagemQuestao } from '../../services/acervoClient';
 import { TableInsertDialog } from './TableInsertDialog';
 
 const GREGAS = ['α', 'β', 'γ', 'δ', 'ε', 'θ', 'λ', 'μ', 'π', 'ρ', 'σ', 'φ', 'ω', 'Δ', 'Σ', 'Φ', 'Ω', 'Γ', 'Θ', 'Λ', 'Π', 'Ψ'];
@@ -215,12 +215,8 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
     if (!file) return;
     setUploading(true);
     try {
-      const ext = file.name.split('.').pop() ?? 'jpg';
-      const path = `${folder}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from('imagens-questoes').upload(path, file, { cacheControl: '3600', upsert: false });
-      if (error) throw new Error(error.message);
-      const { data } = supabase.storage.from('imagens-questoes').getPublicUrl(path);
-      insertAtCursor(`\n[[IMG:${data.publicUrl}]]\n`);
+      const url = await enviarImagemQuestao(file, folder);
+      insertAtCursor(`\n[[IMG:${url}]]\n`);
     } catch (err) {
       onErro?.(err instanceof Error ? err.message : 'Falha ao enviar imagem');
     } finally {

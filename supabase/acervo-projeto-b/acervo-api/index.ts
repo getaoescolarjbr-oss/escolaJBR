@@ -269,6 +269,20 @@ const OPS: Record<string, (a: Args, roles: string[], userId: string | null) => P
     return { linhas: data ?? [], total: count ?? 0 };
   },
 
+  // Imagens do editor: devolve uma URL de envio assinada e temporária para o bucket público
+  // `imagens-questoes` DESTE projeto, mais a URL pública final. O nome do arquivo é sorteado aqui
+  // (pasta questoes/ + uuid), o cliente só escolhe a extensão dentre as permitidas — assim não dá
+  // para gravar fora da pasta nem sobrescrever outra imagem.
+  async urlUploadImagem(a) {
+    const ext = String(a.extensao ?? "").toLowerCase().replace(/^\./, "");
+    if (!["jpg", "jpeg", "png", "gif", "webp", "bmp", "svg"].includes(ext)) throw new ErroHttp(400, "Formato de imagem não permitido");
+    const path = `questoes/${crypto.randomUUID()}.${ext}`;
+    const bucket = supabase.storage.from("imagens-questoes");
+    const { data, error } = await bucket.createSignedUploadUrl(path);
+    if (error || !data) falha(error);
+    return { path, signedUrl: data.signedUrl, publicUrl: bucket.getPublicUrl(path).data.publicUrl };
+  },
+
   async ping() { return new Date().toISOString(); },
 };
 
