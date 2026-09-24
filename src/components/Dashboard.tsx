@@ -95,7 +95,7 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   const [lockedBimestres, setLockedBimestres] = useState<number[]>([]);
   // --- Estado de Atestado ---
   const [atestadoAtivo, setAtestadoAtivo] = useState<AtestadoServidor | null>(null); // se o titular está de atestado
-  const [substituicaoAtiva, setSubstituicaoAtiva] = useState<{ atestado: AtestadoServidor; titularNome: string } | null>(null); // se é substituto
+  const [substituicaoAtiva, setSubstituicaoAtiva] = useState<{ atestado: Pick<AtestadoServidor, 'data_inicio' | 'data_fim'>; titularNome: string } | null>(null); // se é substituto
   // `${turmaId}|${disciplinaId}` -> titular que o professor logado está substituindo nessa turma/disciplina.
   const [espelhos, setEspelhos] = useState<Record<string, TitularEspelho>>({});
   const [substitutoNome, setSubstitutoNome] = useState(''); // quando o titular está bloqueado: quem assumiu as turmas
@@ -148,50 +148,39 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
         setAtestadoAtivo(null);
       }
 
-      // 2. Verificar se o professor ATUAL é substituto de alguém: pega TODAS as turmas/disciplinas
-      // espelhadas com atestado vigente hoje (uma substituição pode cobrir várias).
-      const { data: espelhosRows } = await supabase
-        .from('alocacoes_v2')
-        .select('turma_id, disciplina_id, atestado_id, professor_original_id')
-        .eq('professor_id', professor.id)
-        .eq('is_espelho', true);
-
-      const atestadoIds = [...new Set((espelhosRows ?? []).map((e) => e.atestado_id).filter(Boolean))] as string[];
-      const vigentes = new Map<string, AtestadoServidor>();
-      if (atestadoIds.length > 0) {
-        const { data: ats } = await supabase
-          .from('atestados_servidores')
-          .select('*')
-          .in('id', atestadoIds)
-          .eq('ativo', true)
-          .lte('data_inicio', today)
-          .gte('data_fim', today);
-        (ats ?? []).forEach((a) => vigentes.set(a.id, a));
-      }
-
-      const espelhosVigentes = (espelhosRows ?? []).filter((e) => e.atestado_id && e.professor_original_id && vigentes.has(e.atestado_id));
-      const titularIds = [...new Set(espelhosVigentes.map((e) => e.professor_original_id as string))];
-      const titulares = new Map<string, TitularEspelho>();
-      if (titularIds.length > 0) {
-        const { data: profs } = await supabase
-          .from('professores')
-          .select('id, nome, config_visto_metodo, config_visto_valor_total, config_turmas')
-          .in('id', titularIds);
-        (profs ?? []).forEach((p) => titulares.set(p.id, p as TitularEspelho));
-      }
+      // 2. Verificar se o professor ATUAL é substituto de alguém: todas as turmas/disciplinas
+      // espelhadas com afastamento vigente hoje (uma substituição pode cobrir várias). Vem por RPC
+      // porque o substituto não pode ler atestados_servidores (dado de saúde, só titular/gestão/secretaria):
+      // a função devolve apenas turma, disciplina, titular, período e a configuração de vistos dele.
+      const { data: substituicoes } = await supabase.rpc('rpc_minhas_substituicoes');
+      const linhas = (substituicoes ?? []) as Array<{
+        turma_id: string;
+        disciplina_id: string;
+        titular_id: string;
+        titular_nome: string;
+        data_inicio: string;
+        data_fim: string;
+        config_visto_metodo: Professor['config_visto_metodo'];
+        config_visto_valor_total: number;
+        config_turmas: Professor['config_turmas'] | null;
+      }>;
 
       const mapa: Record<string, TitularEspelho> = {};
-      espelhosVigentes.forEach((e) => {
-        const t = titulares.get(e.professor_original_id as string);
-        if (t) mapa[`${e.turma_id}|${e.disciplina_id}`] = t;
+      linhas.forEach((l) => {
+        mapa[`${l.turma_id}|${l.disciplina_id}`] = {
+          id: l.titular_id,
+          nome: l.titular_nome,
+          config_visto_metodo: l.config_visto_metodo,
+          config_visto_valor_total: l.config_visto_valor_total,
+          config_turmas: l.config_turmas ?? undefined,
+        };
       });
       setEspelhos(mapa);
 
-      const primeiro = espelhosVigentes.find((e) => titulares.has(e.professor_original_id as string));
-      if (primeiro) {
+      if (linhas.length > 0) {
         setSubstituicaoAtiva({
-          atestado: vigentes.get(primeiro.atestado_id as string) as AtestadoServidor,
-          titularNome: titulares.get(primeiro.professor_original_id as string)?.nome || 'Professor Titular',
+          atestado: { data_inicio: linhas[0].data_inicio, data_fim: linhas[0].data_fim },
+          titularNome: linhas[0].titular_nome || 'Professor Titular',
         });
       } else {
         setSubstituicaoAtiva(null);
