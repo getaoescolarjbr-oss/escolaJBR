@@ -179,43 +179,8 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   // Read-only efetivo: bimestre bloqueado OU titular em atestado
   const isEffectivelyLocked = isBimestreLocked || isTitularEmAtestado;
 
-  // Auto-Retorno de Alunos nos Intervalos (09:10, 11:55, 15:40)
-  useEffect(() => {
-    const checkAutoReturns = async () => {
-      const now = new Date();
-      const hours = now.getHours().toString().padStart(2, '0');
-      const minutes = now.getMinutes().toString().padStart(2, '0');
-      const currentTime = `${hours}:${minutes}`;
-
-      const breakTimes = ['09:10', '11:55', '15:40'];
-      
-      for (const bTime of breakTimes) {
-        if (currentTime >= bTime) {
-          try {
-            // Atualiza saídas que ocorreram ANTES do intervalo para "Retornou"
-            // usando a data de hoje para não pegar saídas de ontem
-            const todayStr = new Date().toISOString().split('T')[0];
-            
-            await supabase.from('saidas_sala')
-              .update({
-                status: 'Retornou',
-                hora_retorno: `${todayStr}T${bTime}:00.000Z`
-              })
-              .eq('status', 'Fora')
-              .lt('hora_saida', `${todayStr}T${bTime}:00.000Z`)
-              .gte('hora_saida', `${todayStr}T00:00:00.000Z`);
-          } catch (e) {
-            console.error("Erro no auto-retorno:", e);
-          }
-        }
-      }
-    };
-
-    // Check immediately and then every minute
-    checkAutoReturns();
-    const intervalId = setInterval(checkAutoReturns, 60000);
-    return () => clearInterval(intervalId);
-  }, []);
+  // O auto-retorno de alunos nos intervalos (09:10, 11:55, 15:40) roda no servidor:
+  // job `auto-retorno-saidas-sala` do pg_cron (ver fix_auto_retorno_saidas_sala_pgcron.sql).
 
   // Persistência de filtros
   useEffect(() => {
