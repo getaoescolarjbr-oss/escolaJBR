@@ -11,6 +11,13 @@ import { PatrimonioPanel } from './patrimonio/PatrimonioPanel';
 import { RHPanel } from './rh/RHPanel';
 import { GovernancaPanel } from './governanca/GovernancaPanel';
 import { DocumentosInstitucionaisPanel } from './documentos/DocumentosInstitucionaisPanel';
+import { OcorrenciasIndicador } from './indicadores/OcorrenciasIndicador';
+import { OcorrenciasModal } from './indicadores/OcorrenciasModal';
+import { AlunosStatusModal } from './indicadores/AlunosStatusModal';
+import { AtestadosModal } from './indicadores/AtestadosModal';
+import { AtestadosTile } from './indicadores/AtestadosTile';
+import { DiasLetivosCard } from './indicadores/DiasLetivosCard';
+import { AprovacaoCard } from './indicadores/AprovacaoCard';
 
 // Fase 1: painel de indicadores, só leitura, só GESTAO. Uma RPC só
 // (rpc_indicadores_gestao_escolar) devolve tudo; cada card só mostra número que tem
@@ -27,9 +34,11 @@ interface IndicadorTileProps {
   // "atencao" pinta o número de âmbar quando > 0 — reservado para contagens que
   // representam algo pendente de ação humana (fila, denúncia, vencimento).
   tom?: 'atencao';
+  // Com onClick, o card vira botão (abre o pop-up do indicador).
+  onClick?: () => void;
 }
 
-function IndicadorTile({ label, valor, tom }: IndicadorTileProps) {
+function IndicadorTile({ label, valor, tom, onClick }: IndicadorTileProps) {
   if (!temDados(valor)) {
     return (
       <div className="bg-ms-dark border border-dashed border-gray-700 rounded-2xl p-3 flex flex-col gap-1.5">
@@ -44,15 +53,24 @@ function IndicadorTile({ label, valor, tom }: IndicadorTileProps) {
 
   const emAtencao = tom === 'atencao' && valor > 0;
 
-  return (
-    <div className="bg-ms-card border border-gray-800 rounded-2xl p-3 flex flex-col gap-1">
+  const conteudo = (
+    <>
       <p className="text-[11px] uppercase tracking-wider text-[#2563eb] font-bold">{label}</p>
       <p className={`text-3xl font-black flex items-center gap-2 ${emAtencao ? 'text-amber-400' : 'text-ms-main'}`}>
         {emAtencao && <AlertTriangle className="w-5 h-5" />}
         {formatarValor(valor)}
       </p>
-    </div>
+    </>
   );
+
+  if (onClick) {
+    return (
+      <button onClick={onClick} className="text-left bg-ms-card border border-gray-800 rounded-2xl p-3 flex flex-col gap-1 hover:border-ms-blueText transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ms-blue">
+        {conteudo}
+      </button>
+    );
+  }
+  return <div className="bg-ms-card border border-gray-800 rounded-2xl p-3 flex flex-col gap-1">{conteudo}</div>;
 }
 
 function Secao({ titulo, children }: { titulo: string; children: React.ReactNode }) {
@@ -64,7 +82,7 @@ function Secao({ titulo, children }: { titulo: string; children: React.ReactNode
   );
 }
 
-function BreakdownTile({ label, contagens }: { label: string; contagens: Record<string, number> }) {
+function BreakdownTile({ label, contagens, onSelecionar }: { label: string; contagens: Record<string, number>; onSelecionar?: (chave: string) => void }) {
   const entradas = Object.entries(contagens);
   return (
     <div className="bg-ms-card border border-gray-800 rounded-2xl p-3 flex flex-col gap-1.5">
@@ -73,12 +91,21 @@ function BreakdownTile({ label, contagens }: { label: string; contagens: Record<
         <p className="text-sm text-gray-600">Nenhum registro.</p>
       ) : (
         <div className="space-y-1">
-          {entradas.map(([chave, valor]) => (
-            <div key={chave} className="flex items-center justify-between text-sm">
-              <span className="text-[#2563eb]">{chave}</span>
-              <span className="font-bold text-ms-main">{formatarValor(valor)}</span>
-            </div>
-          ))}
+          {entradas.map(([chave, valor]) => {
+            const linha = (
+              <>
+                <span className="text-[#2563eb]">{chave}</span>
+                <span className="font-bold text-ms-main">{formatarValor(valor)}</span>
+              </>
+            );
+            return onSelecionar ? (
+              <button key={chave} onClick={() => onSelecionar(chave)} className="w-full flex items-center justify-between text-sm rounded px-1 -mx-1 hover:bg-gray-700/30">
+                {linha}
+              </button>
+            ) : (
+              <div key={chave} className="flex items-center justify-between text-sm">{linha}</div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -89,9 +116,16 @@ function IndicadoresTab() {
   const [dados, setDados] = useState<IndicadoresGestaoEscolar | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [popup, setPopup] = useState<
+    { tipo: 'ocorrencias'; filtro: 'sem_visto' } | { tipo: 'atestados' } | { tipo: 'alunos'; status: string } | null
+  >(null);
+  // Incrementa quando um pop-up altera dados, para o gráfico de ocorrências recarregar já.
+  const [versaoOcorrencias, setVersaoOcorrencias] = useState(0);
+  const [versaoAtestados, setVersaoAtestados] = useState(0);
 
-  async function carregar() {
-    setLoading(true);
+  // silencioso = atualiza os números sem trocar a tela por spinner (não fecha pop-ups abertos).
+  async function carregar(silencioso = false) {
+    if (!silencioso) setLoading(true);
     setErro(null);
     try {
       setDados(await obterIndicadoresGestaoEscolar());
@@ -100,6 +134,11 @@ function IndicadoresTab() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function aoAlterarDados() {
+    setVersaoOcorrencias((v) => v + 1);
+    void carregar(true);
   }
 
   useEffect(() => {
@@ -119,20 +158,24 @@ function IndicadoresTab() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-500">Atualizado em {new Date(dados.gerado_em).toLocaleString('pt-BR')}</p>
-        <button onClick={carregar} className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-card border border-gray-800 rounded-lg text-xs text-gray-400 hover:text-ms-main hover:border-ms-blueText transition-colors">
+        <button onClick={() => carregar()} className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-card border border-gray-800 rounded-lg text-xs text-gray-400 hover:text-ms-main hover:border-ms-blueText transition-colors">
           <RefreshCw className="w-3.5 h-3.5" /> Atualizar
         </button>
       </div>
 
       <Secao titulo="Acadêmico">
-        <BreakdownTile label="Alunos por status" contagens={dados.academico.alunos_por_status} />
-        <IndicadorTile label="Ocorrências (30 dias)" valor={dados.academico.ocorrencias_30_dias.total} />
-        <IndicadorTile label="Ocorrências sem visto do coordenador" valor={dados.academico.ocorrencias_30_dias.sem_visto_coordenador} tom="atencao" />
-        <IndicadorTile label="Servidores com atestado ativo" valor={dados.academico.servidores_atestado_ativo} />
+        <BreakdownTile label="Alunos por status" contagens={dados.academico.alunos_por_status} onSelecionar={(status) => setPopup({ tipo: 'alunos', status })} />
+        <OcorrenciasIndicador versao={versaoOcorrencias} onAlterado={() => void carregar(true)} />
+        <IndicadorTile label="Ocorrências sem visto do coordenador" valor={dados.academico.ocorrencias_30_dias.sem_visto_coordenador} tom="atencao" onClick={() => setPopup({ tipo: 'ocorrencias', filtro: 'sem_visto' })} />
+        <AtestadosTile ativos={dados.academico.servidores_atestado_ativo} versao={versaoAtestados} onAbrir={() => setPopup({ tipo: 'atestados' })} />
         <IndicadorTile label="Alunos infrequentes (candidatos a busca ativa)" valor={dados.academico.infrequencia_alunos} tom="atencao" />
-        <IndicadorTile label="Dias letivos dados" valor={dados.academico.dias_letivos} />
-        <IndicadorTile label="Aprovação / reprovação / abandono por turma" valor={dados.academico.situacao_turmas} />
+        <DiasLetivosCard />
+        <AprovacaoCard />
       </Secao>
+
+      {popup?.tipo === 'ocorrencias' && <OcorrenciasModal filtroInicial={popup.filtro} onClose={() => setPopup(null)} onAlterado={aoAlterarDados} />}
+      {popup?.tipo === 'alunos' && <AlunosStatusModal status={popup.status} onClose={() => setPopup(null)} onAlterado={aoAlterarDados} />}
+      {popup?.tipo === 'atestados' && <AtestadosModal onClose={() => { setPopup(null); setVersaoAtestados((v) => v + 1); void carregar(true); }} />}
 
       <Secao titulo="Secretaria">
         <IndicadorTile label="Documentos emitidos (30 dias)" valor={dados.secretaria.documentos_emitidos_30_dias} />
