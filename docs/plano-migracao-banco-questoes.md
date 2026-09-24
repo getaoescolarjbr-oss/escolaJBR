@@ -1,6 +1,43 @@
 # Plano: banco de questões em um 2º projeto Supabase
 
-Preparado em 2026-09-24 a partir de consultas somente-leitura ao banco. **Nada disto foi executado.**
+Preparado em 2026-09-24 a partir de consultas somente-leitura ao banco. Desenho aprovado pelo
+Claysson no mesmo dia.
+
+## Estado da execução (2026-09-24)
+
+| Passo | Situação |
+|---|---|
+| 1. Projeto B criado | **Feito**: `jbr-acervo-questoes` (`cbvrpgwvltmqlmyiabep`, us-west-1, plano gratuito) |
+| Ping anti-pausa | **Feito**: job `ping-acervo-questoes` no projeto principal, seg e qui 12:00 UTC (`select public.ping()` no B) |
+| 2. Estrutura no B | **Feito**: `create_acervo_questoes_projeto_b.sql` (tabelas, índices, funções de busca/sorteio, RLS fechado) |
+| 3. Dados | **Feito e conferido**: 1.632 textos de apoio, 6.581 termos, 21.091 questões; conteúdo idêntico (checksum) |
+| 3. Imagens | Copiadas do bucket do projeto principal para o do B |
+| 4. Reescrita de URLs no B | Ver "Ativação" abaixo |
+| 5. Ponte e portal | **Feito, com a chave DESLIGADA**: `acervo-proxy` (projeto principal), `acervo-api` (B), `VITE_ACERVO_EXTERNO` |
+| 6. Teste com a chave ligada | **Pendente: precisa de login no portal** (ver checklist) |
+| 7. Apagar do projeto principal | **Não feito**, de propósito (só depois de dias estável) |
+
+O projeto principal continua com a cópia completa: com a chave desligada nada mudou para os usuários.
+
+## Ativação e teste (passo 6)
+
+1. Gerar um build de teste com a chave ligada (`VITE_ACERVO_EXTERNO=true npm run build`) e abrir em
+   um endereço à parte. Não ligar em produção antes de passar o checklist.
+2. Checklist, logado como **professor**: abrir o Banco de Questões (lista, filtros, busca por
+   palavra e por texto de apoio, imagens aparecendo); criar uma questão; editá-la; sortear questões;
+   montar uma avaliação com questões e salvar; imprimir; reabrir e reimprimir (preview).
+3. Como **gestão**: Categorias (criar/renomear/excluir termo); excluir uma disciplina de teste.
+4. Como **coordenação de área**: inserir questões na cota da área; renomear assunto/tópico.
+5. Aluno: responder uma avaliação feita com questão vinda do acervo (deve continuar igual).
+
+Comportamento a saber: a questão é copiada para o banco principal quando entra numa prova e
+**nunca é sobrescrita**. Editar depois a questão no acervo não altera uma prova já montada.
+
+## Passo 7 (depois de dias estável)
+
+Só então remover do projeto principal as questões que nenhuma prova usa e as imagens do bucket
+que não são de questões em uso. O SQL fica proposto em `apagar_acervo_do_principal.sql`, com
+trava de conferência; ele **não** deve rodar sem um novo backup verificado.
 
 ## O que a análise mostrou
 
