@@ -17,3 +17,23 @@ export async function obterUsoBancoDados(): Promise<UsoBancoDados> {
   if (error) throw new Error(error.message);
   return data as UsoBancoDados;
 }
+
+// Uso do segundo projeto (jbr-acervo-questoes, banco de questões). O navegador não fala com
+// ele direto: passa pela Edge Function `acervo-proxy`, que valida o login e só deixa a
+// GESTAO consultar (mesma ponte do banco de questões).
+export async function obterUsoBancoAcervo(): Promise<UsoBancoDados> {
+  const { data, error } = await supabase.functions.invoke('acervo-proxy', { body: { op: 'usoBanco', args: {} } });
+  if (error) {
+    // FunctionsHttpError traz a resposta original; a mensagem útil vem em { erro }.
+    let mensagem = error.message;
+    const ctx = (error as { context?: Response }).context;
+    if (ctx && typeof ctx.json === 'function') {
+      try {
+        const corpo = await ctx.json();
+        if (corpo?.erro) mensagem = corpo.erro;
+      } catch { /* mantém a mensagem genérica */ }
+    }
+    throw new Error(mensagem);
+  }
+  return (data as { data: UsoBancoDados }).data;
+}
