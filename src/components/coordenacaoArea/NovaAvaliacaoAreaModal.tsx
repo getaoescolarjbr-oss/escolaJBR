@@ -6,7 +6,7 @@ import type { AreaConhecimento } from '../../utils/areasConhecimento';
 import { disciplinaPertenceAArea, normalizarArea } from '../../utils/areasConhecimento';
 import type { AvaliacaoArea, CotaProfessorInput, NovaAvaliacaoAreaInput } from '../../types/avaliacoes';
 import type { ModoEmbaralhar } from '../../types/correcaoOmr';
-import { criarAvaliacaoArea, editarAvaliacaoArea, buscarInstrucoesPadrao, buscarModoNota, definirModoNota, salvarAvaliacaoAreaSoNota } from '../../services/avaliacoesService';
+import { criarAvaliacaoArea, editarAvaliacaoArea, buscarInstrucoesPadrao, buscarModoNota, definirModoNota, salvarAvaliacaoAreaSoNota, listarEspelhosDeSubstituicao, aplicarSubstituicoes } from '../../services/avaliacoesService';
 import { getCurrentBimestre } from '../../utils/academicUtils';
 import { CamposAvaliacaoComuns, CamposSoNota, versoesEfetivas, type ValoresCamposAvaliacao } from './CamposAvaliacaoComuns';
 
@@ -174,7 +174,14 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
           });
         }
 
-        const lista = Array.from(mapaProfDisc.values()).sort(
+        // Substituição em andamento: o titular sai e aparece o substituto ("Fulano (substituindo Beltrano)").
+        const manter = new Set<string>(
+          (soNota
+            ? (avaliacaoExistente?.notas_professores ?? [])
+            : (avaliacaoExistente?.cotas ?? [])
+          ).map((c) => `${c.professor_id}|${c.disciplina_id}`)
+        );
+        const lista = aplicarSubstituicoes(Array.from(mapaProfDisc.values()), await listarEspelhosDeSubstituicao(), manter).sort(
           (a, b) => a.professor_nome.localeCompare(b.professor_nome) || a.disciplina_nome.localeCompare(b.disciplina_nome)
         );
         setProfessoresArea(lista);

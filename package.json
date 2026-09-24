@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test:omr": "tsx tests/omr-leitura.test.ts",
+    "test:substituicoes": "tsx tests/substituicoes.test.ts",
     "test:omr-db": "node tests/correcao-omr-db.test.mjs",
     "test:rls": "node tests/rls-exposicao.test.mjs --atual"
   },
