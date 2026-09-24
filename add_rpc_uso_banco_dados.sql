@@ -1,7 +1,8 @@
 -- Medidor de uso do banco para o Portal do Administrador.
 --
 -- Devolve o tamanho total do banco (o que a cota do plano gratuito do Supabase conta),
--- quanto é do schema public, e as 5 maiores tabelas — para saber o que está ocupando espaço.
+-- quanto é do schema public, as 5 maiores tabelas e o total de arquivos no Storage (cota
+-- separada, de 1 GB) — para saber o que está ocupando espaço.
 -- Só a GESTAO pode chamar (a checagem é dentro da função, que é SECURITY DEFINER para
 -- conseguir ler o tamanho de tabelas que o usuário comum não enxerga).
 --
@@ -21,6 +22,10 @@ begin
 
   return jsonb_build_object(
     'total_bytes', pg_database_size(current_database()),
+    -- Arquivos (fotos, imagens de questões...) contam na cota de Storage, não na do banco.
+    'storage_bytes', (
+      select coalesce(sum((metadata->>'size')::bigint), 0) from storage.objects
+    ),
     'public_bytes', (
       select coalesce(sum(pg_total_relation_size(c.oid)), 0)
       from pg_class c join pg_namespace n on n.oid = c.relnamespace

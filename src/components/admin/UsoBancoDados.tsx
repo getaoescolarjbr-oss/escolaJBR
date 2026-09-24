@@ -1,12 +1,41 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Database, RefreshCw } from 'lucide-react';
-import { LIMITE_BANCO_BYTES, obterUsoBancoDados } from '../../services/usoBancoService';
+import { LIMITE_BANCO_BYTES, LIMITE_STORAGE_BYTES, obterUsoBancoDados } from '../../services/usoBancoService';
 import type { UsoBancoDados as Uso } from '../../services/usoBancoService';
 
 const MB = 1024 * 1024;
 const fmtMb = (bytes: number) => `${(bytes / MB).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} MB`;
 
-// Medidor de uso do banco (cota do plano gratuito do Supabase) para o Portal do Administrador.
+function Barra({ titulo, usado, limite }: { titulo: string; usado: number; limite: number }) {
+  const pct = Math.min(100, (usado / limite) * 100);
+  const restante = Math.max(0, limite - usado);
+  const cor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-ms-gold' : 'bg-ms-green';
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">{titulo}</p>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <p className="text-sm text-ms-main">
+          <strong className="text-lg font-black">{fmtMb(usado)}</strong>
+          <span className="text-gray-500"> de {fmtMb(limite)} ({pct.toFixed(1)}%)</span>
+        </p>
+        <p className="text-xs text-gray-500">Faltam <strong className="text-ms-main">{fmtMb(restante)}</strong> para a cota</p>
+      </div>
+      <div
+        className="h-3 rounded-full bg-gray-500/25 overflow-hidden"
+        role="progressbar"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={Math.round(pct)}
+        aria-label={`${titulo}: percentual da cota utilizado`}
+      >
+        <div className={`h-full rounded-full transition-all ${cor}`} style={{ width: `${Math.max(pct, 0.5)}%` }} />
+      </div>
+    </div>
+  );
+}
+
+// Medidor de uso do banco e do Storage (cotas do plano gratuito do Supabase) para o
+// Portal do Administrador.
 export function UsoBancoDados() {
   const [uso, setUso] = useState<Uso | null>(null);
   const [erro, setErro] = useState<string | null>(null);
@@ -29,12 +58,8 @@ export function UsoBancoDados() {
     carregar();
   }, [carregar]);
 
-  const pct = uso ? Math.min(100, (uso.total_bytes / LIMITE_BANCO_BYTES) * 100) : 0;
-  const restante = uso ? Math.max(0, LIMITE_BANCO_BYTES - uso.total_bytes) : 0;
-  const cor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-ms-gold' : 'bg-ms-green';
-
   return (
-    <section className="bg-ms-card border border-gray-800 rounded-2xl p-4 sm:p-5" aria-label="Uso do banco de dados">
+    <section className="bg-ms-card border border-gray-800 rounded-2xl p-4 sm:p-5" aria-label="Uso do banco de dados e do armazenamento">
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2 min-w-0">
           <Database className="w-5 h-5 text-ms-blueText shrink-0" />
@@ -56,28 +81,12 @@ export function UsoBancoDados() {
       {!erro && !uso && <p className="mt-3 text-xs text-gray-500">Medindo…</p>}
 
       {uso && (
-        <div className="mt-3 space-y-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <p className="text-sm text-ms-main">
-              <strong className="text-lg font-black">{fmtMb(uso.total_bytes)}</strong>
-              <span className="text-gray-500"> de {fmtMb(LIMITE_BANCO_BYTES)} ({pct.toFixed(1)}%)</span>
-            </p>
-            <p className="text-xs text-gray-500">Faltam <strong className="text-ms-main">{fmtMb(restante)}</strong> para a cota</p>
-          </div>
-
-          <div
-            className="h-3 rounded-full bg-gray-500/25 overflow-hidden"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={Math.round(pct)}
-            aria-label="Percentual da cota do banco utilizado"
-          >
-            <div className={`h-full rounded-full transition-all ${cor}`} style={{ width: `${Math.max(pct, 0.5)}%` }} />
-          </div>
+        <div className="mt-3 space-y-4">
+          <Barra titulo="Banco de dados" usado={uso.total_bytes} limite={LIMITE_BANCO_BYTES} />
+          <Barra titulo="Armazenamento de arquivos (imagens)" usado={uso.storage_bytes} limite={LIMITE_STORAGE_BYTES} />
 
           <details className="text-xs text-gray-500">
-            <summary className="cursor-pointer select-none hover:text-ms-main">Maiores tabelas</summary>
+            <summary className="cursor-pointer select-none hover:text-ms-main">Maiores tabelas do banco</summary>
             <ul className="mt-2 space-y-1">
               {uso.maiores_tabelas.map((t) => (
                 <li key={t.tabela} className="flex justify-between gap-3">
