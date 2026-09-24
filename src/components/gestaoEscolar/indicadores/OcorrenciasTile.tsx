@@ -10,7 +10,8 @@ const INTERVALO_MS = 15000;
 interface OcorrenciasTileProps {
   periodo: PeriodoOcorrencias;
   onPeriodo: (p: PeriodoOcorrencias) => void;
-  onAbrir: () => void;
+  // Abre o pop-up; com turmaId, já filtrado naquela turma.
+  onAbrir: (turmaId?: string) => void;
   // Muda quando algo é registrado/visto no pop-up: força recarregar já, sem esperar o intervalo.
   versao: number;
 }
@@ -37,6 +38,7 @@ export function OcorrenciasTile({ periodo, onPeriodo, onAbrir, versao }: Ocorren
       setResultado({
         periodo,
         itens: (tu.data ?? []).map((t: { id: string; nome: string }) => ({
+          id: t.id,
           rotulo: t.nome,
           partes: [{ nome: 'Ocorrências', valor: contagem.get(t.id) ?? 0, cor: '#ef4444' }],
         })),
@@ -59,7 +61,7 @@ export function OcorrenciasTile({ periodo, onPeriodo, onAbrir, versao }: Ocorren
   return (
     <div className="sm:col-span-2 bg-ms-card border border-gray-800 rounded-2xl p-3 flex flex-col gap-2">
       <div className="flex items-start justify-between gap-2">
-        <button onClick={onAbrir} className="text-left group" aria-label={`Abrir ocorrências: ${rotuloPeriodo(periodo)}`}>
+        <button onClick={() => onAbrir()} className="text-left group" aria-label={`Abrir ocorrências: ${rotuloPeriodo(periodo)}`}>
           <p className="text-[11px] uppercase tracking-wider text-[#2563eb] font-bold">Ocorrências — por turma</p>
           <p className="text-3xl font-black text-ms-main group-hover:text-ms-blueText transition-colors">{atual?.total ?? '…'}</p>
         </button>
@@ -75,7 +77,7 @@ export function OcorrenciasTile({ periodo, onPeriodo, onAbrir, versao }: Ocorren
       {atual === null ? (
         <p className="text-xs text-gray-600">Carregando…</p>
       ) : (
-        <BarrasPorTurma itens={atual.itens} vazio="Nenhuma ocorrência neste período." />
+        <BarrasPorTurma itens={atual.itens} vazio="Nenhuma ocorrência neste período." onSelecionar={(item) => onAbrir(item?.id)} />
       )}
       {atual && <p className="text-[10px] text-gray-600">Atualiza sozinho a cada 15 s · última leitura {atual.em.toLocaleTimeString('pt-BR')}</p>}
     </div>

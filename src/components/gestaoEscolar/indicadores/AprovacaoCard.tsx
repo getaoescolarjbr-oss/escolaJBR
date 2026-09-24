@@ -1,12 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { carregarDadosNotas, resumoBimestre, resumoParcialAno, resumoParcialPorTurma, MEDIA_APROVACAO } from './notasService';
+import { carregarDadosNotas, resumoBimestre, resumoParcialAno, MEDIA_APROVACAO } from './notasService';
 import type { DadosNotas, ResumoSituacao } from './notasService';
 import { BarraProgresso } from './charts';
 import { PERIODOS_LETIVOS, hojeISO } from './diasLetivos';
 import { EvolucaoNotasModal } from './EvolucaoNotasModal';
-import { ModalShell } from './ModalShell';
-import { BarrasPorTurma } from './BarrasPorTurma';
+import { SituacaoPorTurmaModal } from './SituacaoAlunos';
 
 function pct(valor: number, total: number): string {
   return total > 0 ? `${((valor / total) * 100).toFixed(1).replace('.', ',')}%` : '—';
@@ -105,20 +104,7 @@ export function AprovacaoCard() {
         })}
       </div>
 
-      {porTurma && (
-        <ModalShell titulo="Situação dos alunos por turma (antes do exame)" onClose={() => setPorTurma(false)} largura="max-w-2xl">
-          <BarrasPorTurma
-            itens={resumoParcialPorTurma(dados, encerrados).map(({ turma, resumo }) => ({
-              rotulo: turma.nome,
-              partes: [
-                { nome: 'Já aprovados', valor: resumo.acimaDaMedia, cor: '#22c55e' },
-                { nome: 'Faltam aprovar', valor: resumo.abaixoDaMedia, cor: '#f59e0b' },
-                { nome: 'Sem notas', valor: resumo.semNotas, cor: '#6b7280' },
-              ],
-            }))}
-          />
-        </ModalShell>
-      )}
+      {porTurma && <SituacaoPorTurmaModal dados={dados} encerrados={encerrados} onClose={() => setPorTurma(false)} />}
       {evolucao && <EvolucaoNotasModal dados={dados} bimestreDestaque={evolucao.bimestre} onClose={() => setEvolucao(null)} />}
     </div>
   );

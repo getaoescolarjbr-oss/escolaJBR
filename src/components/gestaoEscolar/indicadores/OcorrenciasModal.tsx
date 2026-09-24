@@ -24,6 +24,7 @@ interface OcorrenciaLinha {
 interface OcorrenciasModalProps {
   filtroInicial: 'todas' | 'sem_visto';
   periodoInicial?: PeriodoOcorrencias;
+  turmaInicial?: string; // id da turma; vazio = todas
   onClose: () => void;
   onAlterado: () => void;
 }
@@ -31,10 +32,11 @@ interface OcorrenciasModalProps {
 // Renderiza aos poucos: o ano letivo pode passar de mil ocorrências.
 const PAGINA = 100;
 
-export function OcorrenciasModal({ filtroInicial, periodoInicial = '30d', onClose, onAlterado }: OcorrenciasModalProps) {
+export function OcorrenciasModal({ filtroInicial, periodoInicial = '30d', turmaInicial = '', onClose, onAlterado }: OcorrenciasModalProps) {
   const [filtro, setFiltro] = useState(filtroInicial);
   const [periodo, setPeriodo] = useState<PeriodoOcorrencias>(periodoInicial);
   const [limite, setLimite] = useState(PAGINA);
+  const [turmaFiltro, setTurmaFiltro] = useState(turmaInicial);
   const [linhas, setLinhas] = useState<OcorrenciaLinha[]>([]);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -83,13 +85,23 @@ export function OcorrenciasModal({ filtroInicial, periodoInicial = '30d', onClos
     onAlterado();
   }
 
-  const visiveis = linhas.filter((o) => filtro === 'todas' || !o.visto_coordenador);
-  const semVisto = linhas.filter((o) => !o.visto_coordenador).length;
-  // Gráfico acompanha o filtro ativo (todas × sem visto).
+  const doStatus = linhas.filter((o) => filtro === 'todas' || !o.visto_coordenador);
+  const visiveis = doStatus.filter((o) => !turmaFiltro || o.turma_id === turmaFiltro);
+  const semVisto = linhas.filter((o) => !o.visto_coordenador && (!turmaFiltro || o.turma_id === turmaFiltro)).length;
+  const totalDaTurma = linhas.filter((o) => !turmaFiltro || o.turma_id === turmaFiltro).length;
+  // O gráfico acompanha período e status, mas mostra todas as turmas (a escolhida fica em
+  // destaque); clicar em uma turma filtra a lista, clicar de novo (ou em TOTAL) limpa.
   const porTurma: ItemBarra[] = turmas.map((t) => ({
+    id: t.id,
     rotulo: t.nome,
-    partes: [{ nome: filtro === 'todas' ? 'Ocorrências' : 'Sem visto', valor: visiveis.filter((o) => o.turma_id === t.id).length, cor: filtro === 'todas' ? '#ef4444' : '#f59e0b' }],
+    partes: [{ nome: filtro === 'todas' ? 'Ocorrências' : 'Sem visto', valor: doStatus.filter((o) => o.turma_id === t.id).length, cor: filtro === 'todas' ? '#ef4444' : '#f59e0b' }],
   }));
+  const nomeTurmaFiltro = turmas.find((t) => t.id === turmaFiltro)?.nome ?? null;
+
+  function selecionarTurma(item: ItemBarra | null) {
+    setTurmaFiltro(item && item.id !== turmaFiltro ? item.id ?? '' : '');
+    setLimite(PAGINA);
+  }
 
   return (
     <ModalShell titulo={`Ocorrências — ${rotuloPeriodo(periodo)}`} onClose={onClose}>
@@ -102,9 +114,18 @@ export function OcorrenciasModal({ filtroInicial, periodoInicial = '30d', onClos
               aria-pressed={filtro === f}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold border ${filtro === f ? 'bg-ms-blue text-white border-ms-blue' : 'bg-ms-dark text-gray-400 border-gray-700 hover:text-ms-main'}`}
             >
-              {f === 'todas' ? `Todas (${linhas.length})` : `Sem visto (${semVisto})`}
+              {f === 'todas' ? `Todas (${totalDaTurma})` : `Sem visto (${semVisto})`}
             </button>
           ))}
+          <select
+            aria-label="Filtrar por turma"
+            value={turmaFiltro}
+            onChange={(e) => { setTurmaFiltro(e.target.value); setLimite(PAGINA); }}
+            className="bg-ms-dark border border-gray-700 text-ms-main text-xs font-bold rounded-lg px-2 py-1.5"
+          >
+            <option value="">Todas as turmas</option>
+            {turmas.map((t) => <option key={t.id} value={t.id}>{t.nome}</option>)}
+          </select>
           <select
             aria-label="Período das ocorrências"
             value={periodo}
@@ -128,7 +149,7 @@ export function OcorrenciasModal({ filtroInicial, periodoInicial = '30d', onClos
         )}
 
         {erro && <p className="text-sm text-red-400">{erro}</p>}
-        {!loading && <BarrasPorTurma itens={porTurma} vazio="Nenhuma ocorrência neste filtro." />}
+        {!loading && <BarrasPorTurma itens={porTurma} vazio="Nenhuma ocorrência neste filtro." onSelecionar={selecionarTurma} selecionado={nomeTurmaFiltro} />}
         {loading ? (
           <Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" />
         ) : visiveis.length === 0 ? (

@@ -13,7 +13,19 @@ export const ROTULOS_TIPO_AUSENCIA: Record<TipoAusencia, string> = {
 
 export const MESES = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
 
+export interface RegistroAtestado {
+  id: string;
+  professorId: string;
+  nome: string;
+  tipo: TipoAusencia;
+  dataInicio: string;
+  dataFim: string;
+  dias: number;
+  ativo: boolean;
+}
+
 export interface EstatisticasAtestados {
+  lista: RegistroAtestado[]; // todos os registros (base dos gráficos clicáveis)
   registros: number;
   ativos: number; // mesmo critério do indicador do banco: ativo = true
   servidores: number; // servidores distintos com algum registro
@@ -49,7 +61,11 @@ export function calcularEstatisticas(lista: AusenciaServidor[], nomes: Map<strin
   });
 
   const nomeDe = (id: string) => nomes.get(id) ?? 'Servidor não encontrado';
+  const detalhe: RegistroAtestado[] = lista
+    .map((a, i) => ({ id: a.id, professorId: a.professor_id, nome: nomeDe(a.professor_id), tipo: a.tipo, dataInicio: a.data_inicio, dataFim: a.data_fim, dias: duracoes[i], ativo: a.ativo }))
+    .sort((a, b) => b.dataInicio.localeCompare(a.dataInicio));
   return {
+    lista: detalhe,
     registros: lista.length,
     ativos: lista.filter((a) => a.ativo).length,
     servidores: porServidor.size,
