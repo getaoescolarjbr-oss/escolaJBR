@@ -18,6 +18,8 @@ interface StudentRowProps {
   atividadesRealizadas: number;
   totalAtividades: number;
   index: number;
+  /** Primeiro aluno com média: a composição abre para baixo. */
+  popupMediaParaBaixo?: boolean;
   theme: 'dark' | 'light';
   onUpdateVisto: (alunoId: string, valorAntigo: string | null, novoValor: string | null) => void;
   initialVisto?: string;
@@ -32,7 +34,7 @@ interface StudentRowProps {
   isLocked?: boolean;
 }
 
-export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAtividade, atividadesRealizadas, totalAtividades, index, theme, onUpdateVisto, initialVisto, initialPresenca, initialSaidaId, atividadeIdHoje, onAtividadeCreated, forceNovaAtividade = false, bulkAtividades = [], bulkRefreshTrigger = 0, gradeBreakdown, isLocked = false }: StudentRowProps) {
+export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAtividade, atividadesRealizadas, totalAtividades, index, theme, onUpdateVisto, initialVisto, initialPresenca, initialSaidaId, atividadeIdHoje, onAtividadeCreated, forceNovaAtividade = false, bulkAtividades = [], bulkRefreshTrigger = 0, gradeBreakdown, isLocked = false, popupMediaParaBaixo = false }: StudentRowProps) {
   // Configuração efetiva: per-turma se definida, senão usa padrão global
   const configEfetivo = getConfigPorTurma(professor, aluno.turma_id);
   const [presenca, setPresenca] = useState<boolean | null>(initialPresenca ?? null);
@@ -73,9 +75,8 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
 
   // ─── Controla o modal de Média Final ──────────────────────────────────────
   const [showGradeBreakdown, setShowGradeBreakdown] = useState(false);
-  // O popup abre para cima; perto do topo da tela (primeiros alunos) ele ficava cortado
-  // pelo cabeçalho — aí abre para baixo.
-  const [breakdownParaBaixo, setBreakdownParaBaixo] = useState(false);
+  // O popup abre para cima; no primeiro aluno ficava cortado pelo cabeçalho — ali abre para baixo.
+  const breakdownParaBaixo = popupMediaParaBaixo;
 
   useEffect(() => {
     if (!showGradeBreakdown) return;
@@ -458,10 +459,10 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
 
   return (
     <>
-      <tr className={`transition-all duration-200 border-b border-ms-border/30 bg-[var(--bg-row-even)] ${
-        index % 2 !== 0 ? 'bg-[var(--bg-row-odd)]' : ''
-      } ${isFora ? 'bg-amber-900/10' : 'hover:bg-ms-dark/5'}`}>
-        <td className="md:px-6 px-1.5 md:py-5 py-2.5 whitespace-nowrap">
+      <tr className={`transition-all duration-200 border-b border-ms-border/60 ${
+        isFora ? 'bg-amber-500/10' : index % 2 !== 0 ? 'bg-[var(--bg-row-odd)]' : 'bg-[var(--bg-row-even)]'
+      } hover:bg-blue-500/10`}>
+        <td className="md:px-6 px-1.5 md:py-2 py-1.5 whitespace-nowrap">
           <div className="flex items-center gap-1.5 md:gap-4">
             <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black text-xs md:text-base flex-shrink-0 border border-blue-500/20 shadow-sm">
               {index + 1}
@@ -522,12 +523,12 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
           </div>
         </td>
 
-        <td className="md:px-6 px-0.5 md:py-5 py-2 text-center">
-            <div className="inline-flex flex-col items-center gap-1">
+        <td className="md:px-4 px-0.5 md:py-2 py-1.5 text-center">
+            <div className="inline-flex flex-col md:flex-row items-center gap-1 md:gap-3">
                 {isPosterior || isTransferido ? (
                   <span className="text-[11px] font-black text-gray-500 italic">N/A</span>
                 ) : (
-                  <>
+                  <div className="flex flex-col items-center gap-1">
                     <span className={`text-[11px] font-black ${
                       percentual >= 80 ? 'text-green-500' :
                       percentual >= 60 ? 'text-blue-500' :
@@ -544,19 +545,14 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                           'bg-red-500'
                         }`} style={{ width: `${percentual}%` }}></div>
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {/* Grade Breakdown Trigger */}
                 {gradeBreakdown && !isPosterior && !isTransferido && (
-                  <div className="relative mt-2" ref={gradeBreakdownRef}>
+                  <div className="relative mt-1 md:mt-0" ref={gradeBreakdownRef}>
                     <button 
-                      onClick={(e) => {
-                        const topo = e.currentTarget.getBoundingClientRect().top;
-                        // cabeçalho fixo (~190px) + altura do popup (~260px)
-                        setBreakdownParaBaixo(topo < 450);
-                        setShowGradeBreakdown(!showGradeBreakdown);
-                      }}
+                      onClick={() => setShowGradeBreakdown(!showGradeBreakdown)}
 
                       className={`flex flex-col items-center justify-center md:px-3 px-1.5 md:py-1 py-0.5 rounded-lg border shadow-sm transition-all hover:scale-105 active:scale-95 ${
                         gradeBreakdown.mediaFinal >= 6.0 
@@ -564,7 +560,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                           : 'border-red-500/30 text-red-500 bg-red-500/5 hover:bg-red-500/10'
                       }`}
                     >
-                      <span className={`text-[8px] uppercase tracking-widest font-black opacity-70 mb-0.5 leading-tight text-center ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>Média<br />Final</span>
+                      <span className={`text-[8px] uppercase tracking-widest font-black opacity-70 mb-0.5 leading-tight text-center whitespace-nowrap ${theme === 'light' ? 'text-gray-500' : 'text-gray-400'}`}>Média Final</span>
                       <span className="text-xs md:text-sm leading-none font-black">{gradeBreakdown.mediaFinal.toFixed(2)}</span>
                     </button>
 
@@ -611,7 +607,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
         </td>
         
         {professor.habilitar_chamada_interna && (
-          <td className="md:px-6 px-0.5 md:py-5 py-2 text-center">
+          <td className="md:px-4 px-0.5 md:py-2 py-1.5 text-center">
              <div className="flex items-center justify-center gap-1 md:gap-2">
                 <button 
                   onClick={() => handleChamada(true)} 
@@ -643,7 +639,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
           </td>
         )}
 
-        <td className="md:px-4 px-0.5 md:py-4 py-2 text-center">
+        <td className="md:px-4 px-0.5 md:py-2 py-1.5 text-center">
             {bulkAtividades.length > 1 ? (
               // ── MODO LOTE: controles individuais por atividade ─────────────
               <div className="flex items-end gap-1 md:gap-3 justify-center flex-wrap">
@@ -863,7 +859,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
         </td>
 
         {/* ─── Ações: Ocorrência + Saída de Sala ─── */}
-        <td className="md:px-6 px-0.5 md:py-4 py-2 whitespace-nowrap text-center">
+        <td className="md:px-4 px-0.5 md:py-2 py-1.5 whitespace-nowrap text-center">
           {/* relative aqui para o dropdown se posicionar corretamente */}
           <div className="relative flex items-center justify-center gap-1 md:gap-2" ref={destinoMenuRef}>
             <button

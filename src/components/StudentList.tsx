@@ -664,7 +664,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
               </tr>
             </thead>
             <tbody className="divide-y divide-ms-border/50">
-              {alunos.map((aluno, index) => (
+              {alunos.map((aluno, index, lista) => (
                 <StudentRow 
                   key={`${turmaId}-${disciplinaId}-${aluno.aluno_id}`} 
                   aluno={aluno} 
@@ -686,6 +686,12 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                   bulkAtividades={bulkAtividades}
                   bulkRefreshTrigger={bulkRefreshTrigger}
                   gradeBreakdown={notasDetalhes[aluno.aluno_id]}
+                  // Só o primeiro aluno que tem média abre a composição para baixo — para
+                  // cima ela ficaria sob o cabeçalho fixo. Transferido/remanejado no topo
+                  // da lista não tem média, então conta o próximo.
+                  popupMediaParaBaixo={index === lista.findIndex((a) =>
+                    !!notasDetalhes[a.aluno_id] && !['Transferido', 'Remanejado', 'Cancelada'].includes(a.status ?? '')
+                  )}
                   isLocked={isLocked}
                 />
               ))}

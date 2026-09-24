@@ -21,8 +21,8 @@
 
   --bg-page: #00040a; /* True black-blue */
   --bg-card: #0d1117;
-  --bg-row-even: #161b22;
-  --bg-row-odd: rgba(22, 27, 34, 0.5);
+  --bg-row-even: #0d1117;
+  --bg-row-odd: #1c232d;
   --text-main: #e6edf3;
   --text-muted: #848d97;
   --border-main: #30363d;
@@ -51,7 +51,7 @@
   --bg-page: #f6f8fa;
   --bg-card: #ffffff;
   --bg-row-even: #ffffff;
-  --bg-row-odd: #f6f8fa;
+  --bg-row-odd: #e8eef6;
   --text-main: #1f2328;
   --text-muted: #656d76;
   --border-main: #d0d7de;
