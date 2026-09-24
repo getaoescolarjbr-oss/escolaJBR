@@ -48,6 +48,7 @@ export interface AusenciaServidor {
   id: string;
   professor_id: string;
   substituto_id: string | null;
+  bloquear_titular: boolean;
   data_inicio: string;
   data_fim: string;
   observacoes: string | null;

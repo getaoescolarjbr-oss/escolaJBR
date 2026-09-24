@@ -10,8 +10,9 @@ import { ProtocolosTab } from './ProtocolosTab';
 import { DivergenciasTab } from './DivergenciasTab';
 import { SeriesTab } from './SeriesTab';
 import { CadastrosBibliotecaTab } from './CadastrosBibliotecaTab';
+import { RHPanel } from '../gestaoEscolar/rh/RHPanel';
 
-type Aba = 'matricula' | 'documentos' | 'emissao' | 'protocolos' | 'divergencias' | 'series' | 'biblioteca';
+type Aba = 'matricula' | 'documentos' | 'emissao' | 'protocolos' | 'divergencias' | 'series' | 'biblioteca' | 'rh';
 
 const ABAS_QUE_PRECISAM_DE_PESSOA: Aba[] = ['matricula', 'documentos', 'emissao'];
 
@@ -37,6 +38,8 @@ export function SecretariaPanel() {
     { id: 'divergencias', label: 'Divergências' },
     { id: 'series', label: 'Séries', somenteGestao: true },
     { id: 'biblioteca', label: 'Cadastros Biblioteca' },
+    // Mesmo RH da Gestão Escolar (frequência, escala, ausências/atestados com substituto, terceirizados).
+    { id: 'rh', label: 'RH' },
   ];
 
   return (
@@ -102,6 +105,7 @@ export function SecretariaPanel() {
       {aba === 'divergencias' && <DivergenciasTab />}
       {aba === 'series' && <SeriesTab />}
       {aba === 'biblioteca' && <CadastrosBibliotecaTab />}
+      {aba === 'rh' && <RHPanel />}
     </div>
   );
 }

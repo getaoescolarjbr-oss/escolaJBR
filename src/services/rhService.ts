@@ -97,16 +97,64 @@ export async function criarAusencia(dados: {
   data_inicio: string;
   data_fim: string;
   substituto_id: string | null;
+  bloquear_titular?: boolean;
   processo_sed_ref: string | null;
   observacoes: string | null;
 }): Promise<AusenciaServidor> {
+  // O bloqueio só existe com substituto (senão ninguém assumiria as turmas).
+  const bloquear = !!dados.substituto_id && !!dados.bloquear_titular;
   const { data, error } = await supabase
     .from('atestados_servidores')
-    .insert([{ ...dados, ativo: true, status_oficial: 'INTERNO' }])
+    .insert([{ ...dados, bloquear_titular: bloquear, ativo: true, status_oficial: 'INTERNO' }])
     .select()
     .single();
   if (error) throw error;
+  if (data.substituto_id) {
+    try {
+      await criarEspelhosDaAusencia(data);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : (e as { message?: string })?.message ?? 'erro desconhecido';
+      throw new Error(`A ausência foi registrada, mas não foi possível espelhar as turmas para o substituto: ${msg}`, { cause: e });
+    }
+  }
   return data;
+}
+
+// Espelha as turmas (alocações) do servidor ausente para o substituto — mesma regra do cadastro
+// de atestado em Cadastro de Pessoas (AtestadoModal): copia só as alocações próprias, marcadas
+// com o atestado de origem para poderem ser removidas ao encerrar.
+export async function criarEspelhosDaAusencia(ausencia: Pick<AusenciaServidor, 'id' | 'professor_id' | 'substituto_id'>): Promise<number> {
+  if (!ausencia.substituto_id) return 0;
+  const { data: originais, error } = await supabase
+    .from('alocacoes_v2')
+    .select('turma_id, disciplina_id')
+    .eq('professor_id', ausencia.professor_id)
+    .eq('is_espelho', false);
+  if (error) throw error;
+  if (!originais || originais.length === 0) return 0;
+  const { error: erroInsert } = await supabase.from('alocacoes_v2').insert(
+    originais.map((a) => ({
+      professor_id: ausencia.substituto_id,
+      turma_id: a.turma_id,
+      disciplina_id: a.disciplina_id,
+      is_espelho: true,
+      atestado_id: ausencia.id,
+      professor_original_id: ausencia.professor_id,
+    }))
+  );
+  if (erroInsert) throw erroInsert;
+  return originais.length;
+}
+
+export async function removerEspelhosDaAusencia(ausenciaId: string): Promise<void> {
+  const { error } = await supabase.from('alocacoes_v2').delete().eq('atestado_id', ausenciaId).eq('is_espelho', true);
+  if (error) throw error;
+}
+
+// Liga/desliga o bloqueio do titular numa ausência já registrada (só faz sentido com substituto).
+export async function definirBloqueioTitular(id: string, bloquear: boolean): Promise<void> {
+  const { error } = await supabase.from('atestados_servidores').update({ bloquear_titular: bloquear }).eq('id', id);
+  if (error) throw error;
 }
 
 // status_oficial é sempre um rótulo escolhido manualmente por GESTAO/SECRETARIA — o
@@ -119,6 +167,8 @@ export async function atualizarStatusOficialAusencia(id: string, statusOficial: 
 export async function encerrarAusencia(id: string, dataFim: string): Promise<void> {
   const { error } = await supabase.from('atestados_servidores').update({ ativo: false, data_fim: dataFim }).eq('id', id);
   if (error) throw error;
+  // Encerrou: o titular retoma as turmas, então os espelhos do substituto saem (igual ao AtestadoModal).
+  await removerEspelhosDaAusencia(id);
 }
 
 const BUCKET_RH_DOCUMENTOS = 'rh-documentos';
