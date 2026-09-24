@@ -248,6 +248,27 @@ const OPS: Record<string, (a: Args, roles: string[], userId: string | null) => P
     return { questions: questions ?? [], support_texts: textos };
   },
 
+  // Medidor de uso do projeto do acervo (Portal do Administrador). Só leitura.
+  async usoBanco(_a, roles) {
+    if (!roles.includes("GESTAO")) throw new ErroHttp(403, "Somente a gestão consulta o uso do banco");
+    const { data, error } = await supabase.rpc("rpc_uso_banco_dados");
+    if (error) falha(error);
+    return data;
+  },
+
+  // Backup: uma página de uma das três tabelas, em ordem estável por id. NÃO existe na lista do
+  // acervo-proxy (o navegador não alcança); só quem tem o segredo compartilhado chama, como o
+  // script supabase/acervo-projeto-b/backup-acervo.mjs.
+  async exportarTabela(a) {
+    const TABELAS = ["questions", "support_texts", "question_taxonomy_terms"];
+    if (!TABELAS.includes(a.tabela)) throw new ErroHttp(400, "Tabela inválida");
+    const de = Math.max(0, Number(a.offset) || 0);
+    const n = Math.min(Math.max(1, Number(a.limite) || 500), 500);
+    const { data, error, count } = await supabase.from(a.tabela).select("*", { count: "exact" }).order("id").range(de, de + n - 1);
+    if (error) falha(error);
+    return { linhas: data ?? [], total: count ?? 0 };
+  },
+
   async ping() { return new Date().toISOString(); },
 };
 

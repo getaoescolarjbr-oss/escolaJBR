@@ -1,10 +1,11 @@
 import { supabase } from '../lib/supabase';
 
-// Chave de migração do banco de questões (ver docs/plano-migracao-banco-questoes.md).
-//   desligada (padrão): o portal lê e grava questões direto no banco principal, como sempre.
-//   ligada (VITE_ACERVO_EXTERNO=true no build): o acervo fica no projeto jbr-acervo-questoes e
-//   o portal só fala com ele pela Edge Function `acervo-proxy`, que valida login e papel.
-export const ACERVO_EXTERNO = import.meta.env.VITE_ACERVO_EXTERNO === 'true';
+// Banco de questões (ver docs/plano-migracao-banco-questoes.md).
+//   LIGADO (padrão desde 2026-09-24): o acervo fica no projeto jbr-acervo-questoes e o portal só
+//   fala com ele pela Edge Function `acervo-proxy`, que valida login e papel.
+//   Trava de emergência: VITE_ACERVO_EXTERNO=false no build volta a ler/gravar questões direto
+//   no banco principal (que ainda guarda a cópia completa até o passo 7 do plano).
+export const ACERVO_EXTERNO = import.meta.env.VITE_ACERVO_EXTERNO !== 'false';
 
 export async function acervo<T>(op: string, args: Record<string, unknown> = {}): Promise<T> {
   const { data, error } = await supabase.functions.invoke('acervo-proxy', { body: { op, args } });
