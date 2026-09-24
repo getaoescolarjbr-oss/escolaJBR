@@ -1,34 +1,54 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import type { ComponentType } from 'react';
 import { supabase } from './lib/supabase';
 import type { Professor } from './types';
 import { Login } from './components/Login';
 import { Header } from './components/Header';
-import { Dashboard } from './components/Dashboard';
-import { AdminPanel } from './components/admin/AdminPanel';
-import { CoordinatorDashboard } from './components/CoordinatorDashboard';
-import { InspetorDashboard } from './components/InspetorDashboard';
 import { LandingPage } from './components/LandingPage';
 import { getCurrentBimestre } from './utils/academicUtils';
 import { useAuth } from './hooks/useAuth';
 import { RequireRole } from './components/rbac/RequireRole';
 import { ModuleShell } from './components/shell/ModuleShell';
-import { PessoasPanel } from './components/pessoas/PessoasPanel';
-import { LgpdPanel } from './components/lgpd/LgpdPanel';
-import { UsuariosPanel } from './components/usuarios/UsuariosPanel';
-import { PerfilPanel } from './components/perfil/PerfilPanel';
-import { SecretariaPanel } from './components/secretaria/SecretariaPanel';
-import { CozinhaPanel } from './components/cozinha/CozinhaPanel';
-import { AgendamentoPanel } from './components/agendamento/AgendamentoPanel';
-import { BibliotecaPanel } from './components/biblioteca/BibliotecaPanel';
-import { ProfessorBibliotecaTab } from './components/biblioteca/ProfessorBibliotecaTab';
-import { BancoQuestoesPanel } from './components/bancoQuestoes/BancoQuestoesPanel';
-import { AlunoHome } from './components/aluno/AlunoHome';
-import { CadastroPendenteScreen } from './components/aluno/CadastroPendenteScreen';
-import { GestaoEscolarPanel } from './components/gestaoEscolar/GestaoEscolarPanel';
-import { CoordenacaoAreaPanel } from './components/coordenacaoArea/CoordenacaoAreaPanel';
-import { SimuladoPublicoPage } from './components/simulado/SimuladoPublicoPage';
-import { ModoCorrecaoPage } from './components/correcao/ModoCorrecaoPage';
 import { MODULOS_NAV, modulosVisiveis } from './config/moduleNav';
+
+// Cada módulo vira um chunk próprio, baixado só quando a tela é aberta. Antes tudo ia
+// num bundle único (~3 MB) que todo usuário baixava no primeiro acesso. Login, Header,
+// LandingPage e ModuleShell continuam estáticos: aparecem no primeiro carregamento.
+// Os componentes são exports nomeados, daí o `.then` que os expõe como `default`.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function carregar<T extends ComponentType<any>>(importar: () => Promise<Record<string, unknown>>, nome: string) {
+  return lazy(() => importar().then((m) => ({ default: m[nome] as T })));
+}
+
+const Dashboard = carregar<typeof import('./components/Dashboard').Dashboard>(() => import('./components/Dashboard'), 'Dashboard');
+const AdminPanel = carregar<typeof import('./components/admin/AdminPanel').AdminPanel>(() => import('./components/admin/AdminPanel'), 'AdminPanel');
+const CoordinatorDashboard = carregar<typeof import('./components/CoordinatorDashboard').CoordinatorDashboard>(() => import('./components/CoordinatorDashboard'), 'CoordinatorDashboard');
+const InspetorDashboard = carregar<typeof import('./components/InspetorDashboard').InspetorDashboard>(() => import('./components/InspetorDashboard'), 'InspetorDashboard');
+const PessoasPanel = carregar<typeof import('./components/pessoas/PessoasPanel').PessoasPanel>(() => import('./components/pessoas/PessoasPanel'), 'PessoasPanel');
+const LgpdPanel = carregar<typeof import('./components/lgpd/LgpdPanel').LgpdPanel>(() => import('./components/lgpd/LgpdPanel'), 'LgpdPanel');
+const UsuariosPanel = carregar<typeof import('./components/usuarios/UsuariosPanel').UsuariosPanel>(() => import('./components/usuarios/UsuariosPanel'), 'UsuariosPanel');
+const PerfilPanel = carregar<typeof import('./components/perfil/PerfilPanel').PerfilPanel>(() => import('./components/perfil/PerfilPanel'), 'PerfilPanel');
+const SecretariaPanel = carregar<typeof import('./components/secretaria/SecretariaPanel').SecretariaPanel>(() => import('./components/secretaria/SecretariaPanel'), 'SecretariaPanel');
+const CozinhaPanel = carregar<typeof import('./components/cozinha/CozinhaPanel').CozinhaPanel>(() => import('./components/cozinha/CozinhaPanel'), 'CozinhaPanel');
+const AgendamentoPanel = carregar<typeof import('./components/agendamento/AgendamentoPanel').AgendamentoPanel>(() => import('./components/agendamento/AgendamentoPanel'), 'AgendamentoPanel');
+const BibliotecaPanel = carregar<typeof import('./components/biblioteca/BibliotecaPanel').BibliotecaPanel>(() => import('./components/biblioteca/BibliotecaPanel'), 'BibliotecaPanel');
+const ProfessorBibliotecaTab = carregar<typeof import('./components/biblioteca/ProfessorBibliotecaTab').ProfessorBibliotecaTab>(() => import('./components/biblioteca/ProfessorBibliotecaTab'), 'ProfessorBibliotecaTab');
+const BancoQuestoesPanel = carregar<typeof import('./components/bancoQuestoes/BancoQuestoesPanel').BancoQuestoesPanel>(() => import('./components/bancoQuestoes/BancoQuestoesPanel'), 'BancoQuestoesPanel');
+const AlunoHome = carregar<typeof import('./components/aluno/AlunoHome').AlunoHome>(() => import('./components/aluno/AlunoHome'), 'AlunoHome');
+const CadastroPendenteScreen = carregar<typeof import('./components/aluno/CadastroPendenteScreen').CadastroPendenteScreen>(() => import('./components/aluno/CadastroPendenteScreen'), 'CadastroPendenteScreen');
+const GestaoEscolarPanel = carregar<typeof import('./components/gestaoEscolar/GestaoEscolarPanel').GestaoEscolarPanel>(() => import('./components/gestaoEscolar/GestaoEscolarPanel'), 'GestaoEscolarPanel');
+const CoordenacaoAreaPanel = carregar<typeof import('./components/coordenacaoArea/CoordenacaoAreaPanel').CoordenacaoAreaPanel>(() => import('./components/coordenacaoArea/CoordenacaoAreaPanel'), 'CoordenacaoAreaPanel');
+const SimuladoPublicoPage = carregar<typeof import('./components/simulado/SimuladoPublicoPage').SimuladoPublicoPage>(() => import('./components/simulado/SimuladoPublicoPage'), 'SimuladoPublicoPage');
+const ModoCorrecaoPage = carregar<typeof import('./components/correcao/ModoCorrecaoPage').ModoCorrecaoPage>(() => import('./components/correcao/ModoCorrecaoPage'), 'ModoCorrecaoPage');
+
+// Mesmo spinner da tela de carregamento inicial, usado enquanto um chunk é baixado.
+function Carregando() {
+  return (
+    <div className="min-h-[40vh] flex items-center justify-center">
+      <div className="animate-spin rounded-full h-10 w-10 border-4 border-ms-blueText border-t-transparent shadow-[0_0_15px_rgba(0,38,119,0.5)]"></div>
+    </div>
+  );
+}
 
 const MODULOS_COM_SHELL = [
   'pessoas',
@@ -279,7 +299,7 @@ function App() {
   // qualquer outro estado (spinner de auth, landing, login) — ver
   // create_simulados_publico.sql / SimuladoPublicoPage.
   if (simuladoToken) {
-    return <SimuladoPublicoPage token={simuladoToken} />;
+    return <Suspense fallback={<Carregando />}><SimuladoPublicoPage token={simuladoToken} /></Suspense>;
   }
 
   // O Modo Correção exige login (grava nota), então entra DEPOIS da checagem de sessão,
@@ -322,27 +342,29 @@ function App() {
   // do desvio do BiblioClube e depois da checagem de sessão.
   if (modoCorrecao && !hasRole('ALUNO')) {
     return (
-      <ModoCorrecaoPage
-        provaEsperadaId={provaCorrecao}
-        onFechar={() => {
-          window.history.replaceState({}, '', '/?modulo=banco-questoes');
-          navegarPara('banco-questoes');
-        }}
-      />
+      <Suspense fallback={<Carregando />}>
+        <ModoCorrecaoPage
+          provaEsperadaId={provaCorrecao}
+          onFechar={() => {
+            window.history.replaceState({}, '', '/?modulo=banco-questoes');
+            navegarPara('banco-questoes');
+          }}
+        />
+      </Suspense>
     );
   }
 
   // Aluno tem uma "app" própria (BiblioClube), sem Header/ModuleShell de servidor —
   // ver App.tsx useEffect acima, que já pula fetchProfessorProfile para este papel.
   if (hasRole('ALUNO')) {
-    return <AlunoHome onLogout={() => setView('dashboard')} />;
+    return <Suspense fallback={<Carregando />}><AlunoHome onLogout={() => setView('dashboard')} /></Suspense>;
   }
 
   // Sessão sem professor, sem admin e sem NENHUM papel: é o autocadastro do
   // BiblioClube ainda não aprovado pela Secretaria (ou rejeitado) — nunca um
   // professor "perdido", que é o que a mensagem genérica mais abaixo pressupõe.
   if (!professor && !isAdmin && papeis.length === 0) {
-    return <CadastroPendenteScreen authUserId={session.user.id} onLogout={() => setView('dashboard')} />;
+    return <Suspense fallback={<Carregando />}><CadastroPendenteScreen authUserId={session.user.id} onLogout={() => setView('dashboard')} /></Suspense>;
   }
 
   console.log('App State:', { session: !!session, professor: !!professor, isAdmin, view, loading });
@@ -379,6 +401,7 @@ function App() {
       />
       <main className="flex-1 overflow-auto">
         <div className={(isAdmin && view === 'admin') || (MODULOS_COM_SHELL as readonly string[]).includes(view) ? "w-full p-4 h-full" : "max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8"}>
+          <Suspense fallback={<Carregando />}>
           {isAdmin && view === 'admin' ? (
              <AdminPanel onBack={() => navegarPara('dashboard')} theme={theme} />
           ) : view === 'coordenacao' && hasAnyRole(['GESTAO', 'COORDENACAO']) && professor ? (
@@ -490,6 +513,7 @@ function App() {
               <p className="text-gray-400 mt-4 max-w-md mx-auto">Sua conta não está vinculada a um perfil de professor. Por favor, entre em contato com a administração escolar.</p>
             </div>
           )}
+          </Suspense>
         </div>
       </main>
     </div>

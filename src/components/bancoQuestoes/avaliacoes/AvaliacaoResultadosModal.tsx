@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { BarChart3, FileSpreadsheet, Loader2, Printer, Table as TableIcon, Users, X } from 'lucide-react';
-import * as XLSX from 'xlsx-js-style';
 import type { Avaliacao, QuestaoInfoRelatorio, RelatorioAvaliacaoCompleto, ResultadoAlunoDetalhado } from '../../../types/avaliacoes';
 import { obterResultadosDetalhadosAvaliacao } from '../../../services/avaliacoesService';
 import { printReport } from '../../../utils/printUtils';
@@ -11,6 +10,15 @@ interface Props {
 }
 
 const SEM_TURMA = 'Sem turma';
+
+// O SheetJS pesa ~1 MB: só é baixado quando o usuário clica em "Exportar XLSX", em vez
+// de ir junto com o Banco de Questões inteiro.
+type XLSXLib = typeof import('xlsx-js-style');
+async function carregarXlsx(): Promise<XLSXLib> {
+  const mod = await import('xlsx-js-style');
+  // Pacote CommonJS: conforme o bundler, a API vem no próprio módulo ou em `default`.
+  return ('utils' in mod ? mod : (mod as unknown as { default: XLSXLib }).default) as XLSXLib;
+}
 
 interface EstatisticaQuestao {
   question_id: string;
@@ -63,7 +71,7 @@ const ESTILO_HEADER = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { 
 const ESTILO_ACERTO = { font: { bold: true, color: { rgb: '006100' } }, fill: { fgColor: { rgb: 'C6EFCE' } }, alignment: { horizontal: 'center' } };
 const ESTILO_ERRO = { font: { bold: true, color: { rgb: '9C0006' } }, fill: { fgColor: { rgb: 'FFC7CE' } }, alignment: { horizontal: 'center' } };
 
-function criarPlanilhaAlunos(alunosGrupo: ResultadoAlunoDetalhado[], questoes: QuestaoInfoRelatorio[]) {
+function criarPlanilhaAlunos(XLSX: XLSXLib, alunosGrupo: ResultadoAlunoDetalhado[], questoes: QuestaoInfoRelatorio[]) {
   const header = ['Aluno', 'Turma', 'SGDE', 'Status', 'Total Acertos', '% Acertos', 'Nota',
     ...questoes.map((q) => `Q${String(q.ordem).padStart(2, '0')} (Gab: ${q.correct_letter || '—'})`),
     'Data de Envio'];
@@ -110,7 +118,7 @@ function criarPlanilhaAlunos(alunosGrupo: ResultadoAlunoDetalhado[], questoes: Q
   return ws;
 }
 
-function criarPlanilhaQuestoes(estat: EstatisticaQuestao[]) {
+function criarPlanilhaQuestoes(XLSX: XLSXLib, estat: EstatisticaQuestao[]) {
   const header = ['Questão', 'Gabarito', 'Valor', 'Alunos que Responderam', 'Total de Acertos', 'Total de Erros', 'Taxa de Acerto'];
   const linhas: (string | number)[][] = [header];
   const estilos: { r: number; c: number; s: Record<string, unknown> }[] = [];
@@ -247,8 +255,17 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
     });
   }
 
-  function exportarXlsx() {
+  async function exportarXlsx() {
     if (!relatorio || alunos.length === 0) return;
+
+    let XLSX: XLSXLib;
+    try {
+      XLSX = await carregarXlsx();
+    } catch (e) {
+      console.error('Falha ao carregar o exportador de planilhas:', e);
+      window.alert('Não foi possível carregar o exportador de planilhas. Verifique a conexão e tente novamente.');
+      return;
+    }
 
     const livro = XLSX.utils.book_new();
     const abasUsadas = new Set<string>();
@@ -260,15 +277,15 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
       const estatTurma = estatisticasPorTurma.get(turma)?.porQuestao ?? [];
 
       const nomeAbaAlunos = sanitizarNomeAba(`Resp. ${turma}`, abasUsadas);
-      XLSX.utils.book_append_sheet(livro, criarPlanilhaAlunos(alunosTurma, questoes), nomeAbaAlunos);
+      XLSX.utils.book_append_sheet(livro, criarPlanilhaAlunos(XLSX, alunosTurma, questoes), nomeAbaAlunos);
 
       const nomeAbaQuestoes = sanitizarNomeAba(`Acertos ${turma}`, abasUsadas);
-      XLSX.utils.book_append_sheet(livro, criarPlanilhaQuestoes(estatTurma), nomeAbaQuestoes);
+      XLSX.utils.book_append_sheet(livro, criarPlanilhaQuestoes(XLSX, estatTurma), nomeAbaQuestoes);
     }
 
     // Relatório geral com o total de acertos de cada questão somando todas as turmas.
     const nomeAbaGeral = sanitizarNomeAba('Acertos Geral', abasUsadas);
-    XLSX.utils.book_append_sheet(livro, criarPlanilhaQuestoes(estatisticasGeral), nomeAbaGeral);
+    XLSX.utils.book_append_sheet(livro, criarPlanilhaQuestoes(XLSX, estatisticasGeral), nomeAbaGeral);
 
     const safeTitle = avaliacao.titulo.toLowerCase().replace(/[^a-z0-9]+/g, '-');
     XLSX.writeFile(livro, `relatorio-acertos-${safeTitle}.xlsx`);
