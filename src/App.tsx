@@ -9,6 +9,7 @@ import { getCurrentBimestre } from './utils/academicUtils';
 import { useAuth } from './hooks/useAuth';
 import { RequireRole } from './components/rbac/RequireRole';
 import { ModuleShell } from './components/shell/ModuleShell';
+import { UsoBancoDados } from './components/admin/UsoBancoDados';
 import { MODULOS_NAV, modulosVisiveis } from './config/moduleNav';
 
 // Cada módulo vira um chunk próprio, baixado só quando a tela é aberta. Antes tudo ia
@@ -485,6 +486,7 @@ function App() {
                   </button>
                 ))}
               </div>
+              <UsoBancoDados />
             </div>
           ) : professor ? (
             <div className="flex flex-col gap-6">
