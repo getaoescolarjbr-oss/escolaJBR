@@ -16,7 +16,7 @@ import { BimestreLockModal } from './BimestreLockModal';
 import { GestaoMensagensPanel } from './GestaoMensagensPanel';
 import { AniversariantesPanel } from './AniversariantesPanel';
 import { StudentManager } from './admin/StudentManager';
-import { OcorrenciasIndicador } from './gestaoEscolar/indicadores/OcorrenciasIndicador';
+import { OcorrenciasBotao } from './gestaoEscolar/indicadores/OcorrenciasBotao';
 
 interface CoordinatorDashboardProps {
   professor: Professor;
@@ -1376,6 +1376,8 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
         >
           <Lock className="w-4 h-4" /> Bloquear Bimestres
         </button>
+        {/* Gráfico de ocorrências por turma (com filtro de período) dentro de um pop-up */}
+        <OcorrenciasBotao />
       </div>
 
       {activeTab === 'overview' ? (
@@ -1417,11 +1419,6 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
           </div>
         </div>
-      </div>
-
-      {/* Mesmo indicador de ocorrências (período + gráfico por turma) da Gestão Escolar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <OcorrenciasIndicador />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
