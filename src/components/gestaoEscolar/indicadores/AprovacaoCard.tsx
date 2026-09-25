@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
-import { carregarDadosNotas, resumoBimestre, resumoParcialAno, MEDIA_APROVACAO } from './notasService';
+import { carregarDadosNotas, resumoBimestre, resumoParcialAno, PONTOS_APROVACAO } from './notasService';
 import type { DadosNotas, ResumoSituacao } from './notasService';
 import { BarraProgresso } from './charts';
 import { PERIODOS_LETIVOS, hojeISO } from './diasLetivos';
@@ -39,7 +39,7 @@ export function AprovacaoCard() {
   // Bimestres cujo último dia já passou (os 4 primeiros períodos são os bimestres).
   const hoje = hojeISO();
   const encerrados = PERIODOS_LETIVOS.slice(0, 4).filter((p) => p.fim < hoje).length;
-  const ano = resumoParcialAno(dados, encerrados);
+  const ano = resumoParcialAno(dados);
   const bimestres: ResumoSituacao[] = [1, 2, 3, 4].map((b) => resumoBimestre(dados, b));
 
   return (
@@ -48,7 +48,7 @@ export function AprovacaoCard() {
         <div>
           <p className="text-[11px] uppercase tracking-wider text-[#2563eb] font-bold">Aprovação / reprovação — situação no ano (antes do exame)</p>
           <p className="text-[11px] text-gray-500">
-            Aprovado = todas as disciplinas com média ≥ {MEDIA_APROVACAO.toFixed(1).replace('.', ',')} nos bimestres já encerrados ({encerrados} de 4; o bimestre em andamento não entra na conta). Base: {ano.total} alunos ativos.
+            Aprovado = todas as disciplinas com {PONTOS_APROVACAO.toFixed(1).replace('.', ',')} pontos ou mais somando os bimestres (regra de aprovação por pontos). Quem ainda não chegou fica em "Faltam aprovar". Base: {ano.total} alunos ativos.
           </p>
         </div>
         <button onClick={() => setEvolucao({})} className="px-3 py-1.5 bg-ms-dark border border-gray-700 rounded-lg text-xs font-bold text-gray-300 hover:text-ms-main hover:border-ms-blueText transition-colors">
@@ -62,7 +62,7 @@ export function AprovacaoCard() {
           <p className="text-3xl font-black text-green-500">{ano.acimaDaMedia} <span className="text-sm font-bold text-gray-500">{pct(ano.acimaDaMedia, ano.total)}</span></p>
         </button>
         <button onClick={() => setPorTurma(true)} className="text-left rounded-xl border border-gray-800 p-3 hover:border-ms-blueText transition-colors" aria-label="Faltam aprovar: ver por turma">
-          <p className="text-[11px] uppercase text-gray-500 font-bold">Faltam aprovar (≥ 1 disciplina abaixo)</p>
+          <p className="text-[11px] uppercase text-gray-500 font-bold">Faltam aprovar (alguma disciplina sem 23,5)</p>
           <p className="text-3xl font-black text-amber-400">{ano.abaixoDaMedia} <span className="text-sm font-bold text-gray-500">{pct(ano.abaixoDaMedia, ano.total)}</span></p>
         </button>
         <div className="rounded-xl border border-gray-800 p-3">

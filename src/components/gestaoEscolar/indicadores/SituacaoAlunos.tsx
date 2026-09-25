@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 import { ModalShell } from './ModalShell';
 import { BarrasPorTurma } from './BarrasPorTurma';
-import { MEDIA_APROVACAO, alunosDaTurma, resumoParcialPorTurma, situacaoDoAluno } from './notasService';
+import { PONTOS_APROVACAO, alunosDaTurma, resumoParcialPorTurma, situacaoDoAluno } from './notasService';
 import type { AlunoSituacao, DadosNotas, DisciplinaSituacao } from './notasService';
 
 const fmt = (n: number) => n.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -15,7 +15,7 @@ function LinhaDisciplina({ d, encerrados }: { d: DisciplinaSituacao; encerrados:
     <li className="border border-gray-800 rounded-xl p-3 space-y-1.5">
       <div className="flex items-baseline justify-between gap-3">
         <p className="text-sm font-bold text-ms-main">{d.nome}</p>
-        <p className={`text-sm font-black ${d.aprovada ? 'text-green-500' : 'text-amber-400'}`}>média {fmt(d.media)}</p>
+        <p className={`text-sm font-black ${d.aprovada ? 'text-green-500' : 'text-amber-400'}`}>{fmt(d.soma)} de {fmt(PONTOS_APROVACAO)} pontos</p>
       </div>
       <div className="flex flex-wrap gap-1.5">
         {d.notas.map((n, i) => (
@@ -26,12 +26,12 @@ function LinhaDisciplina({ d, encerrados }: { d: DisciplinaSituacao; encerrados:
       </div>
       {!d.aprovada && (
         <p className="text-xs text-amber-400">
-          Faltam <b>{fmt(d.faltaNaMedia)}</b> ponto(s) na média para chegar a {fmt(MEDIA_APROVACAO)}.
-          {d.precisaPorBimestre === null
+          Faltam <b>{fmt(d.faltaPontos)}</b> ponto(s) para os {fmt(PONTOS_APROVACAO)}.
+          {d.extraPorBimestre === null
             ? ' Não há bimestre restante: resta o exame final.'
-            : d.precisaPorBimestre > 10
-              ? ` Mesmo tirando 10 nos ${d.restantes} bimestre(s) restantes não fecha a média: vai depender do exame final.`
-              : ` Precisa de média ${fmt(d.precisaPorBimestre)} em cada um dos ${d.restantes} bimestre(s) restantes.`}
+            : !d.alcancavel
+              ? ` Mesmo com 10 nos ${d.restantes} bimestre(s) que faltam não chega: vai depender do exame final.`
+              : ` Precisa somar em média ${fmt(d.extraPorBimestre)} ponto(s) por bimestre nos ${d.restantes} que faltam.`}
         </p>
       )}
     </li>
@@ -44,7 +44,7 @@ function SituacaoAlunoModal({ dados, aluno, encerrados, onClose }: { dados: Dado
     <ModalShell titulo={`${aluno.nome} — disciplinas`} onClose={onClose} largura="max-w-2xl">
       <div className="space-y-5">
         <p className="text-[11px] text-gray-500">
-          Média das notas dos {encerrados} bimestre(s) encerrado(s); a média de aprovação é {fmt(MEDIA_APROVACAO)}. Bimestre em andamento aparece como parcial e não entra na média.
+          Aprovado na disciplina = {fmt(PONTOS_APROVACAO)} pontos ou mais somando os bimestres (regra de aprovação por pontos). O bimestre em andamento aparece como parcial e já conta os pontos que o aluno tem até agora.
         </p>
         <section className="space-y-2">
           <h3 className="text-xs font-black uppercase tracking-wider text-amber-400">Faltam aprovar ({abaixo.length})</h3>
@@ -113,7 +113,7 @@ function ListaAlunosTurmaModal({ dados, turma, encerrados, onClose }: { dados: D
 
 export function SituacaoPorTurmaModal({ dados, encerrados, onClose }: { dados: DadosNotas; encerrados: number; onClose: () => void }) {
   const [turma, setTurma] = useState<{ id: string; nome: string } | null>(null);
-  const porTurma = useMemo(() => resumoParcialPorTurma(dados, encerrados), [dados, encerrados]);
+  const porTurma = useMemo(() => resumoParcialPorTurma(dados), [dados]);
 
   return (
     <ModalShell titulo="Situação dos alunos por turma (antes do exame)" onClose={onClose} largura="max-w-2xl">
