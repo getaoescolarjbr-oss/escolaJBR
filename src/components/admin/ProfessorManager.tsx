@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Professor, AtestadoServidor } from '../../types';
-import { Search, Plus, Edit2, Trash2, Loader2, Save, X, Stethoscope, AlertCircle, Cake, BadgeCheck } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Loader2, Save, X, Stethoscope, AlertCircle, Cake, BadgeCheck, ArrowRightLeft } from 'lucide-react';
 import { AtestadoModal } from './AtestadoModal';
+import { TransferirProfessorModal } from './TransferirProfessorModal';
 
 export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
   const [professors, setProfessors] = useState<Professor[]>([]);
@@ -13,6 +14,7 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProfessor, setEditingProfessor] = useState<Professor | null>(null);
   const [atestadoTarget, setAtestadoTarget] = useState<Professor | null>(null);
+  const [transferirTarget, setTransferirTarget] = useState<Professor | null>(null);
   const [atestadosAtivos, setAtestadosAtivos] = useState<Map<string, AtestadoServidor>>(new Map());
   const [customStatus, setCustomStatus] = useState<string[]>([]);
   const [formData, setFormData] = useState<Partial<Professor>>({
@@ -161,6 +163,30 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
       : `Deseja excluir o servidor ${p.nome} (SEM E-MAIL CADASTRADO)?`;
       
     if (!confirm(confirmMsg)) return;
+
+    // Excluir o servidor APAGA junto (em cascata) as atividades, chamadas, horários e alocações dele, e
+    // deixa as avaliações sem dono. Se houver dados, avisa e orienta a transferir antes.
+    const contar = async (tabela: string, coluna: string) => {
+      const { count } = await supabase.from(tabela).select('id', { count: 'exact', head: true }).eq(coluna, p.id);
+      return count ?? 0;
+    };
+    const [nAtiv, nCham, nAval, nAloc, nHor] = await Promise.all([
+      contar('atividades_diárias', 'professor_id'),
+      contar('chamadas', 'professor_id'),
+      contar('avaliacoes', 'professor_id'),
+      contar('alocacoes_v2', 'professor_id'),
+      contar('horarios', 'professor_id'),
+    ]);
+    if (nAtiv + nCham + nAval + nAloc + nHor > 0) {
+      const aviso =
+        `ATENÇÃO: ${p.nome} tem dados no sistema:\n` +
+        `• ${nAloc} turma(s)/disciplina(s) • ${nAtiv} atividade(s) • ${nAval} avaliação(ões)\n` +
+        `• ${nCham} chamada(s) • ${nHor} horário(s)\n\n` +
+        `Excluir APAGA as atividades, chamadas, horários e alocações (e deixa as avaliações e notas sem dono).\n` +
+        `Se outro professor assumiu no lugar, cancele e use o botão "Transferir turmas e diário" antes.\n\n` +
+        `Excluir mesmo assim?`;
+      if (!confirm(aviso)) return;
+    }
 
     try {
       setLoading(true);
@@ -352,7 +378,14 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
                         >
                           <Stethoscope className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
+                          onClick={() => setTransferirTarget(p)}
+                          className="p-2 hover:bg-purple-500/20 text-purple-400 rounded-lg transition-all"
+                          title="Transferir turmas e diário para outro professor (saída definitiva)"
+                        >
+                          <ArrowRightLeft className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => {
                             setEditingProfessor(p);
                             setFormData(p);
@@ -535,6 +568,15 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal de transferência definitiva (saída do professor) */}
+      {transferirTarget && (
+        <TransferirProfessorModal
+          origem={transferirTarget}
+          todos={professors}
+          onClose={() => setTransferirTarget(null)}
+        />
       )}
 
       {/* Modal de Atestado */}
