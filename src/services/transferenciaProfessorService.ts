@@ -7,6 +7,7 @@ import { supabase } from '../lib/supabase';
 export interface ResultadoTransferencia {
   simulado: boolean;
   transferencia_id?: string;
+  turma_scoped: boolean;
   origem: { id: string; nome: string };
   destino: { id: string; nome: string };
   contagens: Record<string, number>;
@@ -41,17 +42,19 @@ function mensagem(error: { message?: string } | null): string {
   return error?.message ?? 'Erro desconhecido.';
 }
 
-export async function simularTransferencia(origemId: string, destinoId: string, incluirOcorrencias: boolean): Promise<ResultadoTransferencia> {
+export async function simularTransferencia(origemId: string, destinoId: string, incluirOcorrencias: boolean, turmaIds?: string[]): Promise<ResultadoTransferencia> {
   const { data, error } = await supabase.rpc('rpc_transferir_professor', {
     p_origem: origemId, p_destino: destinoId, p_simular: true, p_incluir_ocorrencias: incluirOcorrencias, p_observacao: null,
+    p_turma_ids: turmaIds ?? null,
   });
   if (error) throw new Error(mensagem(error));
   return data as ResultadoTransferencia;
 }
 
-export async function executarTransferencia(origemId: string, destinoId: string, incluirOcorrencias: boolean, observacao: string): Promise<ResultadoTransferencia> {
+export async function executarTransferencia(origemId: string, destinoId: string, incluirOcorrencias: boolean, observacao: string, turmaIds?: string[]): Promise<ResultadoTransferencia> {
   const { data, error } = await supabase.rpc('rpc_transferir_professor', {
     p_origem: origemId, p_destino: destinoId, p_simular: false, p_incluir_ocorrencias: incluirOcorrencias, p_observacao: observacao.trim() || null,
+    p_turma_ids: turmaIds ?? null,
   });
   if (error) throw new Error(mensagem(error));
   return data as ResultadoTransferencia;

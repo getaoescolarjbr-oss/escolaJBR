@@ -94,11 +94,19 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [lockedBimestres, setLockedBimestres] = useState<number[]>([]);
   // --- Estado de Atestado ---
-  const [atestadoAtivo, setAtestadoAtivo] = useState<AtestadoServidor | null>(null); // se o titular está de atestado
+  // Cada turma é bloqueada/travada de acordo com o que foi de fato espelhado para um substituto
+  // (alocacoes_v2.atestado_id) — não é mais tudo-ou-nada por professor (pode ter mais de um
+  // atestado ativo ao mesmo tempo, cada um cobrindo turmas diferentes).
+  // turma_id -> atestado que a cobre (com substituto e bloqueio ligado): turma some do seletor.
+  const [turmasBloqueadas, setTurmasBloqueadas] = useState<Map<string, AtestadoServidor>>(new Map());
+  // turma_id -> atestado que a cobre (qualquer atestado ativo, com ou sem substituto/bloqueio):
+  // os lançamentos do titular nessa turma ficam só leitura, mesmo que ela continue visível.
+  const [turmasSomenteLeitura, setTurmasSomenteLeitura] = useState<Map<string, AtestadoServidor>>(new Map());
   const [substituicaoAtiva, setSubstituicaoAtiva] = useState<{ atestado: Pick<AtestadoServidor, 'data_inicio' | 'data_fim'>; titularNome: string } | null>(null); // se é substituto
   // `${turmaId}|${disciplinaId}` -> titular que o professor logado está substituindo nessa turma/disciplina.
   const [espelhos, setEspelhos] = useState<Record<string, TitularEspelho>>({});
-  const [substitutoNome, setSubstitutoNome] = useState(''); // quando o titular está bloqueado: quem assumiu as turmas
+  // turma_id -> nome de quem assumiu (para as turmas em turmasBloqueadas)
+  const [substitutoNomePorTurma, setSubstitutoNomePorTurma] = useState<Record<string, string>>({});
 
   useEffect(() => {
     async function loadLockedBimestres() {
@@ -128,25 +136,51 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
     async function checkAtestadoStatus() {
       const today = new Date().toISOString().split('T')[0];
 
-      // 1. Verificar se o professor ATUAL está de atestado (titular)
+      // 1. Verificar se o professor ATUAL está de atestado (titular) — pode ter mais de um
+      // atestado ativo ao mesmo tempo, cada um cobrindo um conjunto diferente de turmas.
       const { data: atestados } = await supabase
         .from('atestados_servidores')
         .select('*')
         .eq('professor_id', professor.id)
         .eq('ativo', true)
         .lte('data_inicio', today)
-        .gte('data_fim', today)
-        .maybeSingle();
+        .gte('data_fim', today);
 
-      if (atestados) {
-        setAtestadoAtivo(atestados);
-        if (atestados.bloquear_titular && atestados.substituto_id) {
-          const { data: sub } = await supabase.from('professores').select('nome').eq('id', atestados.substituto_id).maybeSingle();
-          setSubstitutoNome(sub?.nome ?? 'o professor substituto');
+      const lista = atestados ?? [];
+
+      const bloqueadas = new Map<string, AtestadoServidor>();
+      const somenteLeitura = new Map<string, AtestadoServidor>();
+      const nomesSubstituto: Record<string, string> = {};
+
+      for (const atestado of lista) {
+        if (!atestado.substituto_id) {
+          // Sem substituto: não há como saber quais turmas foram cobertas — mantém o
+          // comportamento antigo de travar tudo em somente leitura (não há ninguém lançando).
+          turmas.forEach((t) => somenteLeitura.set(t.id, atestado));
+          continue;
         }
-      } else {
-        setAtestadoAtivo(null);
+        // Com substituto: as turmas de fato cobertas são as que foram espelhadas para ele
+        // com este atestado (só GESTAO/SECRETARIA/o próprio titular podem ler atestados_servidores,
+        // mas o titular pode ler suas próprias alocacoes_v2 normalmente).
+        const { data: espelhosDoAtestado } = await supabase
+          .from('alocacoes_v2')
+          .select('turma_id')
+          .eq('atestado_id', atestado.id)
+          .eq('is_espelho', true);
+        const turmaIds = Array.from(new Set((espelhosDoAtestado ?? []).map((e) => e.turma_id as string)));
+        const alvo = turmaIds.length > 0 ? turmaIds : turmas.map((t) => t.id); // sem linha espelhada = cobre tudo (compatibilidade)
+        alvo.forEach((turmaId) => {
+          somenteLeitura.set(turmaId, atestado);
+          if (atestado.bloquear_titular) bloqueadas.set(turmaId, atestado);
+        });
+        if (atestado.bloquear_titular) {
+          const { data: sub } = await supabase.from('professores').select('nome').eq('id', atestado.substituto_id).maybeSingle();
+          alvo.forEach((turmaId) => { nomesSubstituto[turmaId] = sub?.nome ?? 'o professor substituto'; });
+        }
       }
+      setTurmasBloqueadas(bloqueadas);
+      setTurmasSomenteLeitura(somenteLeitura);
+      setSubstitutoNomePorTurma(nomesSubstituto);
 
       // 2. Verificar se o professor ATUAL é substituto de alguém: todas as turmas/disciplinas
       // espelhadas com afastamento vigente hoje (uma substituição pode cobrir várias). Vem por RPC
@@ -187,17 +221,32 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
       }
     }
     checkAtestadoStatus();
-  }, [professor.id]);
+    // `turmas` entra na dependência porque o fallback "sem substituto"/"sem linha espelhada"
+    // acima usa a lista de turmas do professor para saber o que travar.
+  }, [professor.id, turmas]);
 
   const isBimestreLocked = lockedBimestres.includes(selectedBimestre);
-  // Titular de atestado: somente leitura em tudo
-  const isTitularEmAtestado = !!atestadoAtivo;
-  // Read-only efetivo: bimestre bloqueado OU titular em atestado
+  // A turma selecionada está coberta por algum atestado ativo do titular (com ou sem bloqueio)?
+  const atestadoDaTurmaSelecionada = selectedTurma ? turmasSomenteLeitura.get(selectedTurma) : undefined;
+  const isTitularEmAtestado = !!atestadoDaTurmaSelecionada;
+  // Read-only efetivo: bimestre bloqueado OU a turma selecionada está em atestado
   const isEffectivelyLocked = isBimestreLocked || isTitularEmAtestado;
 
-  // Titular com bloqueio ligado no atestado (e substituto definido): não acessa as turmas no período.
-  const titularBloqueado = !!atestadoAtivo?.bloquear_titular && !!atestadoAtivo?.substituto_id;
-  const turmasDisponiveis = titularBloqueado ? [] : turmas;
+  // Turmas com bloqueio ligado (substituto assumiu de vez): somem do seletor do titular.
+  const turmasDisponiveis = turmas.filter((t) => !turmasBloqueadas.has(t.id));
+  // Só usado pelo banner de tela cheia: quando TODAS as turmas do titular estão bloqueadas
+  // (equivalente ao antigo tudo-ou-nada); com bloqueio parcial, as turmas livres continuam
+  // acessíveis normalmente e o aviso de bloqueio de cada turma coberta some do seletor.
+  const titularTotalmenteBloqueado = turmas.length > 0 && turmasDisponiveis.length === 0;
+
+  // Se a turma selecionada (ex.: restaurada do localStorage) ficou bloqueada, tira a seleção
+  // para não deixar o professor "preso" numa turma que sumiu do seletor.
+  useEffect(() => {
+    if (selectedTurma && turmasBloqueadas.has(selectedTurma)) {
+      setSelectedTurma('');
+      setSelectedDisciplina('');
+    }
+  }, [selectedTurma, turmasBloqueadas]);
 
   // Professor "de dados": numa turma/disciplina que o professor logado assume como substituto, as
   // atividades, avaliações, notas, vistos e chamadas continuam no diário do TITULAR (é um só conjunto
@@ -971,15 +1020,17 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
           <AniversariantesPanel />
         ) : activeTab === 'ocorrencias' ? (
           <MinhasOcorrenciasPanel professor={professor} theme={theme} />
-        ) : titularBloqueado ? (
+        ) : titularTotalmenteBloqueado ? (
           <div className="bg-amber-500/10 border-2 border-amber-500/30 p-6 rounded-2xl flex items-start gap-3 shadow-md">
             <ShieldAlert className="w-6 h-6 shrink-0 mt-0.5 text-amber-500" />
             <div>
               <h4 className="font-black text-sm uppercase tracking-wider text-amber-500">Acesso às turmas bloqueado durante o atestado</h4>
               <p className="text-xs text-amber-400/90 font-bold mt-1">
-                Período: {new Date(atestadoAtivo!.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR')} a {new Date(atestadoAtivo!.data_fim + 'T12:00:00').toLocaleDateString('pt-BR')}.
-                Suas turmas estão com <span className="text-amber-300">{substitutoNome || 'o professor substituto'}</span>, que lança as atividades e notas no seu diário.
-                O acesso volta automaticamente ao fim do período.
+                {(() => {
+                  const primeira = Array.from(turmasBloqueadas.values())[0];
+                  return primeira ? `Período: ${new Date(primeira.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR')} a ${new Date(primeira.data_fim + 'T12:00:00').toLocaleDateString('pt-BR')}. ` : '';
+                })()}
+                Suas turmas estão com outro professor, que lança as atividades e notas no diário. O acesso volta automaticamente ao fim do período.
               </p>
             </div>
           </div>
@@ -1001,17 +1052,17 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
               </div>
             )}
 
-            {/* Banner: Professor TITULAR em atestado (somente leitura) */}
-            {isTitularEmAtestado && (
+            {/* Banner: Professor TITULAR em atestado nesta turma (somente leitura) */}
+            {atestadoDaTurmaSelecionada && (
               <div className="bg-amber-500/10 border-2 border-amber-500/30 p-5 rounded-2xl flex items-start gap-3 shadow-md animate-in slide-in-from-top-2 duration-300">
                 <Stethoscope className="w-5 h-5 shrink-0 mt-0.5 text-amber-500" />
                 <div>
-                  <h4 className="font-black text-sm uppercase tracking-wider text-amber-500">Você está de Atestado Médico</h4>
+                  <h4 className="font-black text-sm uppercase tracking-wider text-amber-500">Você está de Atestado Médico nesta turma</h4>
                   <p className="text-xs text-amber-400/80 font-bold mt-1 flex items-center gap-1.5">
                     <Eye className="w-3.5 h-3.5" />
-                    Período: {new Date(atestadoAtivo!.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR')} a {new Date(atestadoAtivo!.data_fim + 'T12:00:00').toLocaleDateString('pt-BR')}.
-                    Seus lançamentos estão em modo somente leitura durante este período.
-                    {atestadoAtivo?.substituto_id && ' Um professor substituto está gerenciando suas turmas.'}
+                    Período: {new Date(atestadoDaTurmaSelecionada.data_inicio + 'T12:00:00').toLocaleDateString('pt-BR')} a {new Date(atestadoDaTurmaSelecionada.data_fim + 'T12:00:00').toLocaleDateString('pt-BR')}.
+                    Seus lançamentos nesta turma estão em modo somente leitura durante este período.
+                    {atestadoDaTurmaSelecionada.substituto_id && substitutoNomePorTurma[selectedTurma] && ` ${substitutoNomePorTurma[selectedTurma]} está gerenciando esta turma.`}
                   </p>
                 </div>
               </div>

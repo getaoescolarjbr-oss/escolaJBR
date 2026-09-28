@@ -11,6 +11,7 @@ import {
   obterUrlDocumentoAusencia,
 } from '../../../services/rhService';
 import { listarProfessoresParaSelecao } from '../../../services/agendamentoService';
+import { supabase } from '../../../lib/supabase';
 
 const ROTULOS_TIPO: Record<TipoAusencia, string> = {
   ATESTADO: 'Atestado médico',
@@ -35,6 +36,44 @@ export function AusenciasTab() {
   const [enviandoDoc, setEnviandoDoc] = useState<string | null>(null);
   const today = new Date().toISOString().slice(0, 10);
   const [novo, setNovo] = useState({ professor_id: '', tipo: 'ATESTADO' as TipoAusencia, data_inicio: today, data_fim: today, substituto_id: '', bloquear_titular: false, processo_sed_ref: '', observacoes: '' });
+  const [turmasProfessor, setTurmasProfessor] = useState<{ id: string; nome: string }[]>([]);
+  const [turmasSelecionadas, setTurmasSelecionadas] = useState<Set<string>>(new Set());
+
+  // Turmas do servidor escolhido — para poder espelhar só algumas (licença de apenas parte
+  // das turmas dele) em vez de todas.
+  useEffect(() => {
+    let cancelado = false;
+    async function carregarTurmasDoProfessor() {
+      if (!novo.professor_id) {
+        if (!cancelado) { setTurmasProfessor([]); setTurmasSelecionadas(new Set()); }
+        return;
+      }
+      const { data } = await supabase
+        .from('alocacoes_v2')
+        .select('turma_id, turmas(nome)')
+        .eq('professor_id', novo.professor_id)
+        .eq('is_espelho', false);
+      if (cancelado) return;
+      const unicas = new Map<string, string>();
+      (data ?? []).forEach((a: { turma_id: string; turmas: { nome: string } | { nome: string }[] | null }) => {
+        const nome = Array.isArray(a.turmas) ? a.turmas[0]?.nome : a.turmas?.nome;
+        if (nome) unicas.set(a.turma_id, nome);
+      });
+      const lista = Array.from(unicas, ([id, nome]) => ({ id, nome })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+      setTurmasProfessor(lista);
+      setTurmasSelecionadas(new Set(lista.map((t) => t.id)));
+    }
+    carregarTurmasDoProfessor();
+    return () => { cancelado = true; };
+  }, [novo.professor_id]);
+
+  function alternarTurma(id: string) {
+    setTurmasSelecionadas((prev) => {
+      const proximo = new Set(prev);
+      if (proximo.has(id)) proximo.delete(id); else proximo.add(id);
+      return proximo;
+    });
+  }
 
   async function carregar() {
     setLoading(true);
@@ -59,6 +98,10 @@ export function AusenciasTab() {
     }
     setErro(null);
     try {
+      // Turmas espelhadas: só quando é um subconjunto (senão manda tudo, como sempre).
+      const turmaIds = novo.substituto_id && turmasSelecionadas.size > 0 && turmasSelecionadas.size < turmasProfessor.length
+        ? Array.from(turmasSelecionadas)
+        : undefined;
       await criarAusencia({
         professor_id: novo.professor_id,
         tipo: novo.tipo,
@@ -68,7 +111,7 @@ export function AusenciasTab() {
         bloquear_titular: !!novo.substituto_id && novo.bloquear_titular,
         processo_sed_ref: novo.processo_sed_ref || null,
         observacoes: novo.observacoes || null,
-      });
+      }, turmaIds);
       setNovo({ professor_id: '', tipo: 'ATESTADO', data_inicio: today, data_fim: today, substituto_id: '', bloquear_titular: false, processo_sed_ref: '', observacoes: '' });
       await carregar();
     } catch (err) {
@@ -161,6 +204,22 @@ export function AusenciasTab() {
           </select>
           <input placeholder="Processo SED (opcional)" value={novo.processo_sed_ref} onChange={(e) => setNovo({ ...novo, processo_sed_ref: e.target.value })} className="px-4 py-3 bg-ms-dark border border-gray-800 rounded-xl text-ms-main outline-none focus:ring-2 focus:ring-ms-blue" />
         </div>
+        {novo.substituto_id && turmasProfessor.length > 1 && (
+          <div className="space-y-1.5">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+              Turmas cobertas pelo substituto <span className="text-gray-500 normal-case font-normal">(desmarque as que não entraram de licença)</span>
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {turmasProfessor.map((t) => (
+                <label key={t.id} className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer ${turmasSelecionadas.has(t.id) ? 'border-ms-blue bg-ms-blue/10 text-ms-main' : 'border-gray-700 text-gray-500'}`}>
+                  <input type="checkbox" checked={turmasSelecionadas.has(t.id)} onChange={() => alternarTurma(t.id)} className="w-3.5 h-3.5" />
+                  {t.nome}
+                </label>
+              ))}
+            </div>
+            {turmasSelecionadas.size === 0 && <p className="text-xs text-red-400">Escolha ao menos uma turma, ou o substituto não recebe nenhuma.</p>}
+          </div>
+        )}
         {novo.substituto_id && (
           <label className="flex items-start gap-2 text-sm text-ms-main cursor-pointer">
             <input

@@ -41,10 +41,40 @@ export function AtestadoModal({ professor, allProfessors, onClose, onUpdate }: A
     bloquear_titular: false,
     observacoes: ''
   });
+  const [turmasProfessor, setTurmasProfessor] = useState<{ id: string; nome: string }[]>([]);
+  const [turmasSelecionadas, setTurmasSelecionadas] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchAtestados();
   }, [professor.id]);
+
+  // Turmas atuais do professor — permite espelhar só algumas (licença de parte das turmas).
+  useEffect(() => {
+    if (!isProfessor) return;
+    supabase
+      .from('alocacoes_v2')
+      .select('turma_id, turmas(nome)')
+      .eq('professor_id', professor.id)
+      .eq('is_espelho', false)
+      .then(({ data }) => {
+        const unicas = new Map<string, string>();
+        (data ?? []).forEach((a: { turma_id: string; turmas: { nome: string } | { nome: string }[] | null }) => {
+          const nome = Array.isArray(a.turmas) ? a.turmas[0]?.nome : a.turmas?.nome;
+          if (nome) unicas.set(a.turma_id, nome);
+        });
+        const lista = Array.from(unicas, ([id, nome]) => ({ id, nome })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+        setTurmasProfessor(lista);
+        setTurmasSelecionadas(new Set(lista.map((t) => t.id)));
+      });
+  }, [professor.id, isProfessor]);
+
+  function alternarTurma(id: string) {
+    setTurmasSelecionadas((prev) => {
+      const proximo = new Set(prev);
+      if (proximo.has(id)) proximo.delete(id); else proximo.add(id);
+      return proximo;
+    });
+  }
 
   async function fetchAtestados() {
     setLoading(true);
@@ -104,13 +134,17 @@ export function AtestadoModal({ professor, allProfessors, onClose, onUpdate }: A
 
       if (errInsert) throw errInsert;
 
-      // 2. Se há substituto, criar espelhos de alocações
+      // 2. Se há substituto, criar espelhos de alocações (só as turmas escolhidas, se for um subconjunto)
       if (isProfessor && formData.substituto_id && novoAtestado) {
-        const { data: alocacoesOriginais } = await supabase
+        let consultaAlocacoes = supabase
           .from('alocacoes_v2')
           .select('turma_id, disciplina_id')
           .eq('professor_id', professor.id)
           .eq('is_espelho', false);
+        if (turmasSelecionadas.size > 0 && turmasSelecionadas.size < turmasProfessor.length) {
+          consultaAlocacoes = consultaAlocacoes.in('turma_id', Array.from(turmasSelecionadas));
+        }
+        const { data: alocacoesOriginais } = await consultaAlocacoes;
 
         if (alocacoesOriginais && alocacoesOriginais.length > 0) {
           const espelhos = alocacoesOriginais.map(a => ({
@@ -281,8 +315,24 @@ export function AtestadoModal({ professor, allProfessors, onClose, onUpdate }: A
                   </select>
                   {formData.substituto_id && (
                     <p className="text-[10px] text-amber-400 font-bold ml-1">
-                      ✓ As turmas de {professor.nome} serão espelhadas automaticamente para o substituto selecionado.
+                      ✓ As turmas selecionadas de {professor.nome} serão espelhadas automaticamente para o substituto.
                     </p>
+                  )}
+                  {formData.substituto_id && turmasProfessor.length > 1 && (
+                    <div className="space-y-1.5 pt-1">
+                      <p className="text-[10px] font-black text-gray-400 uppercase tracking-wider">
+                        Turmas cobertas <span className="normal-case font-normal text-gray-500">(desmarque as que não entraram no atestado)</span>
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {turmasProfessor.map((t) => (
+                          <label key={t.id} className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer ${turmasSelecionadas.has(t.id) ? 'border-amber-400/60 bg-amber-400/10 text-ms-main' : 'border-gray-700 text-gray-500'}`}>
+                          <input type="checkbox" checked={turmasSelecionadas.has(t.id)} onChange={() => alternarTurma(t.id)} className="w-3.5 h-3.5" />
+                            {t.nome}
+                          </label>
+                        ))}
+                      </div>
+                      {turmasSelecionadas.size === 0 && <p className="text-[10px] text-red-400">Escolha ao menos uma turma.</p>}
+                    </div>
                   )}
                   {formData.substituto_id && (
                     <label className="flex items-start gap-2 text-xs text-ms-main font-bold cursor-pointer pt-1">
