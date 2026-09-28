@@ -100,7 +100,7 @@ export async function criarAusencia(dados: {
   bloquear_titular?: boolean;
   processo_sed_ref: string | null;
   observacoes: string | null;
-}): Promise<AusenciaServidor> {
+}, turmaIds?: string[]): Promise<AusenciaServidor> {
   // O bloqueio só existe com substituto (senão ninguém assumiria as turmas).
   const bloquear = !!dados.substituto_id && !!dados.bloquear_titular;
   const { data, error } = await supabase
@@ -111,7 +111,7 @@ export async function criarAusencia(dados: {
   if (error) throw error;
   if (data.substituto_id) {
     try {
-      await criarEspelhosDaAusencia(data);
+      await criarEspelhosDaAusencia(data, turmaIds);
     } catch (e) {
       const msg = e instanceof Error ? e.message : (e as { message?: string })?.message ?? 'erro desconhecido';
       throw new Error(`A ausência foi registrada, mas não foi possível espelhar as turmas para o substituto: ${msg}`, { cause: e });
@@ -122,14 +122,18 @@ export async function criarAusencia(dados: {
 
 // Espelha as turmas (alocações) do servidor ausente para o substituto — mesma regra do cadastro
 // de atestado em Cadastro de Pessoas (AtestadoModal): copia só as alocações próprias, marcadas
-// com o atestado de origem para poderem ser removidas ao encerrar.
-export async function criarEspelhosDaAusencia(ausencia: Pick<AusenciaServidor, 'id' | 'professor_id' | 'substituto_id'>): Promise<number> {
+// com o atestado de origem para poderem ser removidas ao encerrar. Sem turmaIds, espelha tudo
+// (comportamento de sempre); com turmaIds, só as turmas escolhidas (professor de licença só em
+// algumas turmas).
+export async function criarEspelhosDaAusencia(ausencia: Pick<AusenciaServidor, 'id' | 'professor_id' | 'substituto_id'>, turmaIds?: string[]): Promise<number> {
   if (!ausencia.substituto_id) return 0;
-  const { data: originais, error } = await supabase
+  let consulta = supabase
     .from('alocacoes_v2')
     .select('turma_id, disciplina_id')
     .eq('professor_id', ausencia.professor_id)
     .eq('is_espelho', false);
+  if (turmaIds && turmaIds.length > 0) consulta = consulta.in('turma_id', turmaIds);
+  const { data: originais, error } = await consulta;
   if (error) throw error;
   if (!originais || originais.length === 0) return 0;
   const { error: erroInsert } = await supabase.from('alocacoes_v2').insert(
