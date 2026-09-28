@@ -27,14 +27,25 @@ export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onT
 
   useEffect(() => {
     if (isOpen && professor) {
-      supabase.from('lista_para_vistos')
-        .select('turma_id, turma_nome')
+      // Turmas do professor: vem de alocacoes_v2 (a tabela legada `lista_para_vistos` não
+      // existe mais no banco — esta consulta ficava sempre vazia e o seletor de turma
+      // nunca aparecia, então uma configuração por turma feita alhures, ex.: pelo
+      // espelhamento de substituição/transferência de professor, nunca podia ser ajustada
+      // aqui, ainda que o professor mudasse a configuração "Todas as Turmas").
+      supabase
+        .from('alocacoes_v2')
+        .select('turma_id, turmas(nome)')
         .eq('professor_id', professor.id)
         .then(({ data }) => {
-          if (data) {
-             const uniqueTurmas = Array.from(new Map(data.map(item => [item.turma_id, item])).values());
-             setTurmas(uniqueTurmas.map(t => ({ id: t.turma_id, nome: t.turma_nome })).sort((a, b) => a.nome.localeCompare(b.nome)));
-          }
+          if (!data) return;
+          const linhas = data as unknown as { turma_id: string; turmas: { nome: string } | null }[];
+          const uniqueTurmas = Array.from(new Map(linhas.map((item) => [item.turma_id, item])).values());
+          setTurmas(
+            uniqueTurmas
+              .filter((t) => t.turmas?.nome)
+              .map((t) => ({ id: t.turma_id, nome: t.turmas!.nome }))
+              .sort((a, b) => a.nome.localeCompare(b.nome))
+          );
         });
     }
   }, [isOpen, professor]);
@@ -119,6 +130,33 @@ export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onT
     setLoading(false);
   };
 
+  // Some a configuração específica desta turma: ela volta a usar "Todas as Turmas (Padrão)".
+  // Útil quando uma turma ficou com uma configuração antiga presa (ex.: espelhamento de
+  // substituição/transferência de professor copiou a configuração de quem saiu).
+  const handleRemoverConfigTurma = async () => {
+    if (selectedTurmaId === 'global' || !professor.config_turmas?.[selectedTurmaId]) return;
+    setLoading(true);
+    setSaveError(null);
+    const config_turmas = { ...professor.config_turmas };
+    delete config_turmas[selectedTurmaId];
+    const configKey = `portal-config-${professor.user_id}`;
+    localStorage.setItem(configKey, JSON.stringify({
+      config_visto_metodo: professor.config_visto_metodo,
+      config_visto_valor_total: professor.config_visto_valor_total,
+      bimestre_atual: professor.bimestre_atual,
+      theme,
+      config_turmas,
+    }));
+    const { error } = await supabase.from('professores').update({ config_turmas }).eq('user_id', professor.user_id);
+    if (error) {
+      setSaveError('Não foi possível salvar no servidor — verifique sua conexão e tente de novo.');
+    }
+    onUpdate({ ...professor, config_turmas });
+    setLoading(false);
+  };
+
+  const temConfigPropria = selectedTurmaId !== 'global' && !!professor.config_turmas?.[selectedTurmaId];
+
   const currentMetodo = selectedTurmaId === 'global'
     ? professor.config_visto_metodo
     : (professor.config_turmas?.[selectedTurmaId]?.config_visto_metodo || professor.config_visto_metodo);
@@ -166,6 +204,18 @@ export function SettingsModal({ isOpen, onClose, professor, onUpdate, theme, onT
                 <option key={t.id} value={t.id}>{t.nome}</option>
               ))}
             </select>
+            {temConfigPropria && (
+              <div className={`mt-3 flex items-center justify-between gap-3 text-xs px-3 py-2 rounded-lg ${theme === 'light' ? 'bg-amber-50 text-amber-800' : 'bg-amber-950/30 text-amber-300'}`}>
+                <span>Esta turma tem uma configuração própria, diferente de "Todas as Turmas".</span>
+                <button
+                  onClick={handleRemoverConfigTurma}
+                  disabled={loading}
+                  className="shrink-0 font-bold underline hover:no-underline disabled:opacity-50"
+                >
+                  Usar a configuração padrão
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Seção 1: Bimestre e Notas */}
