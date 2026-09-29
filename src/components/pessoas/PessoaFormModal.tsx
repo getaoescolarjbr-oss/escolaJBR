@@ -60,15 +60,15 @@ export function PessoaFormModal({ pessoa, onClose, onSaved }: PessoaFormModalPro
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="bg-ms-card w-full max-w-lg rounded-3xl border border-gray-800 shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-        <div className="px-8 py-6 border-b border-gray-800 flex items-center justify-between bg-gradient-to-r from-ms-blue/10 to-transparent">
+      <div className="bg-ms-card w-full max-w-lg rounded-3xl border border-gray-800 shadow-2xl animate-in zoom-in duration-300 flex flex-col max-h-[90vh] overflow-hidden">
+        <div className="px-8 py-6 border-b border-gray-800 flex items-center justify-between bg-gradient-to-r from-ms-blue/10 to-transparent shrink-0">
           <h3 className="text-xl font-black text-ms-main">{pessoa ? 'Editar Pessoa' : 'Nova Pessoa'}</h3>
           <button onClick={onClose} className="p-2 hover:bg-gray-800 rounded-full transition-colors">
             <X className="w-5 h-5 text-gray-400" />
           </button>
         </div>
 
-        <div className="p-8 space-y-5">
+        <div className="p-8 space-y-5 overflow-y-auto">
           <div className="space-y-2">
             <label className="text-xs font-black text-[#003366] uppercase tracking-wider ml-1">Nome completo</label>
             <input
@@ -139,7 +139,7 @@ export function PessoaFormModal({ pessoa, onClose, onSaved }: PessoaFormModalPro
           )}
         </div>
 
-        <div className="px-8 py-6 bg-gray-800/30 border-t border-gray-800 flex justify-end gap-3">
+        <div className="px-8 py-6 bg-gray-800/30 border-t border-gray-800 flex justify-end gap-3 shrink-0">
           <button onClick={onClose} className="px-6 py-2.5 rounded-xl font-bold text-gray-400 hover:bg-gray-800 transition-all">
             Cancelar
           </button>

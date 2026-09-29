@@ -38,13 +38,13 @@ export function MatriculaModal({ isOpen, onClose, alunoId, alunoNome, onUpdate }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-      <div className="bg-ms-card rounded-2xl border border-ms-border w-full max-w-md overflow-hidden shadow-2xl animate-in zoom-in duration-200">
-        <div className="bg-blue-600 px-6 py-4 flex items-center gap-3">
+      <div className="bg-ms-card rounded-2xl border border-ms-border w-full max-w-md shadow-2xl animate-in zoom-in duration-200 flex flex-col max-h-[90vh] overflow-hidden">
+        <div className="bg-blue-600 px-6 py-4 flex items-center gap-3 shrink-0">
           <UserPlus className="w-5 h-5 text-white" />
           <h3 className="text-sm font-bold text-white uppercase tracking-widest">Informação de Matrícula</h3>
         </div>
-        
-        <div className="p-6 space-y-6">
+
+        <div className="p-6 space-y-6 overflow-y-auto">
           <div>
             <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest mb-1">Aluno</p>
             <p className="text-white font-bold">{alunoNome}</p>
@@ -73,7 +73,7 @@ export function MatriculaModal({ isOpen, onClose, alunoId, alunoNome, onUpdate }
           </div>
         </div>
 
-        <div className="p-6 bg-gray-900/50 border-t border-gray-800 flex gap-3">
+        <div className="p-6 bg-gray-900/50 border-t border-gray-800 flex gap-3 shrink-0">
           <button onClick={onClose} className="flex-1 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors">Cancelar</button>
           <button 
             onClick={handleSave} 

@@ -481,15 +481,15 @@ export function StudentManager({ theme, professor }: StudentManagerProps) {
       {/* Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-ms-card w-full max-w-lg rounded-3xl border border-gray-800 shadow-2xl overflow-hidden animate-in zoom-in duration-300">
-            <div className="px-8 py-6 border-b border-gray-800 flex items-center justify-between bg-gradient-to-r from-ms-blue/10 to-transparent">
+          <div className="bg-ms-card w-full max-w-lg rounded-3xl border border-gray-800 shadow-2xl animate-in zoom-in duration-300 flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="px-8 py-6 border-b border-gray-800 flex items-center justify-between bg-gradient-to-r from-ms-blue/10 to-transparent shrink-0">
               <h3 className="text-xl font-black text-ms-main">{editingStudent ? 'Editar Aluno' : 'Novo Aluno'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-800 rounded-full transition-colors">
                 <X className="w-5 h-5 text-gray-400" />
               </button>
             </div>
-            
-            <div className="p-8 space-y-6">
+
+            <div className="p-8 space-y-6 overflow-y-auto">
               {/* Foto do Aluno */}
               <div className="flex items-center gap-5">
                 <div className="relative flex-shrink-0">
@@ -665,14 +665,14 @@ export function StudentManager({ theme, professor }: StudentManagerProps) {
               )}
             </div>
 
-            <div className="px-8 py-6 bg-gray-800/30 border-t border-gray-800 flex justify-end gap-3">
-              <button 
+            <div className="px-8 py-6 bg-gray-800/30 border-t border-gray-800 flex justify-end gap-3 shrink-0">
+              <button
                 onClick={() => setIsModalOpen(false)}
                 className="px-6 py-2.5 rounded-xl font-bold text-gray-400 hover:bg-gray-800 transition-all"
               >
                 Cancelar
               </button>
-              <button 
+              <button
                 onClick={handleSave}
                 disabled={actionLoading}
                 className="flex items-center gap-2 px-8 py-2.5 bg-ms-blue text-white rounded-xl font-bold hover:bg-blue-600 transition-all shadow-lg shadow-blue-900/30 disabled:opacity-50"

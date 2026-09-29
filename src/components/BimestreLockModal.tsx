@@ -95,11 +95,11 @@ export function BimestreLockModal({ isOpen, onClose, theme, onUpdate }: Bimestre
 
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
-      <div className={`w-full max-w-md rounded-[2.5rem] border shadow-2xl overflow-hidden scale-in animate-in duration-300 ${
+      <div className={`w-full max-w-md rounded-[2.5rem] border shadow-2xl scale-in animate-in duration-300 flex flex-col max-h-[90vh] overflow-hidden ${
         theme === 'light' ? 'bg-white border-blue-100' : 'bg-ms-card border-ms-border'
       }`}>
         {/* Header */}
-        <div className="px-8 py-6 border-b border-ms-border flex items-center justify-between bg-gradient-to-r from-red-650/10 to-transparent">
+        <div className="px-8 py-6 border-b border-ms-border flex items-center justify-between bg-gradient-to-r from-red-650/10 to-transparent shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-red-500/10 flex items-center justify-center border border-red-500/20 shadow-inner">
               <Lock className="w-5 h-5 text-red-500" />
@@ -119,7 +119,7 @@ export function BimestreLockModal({ isOpen, onClose, theme, onUpdate }: Bimestre
         </div>
 
         {/* Content */}
-        <div className="p-8 space-y-6">
+        <div className="p-8 space-y-6 overflow-y-auto">
           <div className="bg-red-500/5 border border-red-500/25 rounded-2xl p-4 flex gap-3 text-xs leading-relaxed text-red-400">
             <ShieldAlert className="w-5 h-5 text-red-500 shrink-0" />
             <div>
@@ -177,7 +177,7 @@ export function BimestreLockModal({ isOpen, onClose, theme, onUpdate }: Bimestre
         </div>
 
         {/* Footer */}
-        <div className="p-6 bg-gray-900/30 border-t border-ms-border flex gap-3">
+        <div className="p-6 bg-gray-900/30 border-t border-ms-border flex gap-3 shrink-0">
           <button
             onClick={onClose}
             className="flex-1 py-3 text-[10px] font-bold text-gray-500 uppercase tracking-widest hover:text-white transition-colors"

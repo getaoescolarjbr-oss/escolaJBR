@@ -522,8 +522,8 @@ export function AllocationManager() {
             {/* Modal Ultra Moderno */}
             {isModalOpen && (
                 <div className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-black/90 backdrop-blur-xl animate-in fade-in duration-300">
-                    <div className="bg-ms-card w-full max-w-xl rounded-[3rem] border border-gray-800 shadow-[0_0_150px_rgba(0,0,0,0.8)] overflow-hidden animate-in zoom-in-95 duration-300">
-                        <div className="px-12 py-10 border-b border-gray-800 bg-gradient-to-br from-ms-blue/20 via-transparent to-transparent flex items-center justify-between">
+                    <div className="bg-ms-card w-full max-w-xl rounded-[3rem] border border-gray-800 shadow-[0_0_150px_rgba(0,0,0,0.8)] animate-in zoom-in-95 duration-300 flex flex-col max-h-[90vh] overflow-hidden">
+                        <div className="px-12 py-10 border-b border-gray-800 bg-gradient-to-br from-ms-blue/20 via-transparent to-transparent flex items-center justify-between shrink-0">
                             <div>
                                 <h3 className="text-3xl font-black text-ms-main tracking-tighter uppercase italic">Nova Alocação</h3>
                                 <p className="text-ms-blueText font-black text-[10px] uppercase tracking-[0.4em] mt-2">Sistema de Gestão JBR</p>
@@ -533,7 +533,7 @@ export function AllocationManager() {
                             </button>
                         </div>
 
-                        <div className="p-12 space-y-10">
+                        <div className="p-12 space-y-10 overflow-y-auto">
                             {/* Seleção de Professor */}
                             <div className="space-y-4">
                                 <label className="text-[10px] font-black text-gray-500 uppercase tracking-[0.3em] ml-2 flex items-center gap-3">
@@ -590,7 +590,7 @@ export function AllocationManager() {
                             </div>
                         </div>
 
-                        <div className="px-12 py-10 bg-gray-950/50 border-t border-gray-800 flex items-center justify-between">
+                        <div className="px-12 py-10 bg-gray-950/50 border-t border-gray-800 flex items-center justify-between shrink-0">
                             <button onClick={() => setIsModalOpen(false)} className="text-xs font-black text-gray-500 uppercase tracking-[0.3em] hover:text-white transition-colors">
                                 Descartar
                             </button>
