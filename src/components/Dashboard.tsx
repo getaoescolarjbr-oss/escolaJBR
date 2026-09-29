@@ -93,6 +93,9 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   const hasAutoSelected = useRef(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [lockedBimestres, setLockedBimestres] = useState<number[]>([]);
+  // "Saída de Sala" desligado por padrão — feature pouco usada, o admin liga em Painel Admin >
+  // Parâmetros Gerais quando quiser (ver RAVConfigManager.tsx).
+  const [saidaSalaHabilitada, setSaidaSalaHabilitada] = useState(false);
   // --- Estado de Atestado ---
   // Cada turma é bloqueada/travada de acordo com o que foi de fato espelhado para um substituto
   // (alocacoes_v2.atestado_id) — não é mais tudo-ou-nada por professor (pode ter mais de um
@@ -130,6 +133,23 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
     }
     loadLockedBimestres();
   }, [selectedBimestre]);
+
+  useEffect(() => {
+    async function loadSaidaSalaConfig() {
+      try {
+        const { data } = await supabase
+          .from('landing_avisos')
+          .select('mensagem')
+          .eq('titulo', 'SAIDA_SALA_HABILITADA')
+          .eq('cor_alerta', 'config')
+          .maybeSingle();
+        setSaidaSalaHabilitada(data?.mensagem === 'true');
+      } catch (err) {
+        console.error('Erro ao buscar configuração de Saída de Sala:', err);
+      }
+    }
+    loadSaidaSalaConfig();
+  }, []);
 
   // --- Verificar atestado / substituição ativa ---
   useEffect(() => {
@@ -1103,9 +1123,10 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                     : []
                 }
                 isLocked={isEffectivelyLocked}
+                saidaSalaHabilitada={saidaSalaHabilitada}
               />
             )}
-            
+
             {activeTab === 'notas' && selectedBimestre !== 5 && (
               <GradesPanel 
                 professor={professorDados}

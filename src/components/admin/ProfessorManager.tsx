@@ -136,9 +136,10 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
           .eq('id', editingProfessor.id);
         error = updateError;
       } else {
+        // Padrão para cadastro novo: modo claro e vistos pelo método "ponto" (visto pelo ".").
         const { error: insertError } = await supabase
           .from('professores')
-          .insert([formData]);
+          .insert([{ theme: 'light', config_visto_metodo: 'ponto', ...formData }]);
         error = insertError;
       }
 

@@ -1,4 +1,21 @@
 import { supabase } from '../lib/supabase';
+import { getBimestreFromDate } from './academicUtils';
+
+// Aluno que saiu definitivamente da turma (Transferido/Remanejado/Cancelada): os campos de
+// lançamento (visto, chamada, notas, ocorrência, média) ficam inativos a partir do bimestre em
+// que a saída aconteceu — inclusive o próprio bimestre da saída, mesmo que já tenha alguma nota
+// lançada antes dela, para não confundir o professor com um aluno que já não está mais na turma.
+// Bimestres anteriores à saída continuam editáveis normalmente (histórico legítimo).
+export function isStudentInativoNoBimestre(
+  student: { status?: string; atestado_inicio?: string | null },
+  bimestreId: number
+): boolean {
+  if (student.status !== 'Transferido' && student.status !== 'Remanejado' && student.status !== 'Cancelada') {
+    return false;
+  }
+  const exitBim = getBimestreFromDate(student.atestado_inicio);
+  return exitBim !== null && bimestreId >= exitBim;
+}
 
 /**
  * Checks if a student is currently absent on a specific date (e.g. class date).
