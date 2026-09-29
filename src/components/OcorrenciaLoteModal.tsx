@@ -251,7 +251,7 @@ export function OcorrenciaLoteModal({
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="px-5 py-2.5 text-gray-300 bg-transparent border border-gray-600 rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
+              className="px-5 py-2.5 text-white/90 bg-transparent border border-white/30 rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-white/10 transition-colors"
             >
               Cancelar
             </button>
