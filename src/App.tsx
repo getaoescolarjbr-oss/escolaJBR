@@ -26,6 +26,7 @@ const AdminPanel = carregar<typeof import('./components/admin/AdminPanel').Admin
 const CoordinatorDashboard = carregar<typeof import('./components/CoordinatorDashboard').CoordinatorDashboard>(() => import('./components/CoordinatorDashboard'), 'CoordinatorDashboard');
 const InspetorDashboard = carregar<typeof import('./components/InspetorDashboard').InspetorDashboard>(() => import('./components/InspetorDashboard'), 'InspetorDashboard');
 const PessoasPanel = carregar<typeof import('./components/pessoas/PessoasPanel').PessoasPanel>(() => import('./components/pessoas/PessoasPanel'), 'PessoasPanel');
+const ServidoresPanel = carregar<typeof import('./components/servidores/ServidoresPanel').ServidoresPanel>(() => import('./components/servidores/ServidoresPanel'), 'ServidoresPanel');
 const LgpdPanel = carregar<typeof import('./components/lgpd/LgpdPanel').LgpdPanel>(() => import('./components/lgpd/LgpdPanel'), 'LgpdPanel');
 const UsuariosPanel = carregar<typeof import('./components/usuarios/UsuariosPanel').UsuariosPanel>(() => import('./components/usuarios/UsuariosPanel'), 'UsuariosPanel');
 const PerfilPanel = carregar<typeof import('./components/perfil/PerfilPanel').PerfilPanel>(() => import('./components/perfil/PerfilPanel'), 'PerfilPanel');
@@ -52,6 +53,7 @@ function Carregando() {
 }
 
 const MODULOS_COM_SHELL = [
+  'servidores',
   'pessoas',
   'secretaria',
   'cozinha',
@@ -67,7 +69,8 @@ const MODULOS_COM_SHELL = [
 type ModuloComShell = (typeof MODULOS_COM_SHELL)[number];
 
 const TITULOS_MODULO: Record<ModuloComShell, { titulo: string; subtitulo?: string }> = {
-  pessoas: { titulo: 'Cadastro de Pessoas', subtitulo: 'Identidade central — Alunos, Servidores e Responsáveis' },
+  servidores: { titulo: 'Servidores', subtitulo: 'Cadastro, atestado/substituto, transferência definitiva e alocação de turmas' },
+  pessoas: { titulo: 'Cadastro de Pessoas', subtitulo: 'Identidade central — Alunos e Responsáveis' },
   secretaria: { titulo: 'Secretaria', subtitulo: 'Matrícula, documentos, emissão e protocolo' },
   cozinha: { titulo: 'Cozinha', subtitulo: 'Cardápio, estoque, fornecedores e indicadores PNAE' },
   agendamento: { titulo: 'Agendamento de Recursos', subtitulo: 'Recursos, bloqueios de manutenção e reservas' },
@@ -445,6 +448,7 @@ function App() {
                   onNavigate={navegarPara}
                   onVoltarInicio={() => navegarPara('dashboard')}
                 >
+                  {modulo === 'servidores' && <ServidoresPanel theme={theme} />}
                   {modulo === 'pessoas' && <PessoasPanel />}
                   {modulo === 'lgpd' && <LgpdPanel />}
                   {modulo === 'usuarios' && <UsuariosPanel />}
