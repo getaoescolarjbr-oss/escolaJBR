@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { Users, BookOpen, Layers, Link as LinkIcon, ArrowLeft, GraduationCap, AlertTriangle, Calendar, CalendarDays, Settings } from 'lucide-react';
-import { ProfessorManager } from './ProfessorManager';
-import { AllocationManager } from './AllocationManager';
+import { BookOpen, Layers, ArrowLeft, GraduationCap, AlertTriangle, Calendar, CalendarDays, Settings } from 'lucide-react';
 import { TurmaManager } from './TurmaManager';
 import { DisciplinaManager } from './DisciplinaManager';
 import { StudentManager } from './StudentManager';
@@ -16,11 +14,9 @@ interface AdminPanelProps {
 }
 
 export function AdminPanel({ onBack, theme }: AdminPanelProps) {
-  const [activeTab, setActiveTab] = useState<'professores' | 'alocacoes' | 'turmas' | 'disciplinas' | 'alunos' | 'ocorrencias' | 'horarios' | 'calendario' | 'config_rav'>('professores');
+  const [activeTab, setActiveTab] = useState<'turmas' | 'disciplinas' | 'alunos' | 'ocorrencias' | 'horarios' | 'calendario' | 'config_rav'>('turmas');
 
   const menuItems = [
-    { id: 'professores', label: 'Servidores', icon: Users },
-    { id: 'alocacoes', label: 'Alocações', icon: LinkIcon },
     { id: 'horarios', label: 'Horários', icon: Calendar },
     { id: 'turmas', label: 'Turmas', icon: Layers },
     { id: 'disciplinas', label: 'Disciplinas', icon: BookOpen },
@@ -69,8 +65,6 @@ export function AdminPanel({ onBack, theme }: AdminPanelProps) {
 
         {/* Content */}
         <div className="flex-1 overflow-auto p-4 md:p-10">
-          {activeTab === 'professores' && <ProfessorManager theme={theme} />}
-          {activeTab === 'alocacoes' && <AllocationManager />}
           {activeTab === 'horarios' && <HorarioManager theme={theme} />}
           {activeTab === 'turmas' && <TurmaManager theme={theme} />}
           {activeTab === 'disciplinas' && <DisciplinaManager theme={theme} />}
@@ -81,7 +75,7 @@ export function AdminPanel({ onBack, theme }: AdminPanelProps) {
             <div className="-m-4 md:-m-10">
               <CalendarioEditor
                 isOpen={true}
-                onClose={() => setActiveTab('professores')}
+                onClose={() => setActiveTab('turmas')}
                 professorNome="Administrador"
               />
             </div>

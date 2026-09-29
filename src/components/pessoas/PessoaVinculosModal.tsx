@@ -235,7 +235,7 @@ export function PessoaVinculosModal({ pessoa, onClose }: PessoaVinculosModalProp
                 <div>
                   <p className="text-xs font-black uppercase tracking-wider text-ms-main">Servidor</p>
                   {vinculos?.servidor ? (
-                    <p className="text-sm text-gray-400 mt-1">Cargo: {vinculos.servidor.cargo}. Edite em Painel Admin &gt; Servidores.</p>
+                    <p className="text-sm text-gray-400 mt-1">Cargo: {vinculos.servidor.cargo}. Edite no módulo Servidores.</p>
                   ) : (
                     <p className="text-sm text-gray-500 mt-1">Não é servidor.</p>
                   )}

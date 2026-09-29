@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { Users, ShieldCheck, ShieldAlert, Settings, UserCog, FolderClock, ChefHat, CalendarClock, BookOpen, LayoutDashboard, Presentation, UserCheck, Library } from 'lucide-react';
+import { Users, ShieldCheck, ShieldAlert, Settings, UserCog, FolderClock, ChefHat, CalendarClock, BookOpen, LayoutDashboard, Presentation, UserCheck, Library, IdCard } from 'lucide-react';
 import type { Papel } from '../types/rbac';
 
 export interface ModuloNavItem {
@@ -15,6 +15,9 @@ export interface ModuloNavItem {
 // module-switcher do Dashboard e o ModuleShell já leem desta mesma lista, filtrada
 // pelo papel do usuário logado.
 export const MODULOS_NAV: ModuloNavItem[] = [
+  // Cadastro, atestado/substituto, transferência definitiva e alocação de turmas de
+  // professores/servidores — tudo num só lugar, para GESTAO e SECRETARIA.
+  { id: 'servidores', label: 'Servidores', icon: IdCard, roles: ['GESTAO', 'SECRETARIA'] },
   { id: 'pessoas', label: 'Cadastro de Pessoas', icon: Users, roles: ['GESTAO', 'SECRETARIA'] },
   { id: 'secretaria', label: 'Secretaria', icon: FolderClock, roles: ['GESTAO', 'SECRETARIA'] },
   { id: 'cozinha', label: 'Cozinha', icon: ChefHat, roles: ['GESTAO', 'NUTRICAO'] },
