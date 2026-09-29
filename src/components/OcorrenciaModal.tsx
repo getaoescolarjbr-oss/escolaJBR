@@ -174,7 +174,7 @@ export function OcorrenciaModal({
         <div className="bg-blue-700 p-5 border-t border-blue-600 flex justify-end gap-3 shrink-0">
           <button
             onClick={onClose}
-            className="px-5 py-2.5 text-gray-400 bg-transparent border border-gray-700 rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"
+            className="px-5 py-2.5 text-white/90 bg-transparent border border-white/30 rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-white/10 transition-colors"
           >
             Cancelar
           </button>

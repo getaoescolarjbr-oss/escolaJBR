@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import type { Professor, ListaParaVistos } from '../types';
 import { supabase } from '../lib/supabase';
 import { Check, X, AlertTriangle, LogOut, Loader2, Plus, Minus, Eye } from 'lucide-react';
@@ -916,23 +917,26 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
         </td>
       </tr>
 
-      <OcorrenciaModal 
-        isOpen={isOcorrenciaOpen}
-        onClose={() => setIsOcorrenciaOpen(false)}
-        alunoId={aluno.aluno_id}
-        alunoNome={aluno.aluno_nome}
-        professorId={professor.id}
-        turmaId={aluno.turma_id}
-        disciplinaId={aluno.disciplina_id}
-        onSuccess={() => {}}
-        onViewProfile={() => {
-          setIsOcorrenciaOpen(false);
-          setIsProfileOpen(true);
-        }}
-        defaultDate={dataAula}
-      />
+      {isOcorrenciaOpen && createPortal(
+        <OcorrenciaModal
+          isOpen={isOcorrenciaOpen}
+          onClose={() => setIsOcorrenciaOpen(false)}
+          alunoId={aluno.aluno_id}
+          alunoNome={aluno.aluno_nome}
+          professorId={professor.id}
+          turmaId={aluno.turma_id}
+          disciplinaId={aluno.disciplina_id}
+          onSuccess={() => {}}
+          onViewProfile={() => {
+            setIsOcorrenciaOpen(false);
+            setIsProfileOpen(true);
+          }}
+          defaultDate={dataAula}
+        />,
+        document.body
+      )}
 
-      {isProfileOpen && (
+      {isProfileOpen && createPortal(
         <StudentProfileModal
           isOpen={isProfileOpen}
           onClose={() => setIsProfileOpen(false)}
@@ -942,7 +946,8 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
           bimestre={bimestreId}
           isCoordinator={professor.cargo === 'Coordenador' || professor.cargo === 'Diretor' || professor.cargo === 'Vice-Diretor'}
           professor={professor}
-        />
+        />,
+        document.body
       )}
     </>
   );
