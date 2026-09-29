@@ -155,15 +155,15 @@ export function DisciplinaManager({ theme }: { theme: 'dark' | 'light' }) {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
-          <div className="bg-ms-card w-full max-w-md rounded-3xl border border-gray-800 shadow-2xl overflow-hidden animate-in zoom-in duration-200">
-            <div className="px-8 py-6 border-b border-gray-800 bg-gradient-to-r from-ms-blue/10 to-transparent flex justify-between items-center">
+          <div className="bg-ms-card w-full max-w-md rounded-3xl border border-gray-800 shadow-2xl animate-in zoom-in duration-200 flex flex-col max-h-[90vh] overflow-hidden">
+            <div className="px-8 py-6 border-b border-gray-800 bg-gradient-to-r from-ms-blue/10 to-transparent flex justify-between items-center shrink-0">
               <h3 className="text-xl font-black text-ms-main">{editingDisc ? 'Editar Disciplina' : 'Nova Disciplina'}</h3>
               <button onClick={() => setIsModalOpen(false)} className="p-2 hover:bg-gray-800 rounded-full text-gray-400">
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
-            <div className="p-8 space-y-6">
+
+            <div className="p-8 space-y-6 overflow-y-auto">
               <div className="space-y-2">
                 <label className="text-xs font-black text-[#003366] uppercase tracking-wider ml-1">Nome da Disciplina</label>
                 <input
@@ -176,7 +176,7 @@ export function DisciplinaManager({ theme }: { theme: 'dark' | 'light' }) {
               </div>
             </div>
 
-            <div className="px-8 py-6 bg-gray-800/30 border-t border-gray-800 flex justify-end gap-3">
+            <div className="px-8 py-6 bg-gray-800/30 border-t border-gray-800 flex justify-end gap-3 shrink-0">
               <button onClick={() => setIsModalOpen(false)} className="px-6 py-2.5 font-bold text-gray-400">Cancelar</button>
               <button 
                 onClick={handleSave}

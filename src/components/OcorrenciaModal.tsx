@@ -89,8 +89,8 @@ export function OcorrenciaModal({
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-ms-card rounded-xl shadow-2xl w-full max-w-lg overflow-hidden border border-gray-800">
-        <div className="flex items-center justify-between p-5 border-b border-red-700 bg-red-600">
+      <div className="bg-ms-card rounded-xl shadow-2xl w-full max-w-lg border border-gray-800 flex flex-col max-h-[90vh] overflow-hidden">
+        <div className="flex items-center justify-between p-5 border-b border-red-700 bg-red-600 shrink-0">
           <div className="flex items-center gap-2 text-white">
             <AlertTriangle size={20} />
             <h2 className="text-lg font-bold uppercase tracking-tight">Registrar Ocorrência</h2>
@@ -99,8 +99,8 @@ export function OcorrenciaModal({
             <X size={20} />
           </button>
         </div>
-        
-        <div className="p-6 space-y-6">
+
+        <div className="p-6 space-y-6 overflow-y-auto">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-xs font-bold text-blue-900 uppercase tracking-widest mb-1">Aluno</p>
@@ -171,7 +171,7 @@ export function OcorrenciaModal({
           </div>
         </div>
         
-        <div className="bg-blue-700 p-5 border-t border-blue-600 flex justify-end gap-3">
+        <div className="bg-blue-700 p-5 border-t border-blue-600 flex justify-end gap-3 shrink-0">
           <button
             onClick={onClose}
             className="px-5 py-2.5 text-gray-400 bg-transparent border border-gray-700 rounded-lg text-sm font-bold uppercase tracking-wider hover:bg-gray-800 transition-colors"

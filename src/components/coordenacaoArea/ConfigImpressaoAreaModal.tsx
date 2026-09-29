@@ -100,7 +100,7 @@ export function ConfigImpressaoAreaModal({ avaliacao, onClose, onSalvo }: Props)
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
-      <div className="bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+      <div className="bg-ms-card border border-gray-200 dark:border-gray-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="text-base font-bold text-ms-main">Configurar impressão</h2>
           <button onClick={onClose} className="text-ms-muted hover:text-ms-main">
