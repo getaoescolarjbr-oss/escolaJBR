@@ -11,6 +11,10 @@ const ROTULOS_TIPO: Record<TipoDocumentoPessoa, string> = {
   COMPROVANTE_RESIDENCIA: 'Comprovante de Residência',
   HISTORICO_ESCOLAR: 'Histórico Escolar',
   OUTRO: 'Outro',
+  CERTIFICADO: 'Certificado',
+  DOCUMENTO_PESSOAL: 'Documento pessoal',
+  ATESTADO_MEDICO: 'Atestado médico',
+  TERMO_CONVOCACAO_ASSINADO: 'Termo de convocação assinado',
 };
 
 interface DocumentosTabProps {

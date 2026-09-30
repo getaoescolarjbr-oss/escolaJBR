@@ -34,7 +34,10 @@ export interface Matricula {
   atualizado_em: string;
 }
 
-export type TipoDocumentoPessoa = 'RG_CERTIDAO' | 'CPF' | 'COMPROVANTE_RESIDENCIA' | 'HISTORICO_ESCOLAR' | 'OUTRO';
+export type TipoDocumentoPessoa =
+  | 'RG_CERTIDAO' | 'CPF' | 'COMPROVANTE_RESIDENCIA' | 'HISTORICO_ESCOLAR' | 'OUTRO'
+  // Ficha do servidor (ver add_documentos_pessoa_tipos_servidor.sql)
+  | 'CERTIFICADO' | 'DOCUMENTO_PESSOAL' | 'ATESTADO_MEDICO' | 'TERMO_CONVOCACAO_ASSINADO';
 
 export interface DocumentoPessoa {
   id: string;
