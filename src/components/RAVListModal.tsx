@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, ListaParaVistos } from '../types';
 import { X, Printer, Sparkles, AlertCircle, FileText, CheckCircle2, AlertTriangle, HelpCircle, Save, Loader2, CheckCheck } from 'lucide-react';
-import { arredondarNotaMS, getCorGradiente, pesoDoVisto } from '../utils/academicUtils';
+import { arredondarNotaMS, getConfigPorTurma, getCorGradiente, pesoDoVisto } from '../utils/academicUtils';
 import { printReport } from '../utils/printUtils';
 import { DecimalInput } from './DecimalInput';
 
@@ -41,6 +41,7 @@ export function RAVListModal({
   disciplinaId,
   bimestreId
 }: RAVListModalProps) {
+  const configEfetivo = getConfigPorTurma(professor, turmaId);
   const [loading, setLoading] = useState(true);
   const [alunos, setAlunos] = useState<RAVStudentRow[]>([]);
   const [ravMode, setRavMode] = useState<'bimestral' | 'semestral'>('bimestral');
@@ -224,7 +225,7 @@ export function RAVListModal({
               });
 
               const realizacao = somaPesos / ativIdsBim.length;
-              const vistoValorMax = professor.config_visto_valor_total || 2.0;
+              const vistoValorMax = configEfetivo.config_visto_valor_total || 2.0;
               notaVisto = Number((realizacao * vistoValorMax).toFixed(2));
             }
 
@@ -314,7 +315,7 @@ export function RAVListModal({
     }
 
     loadData();
-  }, [isOpen, professor.id, turmaId, disciplinaId, bimestreId, professor.config_visto_valor_total]);
+  }, [isOpen, professor.id, turmaId, disciplinaId, bimestreId, configEfetivo.config_visto_valor_total]);
 
   if (!isOpen) return null;
 
