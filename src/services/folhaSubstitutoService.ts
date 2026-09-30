@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { LancamentoFolhaSubstituto, NovoLancamentoFolha, SubstitutoRapido } from '../types/rh';
+import type { LancamentoFolhaSubstituto, NovoLancamentoFolha, Substituicao, SubstitutoRapido } from '../types/rh';
 
 export async function listarLancamentosFolha(competencia: string): Promise<LancamentoFolhaSubstituto[]> {
   const { data, error } = await supabase
@@ -74,4 +74,23 @@ export async function criarSubstitutoRapido(dados: { nome: string; telefone: str
     throw error;
   }
   return data as SubstitutoRapido;
+}
+
+// Relatórios: lançamentos de um intervalo de competências (AAAA-MM-01 a AAAA-MM-01).
+export async function listarLancamentosFolhaIntervalo(deCompetencia: string, ateCompetencia: string): Promise<LancamentoFolhaSubstituto[]> {
+  const { data, error } = await supabase
+    .from('folha_substituto_lancamentos')
+    .select('*')
+    .gte('competencia', deCompetencia)
+    .lte('competencia', ateCompetencia)
+    .order('data')
+    .order('criado_em');
+  if (error) throw error;
+  return (data ?? []) as LancamentoFolhaSubstituto[];
+}
+
+export async function listarSubstituicoesPeriodo(inicio: string, fim: string): Promise<Substituicao[]> {
+  const { data, error } = await supabase.from('substituicoes').select('*').gte('data', inicio).lte('data', fim).order('data');
+  if (error) throw error;
+  return (data ?? []) as Substituicao[];
 }

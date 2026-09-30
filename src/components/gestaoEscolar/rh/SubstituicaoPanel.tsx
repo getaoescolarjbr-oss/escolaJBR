@@ -1,13 +1,16 @@
 import { useState } from 'react';
 import { SubstituicaoTab } from './SubstituicaoTab';
 import { FolhaSubstitutoTab } from './FolhaSubstitutoTab';
+import { RelatorioSubstituicoes } from './RelatorioSubstituicoes';
 
-type Visao = 'folha' | 'aulas';
+type Visao = 'folha' | 'aulas' | 'relatorio';
 
 // Aba única de Substituição do RH. Reúne o que antes eram duas abas:
 // - Controle da folha: planilha de lançamento do professor substituto (dia/período, turmas,
 //   pagamento SED/particular, termo, lançado). É o registro principal e se alimenta sozinho
 //   de atestados com substituto e dos registros por aula.
+// - Relatório e gráficos: resumo, gráficos, pagamentos por substituto, atestados e
+//   substituições do período, com impressão A4.
 // - Registro por aula: arranjo interno de cobertura de uma aula/turma num dia (alimenta a
 //   visão "minhas substituições" do professor e o controle da folha).
 export function SubstituicaoPanel() {
@@ -16,6 +19,7 @@ export function SubstituicaoPanel() {
   const visoes: { id: Visao; rotulo: string; dica: string }[] = [
     { id: 'folha', rotulo: 'Controle da folha', dica: 'Quem substituiu, quando, em quais turmas e como será pago' },
     { id: 'aulas', rotulo: 'Registro por aula', dica: 'Cobertura de uma aula ou turma em um dia' },
+    { id: 'relatorio', rotulo: 'Relatório e gráficos', dica: 'Substituições, pagamentos, atestados e gráficos do período, para imprimir' },
   ];
 
   return (
@@ -39,7 +43,9 @@ export function SubstituicaoPanel() {
         <p className="text-[11px] text-gray-500">{visoes.find((v) => v.id === visao)?.dica}</p>
       </div>
 
-      {visao === 'folha' ? <FolhaSubstitutoTab /> : <SubstituicaoTab />}
+      {visao === 'folha' && <FolhaSubstitutoTab />}
+      {visao === 'aulas' && <SubstituicaoTab />}
+      {visao === 'relatorio' && <RelatorioSubstituicoes />}
     </div>
   );
 }
