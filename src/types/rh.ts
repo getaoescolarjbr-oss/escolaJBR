@@ -101,10 +101,22 @@ export interface LancamentoFolhaSubstituto {
   origem: 'MANUAL' | 'ATESTADO' | 'SUBSTITUICAO';
   atestado_id: string | null;
   substituicao_id: string | null;
+  substituto_rapido_id: string | null;
   registrado_por: string | null;
   criado_em: string;
   atualizado_em: string;
 }
 
 export type NovoLancamentoFolha = Pick<LancamentoFolhaSubstituto,
-  'competencia' | 'data' | 'data_fim' | 'turma_ids' | 'substituto_id' | 'substituto_nome' | 'titular_id' | 'titular_nome' | 'motivo' | 'periodo' | 'carga_horaria' | 'pagamento' | 'observacoes'>;
+  'competencia' | 'data' | 'data_fim' | 'turma_ids' | 'substituto_id' | 'substituto_rapido_id' | 'substituto_nome' | 'titular_id' | 'titular_nome' | 'motivo' | 'periodo' | 'carga_horaria' | 'pagamento' | 'observacoes'>;
+
+// Cadastro rápido de substituto (add_substitutos_rapidos.sql)
+export interface SubstitutoRapido {
+  id: string;
+  nome: string;
+  telefone: string | null;
+  cpf: string | null;
+  observacoes: string | null;
+  ativo: boolean;
+  criado_em: string;
+}

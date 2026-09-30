@@ -1,5 +1,5 @@
 import { supabase } from '../lib/supabase';
-import type { LancamentoFolhaSubstituto, NovoLancamentoFolha } from '../types/rh';
+import type { LancamentoFolhaSubstituto, NovoLancamentoFolha, SubstitutoRapido } from '../types/rh';
 
 export async function listarLancamentosFolha(competencia: string): Promise<LancamentoFolhaSubstituto[]> {
   const { data, error } = await supabase
@@ -49,4 +49,29 @@ export async function listarTurmasDoProfessor(professorId: string): Promise<{ au
     aulas: ((h.data ?? []) as AulaDoProfessor[]).filter((x) => x.turma_id),
     alocadas: Array.from(new Set(((a.data ?? []) as { turma_id: string }[]).map((x) => x.turma_id).filter(Boolean))),
   };
+}
+
+export async function listarSubstitutosRapidos(): Promise<SubstitutoRapido[]> {
+  const { data, error } = await supabase.from('substitutos_rapidos').select('*').eq('ativo', true).order('nome');
+  if (error) throw error;
+  return (data ?? []) as SubstitutoRapido[];
+}
+
+export async function criarSubstitutoRapido(dados: { nome: string; telefone: string; cpf: string }, criadoPor: string): Promise<SubstitutoRapido> {
+  const { data, error } = await supabase
+    .from('substitutos_rapidos')
+    .insert([{
+      nome: dados.nome.trim(),
+      telefone: dados.telefone.replace(/\D/g, '') || null,
+      cpf: dados.cpf.replace(/\D/g, '') || null,
+      criado_por: criadoPor,
+    }])
+    .select()
+    .single();
+  if (error) {
+    // 23505 = já existe (mesmo nome ou mesmo CPF entre os cadastros ativos).
+    if (error.code === '23505') throw new Error('Já existe um substituto cadastrado com esse nome ou CPF. Escolha-o na lista.');
+    throw error;
+  }
+  return data as SubstitutoRapido;
 }
