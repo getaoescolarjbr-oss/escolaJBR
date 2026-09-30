@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS folha_substituto_lancamentos (
   titular_nome     TEXT NOT NULL CHECK (length(trim(titular_nome)) > 0),
   motivo           TEXT NOT NULL CHECK (length(trim(motivo)) > 0),
   periodo          TEXT,                                   -- complemento livre: "manhã", "vespertino - 3h"
+  turma_ids        UUID[] NOT NULL DEFAULT '{}',          -- turmas substituídas (por padrão, as do titular no dia/período)
   carga_horaria    NUMERIC(6,2) CHECK (carga_horaria IS NULL OR carga_horaria >= 0), -- em horas
   pagamento        TEXT CHECK (pagamento IN ('SED', 'PARTICULAR')),  -- NULL = a definir
   termo_ok         BOOLEAN NOT NULL DEFAULT false,
@@ -77,6 +78,29 @@ CREATE TRIGGER trg_auditoria_folha_substituto AFTER INSERT OR UPDATE OR DELETE O
   FOR EACH ROW EXECUTE FUNCTION fn_auditoria();
 
 -- ------------------------------------------------------------------------------------
+-- Turmas do titular no dia/período: as que têm aula na grade (horarios) nos dias da semana
+-- cobertos; se o professor não tem grade cadastrada, todas as turmas das alocações.
+-- (dia_semana em horarios: 1 = segunda ... 5 = sexta, igual a EXTRACT(DOW).)
+-- ------------------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.fn_folha_turmas_periodo(p_titular UUID, p_ini DATE, p_fim DATE)
+RETURNS UUID[] LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public AS $$
+DECLARE
+  v_turmas UUID[];
+BEGIN
+  IF p_titular IS NULL THEN RETURN '{}'; END IF;
+  IF EXISTS (SELECT 1 FROM horarios WHERE professor_id = p_titular) THEN
+    SELECT coalesce(array_agg(DISTINCT h.turma_id), '{}') INTO v_turmas FROM horarios h
+     WHERE h.professor_id = p_titular AND h.turma_id IS NOT NULL
+       AND h.dia_semana IN (SELECT EXTRACT(DOW FROM d)::int FROM generate_series(p_ini, coalesce(p_fim, p_ini), INTERVAL '1 day') d);
+  ELSE
+    SELECT coalesce(array_agg(DISTINCT a.turma_id), '{}') INTO v_turmas FROM alocacoes_v2 a
+     WHERE a.professor_id = p_titular AND NOT a.is_espelho AND a.turma_id IS NOT NULL;
+  END IF;
+  RETURN v_turmas;
+END;
+$$;
+
+-- ------------------------------------------------------------------------------------
 -- Integração com atestados: cria/atualiza o lançamento quando o atestado tem substituto.
 -- ------------------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.fn_folha_motivo_atestado(p_tipo TEXT)
@@ -93,9 +117,10 @@ BEGIN
   SELECT nome INTO v_sub FROM professores WHERE id = a.substituto_id;
   SELECT nome INTO v_tit FROM professores WHERE id = a.professor_id;
   INSERT INTO folha_substituto_lancamentos
-    (competencia, data, data_fim, substituto_id, substituto_nome, titular_id, titular_nome, motivo, origem, atestado_id, registrado_por)
+    (competencia, data, data_fim, turma_ids, substituto_id, substituto_nome, titular_id, titular_nome, motivo, origem, atestado_id, registrado_por)
   VALUES
     (p_competencia, a.data_inicio, CASE WHEN a.data_fim > a.data_inicio THEN a.data_fim ELSE NULL END,
+     public.fn_folha_turmas_periodo(a.professor_id, a.data_inicio, a.data_fim),
      a.substituto_id, coalesce(v_sub, 'Substituto'), a.professor_id, coalesce(v_tit, 'Titular'),
      public.fn_folha_motivo_atestado(a.tipo), 'ATESTADO', a.id, (SELECT id FROM usuarios WHERE id = auth.uid()))
   ON CONFLICT (atestado_id) DO NOTHING;
@@ -147,7 +172,9 @@ BEGIN
       competencia = CASE WHEN NEW.data_inicio IS DISTINCT FROM OLD.data_inicio THEN date_trunc('month', NEW.data_inicio)::date ELSE competencia END,
       data_fim = CASE WHEN NEW.data_inicio IS DISTINCT FROM OLD.data_inicio OR NEW.data_fim IS DISTINCT FROM OLD.data_fim
                       THEN CASE WHEN NEW.data_fim > NEW.data_inicio THEN NEW.data_fim ELSE NULL END
-                      ELSE data_fim END
+                      ELSE data_fim END,
+      turma_ids = CASE WHEN NEW.data_inicio IS DISTINCT FROM OLD.data_inicio OR NEW.data_fim IS DISTINCT FROM OLD.data_fim
+                       THEN public.fn_folha_turmas_periodo(NEW.professor_id, NEW.data_inicio, NEW.data_fim) ELSE turma_ids END
     WHERE atestado_id = NEW.id AND NOT lancado_folha;
   EXCEPTION WHEN OTHERS THEN
     RAISE WARNING 'fn_folha_sync_atestado: %', SQLERRM;
@@ -183,7 +210,16 @@ BEGIN
     SELECT 1 FROM folha_substituto_lancamentos f
      WHERE f.substituto_id = s.substituto_id AND f.titular_id = s.servidor_ausente_id
        AND s.data BETWEEN f.data AND coalesce(f.data_fim, f.data)
-  ) THEN RETURN; END IF;
+  ) THEN
+    -- Mesmo dia/par já tem linha (outra aula): só soma a turma desta substituição a ela.
+    IF s.turma_id IS NOT NULL THEN
+      UPDATE folha_substituto_lancamentos f SET turma_ids = array_append(f.turma_ids, s.turma_id)
+       WHERE f.origem = 'SUBSTITUICAO' AND NOT f.lancado_folha AND f.data = s.data
+         AND f.substituto_id = s.substituto_id AND f.titular_id = s.servidor_ausente_id
+         AND NOT (s.turma_id = ANY (f.turma_ids));
+    END IF;
+    RETURN;
+  END IF;
 
   SELECT nome INTO v_sub FROM professores WHERE id = s.substituto_id;
   SELECT nome INTO v_tit FROM professores WHERE id = s.servidor_ausente_id;
@@ -193,9 +229,11 @@ BEGIN
    ORDER BY t.data_inicio DESC LIMIT 1;
 
   INSERT INTO folha_substituto_lancamentos
-    (competencia, data, substituto_id, substituto_nome, titular_id, titular_nome, motivo, periodo, pagamento, origem, substituicao_id, registrado_por)
+    (competencia, data, turma_ids, substituto_id, substituto_nome, titular_id, titular_nome, motivo, periodo, pagamento, origem, substituicao_id, registrado_por)
   VALUES
-    (date_trunc('month', s.data)::date, s.data, s.substituto_id, coalesce(v_sub, 'Substituto'), s.servidor_ausente_id, coalesce(v_tit, 'Titular'),
+    (date_trunc('month', s.data)::date, s.data,
+     CASE WHEN s.turma_id IS NOT NULL THEN ARRAY[s.turma_id] ELSE public.fn_folha_turmas_periodo(s.servidor_ausente_id, s.data, s.data) END,
+     s.substituto_id, coalesce(v_sub, 'Substituto'), s.servidor_ausente_id, coalesce(v_tit, 'Titular'),
      CASE WHEN v_tipo IS NULL THEN 'Substituição' ELSE public.fn_folha_motivo_atestado(v_tipo) END,
      s.aula_ref, CASE WHEN s.status = 'FORMALIZADA_SED' THEN 'SED' ELSE NULL END, 'SUBSTITUICAO', s.id,
      (SELECT id FROM usuarios WHERE id = auth.uid()));
@@ -304,6 +342,7 @@ $$;
 
 REVOKE ALL ON FUNCTION public.rpc_folha_importar_atestados(DATE) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.rpc_folha_importar_atestados(DATE) TO authenticated;
+REVOKE ALL ON FUNCTION public.fn_folha_turmas_periodo(UUID, DATE, DATE) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.fn_folha_criar_de_atestado(atestados_servidores, DATE) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.fn_folha_sync_atestado() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.fn_folha_criar_de_substituicao(substituicoes) FROM PUBLIC, anon, authenticated;
@@ -322,5 +361,6 @@ REVOKE ALL ON FUNCTION public.fn_folha_sync_substituicao() FROM PUBLIC, anon, au
 --   DROP FUNCTION IF EXISTS public.fn_folha_sync_atestado();
 --   DROP FUNCTION IF EXISTS public.fn_folha_criar_de_atestado(atestados_servidores, DATE);
 --   DROP FUNCTION IF EXISTS public.fn_folha_motivo_atestado(TEXT);
+--   DROP FUNCTION IF EXISTS public.fn_folha_turmas_periodo(UUID, DATE, DATE);
 --   DROP TABLE IF EXISTS folha_substituto_lancamentos;
 --   DROP FUNCTION IF EXISTS public.fn_folha_subst_atualizar();

@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { Download, FileInput, Loader2, Pencil, Plus, Printer, Save, Search, Trash2, X } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
 import type { LancamentoFolhaSubstituto, PagamentoSubstituto } from '../../../types/rh';
-import { listarProfessoresParaSelecao } from '../../../services/agendamentoService';
+import { listarProfessoresParaSelecao, listarTurmas } from '../../../services/agendamentoService';
 import {
   atualizarLancamentoFolha, criarLancamentoFolha, excluirLancamentoFolha, importarAtestadosParaFolha, listarLancamentosFolha,
+  listarTurmasDoProfessor, type AulaDoProfessor,
 } from '../../../services/folhaSubstitutoService';
 import {
   MOTIVOS_SUGERIDOS, ROTULO_PAGAMENTO, dataCurta, formatarHoras, gerarCsvControleFolha, gerarHtmlControleFolha, imprimirHtml, lerHoras,
-  rotuloCompetencia, rotuloPeriodo,
+  nomesDasTurmas, rotuloCompetencia, rotuloPeriodo, turmasDoPeriodo,
 } from '../../../utils/folhaSubstituto';
 
 interface Pessoa { id: string | null; nome: string }
@@ -77,6 +78,10 @@ export function FolhaSubstitutoTab() {
   const [editId, setEditId] = useState<string | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [importando, setImportando] = useState(false);
+  const [turmaNomes, setTurmaNomes] = useState<Record<string, string>>({});
+  const [turmasTitular, setTurmasTitular] = useState<{ profId: string; aulas: AulaDoProfessor[]; alocadas: string[] } | null>(null);
+  // null = automático (as turmas com aula no dia/período); lista = escolha manual da secretaria.
+  const [turmasSel, setTurmasSel] = useState<string[] | null>(null);
   const [busca, setBusca] = useState('');
   const [soPendentes, setSoPendentes] = useState(false);
   const [filtroPgto, setFiltroPgto] = useState<'' | PagamentoSubstituto | 'INDEFINIDO'>('');
@@ -102,10 +107,37 @@ export function FolhaSubstitutoTab() {
   }, []);
 
   useEffect(() => {
+    const t = setTimeout(async () => {
+      try { setTurmaNomes(Object.fromEntries((await listarTurmas()).map((x) => [x.id, x.nome]))); } catch { /* só afeta os nomes exibidos */ }
+    }, 0);
+    return () => clearTimeout(t);
+  }, []);
+
+  const titularId = form.titular.id;
+  useEffect(() => {
+    const t = setTimeout(async () => {
+      if (!titularId) { setTurmasTitular(null); return; }
+      try { setTurmasTitular({ profId: titularId, ...(await listarTurmasDoProfessor(titularId)) }); }
+      catch { setTurmasTitular(null); }
+    }, 0);
+    return () => clearTimeout(t);
+  }, [titularId]);
+
+  useEffect(() => {
     const t = setTimeout(carregar, 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [competencia]);
+
+  const turmasForm = useMemo(() => {
+    if (!titularId || !turmasTitular || turmasTitular.profId !== titularId || !form.data) return null;
+    return turmasDoPeriodo(turmasTitular.aulas, turmasTitular.alocadas, form.data, form.modo === 'periodo' ? form.dataFim || null : null);
+  }, [titularId, turmasTitular, form.data, form.dataFim, form.modo]);
+  const turmasMarcadas = turmasSel ?? turmasForm?.padrao ?? [];
+
+  function alternarTurma(id: string) {
+    setTurmasSel(turmasMarcadas.includes(id) ? turmasMarcadas.filter((x) => x !== id) : [...turmasMarcadas, id]);
+  }
 
   async function salvar() {
     if (!usuarioId) return;
@@ -127,6 +159,7 @@ export function FolhaSubstitutoTab() {
         competencia: competenciaDia1,
         data: form.data,
         data_fim: form.modo === 'periodo' && form.dataFim !== form.data ? form.dataFim : null,
+        turma_ids: titularId ? turmasMarcadas : [],
         substituto_id: form.substituto.id, substituto_nome: form.substituto.nome.trim(),
         titular_id: form.titular.id, titular_nome: form.titular.nome.trim(),
         motivo: form.motivo.trim(), periodo: form.turno.trim() || null, carga_horaria: ch,
@@ -137,6 +170,7 @@ export function FolhaSubstitutoTab() {
       // Mantém data, motivo e pagamento para agilizar a próxima linha (várias substituições no mesmo dia).
       setForm({ ...FORM_VAZIO(), data: form.data, motivo: editId ? '' : form.motivo, pagamento: editId ? '' : form.pagamento });
       setEditId(null);
+      setTurmasSel(null);
       await carregar();
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro ao salvar.');
@@ -147,6 +181,7 @@ export function FolhaSubstitutoTab() {
 
   function editar(l: LancamentoFolhaSubstituto) {
     setEditId(l.id);
+    setTurmasSel(l.turma_ids);
     setForm({
       modo: l.data_fim ? 'periodo' : 'dia', data: l.data, dataFim: l.data_fim ?? '',
       substituto: { id: l.substituto_id, nome: l.substituto_nome }, titular: { id: l.titular_id, nome: l.titular_nome },
@@ -188,7 +223,7 @@ export function FolhaSubstitutoTab() {
   }
 
   function exportarCsv() {
-    const blob = new Blob([gerarCsvControleFolha(lista)], { type: 'text/csv;charset=utf-8' });
+    const blob = new Blob([gerarCsvControleFolha(lista, turmaNomes)], { type: 'text/csv;charset=utf-8' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = `controle-folha-substituto-${competencia}.csv`;
@@ -201,8 +236,8 @@ export function FolhaSubstitutoTab() {
     return lista.filter((l) =>
       (!soPendentes || !l.lancado_folha) &&
       (!filtroPgto || (filtroPgto === 'INDEFINIDO' ? !l.pagamento : l.pagamento === filtroPgto)) &&
-      (!t || `${l.substituto_nome} ${l.titular_nome} ${l.motivo}`.toLowerCase().includes(t)));
-  }, [lista, busca, soPendentes, filtroPgto]);
+      (!t || `${l.substituto_nome} ${l.titular_nome} ${l.motivo} ${nomesDasTurmas(l.turma_ids, turmaNomes)}`.toLowerCase().includes(t)));
+  }, [lista, busca, soPendentes, filtroPgto, turmaNomes]);
 
   const resumo = useMemo(() => {
     const mapa = new Map<string, { nome: string; n: number; sed: number; part: number; indef: number; pendentes: number }>();
@@ -236,7 +271,7 @@ export function FolhaSubstitutoTab() {
             className="flex items-center gap-2 px-4 py-2 bg-ms-card border border-gray-800 text-ms-main rounded-lg text-sm font-bold hover:border-ms-blue disabled:opacity-50">
             {importando ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileInput className="w-4 h-4" />} Importar atestados e substituições
           </button>
-          <button onClick={() => imprimirHtml(gerarHtmlControleFolha(lista, competenciaDia1))} className="flex items-center gap-2 px-4 py-2 bg-ms-blue text-white rounded-lg text-sm font-bold hover:bg-blue-600">
+          <button onClick={() => imprimirHtml(gerarHtmlControleFolha(lista, competenciaDia1, turmaNomes))} className="flex items-center gap-2 px-4 py-2 bg-ms-blue text-white rounded-lg text-sm font-bold hover:bg-blue-600">
             <Printer className="w-4 h-4" /> Imprimir controle
           </button>
           <button onClick={exportarCsv} disabled={lista.length === 0} className="flex items-center gap-2 px-4 py-2 bg-ms-card border border-gray-800 text-ms-main rounded-lg text-sm font-bold hover:border-ms-blue disabled:opacity-40">
@@ -277,7 +312,7 @@ export function FolhaSubstitutoTab() {
             <input list="motivos-folha" value={form.motivo} onChange={(e) => setForm({ ...form, motivo: e.target.value })} className={`${classeInput} mt-1`} />
             <datalist id="motivos-folha">{MOTIVOS_SUGERIDOS.map((m) => <option key={m} value={m} />)}</datalist></label>
           <CampoPessoa rotulo="Professor substituto" valor={form.substituto} opcoes={professores} onChange={(p) => setForm({ ...form, substituto: p })} />
-          <CampoPessoa rotulo="Professor titular" valor={form.titular} opcoes={professores} onChange={(p) => setForm({ ...form, titular: p })} />
+          <CampoPessoa rotulo="Professor titular" valor={form.titular} opcoes={professores} onChange={(p) => { if (p.id !== form.titular.id) setTurmasSel(null); setForm({ ...form, titular: p }); }} />
           <label className="block"><span className={classeRotulo}>CH (horas)</span>
             <input inputMode="decimal" value={form.ch} onChange={(e) => setForm({ ...form, ch: e.target.value })} placeholder="Ex.: 8 ou 3,75" className={`${classeInput} mt-1`} /></label>
           <label className="block"><span className={classeRotulo}>Pagamento</span>
@@ -286,6 +321,41 @@ export function FolhaSubstitutoTab() {
               <option value="SED">Pela SED</option>
               <option value="PARTICULAR">Particular</option>
             </select></label>
+          <div className="sm:col-span-2 lg:col-span-4 space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className={classeRotulo}>Turmas substituídas</span>
+              {turmasForm && (
+                <>
+                  <button type="button" onClick={() => setTurmasSel(turmasForm.opcoes.map((o) => o.id))} className="text-[11px] text-ms-blueText hover:underline">Marcar todas</button>
+                  <button type="button" onClick={() => setTurmasSel([])} className="text-[11px] text-ms-blueText hover:underline">Limpar</button>
+                  {turmasSel !== null && <button type="button" onClick={() => setTurmasSel(null)} className="text-[11px] text-ms-blueText hover:underline">Só as com aula no dia/período</button>}
+                </>
+              )}
+            </div>
+            {!titularId ? (
+              <p className="text-[11px] text-gray-500">Escolha o professor titular na lista para ver as turmas dele.</p>
+            ) : !turmasForm ? (
+              <p className="text-[11px] text-gray-500">Carregando as turmas...</p>
+            ) : turmasForm.opcoes.length === 0 ? (
+              <p className="text-[11px] text-gray-500">Este professor não tem turmas cadastradas (grade ou alocações).</p>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  {[...turmasForm.opcoes].sort((a, b) => (turmaNomes[a.id] ?? '').localeCompare(turmaNomes[b.id] ?? '', 'pt-BR', { numeric: true })).map((o) => {
+                    const marcada = turmasMarcadas.includes(o.id);
+                    return (
+                      <label key={o.id} className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border text-xs cursor-pointer select-none ${marcada ? 'bg-ms-blue/15 border-ms-blueText/40 text-ms-main' : 'bg-ms-dark border-gray-800 text-gray-400'}`}>
+                        <input type="checkbox" checked={marcada} onChange={() => alternarTurma(o.id)} className="accent-blue-600" />
+                        <span className="font-bold">{turmaNomes[o.id] ?? 'Turma'}</span>
+                        <span className="text-[10px] opacity-70">{o.aulas > 0 ? `${o.aulas} aula${o.aulas > 1 ? 's' : ''} no período` : 'sem aula no período'}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+                <p className="text-[11px] text-gray-500">{turmasSel === null ? 'Marcadas automaticamente as turmas que têm aula nos dias da substituição.' : 'Seleção manual.'}</p>
+              </>
+            )}
+          </div>
           <label className="block sm:col-span-2 lg:col-span-4"><span className={classeRotulo}>Observação</span>
             <input value={form.obs} onChange={(e) => setForm({ ...form, obs: e.target.value })} placeholder="Ex.: falta a folha" className={`${classeInput} mt-1`} /></label>
         </div>
@@ -294,7 +364,7 @@ export function FolhaSubstitutoTab() {
           <button onClick={salvar} disabled={salvando} className="flex items-center gap-2 px-5 py-2 bg-ms-blue text-white rounded-lg text-sm font-bold hover:bg-blue-600 disabled:opacity-50">
             {salvando ? <Loader2 className="w-4 h-4 animate-spin" /> : editId ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />} {editId ? 'Salvar alterações' : 'Adicionar'}
           </button>
-          {editId && <button onClick={() => { setEditId(null); setForm(FORM_VAZIO()); setErro(null); }} className="flex items-center gap-1 px-4 py-2 bg-ms-dark border border-gray-800 text-gray-300 rounded-lg text-sm"><X className="w-4 h-4" /> Cancelar</button>}
+          {editId && <button onClick={() => { setEditId(null); setForm(FORM_VAZIO()); setTurmasSel(null); setErro(null); }} className="flex items-center gap-1 px-4 py-2 bg-ms-dark border border-gray-800 text-gray-300 rounded-lg text-sm"><X className="w-4 h-4" /> Cancelar</button>}
         </div>
       </div>
 
@@ -318,19 +388,19 @@ export function FolhaSubstitutoTab() {
       </div>
 
       <div className="overflow-x-auto bg-ms-card border border-gray-800 rounded-2xl">
-        <table className="w-full text-sm min-w-[960px]">
+        <table className="w-full text-sm min-w-[1080px]">
           <thead>
             <tr className="text-left text-[10px] font-black uppercase tracking-wider text-gray-400 border-b border-gray-800">
-              <th className="px-3 py-3">Data / período</th><th className="px-3 py-3">Substituto</th><th className="px-3 py-3">Titular</th><th className="px-3 py-3">Motivo</th>
+              <th className="px-3 py-3">Data / período</th><th className="px-3 py-3">Substituto</th><th className="px-3 py-3">Titular</th><th className="px-3 py-3">Turmas</th><th className="px-3 py-3">Motivo</th>
               <th className="px-3 py-3">CH</th><th className="px-3 py-3">Pagamento</th>
               <th className="px-2 py-3 text-center">Termo</th><th className="px-2 py-3 text-center">Just.</th><th className="px-2 py-3 text-center">Lançado / pago</th><th className="px-3 py-3" />
             </tr>
           </thead>
           <tbody>
             {carregando ? (
-              <tr><td colSpan={10} className="py-8 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-ms-blueText" /></td></tr>
+              <tr><td colSpan={11} className="py-8 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-ms-blueText" /></td></tr>
             ) : visiveis.length === 0 ? (
-              <tr><td colSpan={10} className="py-8 text-center text-gray-500">{lista.length === 0 ? 'Nenhum lançamento nesta competência.' : 'Nada encontrado com esse filtro.'}</td></tr>
+              <tr><td colSpan={11} className="py-8 text-center text-gray-500">{lista.length === 0 ? 'Nenhum lançamento nesta competência.' : 'Nada encontrado com esse filtro.'}</td></tr>
             ) : (
               visiveis.map((l) => (
                 <tr key={l.id} className={`border-b border-gray-800/60 ${l.lancado_folha ? 'bg-yellow-400/10' : ''}`}>
@@ -340,6 +410,7 @@ export function FolhaSubstitutoTab() {
                   </td>
                   <td className="px-3 py-2 font-bold text-ms-main">{l.substituto_nome}{l.origem !== 'MANUAL' && <span className="ml-2 align-middle text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-ms-blue/15 text-ms-blueText" title={l.origem === 'ATESTADO' ? 'Veio do lançamento do atestado' : 'Veio da aba Substituição'}>{l.origem === 'ATESTADO' ? 'atestado' : 'substituição'}</span>}</td>
                   <td className="px-3 py-2">{l.titular_nome}</td>
+                  <td className="px-3 py-2 text-xs text-gray-300 max-w-[160px]">{nomesDasTurmas(l.turma_ids, turmaNomes) || <span className="text-gray-600">—</span>}</td>
                   <td className="px-3 py-2">{l.motivo}{l.observacoes && <span className="block text-[11px] text-amber-400">{l.observacoes}</span>}</td>
                   <td className="px-3 py-2 whitespace-nowrap">{l.carga_horaria === null ? <span className="text-amber-400 text-xs">informar</span> : formatarHoras(l.carga_horaria)}</td>
                   <td className="px-3 py-2">

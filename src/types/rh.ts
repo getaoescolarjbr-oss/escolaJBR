@@ -90,6 +90,7 @@ export interface LancamentoFolhaSubstituto {
   titular_nome: string;
   motivo: string;
   periodo: string | null;
+  turma_ids: string[]; // turmas substituídas
   carga_horaria: number | null;
   pagamento: PagamentoSubstituto | null; // null = a definir
   termo_ok: boolean;
@@ -106,4 +107,4 @@ export interface LancamentoFolhaSubstituto {
 }
 
 export type NovoLancamentoFolha = Pick<LancamentoFolhaSubstituto,
-  'competencia' | 'data' | 'data_fim' | 'substituto_id' | 'substituto_nome' | 'titular_id' | 'titular_nome' | 'motivo' | 'periodo' | 'carga_horaria' | 'pagamento' | 'observacoes'>;
+  'competencia' | 'data' | 'data_fim' | 'turma_ids' | 'substituto_id' | 'substituto_nome' | 'titular_id' | 'titular_nome' | 'motivo' | 'periodo' | 'carga_horaria' | 'pagamento' | 'observacoes'>;
