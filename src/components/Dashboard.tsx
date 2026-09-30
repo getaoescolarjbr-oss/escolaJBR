@@ -249,8 +249,11 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   // A turma selecionada está coberta por algum atestado ativo do titular (com ou sem bloqueio)?
   const atestadoDaTurmaSelecionada = selectedTurma ? turmasSomenteLeitura.get(selectedTurma) : undefined;
   const isTitularEmAtestado = !!atestadoDaTurmaSelecionada;
-  // Read-only efetivo: bimestre bloqueado OU a turma selecionada está em atestado
-  const isEffectivelyLocked = isBimestreLocked || isTitularEmAtestado;
+  // Se o professor LOGADO é o substituto desta turma+disciplina, ele PODE lançar —
+  // o bloqueio de somente-leitura é para o titular afastado, não para quem assumiu.
+  const isSubstituindoEstaTurma = !!(selectedTurma && selectedDisciplina && espelhos[`${selectedTurma}|${selectedDisciplina}`]);
+  // Read-only efetivo: bimestre bloqueado OU titular em atestado (e o logado NÃO é o substituto desta turma)
+  const isEffectivelyLocked = isBimestreLocked || (isTitularEmAtestado && !isSubstituindoEstaTurma);
 
   // Turmas com bloqueio ligado (substituto assumiu de vez): somem do seletor do titular.
   const turmasDisponiveis = turmas.filter((t) => !turmasBloqueadas.has(t.id));
