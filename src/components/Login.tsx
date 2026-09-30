@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { signInWithPassword, registerFirstAccess, resetPassword } from '../services/authService';
 import { AlunoAuth } from './AlunoAuth';
-import { CadastroServidorCampos, CAMPOS_SERVIDOR_VAZIOS, type CamposServidor } from './CadastroServidorCampos';
+import { CadastroServidorCampos } from './CadastroServidorCampos';
 import { emailJaCadastradoPelaEscola, solicitarCadastroServidor } from '../services/cadastroServidorService';
-import { validarCpf } from '../utils/cadastroServidor';
+import { CAMPOS_SERVIDOR_VAZIOS, validarCpf, type CamposServidor } from '../utils/cadastroServidor';
 
 const EMAIL_ADMIN = 'gestaoescolarjbr@gmail.com';
 
