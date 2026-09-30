@@ -347,7 +347,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
     if (turmaId && disciplinaId) {
       fetchData();
     }
-  }, [professor.id, turmaId, disciplinaId, bimestreId, dataAula, refreshTrigger, refreshKey]);
+  }, [professor.id, turmaId, disciplinaId, bimestreId, dataAula, refreshTrigger, refreshKey, configEfetivo.config_visto_valor_total, configEfetivo.config_visto_metodo]);
 
   // Polling para saidas_sala para manter sincronizado com o mobile
   useEffect(() => {

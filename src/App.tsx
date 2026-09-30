@@ -151,7 +151,8 @@ function App() {
         theme,
         config_visto_metodo: professor.config_visto_metodo,
         config_visto_valor_total: professor.config_visto_valor_total,
-        bimestre_atual: professor.bimestre_atual
+        bimestre_atual: professor.bimestre_atual,
+        ...(professor.config_turmas ? { config_turmas: professor.config_turmas } : {})
       };
       
       localStorage.setItem(configKey, JSON.stringify(updates));
@@ -206,6 +207,7 @@ function App() {
         ...data,
         config_visto_metodo: configBackup.config_visto_metodo || data.config_visto_metodo || 'gradual',
         config_visto_valor_total: configBackup.config_visto_valor_total || data.config_visto_valor_total || 10,
+        config_turmas: configBackup.config_turmas || data.config_turmas,
         bimestre_atual: getCurrentBimestre()
       };
 

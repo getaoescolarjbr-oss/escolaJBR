@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import type { Professor, Avaliacao, NotaAvaliacao, ListaParaVistos } from '../types';
 import { Plus, Save, Trash2, Calculator, Info, TrendingUp, X, Sparkles, CheckCheck, Loader2 } from 'lucide-react';
 import { autoUpdateExpiredAbsences, isStudentAbsentOnDate, isStudentInativoNoBimestre } from '../utils/studentUtils';
-import { arredondarNotaMS, getCorGradiente, pesoDoVisto } from '../utils/academicUtils';
+import { arredondarNotaMS, getConfigPorTurma, getCorGradiente, pesoDoVisto } from '../utils/academicUtils';
 import { RAVListModal } from './RAVListModal';
 import { DecimalInput } from './DecimalInput';
 import { buscarNotasBloqueadas } from '../services/avaliacoesService';
@@ -19,6 +19,7 @@ interface GradesPanelProps {
 }
 
 export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, theme, refreshKey = 0, isLocked = false }: GradesPanelProps) {
+  const configEfetivo = getConfigPorTurma(professor, turmaId);
   const [alunos, setAlunos] = useState<ListaParaVistos[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
   // avaliacao_id -> nome do corretor, para os campos que este professor só pode ver.
@@ -146,7 +147,7 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                 const aId = String(aluno.aluno_id).trim();
                 const somaPesos = pesosAluno[aId] || 0;
                 const realizacao = somaPesos / totalAtiv;
-                const notaFinalVisto = realizacao * (professor.config_visto_valor_total || 2.0);
+                const notaFinalVisto = realizacao * (configEfetivo.config_visto_valor_total || 2.0);
                 notasVistos[aluno.aluno_id] = Number(notaFinalVisto.toFixed(2));
             });
             setVistosCalculados(notasVistos);
@@ -158,7 +159,7 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
       setLoading(false);
     }
     fetchData();
-  }, [professor.id, turmaId, disciplinaId, bimestreId, professor.config_visto_valor_total, refreshKey]);
+  }, [professor.id, turmaId, disciplinaId, bimestreId, configEfetivo.config_visto_valor_total, refreshKey]);
 
   const handleAddAvaliacao = async () => {
     if (!newAvalName.trim() || newAvalValue <= 0) return;
@@ -546,7 +547,7 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                             <th className={`px-2 sm:px-6 py-4 text-left text-[10px] font-black text-white uppercase tracking-widest sticky left-0 z-10 border-r border-white/10 min-w-[100px] max-w-[120px] sm:max-w-none ${
                               theme === 'light' ? 'bg-ms-blue' : 'bg-ms-accent'
                             }`}>Estudante</th>
-                            <th className="px-2 sm:px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest bg-blue-600/20 whitespace-nowrap">Vistos ({professor.config_visto_valor_total})</th>
+                            <th className="px-2 sm:px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest bg-blue-600/20 whitespace-nowrap">Vistos ({configEfetivo.config_visto_valor_total || 2.0})</th>
                             {avaliacoes.map(av => (
                             <th key={av.id} className="px-2 sm:px-4 py-4 text-center text-[10px] font-black text-white uppercase tracking-widest">
                                 <div className="truncate max-w-[70px] sm:max-w-[100px] mx-auto">{av.nome}</div>

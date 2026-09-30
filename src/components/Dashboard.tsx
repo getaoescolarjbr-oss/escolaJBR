@@ -11,7 +11,7 @@ import { ProfessorMensagensPanel } from './ProfessorMensagensPanel';
 import { MinhasOcorrenciasPanel } from './MinhasOcorrenciasPanel';
 import { AniversariantesPanel } from './AniversariantesPanel';
 import { CalendarioLetivoModal } from './CalendarioLetivoModal';
-import { getCurrentBimestre } from '../utils/academicUtils';
+import { getCurrentBimestre, getConfigPorTurma } from '../utils/academicUtils';
 
 
 const TEMPO_RANGES = [
@@ -274,16 +274,15 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   // Professor "de dados": numa turma/disciplina que o professor logado assume como substituto, as
   // atividades, avaliações, notas, vistos e chamadas continuam no diário do TITULAR (é um só conjunto
   // por turma+disciplina; se cada um lançasse no seu nome a nota do bimestre ficaria partida em duas).
-  // Só o id e a configuração de vistos vêm do titular; nome, e-mail e cargo continuam os de quem está logado.
+  // O id do titular é usado para registrar e vincular as atividades ao diário, mas a configuração de
+  // vistos (método de lançamento, valor total e regras por turma) aplicada aos alunos é a do professor
+  // substituto logado (que é quem está ministrando e avaliando as aulas).
   const professorDados = useMemo<Professor>(() => {
     const titular = espelhos[`${selectedTurma}|${selectedDisciplina}`];
     if (!titular) return professor;
     return {
       ...professor,
       id: titular.id,
-      config_visto_metodo: titular.config_visto_metodo,
-      config_visto_valor_total: titular.config_visto_valor_total,
-      config_turmas: titular.config_turmas,
     };
   }, [espelhos, professor, selectedTurma, selectedDisciplina]);
 
@@ -1043,7 +1042,10 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                   <h4 className="font-black text-sm uppercase tracking-wider text-amber-400">Modo Substituto Ativo</h4>
                   <p className="text-xs text-amber-300/80 font-bold mt-1">
                     Você está substituindo <span className="text-amber-300">{substituicaoAtiva.titularNome}</span> até <span className="text-amber-300">{new Date(substituicaoAtiva.atestado.data_fim + 'T12:00:00').toLocaleDateString('pt-BR')}</span>.
-                    Você trabalha sobre o diário dele: atividades, vistos, chamadas e notas ficam nos registros de {substituicaoAtiva.titularNome}.
+                    Você trabalha sobre o diário dele (atividades, chamadas e notas), e a sua configuração de vistos ({(() => {
+                      const cfg = getConfigPorTurma(professorDados, selectedTurma);
+                      return `modo ${cfg.config_visto_metodo}, valor total ${cfg.config_visto_valor_total} pts`;
+                    })()}) está ativa para os alunos.
                   </p>
                 </div>
               </div>

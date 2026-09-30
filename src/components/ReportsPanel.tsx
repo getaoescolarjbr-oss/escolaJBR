@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import type { Professor, ListaParaVistos } from '../types';
 import { AlertCircle, Printer, Settings2, Users, Calculator, ArrowLeft } from 'lucide-react';
 import { autoUpdateExpiredAbsences } from '../utils/studentUtils';
-import { arredondarNotaMS, getCorGradiente, estaAprovado, getBimestreFromDate, pesoDoVisto } from '../utils/academicUtils';
+import { arredondarNotaMS, getConfigPorTurma, getCorGradiente, estaAprovado, getBimestreFromDate, pesoDoVisto } from '../utils/academicUtils';
 import { MatriculaModal } from './MatriculaModal';
 import { ExameFinalPanel } from './ExameFinalPanel';
 import { printReport } from '../utils/printUtils';
@@ -18,6 +18,7 @@ interface ReportsPanelProps {
 }
 
 export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, theme, isLocked = false }: ReportsPanelProps) {
+  const configEfetivo = getConfigPorTurma(professor, turmaId);
   const [alunos, setAlunos] = useState<ListaParaVistos[]>([]);
   const [stats, setStats] = useState<Record<string, { totalVistos: number; totalAtiv: number; media: number; bimestreEntrada: number }>>({});
   const [loading, setLoading] = useState(true);
@@ -154,7 +155,7 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
       const notaRav = notasAluno.find(n => n.avaliacao_id === ravAvalId)?.nota;
 
       const pesosVisto = vistosAluno.reduce((acc, v) => acc + pesoDoVisto(v.valor), 0);
-      const notaVistoFinal = totalAtiv > 0 ? (pesosVisto / totalAtiv) * (professor.config_visto_valor_total || 2.0) : 0;
+      const notaVistoFinal = totalAtiv > 0 ? (pesosVisto / totalAtiv) * (configEfetivo.config_visto_valor_total || 2.0) : 0;
       const mediaSemRav = somaNotas + notaVistoFinal;
 
       newStats[aluno.aluno_id] = {
@@ -305,7 +306,7 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
               ativIdsBim.includes(v.atividade_id)
             );
             const pesosVisto = vistosBim.reduce((acc, v) => acc + pesoDoVisto(v.valor), 0);
-            notaVistoFinal = (pesosVisto / totalAtivBim) * (professor.config_visto_valor_total || 2.0);
+            notaVistoFinal = (pesosVisto / totalAtivBim) * (configEfetivo.config_visto_valor_total || 2.0);
           }
 
           const avalIdsBim = avaliacoesPorBimestre[b] || [];
@@ -378,13 +379,13 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
     } else if (bimestreId === 5) {
       setLoading(false);
     }
-  }, [professor.id, turmaId, disciplinaId, bimestreId]);
+  }, [professor.id, turmaId, disciplinaId, bimestreId, configEfetivo.config_visto_valor_total]);
 
   useEffect(() => {
     if (turmaId && disciplinaId && reportTab === 'anual') {
       fetchAnualData();
     }
-  }, [professor.id, turmaId, disciplinaId, reportTab]);
+  }, [professor.id, turmaId, disciplinaId, reportTab, configEfetivo.config_visto_valor_total]);
 
   useEffect(() => {
     if (bimestreId === 5) setReportTab('anual');
