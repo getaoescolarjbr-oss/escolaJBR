@@ -279,9 +279,10 @@ export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLoc
             </thead>
             <tbody className="divide-y divide-ms-border/30">
               {alunos.map((aluno, idx) => {
+                const isInativo = aluno.status === 'Transferido' || aluno.status === 'Remanejado' || aluno.status === 'Cancelada';
                 const ma = mediasAnuais[aluno.id] || 0;
                 const freq = frequencias[aluno.id] ?? 100;
-                
+
                 let situacaoInicial = 'Em Exame';
                 let isExame = false;
                 let corSituacao = 'text-yellow-500';
@@ -336,57 +337,75 @@ export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLoc
                     }`}>
                       <div className="flex items-center gap-3">
                         <span className="text-[10px] font-black text-ms-gold">{idx + 1}.</span>
-                        <span className={`text-xs font-bold ${theme === 'light' ? 'text-blue-950' : 'text-ms-main'}`}>{aluno.nome}</span>
+                        <span className={`text-xs font-bold ${isInativo ? 'line-through text-gray-500 opacity-60' : theme === 'light' ? 'text-blue-950' : 'text-ms-main'}`}>{aluno.nome}</span>
+                        {isInativo && (
+                          <span className="text-[8px] px-1.5 py-0.5 rounded-full font-black uppercase border tracking-normal bg-orange-500/20 text-orange-400 border-orange-500/30">
+                            {aluno.status}
+                          </span>
+                        )}
                       </div>
                     </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className={`text-sm font-black ${getCorGradiente(ma, theme) === '#ef4444' || getCorGradiente(ma, theme) === '#dc2626' ? 'text-red-500' : 'text-blue-500'}`}>
-                        {ma.toFixed(1)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className={`text-sm font-bold ${freq >= 75 ? (theme === 'light' ? 'text-blue-900' : 'text-white') : 'text-red-500'}`}>
-                        {freq}%
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-center">
-                      <span className={`text-[9px] font-black uppercase tracking-widest ${corSituacao}`}>
-                        {situacaoInicial}
-                      </span>
-                    </td>
-                    <td className="px-4 py-4 text-center bg-blue-500/5">
-                      {isExame && !impossivel ? (
-                        <span className="text-sm font-black text-yellow-500">{notaNecessaria.toFixed(1)}</span>
-                      ) : (
-                        <span className="text-gray-500">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-4 text-center bg-blue-500/10">
-                      {isExame && !impossivel && exameAvaliacao ? (
-                        <DecimalInput 
-                          value={notasExame[aluno.id] ?? ''}
-                          onChange={(val) => handleUpdateNotaExame(aluno.id, val ?? 0)}
-                          max={10}
-                          disabled={isLocked}
-                          className={`w-16 text-center p-1 rounded text-xs font-bold focus:border-blue-500 outline-none border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
-                            theme === 'light' ? 'bg-white border-blue-200 text-blue-900' : 'bg-ms-dark/20 border-ms-border text-white'
-                          }`}
-                          placeholder="0.0"
-                        />
-                      ) : (
-                        <span className="text-gray-500">—</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="flex flex-col items-center gap-1">
-                        <span className={`text-sm font-black ${corResultado}`}>
-                          {mf.toFixed(1)}
-                        </span>
-                        <span className={`text-[9px] font-black uppercase tracking-widest ${corResultado}`}>
-                          {resultadoFinal}
-                        </span>
-                      </div>
-                    </td>
+                    {isInativo ? (
+                      <>
+                        <td className="px-4 py-4 text-center"><span className="text-xs text-gray-500 font-semibold italic">Inativo</span></td>
+                        <td className="px-4 py-4 text-center"><span className="text-gray-500">—</span></td>
+                        <td className="px-4 py-4 text-center"><span className="text-gray-500">—</span></td>
+                        <td className="px-4 py-4 text-center bg-blue-500/5"><span className="text-gray-500">—</span></td>
+                        <td className="px-4 py-4 text-center bg-blue-500/10"><span className="text-gray-500">—</span></td>
+                        <td className="px-6 py-4 text-center"><span className="text-gray-500">—</span></td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-4 py-4 text-center">
+                          <span className={`text-sm font-black ${getCorGradiente(ma, theme) === '#ef4444' || getCorGradiente(ma, theme) === '#dc2626' ? 'text-red-500' : 'text-blue-500'}`}>
+                            {ma.toFixed(1)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <span className={`text-sm font-bold ${freq >= 75 ? (theme === 'light' ? 'text-blue-900' : 'text-white') : 'text-red-500'}`}>
+                            {freq}%
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-center">
+                          <span className={`text-[9px] font-black uppercase tracking-widest ${corSituacao}`}>
+                            {situacaoInicial}
+                          </span>
+                        </td>
+                        <td className="px-4 py-4 text-center bg-blue-500/5">
+                          {isExame && !impossivel ? (
+                            <span className="text-sm font-black text-yellow-500">{notaNecessaria.toFixed(1)}</span>
+                          ) : (
+                            <span className="text-gray-500">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-center bg-blue-500/10">
+                          {isExame && !impossivel && exameAvaliacao ? (
+                            <DecimalInput
+                              value={notasExame[aluno.id] ?? ''}
+                              onChange={(val) => handleUpdateNotaExame(aluno.id, val ?? 0)}
+                              max={10}
+                              disabled={isLocked}
+                              className={`w-16 text-center p-1 rounded text-xs font-bold focus:border-blue-500 outline-none border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                                theme === 'light' ? 'bg-white border-blue-200 text-blue-900' : 'bg-ms-dark/20 border-ms-border text-white'
+                              }`}
+                              placeholder="0.0"
+                            />
+                          ) : (
+                            <span className="text-gray-500">—</span>
+                          )}
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <div className="flex flex-col items-center gap-1">
+                            <span className={`text-sm font-black ${corResultado}`}>
+                              {mf.toFixed(1)}
+                            </span>
+                            <span className={`text-[9px] font-black uppercase tracking-widest ${corResultado}`}>
+                              {resultadoFinal}
+                            </span>
+                          </div>
+                        </td>
+                      </>
+                    )}
                   </tr>
                 );
               })}

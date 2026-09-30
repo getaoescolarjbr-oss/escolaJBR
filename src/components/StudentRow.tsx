@@ -7,8 +7,8 @@ import { OcorrenciaModal } from './OcorrenciaModal';
 import { StudentProfileModal } from './StudentProfileModal';
 import { DecimalInput } from './DecimalInput';
 import type { StudentGradeBreakdown } from './StudentList';
-import { getBimestreFromDate, getConfigPorTurma, pesoDoVisto } from '../utils/academicUtils';
-import { isStudentAbsentOnDate } from '../utils/studentUtils';
+import { getConfigPorTurma, pesoDoVisto } from '../utils/academicUtils';
+import { isStudentAbsentOnDate, isStudentInativoNoBimestre } from '../utils/studentUtils';
 
 interface StudentRowProps {
   aluno: ListaParaVistos;
@@ -33,24 +33,25 @@ interface StudentRowProps {
   bulkRefreshTrigger?: number;
   gradeBreakdown?: StudentGradeBreakdown;
   isLocked?: boolean;
+  /** Liga/desliga o botão de Saída de Sala — configuração geral do admin (padrão: desligado). */
+  saidaSalaHabilitada?: boolean;
 }
 
-export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAtividade, atividadesRealizadas, totalAtividades, index, theme, onUpdateVisto, initialVisto, initialPresenca, initialSaidaId, atividadeIdHoje, onAtividadeCreated, forceNovaAtividade = false, bulkAtividades = [], bulkRefreshTrigger = 0, gradeBreakdown, isLocked = false, popupMediaParaBaixo = false }: StudentRowProps) {
+export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAtividade, atividadesRealizadas, totalAtividades, index, theme, onUpdateVisto, initialVisto, initialPresenca, initialSaidaId, atividadeIdHoje, onAtividadeCreated, forceNovaAtividade = false, bulkAtividades = [], bulkRefreshTrigger = 0, gradeBreakdown, isLocked = false, saidaSalaHabilitada = false, popupMediaParaBaixo = false }: StudentRowProps) {
   // Configuração efetiva: per-turma se definida, senão usa padrão global
   const configEfetivo = getConfigPorTurma(professor, aluno.turma_id);
   const [presenca, setPresenca] = useState<boolean | null>(initialPresenca ?? null);
   const [valorVisto, setValorVisto] = useState<string | null>(initialVisto ?? null);
   const [atividadeId, setAtividadeId] = useState<string | null>(atividadeIdHoje);
   
+  // Badge/risco no nome: mostra sempre que o aluno já não está mais na turma, independente do
+  // bimestre em exibição. Campos de lançamento usam isPosterior (por bimestre) — ver studentUtils.
   const isTransferido = aluno.status === 'Transferido' || aluno.status === 'Remanejado' || aluno.status === 'Cancelada';
 
-  const isPosterior = useMemo(() => {
-    if (aluno.status !== 'Transferido' && aluno.status !== 'Remanejado' && aluno.status !== 'Cancelada') {
-      return false;
-    }
-    const exitBim = getBimestreFromDate(aluno.atestado_inicio);
-    return exitBim !== null && bimestreId > exitBim;
-  }, [aluno.status, aluno.atestado_inicio, bimestreId]);
+  const isPosterior = useMemo(
+    () => isStudentInativoNoBimestre(aluno, bimestreId),
+    [aluno, bimestreId]
+  );
 
   const [isChamadaLoading, setIsChamadaLoading] = useState(false);
   const [isVistoLoading, setIsVistoLoading] = useState(false);
@@ -475,7 +476,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                   className={`text-xs md:text-sm font-black tracking-tight uppercase max-w-[130px] sm:max-w-[160px] md:max-w-none truncate cursor-pointer hover:underline hover:text-blue-500 dark:hover:text-blue-400 transition-all ${
                     isStudentAbsentOnDate(aluno, dataAula)
                       ? 'animate-pulse text-red-650 dark:text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-lg'
-                      : aluno.status === 'Transferido' || aluno.status === 'Remanejado'
+                      : isTransferido
                         ? 'line-through text-gray-500 opacity-60'
                         : theme === 'light' ? 'text-[#003366]' : 'text-ms-main'
                   }`}
@@ -508,7 +509,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 )}
               </div>
               <div className="flex items-center gap-1.5 md:gap-2 mt-0.5 md:mt-1">
-                {!isPosterior && !isTransferido && (
+                {!isPosterior && (
                   percentual <= 35 ? (
                     <span className="flex items-center gap-1 text-[7px] md:text-[8px] font-black bg-red-600 text-white px-1.5 py-0.5 rounded-full animate-pulse">CRÍTICO</span>
                   ) : percentual <= 59 ? (
@@ -526,7 +527,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
 
         <td className="md:px-4 px-0.5 md:py-2 py-1.5 text-center">
             <div className="inline-flex flex-col md:flex-row items-center gap-1 md:gap-3">
-                {isPosterior || isTransferido ? (
+                {isPosterior ? (
                   <span className="text-[11px] font-black text-gray-500 italic">N/A</span>
                 ) : (
                   <div className="flex flex-col items-center gap-1">
@@ -550,7 +551,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 )}
 
                 {/* Grade Breakdown Trigger */}
-                {gradeBreakdown && !isPosterior && !isTransferido && (
+                {gradeBreakdown && !isPosterior && (
                   <div className="relative mt-1 md:mt-0" ref={gradeBreakdownRef}>
                     <button 
                       onClick={() => setShowGradeBreakdown(!showGradeBreakdown)}
@@ -612,7 +613,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
              <div className="flex items-center justify-center gap-1 md:gap-2">
                 <button 
                   onClick={() => handleChamada(true)} 
-                  disabled={isChamadaLoading || isLocked || isPosterior || isTransferido}
+                  disabled={isChamadaLoading || isLocked || isPosterior}
                   className={`p-1.5 md:p-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     presenca === true 
                       ? 'bg-green-500 text-white shadow-lg shadow-green-900/50 scale-110' 
@@ -625,7 +626,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 </button>
                 <button 
                   onClick={() => handleChamada(false)} 
-                  disabled={isChamadaLoading || isLocked || isPosterior || isTransferido}
+                  disabled={isChamadaLoading || isLocked || isPosterior}
                   className={`p-1.5 md:p-2.5 rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                     presenca === false 
                       ? 'bg-red-500 text-white shadow-lg shadow-red-900/50 scale-110' 
@@ -694,7 +695,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         <button
                           title={tituloPonto}
                           onClick={() => handleBulkVistoAction(ativ.id, proximoPonto(val))}
-                          disabled={isLdg || isLocked || isPosterior || isTransferido}
+                          disabled={isLdg || isLocked || isPosterior}
                           className={`w-6 md:w-8 h-6 md:h-8 rounded-full border-2 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
                             estado === 'azul'
                               ? 'bg-blue-600 border-blue-400 scale-110 shadow-lg shadow-blue-900/40'
@@ -719,7 +720,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                           value={val || ''}
                           onChange={(num) => handleBulkVistoAction(ativ.id, num === null ? null : String(num))}
                           max={10}
-                          disabled={isLdg || isLocked || isPosterior || isTransferido}
+                          disabled={isLdg || isLocked || isPosterior}
                           className={`w-10 md:w-12 text-center py-0.5 md:py-1 px-0.5 md:px-1 rounded border outline-none font-bold text-[10px] md:text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-blue-500 ${
                             theme === 'light' ? 'bg-blue-50 border-blue-200 text-blue-900' : 'bg-gray-900 border-gray-700 text-white'
                           }`}
@@ -732,7 +733,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         <select
                           value={val || ''}
                           onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value || null)}
-                          disabled={isLdg || isLocked || isPosterior || isTransferido}
+                          disabled={isLdg || isLocked || isPosterior}
                           className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed py-0.5 md:py-1 px-0.5 md:px-1 w-10 md:w-12`}
                         >
                           <option value="">—</option>
@@ -746,7 +747,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                         <select
                           value={val || ''}
                           onChange={(e) => handleBulkVistoAction(ativ.id, e.target.value || null)}
-                          disabled={isLdg || isLocked || isPosterior || isTransferido}
+                          disabled={isLdg || isLocked || isPosterior}
                           className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed py-0.5 md:py-1 px-0.5 md:px-1 w-12 md:w-14`}
                         >
                           <option value="">—</option>
@@ -764,7 +765,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 })}
                 
                 {/* Botão Marcar Todos (Individual) */}
-                {!isPosterior && !isTransferido && !isLocked && bulkAtividades.length > 1 && (() => {
+                {!isPosterior && !isLocked && bulkAtividades.length > 1 && (() => {
                    const defaultVal = configEfetivo.config_visto_metodo === 'ponto' ? '.' : 
                                       configEfetivo.config_visto_metodo === 'simbolico' ? '+' : 
                                       configEfetivo.config_visto_metodo === 'gradual' ? '1.0' : '10';
@@ -795,7 +796,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                               key={v}
                               title={v === '0' ? 'Viu o caderno, aluno não fez' : undefined}
                               onClick={() => handleVistoAction(valorVisto === v ? null : v)}
-                              disabled={isLocked || isPosterior || isTransferido}
+                              disabled={isLocked || isPosterior}
                               className={`md:px-2 px-1 md:py-1.5 py-1 rounded-md text-[9px] md:text-[10px] font-black border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                                 valorVisto === v
                                   ? (v === '0' ? 'bg-red-600 text-white border-red-400' : 'bg-blue-600 text-white border-blue-400')
@@ -807,8 +808,8 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                 )}
                 {configEfetivo.config_visto_metodo === 'simbolico' && (
                     <div className="flex gap-1">
-                        <button title="Feito — 100%" onClick={() => handleVistoAction(valorVisto === '+' ? null : '+')} disabled={isLocked || isPosterior || isTransferido} className={`p-1.5 md:p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '+' ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-900/50' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
-                        <button title="Feito — 50%" onClick={() => handleVistoAction(valorVisto === '-' ? null : '-')} disabled={isLocked || isPosterior || isTransferido} className={`p-1.5 md:p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '-' ? 'bg-amber-500 text-white border-amber-400 shadow-lg shadow-amber-900/50' : theme === 'light' ? 'bg-amber-500/25 text-amber-700 border-amber-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Minus className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
+                        <button title="Feito — 100%" onClick={() => handleVistoAction(valorVisto === '+' ? null : '+')} disabled={isLocked || isPosterior} className={`p-1.5 md:p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '+' ? 'bg-blue-600 text-white border-blue-400 shadow-lg shadow-blue-900/50' : theme === 'light' ? 'bg-blue-500/25 text-blue-700 border-blue-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Plus className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
+                        <button title="Feito — 50%" onClick={() => handleVistoAction(valorVisto === '-' ? null : '-')} disabled={isLocked || isPosterior} className={`p-1.5 md:p-2 rounded-md border transition-all disabled:opacity-50 disabled:cursor-not-allowed ${valorVisto === '-' ? 'bg-amber-500 text-white border-amber-400 shadow-lg shadow-amber-900/50' : theme === 'light' ? 'bg-amber-500/25 text-amber-700 border-amber-500/20' : 'bg-gray-800 text-blue-200 border-gray-700'}`}><Minus className="w-3.5 h-3.5 md:w-4 md:h-4" /></button>
                     </div>
                 )}
                 {configEfetivo.config_visto_metodo === 'ponto' && (() => {
@@ -821,7 +822,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                     <button
                         title={titulo}
                         onClick={() => handleVistoAction(proximoPonto(valorVisto))}
-                        disabled={isLocked || isPosterior || isTransferido}
+                        disabled={isLocked || isPosterior}
                         className={`w-8 md:w-10 h-8 md:h-10 rounded-full border-2 transition-all flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed ${
                             estado === 'azul'
                                 ? 'bg-blue-600 text-white border-blue-400 scale-110 shadow-lg'
@@ -844,7 +845,7 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
                             value={valorVisto || ''}
                             onChange={(num) => handleVistoAction(num === null ? null : String(num))}
                             max={10}
-                            disabled={isLocked || isPosterior || isTransferido}
+                            disabled={isLocked || isPosterior}
                             className={`w-full text-center p-1 md:p-2 rounded-lg border outline-none font-bold text-xs md:text-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
                                 theme === 'light'
                                     ? 'bg-blue-50 border-blue-100 text-blue-900 focus:ring-2 focus:ring-blue-500'
@@ -865,53 +866,57 @@ export function StudentRow({ aluno, professor, dataAula, bimestreId, descricaoAt
           <div className="relative flex items-center justify-center gap-1 md:gap-2" ref={destinoMenuRef}>
             <button
               onClick={() => setIsOcorrenciaOpen(true)}
-              disabled={isLocked}
+              disabled={isLocked || isPosterior}
               className="p-1.5 md:p-2.5 rounded-lg border border-amber-500/30 text-amber-500 hover:bg-amber-500/20 shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               title="Registrar Ocorrência"
             >
               <AlertTriangle className="w-3.5 h-3.5 md:w-4 md:h-4" />
             </button>
 
-            <button
-              onClick={() => {
-                if (isFora) {
-                  handleRetorno();
-                } else {
-                  setShowDestinoMenu(prev => !prev);
-                }
-              }}
-              disabled={(isLocked && !isFora) || isPosterior}
-              className={`p-1.5 md:p-2.5 rounded-lg border transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
-                isFora
-                  ? 'bg-amber-500 text-white border-amber-400'
-                  : 'border-red-500/30 text-red-500 hover:bg-red-500/10'
-              }`}
-            >
-              <LogOut className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isFora ? 'rotate-180' : ''}`} />
-            </button>
+            {saidaSalaHabilitada && (
+              <>
+                <button
+                  onClick={() => {
+                    if (isFora) {
+                      handleRetorno();
+                    } else {
+                      setShowDestinoMenu(prev => !prev);
+                    }
+                  }}
+                  disabled={(isLocked && !isFora) || isPosterior}
+                  className={`p-1.5 md:p-2.5 rounded-lg border transition-all shadow-lg disabled:opacity-50 disabled:cursor-not-allowed ${
+                    isFora
+                      ? 'bg-amber-500 text-white border-amber-400'
+                      : 'border-red-500/30 text-red-500 hover:bg-red-500/10'
+                  }`}
+                >
+                  <LogOut className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isFora ? 'rotate-180' : ''}`} />
+                </button>
 
-            {/* Dropdown de destinos — fecha ao clicar fora via useEffect */}
-            {showDestinoMenu && (
-              <div className={`absolute right-0 top-full mt-2 w-44 rounded-xl shadow-2xl z-50 py-1.5 border ${
-                theme === 'light'
-                  ? 'bg-white border-blue-100'
-                  : 'bg-ms-card border-gray-700'
-              }`}>
-                <p className={`px-4 pt-1 pb-2 text-[9px] font-black uppercase tracking-widest border-b mb-1 ${
-                  theme === 'light' ? 'text-blue-400 border-blue-50' : 'text-blue-400 border-gray-700'
-                }`}>Para onde foi?</p>
-                {destinations.map(d => (
-                  <button
-                    key={d}
-                    onClick={() => handleSaida(d)}
-                    className={`block w-full text-left px-4 py-2 text-xs font-semibold transition-colors ${
-                      theme === 'light'
-                        ? 'text-blue-800 hover:bg-blue-50 hover:text-blue-900'
-                        : 'text-blue-200 hover:bg-blue-600/20 hover:text-white'
-                    }`}
-                  >{d}</button>
-                ))}
-              </div>
+                {/* Dropdown de destinos — fecha ao clicar fora via useEffect */}
+                {showDestinoMenu && (
+                  <div className={`absolute right-0 top-full mt-2 w-44 rounded-xl shadow-2xl z-50 py-1.5 border ${
+                    theme === 'light'
+                      ? 'bg-white border-blue-100'
+                      : 'bg-ms-card border-gray-700'
+                  }`}>
+                    <p className={`px-4 pt-1 pb-2 text-[9px] font-black uppercase tracking-widest border-b mb-1 ${
+                      theme === 'light' ? 'text-blue-400 border-blue-50' : 'text-blue-400 border-gray-700'
+                    }`}>Para onde foi?</p>
+                    {destinations.map(d => (
+                      <button
+                        key={d}
+                        onClick={() => handleSaida(d)}
+                        className={`block w-full text-left px-4 py-2 text-xs font-semibold transition-colors ${
+                          theme === 'light'
+                            ? 'text-blue-800 hover:bg-blue-50 hover:text-blue-900'
+                            : 'text-blue-200 hover:bg-blue-600/20 hover:text-white'
+                        }`}
+                      >{d}</button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </div>
         </td>

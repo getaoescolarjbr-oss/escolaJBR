@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, Avaliacao, NotaAvaliacao, ListaParaVistos } from '../types';
 import { Plus, Save, Trash2, Calculator, Info, TrendingUp, X, Sparkles, CheckCheck, Loader2 } from 'lucide-react';
-import { autoUpdateExpiredAbsences, isStudentAbsentOnDate } from '../utils/studentUtils';
-import { arredondarNotaMS, getCorGradiente, getBimestreFromDate, pesoDoVisto } from '../utils/academicUtils';
+import { autoUpdateExpiredAbsences, isStudentAbsentOnDate, isStudentInativoNoBimestre } from '../utils/studentUtils';
+import { arredondarNotaMS, getCorGradiente, pesoDoVisto } from '../utils/academicUtils';
 import { RAVListModal } from './RAVListModal';
 import { DecimalInput } from './DecimalInput';
 import { buscarNotasBloqueadas } from '../services/avaliacoesService';
@@ -558,10 +558,7 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                         </thead>
                         <tbody className="divide-y divide-ms-border/30">
                         {alunos.map((aluno, idx) => {
-                            const isPosterior = (aluno.status === 'Transferido' || aluno.status === 'Remanejado' || aluno.status === 'Cancelada') && (() => {
-                              const exitBim = getBimestreFromDate(aluno.atestado_inicio);
-                              return exitBim !== null && bimestreId > exitBim;
-                            })();
+                            const isPosterior = isStudentInativoNoBimestre(aluno, bimestreId);
 
                             const notaVisto = isPosterior ? 0 : (vistosCalculados[aluno.aluno_id] || 0);
                             let somaNotas = notaVisto;
@@ -596,7 +593,7 @@ export function GradesPanel({ professor, turmaId, disciplinaId, bimestreId, them
                                     <span className={`text-[10px] sm:text-xs font-bold leading-tight ${
                                       isAbsentToday
                                         ? 'animate-pulse text-red-650 dark:text-red-400 bg-red-500/10 border border-red-500/20 px-2 py-0.5 rounded-lg'
-                                        : aluno.status === 'Transferido' || aluno.status === 'Remanejado'
+                                        : aluno.status === 'Transferido' || aluno.status === 'Remanejado' || aluno.status === 'Cancelada'
                                           ? 'line-through text-gray-500 opacity-60'
                                           : theme === 'light' ? 'text-blue-950' : 'text-ms-main'
                                     }`} title={aluno.aluno_nome}>

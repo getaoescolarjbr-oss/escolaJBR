@@ -93,6 +93,9 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   const hasAutoSelected = useRef(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
   const [lockedBimestres, setLockedBimestres] = useState<number[]>([]);
+  // "Saída de Sala" desligado por padrão — feature pouco usada, o admin liga em Painel Admin >
+  // Parâmetros Gerais quando quiser (ver RAVConfigManager.tsx).
+  const [saidaSalaHabilitada, setSaidaSalaHabilitada] = useState(false);
   // --- Estado de Atestado ---
   // Cada turma é bloqueada/travada de acordo com o que foi de fato espelhado para um substituto
   // (alocacoes_v2.atestado_id) — não é mais tudo-ou-nada por professor (pode ter mais de um
@@ -130,6 +133,23 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
     }
     loadLockedBimestres();
   }, [selectedBimestre]);
+
+  useEffect(() => {
+    async function loadSaidaSalaConfig() {
+      try {
+        const { data } = await supabase
+          .from('landing_avisos')
+          .select('mensagem')
+          .eq('titulo', 'SAIDA_SALA_HABILITADA')
+          .eq('cor_alerta', 'config')
+          .maybeSingle();
+        setSaidaSalaHabilitada(data?.mensagem === 'true');
+      } catch (err) {
+        console.error('Erro ao buscar configuração de Saída de Sala:', err);
+      }
+    }
+    loadSaidaSalaConfig();
+  }, []);
 
   // --- Verificar atestado / substituição ativa ---
   useEffect(() => {
@@ -229,8 +249,11 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   // A turma selecionada está coberta por algum atestado ativo do titular (com ou sem bloqueio)?
   const atestadoDaTurmaSelecionada = selectedTurma ? turmasSomenteLeitura.get(selectedTurma) : undefined;
   const isTitularEmAtestado = !!atestadoDaTurmaSelecionada;
-  // Read-only efetivo: bimestre bloqueado OU a turma selecionada está em atestado
-  const isEffectivelyLocked = isBimestreLocked || isTitularEmAtestado;
+  // Se o professor LOGADO é o substituto desta turma+disciplina, ele PODE lançar —
+  // o bloqueio de somente-leitura é para o titular afastado, não para quem assumiu.
+  const isSubstituindoEstaTurma = !!(selectedTurma && selectedDisciplina && espelhos[`${selectedTurma}|${selectedDisciplina}`]);
+  // Read-only efetivo: bimestre bloqueado OU titular em atestado (e o logado NÃO é o substituto desta turma)
+  const isEffectivelyLocked = isBimestreLocked || (isTitularEmAtestado && !isSubstituindoEstaTurma);
 
   // Turmas com bloqueio ligado (substituto assumiu de vez): somem do seletor do titular.
   const turmasDisponiveis = turmas.filter((t) => !turmasBloqueadas.has(t.id));
@@ -1103,9 +1126,10 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                     : []
                 }
                 isLocked={isEffectivelyLocked}
+                saidaSalaHabilitada={saidaSalaHabilitada}
               />
             )}
-            
+
             {activeTab === 'notas' && selectedBimestre !== 5 && (
               <GradesPanel 
                 professor={professorDados}

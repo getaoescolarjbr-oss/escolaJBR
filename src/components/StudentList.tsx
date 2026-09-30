@@ -30,6 +30,8 @@ interface StudentListProps {
   onAtividadeLoaded?: (descricao: string, id: string | null) => void;
   bulkAtividades?: { id: string; data: string; descricao: string }[];
   isLocked?: boolean;
+  // Liga/desliga o botão de Saída de Sala — configuração geral do admin (padrão: desligado).
+  saidaSalaHabilitada?: boolean;
   // ID da atividade controlado pelo Dashboard (ex.: atalho clicado ou "Nova Atividade").
   // Quando muda, sincroniza a atividade/vistos exibidos sem esperar um refetch completo.
   selectedAtividadeId?: string | null;
@@ -41,7 +43,7 @@ interface StudentListProps {
   refreshKey?: number;
 }
 
-export function StudentList({ professor, turmaId, disciplinaId, dataAula = new Date().toISOString().split('T')[0], bimestreId, descricaoAtividade, theme, onAtividadeLoaded, bulkAtividades = [], isLocked = false, selectedAtividadeId, forceNovaAtividade = false, refreshKey = 0 }: StudentListProps) {
+export function StudentList({ professor, turmaId, disciplinaId, dataAula = new Date().toISOString().split('T')[0], bimestreId, descricaoAtividade, theme, onAtividadeLoaded, bulkAtividades = [], isLocked = false, saidaSalaHabilitada = false, selectedAtividadeId, forceNovaAtividade = false, refreshKey = 0 }: StudentListProps) {
   // Config efetiva para esta turma (per-turma ou global)
   const configEfetivo = getConfigPorTurma(professor, turmaId);
   const [alunos, setAlunos] = useState<ListaParaVistos[]>([]);
@@ -321,19 +323,22 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
       setEstatisticasVistos(currentStats);
       setNotasDetalhes(breakdownObj);
 
-      // 8. Buscar Saídas de Sala (Sincronização)
-      const { data: saidas } = await supabase
-        .from('saidas_sala')
-        .select('id, aluno_id')
-        .eq('turma_id', turmaId)
-        .eq('status', 'Fora');
-      
-      if (saidas) {
-          const mapSaidas: Record<string, string> = {};
-          saidas.forEach(s => { mapSaidas[String(s.aluno_id).trim()] = s.id; });
-          setSaidasAtivas(mapSaidas);
-      } else {
-          setSaidasAtivas({});
+      // 8. Buscar Saídas de Sala (Sincronização) — só quando a funcionalidade está habilitada
+      // pelo admin (Painel Admin > Parâmetros Gerais); desligada por padrão.
+      if (saidaSalaHabilitada) {
+        const { data: saidas } = await supabase
+          .from('saidas_sala')
+          .select('id, aluno_id')
+          .eq('turma_id', turmaId)
+          .eq('status', 'Fora');
+
+        if (saidas) {
+            const mapSaidas: Record<string, string> = {};
+            saidas.forEach(s => { mapSaidas[String(s.aluno_id).trim()] = s.id; });
+            setSaidasAtivas(mapSaidas);
+        } else {
+            setSaidasAtivas({});
+        }
       }
 
       setLoading(false);
@@ -346,7 +351,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
 
   // Polling para saidas_sala para manter sincronizado com o mobile
   useEffect(() => {
-    if (!turmaId) return;
+    if (!turmaId || !saidaSalaHabilitada) return;
     const fetchSaidas = async () => {
       const { data: saidas } = await supabase
         .from('saidas_sala')
@@ -364,7 +369,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
     };
     
     return iniciarPolling(fetchSaidas, 15000); // sync a cada 15 s, só com a aba visível
-  }, [turmaId]);
+  }, [turmaId, saidaSalaHabilitada]);
 
   const handleUpdateVistoStat = (alunoId: string, valorAntigo: string | null, novoValor: string | null) => {
     const pesoAntigo = pesoDoVisto(valorAntigo);
@@ -693,6 +698,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
                     !!notasDetalhes[a.aluno_id] && !['Transferido', 'Remanejado', 'Cancelada'].includes(a.status ?? '')
                   )}
                   isLocked={isLocked}
+                  saidaSalaHabilitada={saidaSalaHabilitada}
                 />
               ))}
               {alunos.length === 0 && (

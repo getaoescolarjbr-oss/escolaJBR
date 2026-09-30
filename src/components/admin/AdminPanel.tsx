@@ -23,7 +23,7 @@ export function AdminPanel({ onBack, theme }: AdminPanelProps) {
     { id: 'alunos',       label: 'Alunos',      icon: GraduationCap },
     { id: 'ocorrencias',  label: 'Ocorrências', icon: AlertTriangle },
     { id: 'calendario',   label: 'Calendário',  icon: CalendarDays },
-    { id: 'config_rav',   label: 'Parâmetros RAV', icon: Settings },
+    { id: 'config_rav',   label: 'Parâmetros Gerais', icon: Settings },
   ];
 
   return (

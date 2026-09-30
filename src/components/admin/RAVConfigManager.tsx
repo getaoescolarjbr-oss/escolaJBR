@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Settings, Save, Loader2, CheckCircle, HelpCircle, Calendar, Layers } from 'lucide-react';
+import { Settings, Save, Loader2, CheckCircle, HelpCircle, Calendar, Layers, DoorOpen } from 'lucide-react';
 
 interface RAVConfigManagerProps {
   theme: 'dark' | 'light';
@@ -11,6 +11,11 @@ export function RAVConfigManager({ theme }: RAVConfigManagerProps) {
   const [saving, setSaving] = useState(false);
   const [mode, setMode] = useState<'bimestral' | 'semestral'>('bimestral');
   const [success, setSuccess] = useState(false);
+
+  // Saída de Sala: pouco usada, desligada por padrão — o admin liga aqui quando quiser.
+  const [saidaSalaHabilitada, setSaidaSalaHabilitada] = useState(false);
+  const [savingSaidaSala, setSavingSaidaSala] = useState(false);
+  const [successSaidaSala, setSuccessSaidaSala] = useState(false);
 
   useEffect(() => {
     async function loadConfig() {
@@ -41,8 +46,59 @@ export function RAVConfigManager({ theme }: RAVConfigManagerProps) {
       }
     }
 
+    async function loadSaidaSalaConfig() {
+      try {
+        const { data } = await supabase
+          .from('landing_avisos')
+          .select('mensagem')
+          .eq('titulo', 'SAIDA_SALA_HABILITADA')
+          .eq('cor_alerta', 'config')
+          .maybeSingle();
+        setSaidaSalaHabilitada(data?.mensagem === 'true');
+      } catch (err) {
+        console.error('Erro ao carregar configuração de Saída de Sala:', err);
+      }
+    }
+
     loadConfig();
+    loadSaidaSalaConfig();
   }, []);
+
+  const handleToggleSaidaSala = async () => {
+    const novoValor = !saidaSalaHabilitada;
+    setSavingSaidaSala(true);
+    setSuccessSaidaSala(false);
+    try {
+      const { data: existing } = await supabase
+        .from('landing_avisos')
+        .select('id')
+        .eq('titulo', 'SAIDA_SALA_HABILITADA')
+        .eq('cor_alerta', 'config')
+        .maybeSingle();
+
+      if (existing?.id) {
+        const { error } = await supabase
+          .from('landing_avisos')
+          .update({ mensagem: String(novoValor) })
+          .eq('id', existing.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('landing_avisos')
+          .insert([{ titulo: 'SAIDA_SALA_HABILITADA', mensagem: String(novoValor), cor_alerta: 'config' }]);
+        if (error) throw error;
+      }
+
+      setSaidaSalaHabilitada(novoValor);
+      setSuccessSaidaSala(true);
+      setTimeout(() => setSuccessSaidaSala(false), 3000);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : JSON.stringify(err);
+      alert('Erro ao salvar configuração de Saída de Sala: ' + msg);
+    } finally {
+      setSavingSaidaSala(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
@@ -108,6 +164,7 @@ export function RAVConfigManager({ theme }: RAVConfigManagerProps) {
   };
 
   return (
+    <div className="space-y-6">
     <div className="bg-ms-card rounded-3xl border border-ms-border overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
       {/* Header */}
       <div className="px-8 py-6 border-b border-ms-border bg-ms-dark/30">
@@ -260,6 +317,52 @@ export function RAVConfigManager({ theme }: RAVConfigManagerProps) {
           </div>
         )}
       </div>
+    </div>
+
+    {/* Card: Funcionalidades do Diário */}
+    <div className="bg-ms-card rounded-3xl border border-ms-border overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-300">
+      <div className="px-8 py-6 border-b border-ms-border bg-ms-dark/30">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-ms-blue/20 flex items-center justify-center text-ms-blueText border border-ms-blueText/30 shadow-lg">
+            <DoorOpen className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-ms-main tracking-tight">Funcionalidades do Diário</h2>
+            <p className="text-xs text-[#003366] font-bold uppercase tracking-wider">Recursos que os professores podem usar em sala</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-8">
+        <div className="flex items-center justify-between gap-4 p-5 rounded-2xl border border-ms-border bg-ms-dark/20 max-w-3xl">
+          <div>
+            <h3 className={`text-sm font-black ${theme === 'light' ? 'text-blue-900' : 'text-white'}`}>Registro de Saída de Sala</h3>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed max-w-lg">
+              Botão no diário do professor para marcar quando um aluno sai da sala (banheiro, secretaria etc.) e
+              controlar o retorno. Desligado por padrão — ligue aqui se a escola for usar.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleToggleSaidaSala}
+            disabled={savingSaidaSala}
+            className={`relative w-14 h-7 rounded-full transition-colors shrink-0 disabled:opacity-50 ${
+              saidaSalaHabilitada ? 'bg-emerald-600' : 'bg-gray-700'
+            }`}
+            title={saidaSalaHabilitada ? 'Habilitado — clique para desligar' : 'Desligado — clique para habilitar'}
+          >
+            <span className={`absolute top-1 left-1 w-5 h-5 rounded-full bg-white transition-transform ${
+              saidaSalaHabilitada ? 'translate-x-7' : ''
+            }`} />
+          </button>
+        </div>
+        {successSaidaSala && (
+          <div className="flex items-center gap-2 text-emerald-500 font-bold text-xs mt-3 animate-in fade-in zoom-in duration-200">
+            <CheckCircle className="w-4 h-4" /> Configuração salva com sucesso!
+          </div>
+        )}
+      </div>
+    </div>
     </div>
   );
 }

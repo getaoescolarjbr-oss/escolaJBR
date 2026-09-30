@@ -1740,7 +1740,11 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                                    <div className="flex items-center gap-3">
                                        <span className="text-[10px] font-black text-ms-gold">{aluno.aluno_numero || '-'}</span>
                                        <div className="flex flex-col min-w-0">
-                                         <span className={`text-xs font-bold truncate max-w-[200px] ${isInactive ? 'text-gray-400' : 'text-ms-main'}`} title={aluno.nome}>{aluno.nome}</span>
+                                         <span className={`text-xs font-bold truncate max-w-[200px] ${
+                                           aluno.status === 'Transferido' || aluno.status === 'Remanejado' || aluno.status === 'Cancelada'
+                                             ? 'line-through text-gray-500 opacity-60'
+                                             : isInactive ? 'text-gray-400' : 'text-ms-main'
+                                         }`} title={aluno.nome}>{aluno.nome}</span>
                                          {isInactive && (
                                            <span className={`mt-0.5 inline-flex items-center px-1.5 py-0 rounded text-[8px] font-black uppercase tracking-wider border ${statusColor}`}>
                                              {statusLabel}
