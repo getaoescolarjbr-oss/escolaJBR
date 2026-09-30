@@ -8,6 +8,7 @@ export interface ResultadoTransferencia {
   simulado: boolean;
   transferencia_id?: string;
   turma_scoped: boolean;
+  disciplina_scoped?: boolean;
   origem: { id: string; nome: string };
   destino: { id: string; nome: string };
   contagens: Record<string, number>;
@@ -42,19 +43,21 @@ function mensagem(error: { message?: string } | null): string {
   return error?.message ?? 'Erro desconhecido.';
 }
 
-export async function simularTransferencia(origemId: string, destinoId: string, incluirOcorrencias: boolean, turmaIds?: string[]): Promise<ResultadoTransferencia> {
+// alocacaoIds: pares turma + disciplina (ids de alocacoes_v2) que passam para o destino. Sem eles,
+// transfere tudo. Permite dividir as disciplinas de uma mesma turma entre dois professores.
+export async function simularTransferencia(origemId: string, destinoId: string, incluirOcorrencias: boolean, alocacaoIds?: string[]): Promise<ResultadoTransferencia> {
   const { data, error } = await supabase.rpc('rpc_transferir_professor', {
     p_origem: origemId, p_destino: destinoId, p_simular: true, p_incluir_ocorrencias: incluirOcorrencias, p_observacao: null,
-    p_turma_ids: turmaIds ?? null,
+    p_alocacao_ids: alocacaoIds ?? null,
   });
   if (error) throw new Error(mensagem(error));
   return data as ResultadoTransferencia;
 }
 
-export async function executarTransferencia(origemId: string, destinoId: string, incluirOcorrencias: boolean, observacao: string, turmaIds?: string[]): Promise<ResultadoTransferencia> {
+export async function executarTransferencia(origemId: string, destinoId: string, incluirOcorrencias: boolean, observacao: string, alocacaoIds?: string[]): Promise<ResultadoTransferencia> {
   const { data, error } = await supabase.rpc('rpc_transferir_professor', {
     p_origem: origemId, p_destino: destinoId, p_simular: false, p_incluir_ocorrencias: incluirOcorrencias, p_observacao: observacao.trim() || null,
-    p_turma_ids: turmaIds ?? null,
+    p_alocacao_ids: alocacaoIds ?? null,
   });
   if (error) throw new Error(mensagem(error));
   return data as ResultadoTransferencia;

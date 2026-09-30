@@ -25,7 +25,8 @@ interface TransferirProfessorModalProps {
 // Saída definitiva de um professor: turmas, diário, avaliações e horários passam a outro professor.
 // Fluxo: escolher o destino → SIMULAR (só conta, não altera) → confirmar digitando TRANSFERIR.
 // Tudo pode ser desfeito depois pelo histórico abaixo.
-interface TurmaOrigem { id: string; nome: string }
+// Uma alocação do professor de origem = um par turma + disciplina (é o que se escolhe transferir).
+interface AlocacaoOrigem { id: string; turmaId: string; turma: string; disciplina: string | null }
 
 export function TransferirProfessorModal({ origem, todos, onClose }: TransferirProfessorModalProps) {
   const [destinoId, setDestinoId] = useState('');
@@ -37,8 +38,8 @@ export function TransferirProfessorModal({ origem, todos, onClose }: TransferirP
   const [erro, setErro] = useState<string | null>(null);
   const [feita, setFeita] = useState<ResultadoTransferencia | null>(null);
   const [historico, setHistorico] = useState<RegistroTransferencia[]>([]);
-  const [turmasOrigem, setTurmasOrigem] = useState<TurmaOrigem[]>([]);
-  const [turmasSelecionadas, setTurmasSelecionadas] = useState<Set<string>>(new Set());
+  const [alocOrigem, setAlocOrigem] = useState<AlocacaoOrigem[]>([]);
+  const [selecionadas, setSelecionadas] = useState<Set<string>>(new Set());
 
   const candidatos = useMemo(
     () => todos.filter((p) => p.id !== origem.id).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR')),
@@ -53,22 +54,23 @@ export function TransferirProfessorModal({ origem, todos, onClose }: TransferirP
     }
   }, [origem.id]);
 
-  // Turmas que ainda são do professor de origem agora — usado para permitir escolher só
-  // algumas (quando as aulas dele foram/vão ser divididas entre dois professores).
+  // Turmas E disciplinas que ainda são do professor de origem agora: permite escolher só algumas
+  // (quando as aulas dele foram/vão ser divididas entre professores — inclusive duas disciplinas
+  // da mesma turma indo para professores diferentes).
   const carregarTurmasOrigem = useCallback(async () => {
     const { data } = await supabase
       .from('alocacoes_v2')
-      .select('turma_id, turmas(nome)')
+      .select('id, turma_id, turmas(nome), disciplinas(nome)')
       .eq('professor_id', origem.id)
       .eq('is_espelho', false);
-    const unicas = new Map<string, string>();
-    (data ?? []).forEach((a: { turma_id: string; turmas: { nome: string } | { nome: string }[] | null }) => {
-      const nome = Array.isArray(a.turmas) ? a.turmas[0]?.nome : a.turmas?.nome;
-      if (nome) unicas.set(a.turma_id, nome);
-    });
-    const lista = Array.from(unicas, ([id, nome]) => ({ id, nome })).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
-    setTurmasOrigem(lista);
-    setTurmasSelecionadas(new Set(lista.map((t) => t.id)));
+    const um = <T,>(v: T | T[] | null): T | null => (Array.isArray(v) ? v[0] ?? null : v);
+    const lista: AlocacaoOrigem[] = (data ?? [])
+      .map((a: { id: string; turma_id: string; turmas: { nome: string } | { nome: string }[] | null; disciplinas: { nome: string } | { nome: string }[] | null }) => ({
+        id: a.id, turmaId: a.turma_id, turma: um(a.turmas)?.nome ?? 'Turma', disciplina: um(a.disciplinas)?.nome ?? null,
+      }))
+      .sort((a, b) => a.turma.localeCompare(b.turma, 'pt-BR', { numeric: true }) || (a.disciplina ?? '').localeCompare(b.disciplina ?? '', 'pt-BR'));
+    setAlocOrigem(lista);
+    setSelecionadas(new Set(lista.map((x) => x.id)));
   }, [origem.id]);
 
   useEffect(() => {
@@ -83,8 +85,8 @@ export function TransferirProfessorModal({ origem, todos, onClose }: TransferirP
     setErro(null);
   }
 
-  function alternarTurma(id: string) {
-    setTurmasSelecionadas((prev) => {
+  function alternarAlocacao(id: string) {
+    setSelecionadas((prev) => {
       const proximo = new Set(prev);
       if (proximo.has(id)) proximo.delete(id); else proximo.add(id);
       return proximo;
@@ -92,19 +94,40 @@ export function TransferirProfessorModal({ origem, todos, onClose }: TransferirP
     mudou();
   }
 
-  // Quando todas as turmas estão marcadas, transfere tudo (comportamento de sempre); só manda
-  // a lista quando é um subconjunto — assim cotas de avaliação da área etc. continuam migrando
-  // normalmente numa transferência completa.
-  const turmaIdsParaEnviar = turmasSelecionadas.size > 0 && turmasSelecionadas.size < turmasOrigem.length
-    ? Array.from(turmasSelecionadas)
+  // Marca/desmarca todas as disciplinas de uma turma de uma vez.
+  function alternarTurma(turmaId: string) {
+    const ids = alocOrigem.filter((x) => x.turmaId === turmaId).map((x) => x.id);
+    const todasMarcadas = ids.every((id) => selecionadas.has(id));
+    setSelecionadas((prev) => {
+      const proximo = new Set(prev);
+      ids.forEach((id) => (todasMarcadas ? proximo.delete(id) : proximo.add(id)));
+      return proximo;
+    });
+    mudou();
+  }
+
+  // Quando tudo está marcado, transfere tudo (comportamento de sempre, inclusive cotas de avaliação
+  // da área); só manda a lista quando é um subconjunto de turma+disciplina.
+  const alocacaoIdsParaEnviar = selecionadas.size > 0 && selecionadas.size < alocOrigem.length
+    ? Array.from(selecionadas)
     : undefined;
 
+  const turmasAgrupadas = useMemo(() => {
+    const mapa = new Map<string, { turmaId: string; turma: string; itens: AlocacaoOrigem[] }>();
+    alocOrigem.forEach((a) => {
+      const g = mapa.get(a.turmaId) ?? { turmaId: a.turmaId, turma: a.turma, itens: [] };
+      g.itens.push(a);
+      mapa.set(a.turmaId, g);
+    });
+    return Array.from(mapa.values());
+  }, [alocOrigem]);
+
   async function simular() {
-    if (!destinoId || turmasSelecionadas.size === 0) return;
+    if (!destinoId || selecionadas.size === 0) return;
     setOcupado(true);
     setErro(null);
     try {
-      setSimulacao(await simularTransferencia(origem.id, destinoId, incluirOcorrencias, turmaIdsParaEnviar));
+      setSimulacao(await simularTransferencia(origem.id, destinoId, incluirOcorrencias, alocacaoIdsParaEnviar));
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro ao simular.');
     } finally {
@@ -117,7 +140,7 @@ export function TransferirProfessorModal({ origem, todos, onClose }: TransferirP
     setOcupado(true);
     setErro(null);
     try {
-      setFeita(await executarTransferencia(origem.id, destinoId, incluirOcorrencias, observacao, turmaIdsParaEnviar));
+      setFeita(await executarTransferencia(origem.id, destinoId, incluirOcorrencias, observacao, alocacaoIdsParaEnviar));
       setSimulacao(null);
       await Promise.all([carregarHistorico(), carregarTurmasOrigem()]);
     } catch (e) {
@@ -170,11 +193,11 @@ export function TransferirProfessorModal({ origem, todos, onClose }: TransferirP
             <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0" />
             <div className="space-y-2">
               <span>Transferência concluída: de <b>{feita.origem.nome}</b> para <b>{feita.destino.nome}</b>. Se algo estiver errado, desfaça pelo histórico abaixo.</span>
-              {turmasOrigem.length > 0 && (
+              {alocOrigem.length > 0 && (
                 <div>
-                  <p className="text-xs text-green-400/80">Ainda ficaram com {origem.nome}: {turmasOrigem.map((t) => t.nome).join(', ')}.</p>
+                  <p className="text-xs text-green-400/80">Ainda ficaram com {origem.nome}: {alocOrigem.map((x) => (x.disciplina ? `${x.turma} (${x.disciplina})` : x.turma)).join(', ')}.</p>
                   <button onClick={transferirMais} className="mt-1 flex items-center gap-1.5 text-xs font-bold text-ms-blue hover:underline">
-                    <ArrowRightLeft className="w-3.5 h-3.5" /> Transferir essas turmas para outro professor
+                    <ArrowRightLeft className="w-3.5 h-3.5" /> Transferir essas turmas/disciplinas para outro professor
                   </button>
                 </div>
               )}
@@ -192,20 +215,31 @@ export function TransferirProfessorModal({ origem, todos, onClose }: TransferirP
               </select>
             </label>
 
-            {turmasOrigem.length > 1 && (
-              <div className="space-y-1.5">
+            {alocOrigem.length > 1 && (
+              <div className="space-y-2">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
-                  Turmas a transferir <span className="text-gray-500 normal-case font-normal">(desmarque para dividir com outro professor depois)</span>
+                  Turmas e disciplinas a transferir <span className="text-gray-500 normal-case font-normal">(desmarque o que vai para outro professor; dá para dividir as disciplinas de uma mesma turma)</span>
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  {turmasOrigem.map((t) => (
-                    <label key={t.id} className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border cursor-pointer ${turmasSelecionadas.has(t.id) ? 'border-ms-blue bg-ms-blue/10 text-ms-main' : 'border-gray-700 text-gray-500'}`}>
-                      <input type="checkbox" checked={turmasSelecionadas.has(t.id)} onChange={() => alternarTurma(t.id)} className="w-3.5 h-3.5" />
-                      {t.nome}
-                    </label>
-                  ))}
+                <div className="space-y-1.5">
+                  {turmasAgrupadas.map((g) => {
+                    const marcadas = g.itens.filter((x) => selecionadas.has(x.id)).length;
+                    return (
+                      <div key={g.turmaId} className="flex flex-wrap items-center gap-2 rounded-lg border border-gray-800 px-2.5 py-1.5">
+                        <button type="button" onClick={() => alternarTurma(g.turmaId)} className="text-xs font-black text-ms-main min-w-[4.5rem] text-left hover:text-ms-blueText" title="Marcar/desmarcar todas as disciplinas desta turma">
+                          {g.turma}
+                          {g.itens.length > 1 && <span className="ml-1 text-[10px] font-normal text-gray-500">{marcadas}/{g.itens.length}</span>}
+                        </button>
+                        {g.itens.map((a) => (
+                          <label key={a.id} className={`flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-lg border cursor-pointer ${selecionadas.has(a.id) ? 'border-ms-blue bg-ms-blue/10 text-ms-main' : 'border-gray-700 text-gray-500'}`}>
+                            <input type="checkbox" checked={selecionadas.has(a.id)} onChange={() => alternarAlocacao(a.id)} className="w-3.5 h-3.5" />
+                            {a.disciplina ?? 'Sem disciplina'}
+                          </label>
+                        ))}
+                      </div>
+                    );
+                  })}
                 </div>
-                {turmasSelecionadas.size === 0 && <p className="text-xs text-red-400">Escolha ao menos uma turma.</p>}
+                {selecionadas.size === 0 && <p className="text-xs text-red-400">Escolha ao menos uma turma/disciplina.</p>}
               </div>
             )}
 
@@ -214,7 +248,7 @@ export function TransferirProfessorModal({ origem, todos, onClose }: TransferirP
               <span>Levar também as ocorrências registradas por ele <span className="text-xs text-gray-500">(por padrão ficam com quem registrou, como histórico)</span></span>
             </label>
             <input placeholder="Observação (opcional): ex. saída em 24/09, assume o Prof. …" value={observacao} onChange={(e) => setObservacao(e.target.value)} className={campo} />
-            <button onClick={simular} disabled={!destinoId || turmasSelecionadas.size === 0 || ocupado} className="flex items-center gap-2 px-4 py-2 bg-ms-blue text-white text-sm font-bold rounded-lg disabled:opacity-50">
+            <button onClick={simular} disabled={!destinoId || selecionadas.size === 0 || ocupado} className="flex items-center gap-2 px-4 py-2 bg-ms-blue text-white text-sm font-bold rounded-lg disabled:opacity-50">
               {ocupado && !simulacao ? <Loader2 className="w-4 h-4 animate-spin" /> : <ArrowRightLeft className="w-4 h-4" />} Simular (não altera nada)
             </button>
           </section>
