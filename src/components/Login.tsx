@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { signInWithPassword, registerFirstAccess, resetPassword } from '../services/authService';
 import { AlunoAuth } from './AlunoAuth';
+import { CadastroServidorCampos } from './CadastroServidorCampos';
+import { emailJaCadastradoPelaEscola, solicitarCadastroServidor } from '../services/cadastroServidorService';
+import { CAMPOS_SERVIDOR_VAZIOS, validarCpf, type CamposServidor } from '../utils/cadastroServidor';
+
+const EMAIL_ADMIN = 'gestaoescolarjbr@gmail.com';
 
 interface LoginProps {
   onLogin: () => void;
@@ -24,6 +29,21 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
 
   const [showPassword, setShowPassword] = useState(false);
 
+  const [dadosServidor, setDadosServidor] = useState<CamposServidor>(CAMPOS_SERVIDOR_VAZIOS);
+  // null = ainda não consultado. true = e-mail já está na base da escola (fluxo antigo,
+  // só cria a senha). false = e-mail novo: pede os dados completos e aguarda aprovação.
+  const [emailNaBase, setEmailNaBase] = useState<boolean | null>(null);
+
+  const consultarEmail = async () => {
+    const valor = email.trim().toLowerCase();
+    if (!valor.includes('@')) { setEmailNaBase(null); return; }
+    try {
+      setEmailNaBase(valor === EMAIL_ADMIN || await emailJaCadastradoPelaEscola(valor));
+    } catch {
+      setEmailNaBase(null);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -44,14 +64,24 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
         // entao ler `professores` aqui exigia deixar a tabela legivel sem login — e isso
         // entregava os 67 e-mails da escola a quem pedisse. A RPC responde so sim ou nao
         // (ver fechar_exposicao_anon.sql).
-        const { data: ehProfessor, error: profError } = await supabase
-          .rpc('rpc_email_de_professor_existe', { p_email: email });
-        if (profError) throw profError;
+        const ehProfessor = await emailJaCadastradoPelaEscola(email);
+        const isAdminEmail = email === EMAIL_ADMIN;
 
-        const isAdminEmail = email === 'gestaoescolarjbr@gmail.com';
-
+        // E-mail novo: cadastro completo, sem acesso até a Secretaria/Gestão aprovar
+        // (ver create_cadastro_servidor_com_aprovacao.sql).
         if (!ehProfessor && !isAdminEmail) {
-          throw new Error("E-mail não encontrado na base de professores da escola.");
+          if (emailNaBase !== false) {
+            // Enviou antes de o formulário completo aparecer (ex.: Enter sem sair do campo).
+            setEmailNaBase(false);
+            throw new Error('Seu e-mail ainda não está na base da escola. Preencha os dados que apareceram e envie de novo.');
+          }
+          if (!validarCpf(dadosServidor.cpf)) throw new Error('CPF inválido. Confira os números digitados.');
+          if (dadosServidor.telefone.replace(/\D/g, '').length < 10) throw new Error('Informe o telefone com DDD.');
+          await solicitarCadastroServidor({ email, senha: password, ...dadosServidor });
+          setSuccess('Cadastro enviado! Você poderá entrar assim que a Secretaria ou a Gestão aprovar.');
+          setView('LOGIN');
+          setPassword('');
+          return;
         }
 
         // 2. Cria o usuário no auth
@@ -139,7 +169,8 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => { setEmail(e.target.value); setEmailNaBase(null); }}
+                  onBlur={view === 'REGISTER' ? consultarEmail : undefined}
                   placeholder="professor@escola.edu.br"
                   className="w-full px-4 py-3 bg-[#F0F2F5] border border-[#003366]/30 text-[#003366] rounded-lg focus:ring-2 focus:ring-[#003366] focus:border-[#003366] outline-none transition-all placeholder:text-gray-400 font-medium"
                 />
@@ -172,6 +203,10 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
                     </button>
                   </div>
                 </div>
+              )}
+
+              {view === 'REGISTER' && emailNaBase === false && (
+                <CadastroServidorCampos valores={dadosServidor} onChange={setDadosServidor} />
               )}
 
               {error && (

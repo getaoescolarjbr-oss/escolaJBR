@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Clock, XCircle, Loader2, BookOpen } from 'lucide-react';
 import { signOut } from '../../services/authService';
 import { meuCadastroPendente } from '../../services/cadastroBibliotecaService';
+import { meuCadastroServidor } from '../../services/cadastroServidorService';
 
 interface CadastroPendenteScreenProps {
   authUserId: string;
@@ -12,13 +13,22 @@ interface CadastroPendenteScreenProps {
 // da Secretaria aprovar) — evita cair na tela genérica de "perfil de professor não
 // encontrado", que não faz sentido pra este caso.
 export function CadastroPendenteScreen({ authUserId, onLogout }: CadastroPendenteScreenProps) {
-  const [status, setStatus] = useState<'PENDENTE' | 'REJEITADO' | 'DESCONHECIDO' | null>(null);
+  const [status, setStatus] = useState<'PENDENTE' | 'REJEITADO' | 'APROVADO_SERVIDOR' | 'DESCONHECIDO' | null>(null);
+  const [ehServidor, setEhServidor] = useState(false);
   const [observacoes, setObservacoes] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const timeout = setTimeout(async () => {
       try {
+        // Servidor (Portal do Servidor) primeiro; se não houver pedido, é o aluno do BiblioClube.
+        const servidor = await meuCadastroServidor(authUserId);
+        if (servidor) {
+          setEhServidor(true);
+          setStatus(servidor.status === 'APROVADO' ? 'APROVADO_SERVIDOR' : servidor.status);
+          setObservacoes(servidor.observacoes_analise);
+          return;
+        }
         const cadastro = await meuCadastroPendente(authUserId);
         setStatus(cadastro ? (cadastro.status === 'APROVADO' ? 'DESCONHECIDO' : cadastro.status) : 'DESCONHECIDO');
         setObservacoes(cadastro?.observacoes_analise ?? null);
@@ -40,6 +50,11 @@ export function CadastroPendenteScreen({ authUserId, onLogout }: CadastroPendent
         <BookOpen className="mx-auto w-10 h-10 text-ms-blueText mb-4" />
         {loading ? (
           <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" />
+        ) : status === 'APROVADO_SERVIDOR' ? (
+          <>
+            <h1 className="text-lg font-bold text-ms-main">Cadastro aprovado!</h1>
+            <p className="text-sm text-gray-400 mt-2">Seu acesso foi liberado. Toque em Sair e entre novamente.</p>
+          </>
         ) : status === 'REJEITADO' ? (
           <>
             <XCircle className="mx-auto w-10 h-10 text-red-400 mb-3" />
@@ -54,8 +69,9 @@ export function CadastroPendenteScreen({ authUserId, onLogout }: CadastroPendent
             <Clock className="mx-auto w-10 h-10 text-amber-400 mb-3" />
             <h1 className="text-lg font-bold text-ms-main">Cadastro em análise</h1>
             <p className="text-sm text-gray-400 mt-2">
-              Recebemos seu pedido para o BiblioClube! A Secretaria vai conferir seus dados de matrícula antes de liberar
-              o acesso. Volte a tentar entrar em alguns dias.
+              {ehServidor
+                ? 'Recebemos seu cadastro! A Secretaria ou a Gestão vai conferir seus dados antes de liberar o acesso. Volte a entrar em alguns dias.'
+                : 'Recebemos seu pedido para o BiblioClube! A Secretaria vai conferir seus dados de matrícula antes de liberar o acesso. Volte a tentar entrar em alguns dias.'}
             </p>
           </>
         ) : (
