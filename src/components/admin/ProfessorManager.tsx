@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import type { Professor, AtestadoServidor } from '../../types';
-import { Search, Plus, Edit2, Trash2, Loader2, Save, X, Stethoscope, AlertCircle, Cake, BadgeCheck, ArrowRightLeft } from 'lucide-react';
+import { Search, Plus, Edit2, Trash2, Loader2, Save, X, Stethoscope, AlertCircle, Cake, BadgeCheck, ArrowRightLeft, FolderOpen } from 'lucide-react';
 import { AtestadoModal } from './AtestadoModal';
 import { TransferirProfessorModal } from './TransferirProfessorModal';
+import { FichaServidorModal } from '../secretaria/FichaServidorModal';
 
 export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
   const [professors, setProfessors] = useState<Professor[]>([]);
@@ -15,6 +16,7 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
   const [editingProfessor, setEditingProfessor] = useState<Professor | null>(null);
   const [atestadoTarget, setAtestadoTarget] = useState<Professor | null>(null);
   const [transferirTarget, setTransferirTarget] = useState<Professor | null>(null);
+  const [fichaTarget, setFichaTarget] = useState<Professor | null>(null);
   const [atestadosAtivos, setAtestadosAtivos] = useState<Map<string, AtestadoServidor>>(new Map());
   const [customStatus, setCustomStatus] = useState<string[]>([]);
   const [formData, setFormData] = useState<Partial<Professor>>({
@@ -371,6 +373,13 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-center gap-2">
+                        <button
+                          onClick={() => setFichaTarget(p)}
+                          className="p-2 hover:bg-emerald-500/20 text-emerald-400 rounded-lg transition-all"
+                          title="Ficha do servidor: certificados, documentos, atestados e termos assinados"
+                        >
+                          <FolderOpen className="w-4 h-4" />
+                        </button>
                         {/* Botão Atestado */}
                         <button
                           onClick={() => setAtestadoTarget(p)}
@@ -570,6 +579,8 @@ export function ProfessorManager({ theme }: { theme: 'dark' | 'light' }) {
           </div>
         </div>
       )}
+
+      {fichaTarget && <FichaServidorModal servidor={fichaTarget} onClose={() => setFichaTarget(null)} />}
 
       {/* Modal de transferência definitiva (saída do professor) */}
       {transferirTarget && (

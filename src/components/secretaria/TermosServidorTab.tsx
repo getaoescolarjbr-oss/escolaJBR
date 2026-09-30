@@ -10,6 +10,7 @@ import {
 } from '../../services/termosServidorService';
 import { FUNDAMENTO_VALOR_PADRAO, gerarHtmlTermoConvocado, type DadosTermoConvocado } from '../../utils/termoConvocado';
 import { formatarCpf, formatarTelefone } from '../../utils/cadastroServidor';
+import { DocumentosServidor } from './DocumentosServidor';
 
 const CHAVE_PREFS = 'termo-convocado-prefs';
 const hoje = () => new Date().toISOString().slice(0, 10);
@@ -263,6 +264,15 @@ export function TermosServidorTab() {
             <Campo rotulo="Cidade"><input value={dados.cidade} onChange={(e) => set('cidade', e.target.value)} className={classeInput} /></Campo>
             <Campo rotulo="Data"><input type="date" value={dados.dataDocumento} onChange={(e) => set('dataDocumento', e.target.value)} className={classeInput} /></Campo>
           </div>
+        </div>
+
+        <div className="bg-ms-card border border-gray-800 rounded-2xl p-5 space-y-3">
+          <p className="text-xs font-black uppercase tracking-wider text-ms-main">4. Termo assinado (escaneado)</p>
+          {servidor?.pessoa_id ? (
+            <DocumentosServidor pessoaId={servidor.pessoa_id} tipo="TERMO_CONVOCACAO_ASSINADO" nomeServidor={servidor.nome} />
+          ) : (
+            <p className="text-[11px] text-gray-500">Escolha o professor na lista (passo 1) para guardar o termo assinado na ficha dele.</p>
+          )}
         </div>
 
         {erro && <p className="text-xs text-red-400">{erro}</p>}
