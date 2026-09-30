@@ -103,7 +103,7 @@ export function gerarHtmlTermoConvocado(d: DadosTermoConvocado): string {
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { background: #e5e7eb; }
   body { font-family: Arial, Helvetica, sans-serif; font-size: 11pt; color: #000; }
-  .pagina { width: 210mm; height: 297mm; margin: 0 auto 6mm; padding: 12mm 16mm 10mm 18mm; background: #fff; position: relative; overflow: hidden; page-break-after: always; }
+  .pagina { width: 210mm; height: 297mm; margin: 0 auto 6mm; padding: 12mm 16mm 10mm 18mm; background: #fff; position: relative; overflow: hidden; page-break-after: always; display: flex; flex-direction: column; }
   .pagina:last-child { page-break-after: auto; margin-bottom: 0; }
   h1 { text-align: center; font-size: 11pt; font-weight: bold; text-transform: uppercase; }
   h2 { text-align: center; font-size: 11pt; font-weight: bold; text-transform: uppercase; margin: 3mm 0 3.5mm; }
@@ -114,9 +114,10 @@ export function gerarHtmlTermoConvocado(d: DadosTermoConvocado): string {
   .corpo { text-align: justify; line-height: 1.75; margin-top: 3.5mm; }
   .corpo p { margin-bottom: 2mm; }
   .item { display: flex; align-items: baseline; gap: 1mm; line-height: 1.7; }
-  .item .lin { flex: 1; border-bottom: 0.25mm solid #000; padding: 0 1mm; min-height: 5.4mm; }
+  .item .lin { text-align: left; flex: 1; border-bottom: 0.25mm solid #000; padding: 0 1mm; min-height: 5.4mm; }
   .linha-extra { border-bottom: 0.25mm solid #000; min-height: 5.6mm; margin: 0 0 0.4mm 0; }
-  .nota { position: absolute; left: 18mm; right: 16mm; bottom: 10mm; font-family: 'Times New Roman', Times, serif; font-style: italic; font-size: 9pt; line-height: 1.22; }
+  .conteudo { flex: none; }
+  .nota { margin-top: auto; padding-top: 3mm; font-family: 'Times New Roman', Times, serif; font-style: italic; font-size: 9pt; line-height: 1.22; }
   .nota .traco { border-top: 0.25mm solid #000; width: 45mm; margin-bottom: 1.4mm; }
   .verso-topo { margin-top: 2mm; text-align: center; }
   .ass { text-align: center; margin-top: 12mm; }
@@ -133,6 +134,7 @@ export function gerarHtmlTermoConvocado(d: DadosTermoConvocado): string {
 <body>
 
 <div class="pagina">
+  <div class="conteudo">
   <h1>Termo de Ajuste e Compromisso Professor Convocado</h1>
   <h2>(Art. 19, § 3°, da LC 266/2019)</h2>
 
@@ -175,6 +177,7 @@ export function gerarHtmlTermoConvocado(d: DadosTermoConvocado): string {
     <p style="margin-top:3.5mm">Declaro estar apto (a) e preencher todos os requisitos exigidos para o desempenho da função Docente, comprometendo-me a cumprí-la com dedicação e zelo, bem como estou ciente de que ficarei submetido (a) aos deveres e proibições previstos no Estatuto dos Profissionais da Educação Básica e, subsidiariamente, no Estatuto dos Servidores Públicos Civis do Estado.</p>
     <p>Declaro, ainda, estar ciente da temporariedade do vínculo com a Administração Pública, vinculada à necessidade excepcional e transitória da Administração Pública acima especificada, bem como que que tenho assegurados os direitos previstos no art. 22 da LC n° 87/2000, com a redação dada pela LC n° 266/2019<sup>1</sup>.</p>
   </div>
+  </div>
 
   <div class="nota">
     <div class="traco"></div>
@@ -185,6 +188,7 @@ export function gerarHtmlTermoConvocado(d: DadosTermoConvocado): string {
 </div>
 
 <div class="pagina">
+  <div class="conteudo">
   <div class="verso-topo">${d.cidade.trim() ? esc(d.cidade.trim()) : '______________________'}, MS, ${dt ? dt[3] : '______'} de ${dt ? MESES[Number(dt[2]) - 1] : '______________'} de ${dt ? dt[1] : '________'}.</div>
 
   <div class="ass"><div class="tr"></div>Assinatura do (a) Docente Temporário (a)</div>
@@ -192,6 +196,7 @@ export function gerarHtmlTermoConvocado(d: DadosTermoConvocado): string {
   <div class="ass2">
     <div><div class="tr"></div>Assinatura do Diretor (a)</div>
     <div><div class="tr"></div>Assinatura do Secretário (a)</div>
+  </div>
   </div>
 
   <div class="nota">
@@ -205,6 +210,14 @@ export function gerarHtmlTermoConvocado(d: DadosTermoConvocado): string {
   </div>
 </div>
 
+<script>
+  // Se algum campo vier longo e o conteudo encostar nas notas de rodape, reduz o conteudo
+  // aos poucos (ate 70%) ate caber: nunca sobrepoe o rodape.
+  document.querySelectorAll('.pagina').forEach(function (pg) {
+    var c = pg.querySelector('.conteudo'), z = 1;
+    while (pg.scrollHeight > pg.clientHeight + 1 && z > 0.7) { z -= 0.02; c.style.zoom = z; }
+  });
+</script>
 </body>
 </html>`;
 }
