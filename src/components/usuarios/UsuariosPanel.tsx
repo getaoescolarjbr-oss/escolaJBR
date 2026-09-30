@@ -23,6 +23,7 @@ interface UsuarioAgrupado {
 const ROTULOS_PAPEL: Record<Papel, string> = {
   GESTAO: 'Gestão',
   SECRETARIA: 'Secretaria',
+  SECRETARIA_GERAL: 'Secretária Geral',
   COORDENACAO: 'Coordenação Geral',
   COORDENACAO_AREA: 'Coordenador de Área (PCA)',
   PROFESSOR: 'Professor',

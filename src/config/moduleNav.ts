@@ -17,7 +17,7 @@ export interface ModuloNavItem {
 export const MODULOS_NAV: ModuloNavItem[] = [
   // Cadastro, atestado/substituto, transferência definitiva e alocação de turmas de
   // professores/servidores — tudo num só lugar, para GESTAO e SECRETARIA.
-  { id: 'servidores', label: 'Servidores', icon: IdCard, roles: ['GESTAO', 'SECRETARIA'] },
+  { id: 'servidores', label: 'Servidores', icon: IdCard, roles: ['GESTAO', 'SECRETARIA_GERAL'] },
   { id: 'pessoas', label: 'Cadastro de Pessoas', icon: Users, roles: ['GESTAO', 'SECRETARIA'] },
   { id: 'secretaria', label: 'Secretaria', icon: FolderClock, roles: ['GESTAO', 'SECRETARIA'] },
   { id: 'cozinha', label: 'Cozinha', icon: ChefHat, roles: ['GESTAO', 'NUTRICAO'] },
