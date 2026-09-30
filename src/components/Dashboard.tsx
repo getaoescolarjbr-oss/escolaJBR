@@ -382,51 +382,38 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
       const combinedMap = new Map();
 
       try {
-        const firstName = professor.nome.split(' ')[0];
-
-        // 1. Coleta IDs por múltiplos critérios
+        // Identifica o professor só por chaves exatas (id / e-mail) — nunca por nome: um
+        // casamento por substring de primeiro nome (ex.: "Juliana") pega qualquer outro
+        // professor homônimo da escola e mistura as turmas dele nesta lista (bug real
+        // encontrado em produção: Janaina/Fabio/Juliana/Luciana têm mais de uma pessoa).
         const { data: profsByEmail } = await supabase.from('professores').select('id').eq('email', professor.email);
-        const { data: profsByName } = await supabase.from('professores').select('id').ilike('nome', `%${firstName}%`);
 
         const allIds = Array.from(new Set([
           professor.id,
-          ...(profsByEmail?.map(p => p.id) || []),
-          ...(profsByName?.map(p => p.id) || [])
+          ...(profsByEmail?.map(p => p.id) || [])
         ])).filter(Boolean);
 
-        // 2. BUSCA BRUTA (Se falhar a específica, tenta geral)
-        let { data: allocs } = await supabase
+        const { data: allocs } = await supabase
           .from('alocacoes_v2')
           .select(`turma_id, turmas (nome, nivel)`)
           .in('professor_id', allIds);
 
-        // FALLBACK RADICAL: Se não veio nada, busca TUDO de alocacoes e filtra no código
-        if (!allocs || allocs.length === 0) {
-           const { data: allData } = await supabase
-             .from('alocacoes_v2')
-             .select(`turma_id, professor_id, professores(nome), turmas (nome, nivel)`);
-           
-           allocs = allData?.filter(a => 
-             (a as any).professores?.nome?.toLowerCase().includes(firstName.toLowerCase())
-           ) || [];
-        }
-
         if (allocs) {
           allocs.forEach((a: any) => {
             if (a.turma_id && a.turmas) {
-              combinedMap.set(a.turma_id, { 
-                id: a.turma_id, 
-                nome: `${a.turmas.nome} - ${a.turmas.nivel || ''}`.trim() 
+              combinedMap.set(a.turma_id, {
+                id: a.turma_id,
+                nome: `${a.turmas.nome} - ${a.turmas.nivel || ''}`.trim()
               });
             }
           });
         }
 
-        // 3. Busca no Legado (também com fallback por nome)
+        // 3. Busca no Legado (só por e-mail exato — mesmo motivo acima)
         const { data: legacy } = await supabase
           .from('lista_para_vistos')
           .select('turma_id, turma_nome, professor_nome')
-          .or(`professor_email.eq.${professor.email},professor_nome.ilike.%${firstName}%`);
+          .eq('professor_email', professor.email);
 
         if (legacy) {
           legacy.forEach(a => {
@@ -456,31 +443,18 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
       const combinedMap = new Map();
 
       try {
-        const firstName = professor.nome.split(' ')[0];
+        // Mesma identificação exata (id / e-mail) usada em loadTurmas — ver comentário lá.
         const { data: profsByEmail } = await supabase.from('professores').select('id').eq('email', professor.email);
-        const { data: profsByName } = await supabase.from('professores').select('id').ilike('nome', `%${firstName}%`);
         const allIds = Array.from(new Set([
           professor.id,
-          ...(profsByEmail?.map(p => p.id) || []),
-          ...(profsByName?.map(p => p.id) || [])
+          ...(profsByEmail?.map(p => p.id) || [])
         ])).filter(Boolean);
 
-        let { data: allocs } = await supabase
+        const { data: allocs } = await supabase
           .from('alocacoes_v2')
           .select(`disciplina_id, disciplinas (nome)`)
           .eq('turma_id', selectedTurma)
           .in('professor_id', allIds);
-
-        if (!allocs || allocs.length === 0) {
-          const { data: allData } = await supabase
-            .from('alocacoes_v2')
-            .select(`disciplina_id, professor_id, professores(nome), disciplinas (nome)`)
-            .eq('turma_id', selectedTurma);
-          
-          allocs = allData?.filter(a => 
-            (a as any).professores?.nome?.toLowerCase().includes(firstName.toLowerCase())
-          ) || [];
-        }
 
         if (allocs) {
           allocs.forEach((a: any) => {
@@ -493,12 +467,12 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
           });
         }
 
-        // Legado
+        // Legado — só por e-mail exato
         const { data: legacy } = await supabase
           .from('lista_para_vistos')
           .select('disciplina_id, disciplina_nome')
           .eq('turma_id', selectedTurma)
-          .or(`professor_email.eq.${professor.email},professor_nome.ilike.%${firstName}%`);
+          .eq('professor_email', professor.email);
 
         if (legacy) {
           legacy.forEach(a => {
