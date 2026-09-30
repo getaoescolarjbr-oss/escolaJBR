@@ -19,13 +19,15 @@ const VAZIO: DadosTermoConvocado = {
   endereco: '', telefoneFixo: '', celular: '', email: '', formacao: '',
   horasSemanais: '', componente: '', escolaMunicipio: 'E.E. José Barbosa Rodrigues', periodoDe: '', periodoAte: '',
   substituidoNome: '', substituidoMatricula: '', valorHora: '43,32777', fundamentoValor: FUNDAMENTO_VALOR_PADRAO,
-  cidade: '', dataDocumento: hoje(),
+  cidade: 'Campo Grande', dataDocumento: hoje(),
 };
 
 // Lembra o que raramente muda entre um termo e outro (valor da hora-aula, cidade, escola).
 function lerPrefs(): Partial<DadosTermoConvocado> {
   try {
-    return JSON.parse(localStorage.getItem(CHAVE_PREFS) ?? '{}');
+    const prefs: Partial<DadosTermoConvocado> = JSON.parse(localStorage.getItem(CHAVE_PREFS) ?? '{}');
+    // Campo vazio guardado antes não pode apagar o padrão (ex.: cidade Campo Grande).
+    return Object.fromEntries(Object.entries(prefs).filter(([, v]) => typeof v === 'string' && v.trim())) as Partial<DadosTermoConvocado>;
   } catch {
     return {};
   }
