@@ -3,10 +3,9 @@ import { EscalaTab } from './EscalaTab';
 import { FrequenciaTab } from './FrequenciaTab';
 import { AusenciasTab } from './AusenciasTab';
 import { TerceirizadosTab } from './TerceirizadosTab';
-import { SubstituicaoTab } from './SubstituicaoTab';
-import { FolhaSubstitutoTab } from './FolhaSubstitutoTab';
+import { SubstituicaoPanel } from './SubstituicaoPanel';
 
-type Aba = 'frequencia' | 'escala' | 'ausencias' | 'terceirizados' | 'substituicao' | 'folha';
+type Aba = 'frequencia' | 'escala' | 'ausencias' | 'terceirizados' | 'substituicao';
 
 // RH operacional interno: complementar à SUGESP/SED, não concede licença nem
 // formaliza substituição/atribuição (ver create_gestao_rh_schema.sql).
@@ -18,7 +17,6 @@ export function RHPanel() {
     { id: 'escala', label: 'Escala/Jornada' },
     { id: 'ausencias', label: 'Ausências/Atestados' },
     { id: 'substituicao', label: 'Substituição' },
-    { id: 'folha', label: 'Folha do Substituto' },
     { id: 'terceirizados', label: 'Terceirizados' },
   ];
 
@@ -47,8 +45,7 @@ export function RHPanel() {
       {aba === 'frequencia' && <FrequenciaTab />}
       {aba === 'escala' && <EscalaTab />}
       {aba === 'ausencias' && <AusenciasTab />}
-      {aba === 'substituicao' && <SubstituicaoTab />}
-      {aba === 'folha' && <FolhaSubstitutoTab />}
+      {aba === 'substituicao' && <SubstituicaoPanel />}
       {aba === 'terceirizados' && <TerceirizadosTab />}
     </div>
   );

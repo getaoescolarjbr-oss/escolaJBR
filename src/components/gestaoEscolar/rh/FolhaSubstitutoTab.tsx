@@ -1,66 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Download, FileInput, Loader2, Pencil, Plus, Printer, Save, Search, Trash2, X } from 'lucide-react';
 import { useAuth } from '../../../hooks/useAuth';
-import type { LancamentoFolhaSubstituto, PagamentoSubstituto } from '../../../types/rh';
+import type { LancamentoFolhaSubstituto, PagamentoSubstituto, SubstitutoRapido } from '../../../types/rh';
 import { listarProfessoresParaSelecao, listarTurmas } from '../../../services/agendamentoService';
 import {
   atualizarLancamentoFolha, criarLancamentoFolha, excluirLancamentoFolha, importarAtestadosParaFolha, listarLancamentosFolha,
-  listarTurmasDoProfessor, type AulaDoProfessor,
+  listarTurmasDoProfessor, type AulaDoProfessor, criarSubstitutoRapido, listarSubstitutosRapidos,
 } from '../../../services/folhaSubstitutoService';
+import { SeletorSubstituto, SeletorTitular, type SubstitutoSel, type TitularSel } from './SeletoresFolha';
 import {
   MOTIVOS_SUGERIDOS, ROTULO_PAGAMENTO, dataCurta, formatarHoras, gerarCsvControleFolha, gerarHtmlControleFolha, imprimirHtml, lerHoras,
   nomesDasTurmas, rotuloCompetencia, rotuloPeriodo, turmasDoPeriodo,
 } from '../../../utils/folhaSubstituto';
 
-interface Pessoa { id: string | null; nome: string }
 interface Form {
   modo: 'dia' | 'periodo'; data: string; dataFim: string;
-  substituto: Pessoa; titular: Pessoa; motivo: string; turno: string; ch: string; pagamento: '' | PagamentoSubstituto; obs: string;
+  substituto: SubstitutoSel | null; titular: TitularSel | null; motivo: string; turno: string; ch: string; pagamento: '' | PagamentoSubstituto; obs: string;
 }
 
 const hoje = () => new Date().toISOString().slice(0, 10);
 const FORM_VAZIO = (): Form => ({
-  modo: 'dia', data: hoje(), dataFim: '', substituto: { id: null, nome: '' }, titular: { id: null, nome: '' },
+  modo: 'dia', data: hoje(), dataFim: '', substituto: null, titular: null,
   motivo: '', turno: '', ch: '', pagamento: '', obs: '',
 });
 const classeInput = 'w-full px-3 py-2 bg-ms-dark border border-gray-800 rounded-lg text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue';
 const classeRotulo = 'text-[10px] font-black uppercase tracking-wider text-gray-400';
-
-// Nome livre com sugestões da lista de servidores: escolher da lista guarda o vínculo
-// (id); digitar um nome que não existe (ex.: "não houve") também vale.
-function CampoPessoa({ rotulo, valor, opcoes, onChange }: { rotulo: string; valor: Pessoa; opcoes: { id: string; nome: string }[]; onChange: (p: Pessoa) => void }) {
-  const [foco, setFoco] = useState(false);
-  const termo = valor.nome.trim().toLowerCase();
-  const sugestoes = useMemo(
-    () => (termo.length < 1 ? [] : opcoes.filter((o) => o.nome.toLowerCase().includes(termo) && o.nome.toLowerCase() !== termo).slice(0, 6)),
-    [opcoes, termo],
-  );
-  return (
-    <label className="block relative">
-      <span className={classeRotulo}>{rotulo}</span>
-      <input
-        value={valor.nome}
-        onFocus={() => setFoco(true)}
-        onBlur={() => setFoco(false)}
-        onChange={(e) => {
-          const nome = e.target.value;
-          const exato = opcoes.find((o) => o.nome.toLowerCase() === nome.trim().toLowerCase());
-          onChange({ id: exato?.id ?? null, nome });
-        }}
-        className={`${classeInput} mt-1`}
-        autoComplete="off"
-      />
-      {foco && sugestoes.length > 0 && (
-        <div className="absolute z-20 mt-1 w-full bg-ms-card border border-gray-800 rounded-xl shadow-xl overflow-hidden">
-          {sugestoes.map((o) => (
-            <button key={o.id} type="button" onMouseDown={(e) => { e.preventDefault(); onChange({ id: o.id, nome: o.nome }); }}
-              className="w-full text-left px-3 py-2 text-sm text-ms-main hover:bg-ms-blue/20">{o.nome}</button>
-          ))}
-        </div>
-      )}
-    </label>
-  );
-}
 
 // Controle de lançamento de folha do professor substituto — a planilha de papel da
 // secretaria em forma de tela. Os lançamentos nascem sozinhos quando um atestado é
@@ -70,6 +34,7 @@ export function FolhaSubstitutoTab() {
   const { usuarioId } = useAuth();
   const [competencia, setCompetencia] = useState(() => hoje().slice(0, 7)); // AAAA-MM
   const [professores, setProfessores] = useState<{ id: string; nome: string }[]>([]);
+  const [rapidos, setRapidos] = useState<SubstitutoRapido[]>([]);
   const [lista, setLista] = useState<LancamentoFolhaSubstituto[]>([]);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
@@ -101,7 +66,8 @@ export function FolhaSubstitutoTab() {
 
   useEffect(() => {
     const t = setTimeout(async () => {
-      try { setProfessores(await listarProfessoresParaSelecao()); } catch { /* sugestões são opcionais */ }
+      try { setProfessores(await listarProfessoresParaSelecao()); } catch { /* a lista é necessária, mas o erro aparece ao salvar */ }
+      try { setRapidos(await listarSubstitutosRapidos()); } catch { /* cadastro rápido é opcional */ }
     }, 0);
     return () => clearTimeout(t);
   }, []);
@@ -113,7 +79,7 @@ export function FolhaSubstitutoTab() {
     return () => clearTimeout(t);
   }, []);
 
-  const titularId = form.titular.id;
+  const titularId = form.titular?.id ?? null;
   useEffect(() => {
     const t = setTimeout(async () => {
       if (!titularId) { setTurmasTitular(null); return; }
@@ -142,10 +108,9 @@ export function FolhaSubstitutoTab() {
   async function salvar() {
     if (!usuarioId) return;
     const ch = lerHoras(form.ch);
-    if (!form.data || !form.substituto.nome.trim() || !form.titular.nome.trim() || !form.motivo.trim()) {
-      setErro('Preencha a data, o professor substituto, o professor titular e o motivo.');
-      return;
-    }
+    if (!form.titular) { setErro('Escolha o professor titular na lista de servidores.'); return; }
+    if (!form.substituto) { setErro('Escolha o professor substituto na lista ou faça o cadastro rápido.'); return; }
+    if (!form.data || !form.motivo.trim()) { setErro('Preencha a data e o motivo.'); return; }
     if (form.modo === 'periodo' && (!form.dataFim || form.dataFim < form.data)) {
       setErro('No período, a data final não pode ser anterior à inicial.');
       return;
@@ -160,7 +125,9 @@ export function FolhaSubstitutoTab() {
         data: form.data,
         data_fim: form.modo === 'periodo' && form.dataFim !== form.data ? form.dataFim : null,
         turma_ids: titularId ? turmasMarcadas : [],
-        substituto_id: form.substituto.id, substituto_nome: form.substituto.nome.trim(),
+        substituto_id: form.substituto.tipo === 'professor' ? form.substituto.id : null,
+        substituto_rapido_id: form.substituto.tipo === 'rapido' ? form.substituto.id : null,
+        substituto_nome: form.substituto.nome.trim(),
         titular_id: form.titular.id, titular_nome: form.titular.nome.trim(),
         motivo: form.motivo.trim(), periodo: form.turno.trim() || null, carga_horaria: ch,
         pagamento: form.pagamento || null, observacoes: form.obs.trim() || null,
@@ -184,7 +151,11 @@ export function FolhaSubstitutoTab() {
     setTurmasSel(l.turma_ids);
     setForm({
       modo: l.data_fim ? 'periodo' : 'dia', data: l.data, dataFim: l.data_fim ?? '',
-      substituto: { id: l.substituto_id, nome: l.substituto_nome }, titular: { id: l.titular_id, nome: l.titular_nome },
+      substituto: l.substituto_id ? { tipo: 'professor', id: l.substituto_id, nome: l.substituto_nome }
+        : l.substituto_rapido_id ? { tipo: 'rapido', id: l.substituto_rapido_id, nome: l.substituto_nome }
+        : l.substituto_nome === 'Não houve' ? { tipo: 'nenhum', id: null, nome: l.substituto_nome }
+        : { tipo: 'livre', id: null, nome: l.substituto_nome },
+      titular: l.titular_id ? { id: l.titular_id, nome: l.titular_nome } : null,
       motivo: l.motivo, turno: l.periodo ?? '', ch: l.carga_horaria === null ? '' : String(l.carga_horaria).replace('.', ','),
       pagamento: l.pagamento ?? '', obs: l.observacoes ?? '',
     });
@@ -311,8 +282,10 @@ export function FolhaSubstitutoTab() {
           <label className="block"><span className={classeRotulo}>Motivo</span>
             <input list="motivos-folha" value={form.motivo} onChange={(e) => setForm({ ...form, motivo: e.target.value })} className={`${classeInput} mt-1`} />
             <datalist id="motivos-folha">{MOTIVOS_SUGERIDOS.map((m) => <option key={m} value={m} />)}</datalist></label>
-          <CampoPessoa rotulo="Professor substituto" valor={form.substituto} opcoes={professores} onChange={(p) => setForm({ ...form, substituto: p })} />
-          <CampoPessoa rotulo="Professor titular" valor={form.titular} opcoes={professores} onChange={(p) => { if (p.id !== form.titular.id) setTurmasSel(null); setForm({ ...form, titular: p }); }} />
+          <SeletorSubstituto valor={form.substituto} professores={professores} rapidos={rapidos}
+            onChange={(s) => setForm({ ...form, substituto: s })}
+            onCadastrar={async (d) => { const criado = await criarSubstitutoRapido(d, usuarioId ?? ''); setRapidos((l) => [...l, criado]); return criado; }} />
+          <SeletorTitular valor={form.titular} opcoes={professores} onChange={(t) => { setTurmasSel(null); setForm({ ...form, titular: t }); }} />
           <label className="block"><span className={classeRotulo}>CH (horas)</span>
             <input inputMode="decimal" value={form.ch} onChange={(e) => setForm({ ...form, ch: e.target.value })} placeholder="Ex.: 8 ou 3,75" className={`${classeInput} mt-1`} /></label>
           <label className="block"><span className={classeRotulo}>Pagamento</span>
