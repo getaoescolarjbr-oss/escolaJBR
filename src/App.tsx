@@ -11,6 +11,7 @@ import { RequireRole } from './components/rbac/RequireRole';
 import { ModuleShell } from './components/shell/ModuleShell';
 import { UsoBancoDados } from './components/admin/UsoBancoDados';
 import { MODULOS_NAV, modulosVisiveis } from './config/moduleNav';
+import { recarregarSeChunkAntigo } from './utils/recarregarSeChunkAntigo';
 
 // Cada módulo vira um chunk próprio, baixado só quando a tela é aberta. Antes tudo ia
 // num bundle único (~3 MB) que todo usuário baixava no primeiro acesso. Login, Header,
@@ -18,7 +19,16 @@ import { MODULOS_NAV, modulosVisiveis } from './config/moduleNav';
 // Os componentes são exports nomeados, daí o `.then` que os expõe como `default`.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function carregar<T extends ComponentType<any>>(importar: () => Promise<Record<string, unknown>>, nome: string) {
-  return lazy(() => importar().then((m) => ({ default: m[nome] as T })));
+  return lazy(() =>
+    importar()
+      .then((m) => ({ default: m[nome] as T }))
+      .catch((erro) => {
+        // Arquivo da tela não existe mais (deploy novo com a aba aberta): atualiza a página uma vez.
+        // O spinner continua até a recarga; se já recarregou há pouco, o erro segue para o aviso.
+        if (recarregarSeChunkAntigo()) return new Promise<never>(() => {});
+        throw erro;
+      }),
+  );
 }
 
 const Dashboard = carregar<typeof import('./components/Dashboard').Dashboard>(() => import('./components/Dashboard'), 'Dashboard');
