@@ -10,13 +10,17 @@ interface Props {
   pessoaId: string;
   tipo: TipoDocumentoPessoa;
   nomeServidor: string;
+  // Só a lista (sem enviar): usado quando o envio é feito por outro componente (assinatura digital).
+  somenteLista?: boolean;
+  // Muda quando outro componente guardou um documento: relê a lista.
+  recarregarChave?: number;
 }
 
 const semAcento = (t: string) => t.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
 
 // Documentos de UMA categoria da ficha do servidor: envia por câmera (escâner) ou arquivo,
 // com descrição, e lista/abre/exclui o que já foi guardado.
-export function DocumentosServidor({ pessoaId, tipo, nomeServidor }: Props) {
+export function DocumentosServidor({ pessoaId, tipo, nomeServidor, somenteLista = false, recarregarChave = 0 }: Props) {
   const { usuarioId } = useAuth();
   const categoria = CATEGORIAS_SERVIDOR.find((c) => c.tipo === tipo)!;
   const [docs, setDocs] = useState<DocumentoPessoa[]>([]);
@@ -42,7 +46,7 @@ export function DocumentosServidor({ pessoaId, tipo, nomeServidor }: Props) {
     const t = setTimeout(() => { setDescricao(''); setErro(null); void carregar(); }, 0);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pessoaId, tipo]);
+  }, [pessoaId, tipo, recarregarChave]);
 
   function descricaoOk(): boolean {
     if (categoria.descricaoObrigatoria && !descricao.trim()) {
@@ -90,6 +94,7 @@ export function DocumentosServidor({ pessoaId, tipo, nomeServidor }: Props) {
 
   return (
     <div className="space-y-4">
+      {!somenteLista && (
       <div className="bg-ms-card border border-gray-800 rounded-2xl p-4 space-y-3">
         <label className="block">
           <span className="text-[10px] font-black uppercase tracking-wider text-gray-400">{categoria.rotuloDescricao}{categoria.descricaoObrigatoria ? ' *' : ''}</span>
@@ -109,6 +114,7 @@ export function DocumentosServidor({ pessoaId, tipo, nomeServidor }: Props) {
         </div>
         {erro && <p className="text-xs text-red-400">{erro}</p>}
       </div>
+      )}
 
       {carregando ? (
         <div className="py-4 text-center"><Loader2 className="w-5 h-5 animate-spin mx-auto text-ms-blueText" /></div>

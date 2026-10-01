@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Loader2, CheckCircle2, XCircle, Eye, FileText } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Eye, FileText, Undo2, ScrollText } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import type { Papel } from '../../types/rbac';
 import type { CadastroServidorPendente, CampoConvocacao, DocumentoDoCadastro } from '../../services/cadastroServidorService';
@@ -8,8 +8,10 @@ import { ConvocacaoCampos } from '../cadastroServidor/ConvocacaoCampos';
 import {
   listarCadastrosServidoresPendentes,
   aprovarCadastroServidor,
+  devolverCadastroServidor,
   rejeitarCadastroServidor,
 } from '../../services/cadastroServidorService';
+import { TermoCadastroModal } from './TermoCadastroModal';
 import { PAPEIS_SERVIDOR, formatarCpf, formatarTelefone, papelSugeridoPorCargo } from '../../utils/cadastroServidor';
 
 // Aprovação dos servidores que se cadastraram sozinhos no Portal do Servidor. Até aqui a
@@ -25,6 +27,7 @@ export function CadastrosServidoresTab() {
   const [camposConv, setCamposConv] = useState<CampoConvocacao[]>([]);
   const [convPorCadastro, setConvPorCadastro] = useState<Record<string, Record<string, string>>>({});
   const [salvandoConvId, setSalvandoConvId] = useState<string | null>(null);
+  const [termoDe, setTermoDe] = useState<CadastroServidorPendente | null>(null);
 
   // Só a Gestão concede papéis que dão poder sobre os outros (o banco também confere).
   const papeisDisponiveis = PAPEIS_SERVIDOR.filter((p) => hasRole('GESTAO') || (p !== 'GESTAO' && p !== 'SECRETARIA'));
@@ -89,6 +92,21 @@ export function CadastrosServidoresTab() {
       setErro(err instanceof Error ? err.message : 'Erro ao salvar a convocação.');
     } finally {
       setSalvandoConvId(null);
+    }
+  }
+
+  async function handleDevolver(c: CadastroServidorPendente) {
+    const motivo = window.prompt('O que o servidor precisa corrigir? (ele verá esta mensagem)');
+    if (motivo === null) return;
+    setProcessandoId(c.id);
+    setErro(null);
+    try {
+      await devolverCadastroServidor(c.id, motivo);
+      await carregar();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Erro ao devolver o cadastro.');
+    } finally {
+      setProcessandoId(null);
     }
   }
 
@@ -188,6 +206,19 @@ export function CadastrosServidoresTab() {
                 {processandoId === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />} Aprovar
               </button>
               <button
+                onClick={() => setTermoDe(c)}
+                className="flex items-center gap-1 px-4 py-2 bg-ms-dark border border-gray-800 rounded-lg text-xs text-gray-300 hover:border-ms-blue transition-colors"
+              >
+                <ScrollText className="w-3.5 h-3.5" /> Termo
+              </button>
+              <button
+                onClick={() => handleDevolver(c)}
+                disabled={processandoId === c.id}
+                className="flex items-center gap-1 px-4 py-2 bg-ms-dark border border-gray-800 rounded-lg text-xs text-amber-400 hover:border-amber-500/40 transition-colors disabled:opacity-50"
+              >
+                <Undo2 className="w-3.5 h-3.5" /> Pedir correção
+              </button>
+              <button
                 onClick={() => handleRejeitar(c)}
                 disabled={processandoId === c.id}
                 className="flex items-center gap-1 px-4 py-2 bg-ms-dark border border-gray-800 rounded-lg text-xs text-gray-400 hover:border-red-500/40 hover:text-red-400 transition-colors disabled:opacity-50"
@@ -198,6 +229,7 @@ export function CadastrosServidoresTab() {
           </div>
         ))
       )}
+      {termoDe && <TermoCadastroModal cadastro={{ ...termoDe, convocacao: convPorCadastro[termoDe.id] ?? termoDe.convocacao }} onFechar={() => setTermoDe(null)} />}
     </div>
   );
 }

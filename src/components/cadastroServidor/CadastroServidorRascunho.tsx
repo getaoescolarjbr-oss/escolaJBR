@@ -194,6 +194,14 @@ export function CadastroServidorRascunho({ cadastro, onRecarregar, onLogout }: P
           </p>
         </div>
 
+        {cadastro.correcao_motivo && cadastro.correcao_em && (!cadastro.enviado_em || new Date(cadastro.enviado_em) < new Date(cadastro.correcao_em)) && (
+          <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 space-y-1">
+            <p className="text-xs font-black uppercase tracking-wider text-amber-400">A Secretaria pediu uma correção</p>
+            <p className="text-sm text-ms-main">{cadastro.correcao_motivo}</p>
+            <p className="text-xs text-gray-400">Corrija o que foi pedido e envie o cadastro de novo.</p>
+          </div>
+        )}
+
         <div className="bg-ms-card border border-gray-800 rounded-2xl p-5 space-y-2">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs font-black uppercase tracking-wider text-gray-400">Meus dados</p>
