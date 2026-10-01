@@ -88,7 +88,9 @@ function App() {
   const { session, hasRole, hasAnyRole, papeis, loading: authLoading } = useAuth();
   const [professor, setProfessor] = useState<Professor | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showLogin, setShowLogin] = useState(false);
+  // Link de convite da Secretaria (?convite=...): abre direto o cadastro de servidor.
+  const conviteToken = useMemo(() => new URLSearchParams(window.location.search).get('convite'), []);
+  const [showLogin, setShowLogin] = useState(() => Boolean(new URLSearchParams(window.location.search).get('convite')));
   // Atalho "Biblioteca" do Acesso Rápido da LandingPage abre o login já no modo
   // BiblioClube (aluno), em vez do login padrão de servidor.
   const [loginModoAluno, setLoginModoAluno] = useState(false);
@@ -349,7 +351,7 @@ function App() {
 
   if (!session) {
     if (showLogin) {
-      return <Login onLogin={() => setShowLogin(false)} onBack={() => setShowLogin(false)} modoInicial={loginModoAluno ? 'aluno' : 'servidor'} />;
+      return <Login onLogin={() => setShowLogin(false)} onBack={() => setShowLogin(false)} modoInicial={loginModoAluno ? 'aluno' : 'servidor'} conviteToken={conviteToken} />;
     }
     return <LandingPage onEnterPortal={handleEnterPortal} />;
   }

@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Loader2, CheckCircle2, XCircle, Eye, FileText } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import type { Papel } from '../../types/rbac';
-import type { CadastroServidorPendente, DocumentoDoCadastro } from '../../services/cadastroServidorService';
-import { listarDocumentosDoCadastro, urlDocumentoDoCadastro } from '../../services/cadastroServidorService';
+import type { CadastroServidorPendente, CampoConvocacao, DocumentoDoCadastro } from '../../services/cadastroServidorService';
+import { listarCamposConvocacao, listarDocumentosDoCadastro, salvarConvocacaoDoCadastro, urlDocumentoDoCadastro } from '../../services/cadastroServidorService';
+import { ConvocacaoCampos } from '../cadastroServidor/ConvocacaoCampos';
 import {
   listarCadastrosServidoresPendentes,
   aprovarCadastroServidor,
@@ -21,6 +22,9 @@ export function CadastrosServidoresTab() {
   const [erro, setErro] = useState<string | null>(null);
   const [papelPorCadastro, setPapelPorCadastro] = useState<Record<string, Papel | ''>>({});
   const [docsPorCadastro, setDocsPorCadastro] = useState<Record<string, DocumentoDoCadastro[]>>({});
+  const [camposConv, setCamposConv] = useState<CampoConvocacao[]>([]);
+  const [convPorCadastro, setConvPorCadastro] = useState<Record<string, Record<string, string>>>({});
+  const [salvandoConvId, setSalvandoConvId] = useState<string | null>(null);
 
   // Só a Gestão concede papéis que dão poder sobre os outros (o banco também confere).
   const papeisDisponiveis = PAPEIS_SERVIDOR.filter((p) => hasRole('GESTAO') || (p !== 'GESTAO' && p !== 'SECRETARIA'));
@@ -30,6 +34,8 @@ export function CadastrosServidoresTab() {
     try {
       const lista = await listarCadastrosServidoresPendentes();
       setCadastros(lista);
+      setCamposConv(await listarCamposConvocacao());
+      setConvPorCadastro(Object.fromEntries(lista.map((c) => [c.id, c.convocacao ?? {}])));
       const docs = await listarDocumentosDoCadastro(lista.map((c) => c.id));
       const agrupado: Record<string, DocumentoDoCadastro[]> = {};
       docs.forEach((d) => { (agrupado[d.cadastro_id] ??= []).push(d); });
@@ -70,6 +76,19 @@ export function CadastrosServidoresTab() {
       setErro(err instanceof Error ? err.message : 'Erro ao aprovar cadastro.');
     } finally {
       setProcessandoId(null);
+    }
+  }
+
+  async function salvarConvocacao(c: CadastroServidorPendente) {
+    setSalvandoConvId(c.id);
+    setErro(null);
+    try {
+      await salvarConvocacaoDoCadastro(c.id, convPorCadastro[c.id] ?? {});
+      setCadastros((l) => l.map((x) => (x.id === c.id ? { ...x, convocacao: convPorCadastro[c.id] ?? {} } : x)));
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Erro ao salvar a convocação.');
+    } finally {
+      setSalvandoConvId(null);
     }
   }
 
@@ -134,6 +153,19 @@ export function CadastrosServidoresTab() {
                 ))
               )}
             </div>
+
+            {camposConv.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">Dados da convocação (termo de convocado)</p>
+                <ConvocacaoCampos campos={camposConv} modos={c.convocacao_modos ?? {}} valores={convPorCadastro[c.id] ?? {}} quem="SECRETARIA"
+                  onChange={(campo, valor) => setConvPorCadastro((s) => ({ ...s, [c.id]: { ...(s[c.id] ?? {}), [campo]: valor } }))} />
+                {JSON.stringify(Object.entries(convPorCadastro[c.id] ?? {}).filter(([, v]) => v.trim()).sort()) !== JSON.stringify(Object.entries(c.convocacao ?? {}).sort()) && (
+                  <button onClick={() => salvarConvocacao(c)} disabled={salvandoConvId === c.id} className="flex items-center gap-2 px-3 py-1.5 bg-ms-blue text-white rounded-lg text-xs font-bold hover:bg-blue-600 disabled:opacity-50">
+                    {salvandoConvId === c.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Salvar convocação
+                  </button>
+                )}
+              </div>
+            )}
 
             <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400">
               Papel de acesso
