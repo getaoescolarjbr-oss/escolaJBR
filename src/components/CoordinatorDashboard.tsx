@@ -1763,7 +1763,8 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                                      const notaVistos = totalAtiv > 0 ? (acumulado / totalAtiv) * maxVistos : 0;
 
                                      const notasInfo = painelData.notas?.[aluno.id]?.[disc] || { total: 0, detalhes: [] };
-                                     const mediaFinal = notasInfo.total + notaVistos;
+                                     // Teto de 10: ver mesmo comentário em StudentList.tsx.
+                                     const mediaFinal = Math.min(10, notasInfo.total + notaVistos);
                                      const hasAnyData = totalAtiv > 0 || notasInfo.detalhes.length > 0;
 
                                      return (
