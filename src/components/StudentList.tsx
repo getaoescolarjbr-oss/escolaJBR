@@ -313,7 +313,9 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
               const notaVistoFinal = totalAtivCalculado > 0 ? (pesosVistoAlunoCapped / totalAtivCalculado) * maxVistosPoints : 0;
 
               breakdownObj[cleanId] = {
-                  mediaFinal: somaNotas + notaVistoFinal,
+                  // Teto de 10: o professor pode cadastrar avaliações que somem mais que isso,
+                  // mas a média final exibida nunca deve ultrapassar o máximo da disciplina.
+                  mediaFinal: Math.min(10, somaNotas + notaVistoFinal),
                   notaVistos: notaVistoFinal,
                   valorMaximoVistos: maxVistosPoints,
                   avaliacoes: detalheAvaliacoes
@@ -415,7 +417,7 @@ export function StudentList({ professor, turmaId, disciplinaId, dataAula = new D
         [alunoId]: {
           ...studentBreakdown,
           notaVistos: newNotaVisto,
-          mediaFinal: somaNotas + newNotaVisto
+          mediaFinal: Math.min(10, somaNotas + newNotaVisto)
         }
       };
     });
