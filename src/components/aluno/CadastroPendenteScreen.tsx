@@ -1,47 +1,58 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Clock, XCircle, Loader2, BookOpen } from 'lucide-react';
 import { signOut } from '../../services/authService';
 import { meuCadastroPendente } from '../../services/cadastroBibliotecaService';
-import { meuCadastroServidor } from '../../services/cadastroServidorService';
+import { meuCadastroServidor, type CadastroServidorPendente } from '../../services/cadastroServidorService';
+import { CadastroServidorRascunho } from '../cadastroServidor/CadastroServidorRascunho';
 
 interface CadastroPendenteScreenProps {
   authUserId: string;
   onLogout: () => void;
 }
 
-// Mostrada quando existe sessão mas nenhum papel ainda (aluno recém-cadastrado, antes
-// da Secretaria aprovar) — evita cair na tela genérica de "perfil de professor não
-// encontrado", que não faz sentido pra este caso.
+type Situacao = 'PENDENTE' | 'REJEITADO' | 'APROVADO_SERVIDOR' | 'DESCONHECIDO' | null;
+
+// Mostrada quando existe sessão mas nenhum papel ainda (servidor ou aluno recém-cadastrado,
+// antes da aprovação) — evita cair na tela genérica de "perfil de professor não encontrado".
+// Servidor com cadastro ainda em RASCUNHO cai direto na etapa de envio de documentos.
 export function CadastroPendenteScreen({ authUserId, onLogout }: CadastroPendenteScreenProps) {
-  const [status, setStatus] = useState<'PENDENTE' | 'REJEITADO' | 'APROVADO_SERVIDOR' | 'DESCONHECIDO' | null>(null);
+  const [status, setStatus] = useState<Situacao>(null);
   const [ehServidor, setEhServidor] = useState(false);
   const [observacoes, setObservacoes] = useState<string | null>(null);
+  const [rascunho, setRascunho] = useState<CadastroServidorPendente | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    const timeout = setTimeout(async () => {
-      try {
-        // Servidor (Portal do Servidor) primeiro; se não houver pedido, é o aluno do BiblioClube.
-        const servidor = await meuCadastroServidor(authUserId);
-        if (servidor) {
-          setEhServidor(true);
-          setStatus(servidor.status === 'APROVADO' ? 'APROVADO_SERVIDOR' : servidor.status);
-          setObservacoes(servidor.observacoes_analise);
-          return;
-        }
-        const cadastro = await meuCadastroPendente(authUserId);
-        setStatus(cadastro ? (cadastro.status === 'APROVADO' ? 'DESCONHECIDO' : cadastro.status) : 'DESCONHECIDO');
-        setObservacoes(cadastro?.observacoes_analise ?? null);
-      } finally {
-        setLoading(false);
+  const carregar = useCallback(async () => {
+    try {
+      // Servidor (Portal do Servidor) primeiro; se não houver pedido, é o aluno do BiblioClube.
+      const servidor = await meuCadastroServidor(authUserId);
+      if (servidor) {
+        setEhServidor(true);
+        setRascunho(servidor.status === 'RASCUNHO' ? servidor : null);
+        setStatus(servidor.status === 'APROVADO' ? 'APROVADO_SERVIDOR' : servidor.status === 'RASCUNHO' ? null : servidor.status);
+        setObservacoes(servidor.observacoes_analise);
+        return;
       }
-    }, 0);
-    return () => clearTimeout(timeout);
+      const cadastro = await meuCadastroPendente(authUserId);
+      setStatus(cadastro ? (cadastro.status === 'APROVADO' ? 'DESCONHECIDO' : cadastro.status) : 'DESCONHECIDO');
+      setObservacoes(cadastro?.observacoes_analise ?? null);
+    } finally {
+      setLoading(false);
+    }
   }, [authUserId]);
+
+  useEffect(() => {
+    const timeout = setTimeout(carregar, 0);
+    return () => clearTimeout(timeout);
+  }, [carregar]);
 
   async function handleLogout() {
     await signOut();
     onLogout();
+  }
+
+  if (rascunho) {
+    return <CadastroServidorRascunho cadastro={rascunho} onRecarregar={carregar} onLogout={onLogout} />;
   }
 
   return (
@@ -70,7 +81,7 @@ export function CadastroPendenteScreen({ authUserId, onLogout }: CadastroPendent
             <h1 className="text-lg font-bold text-ms-main">Cadastro em análise</h1>
             <p className="text-sm text-gray-400 mt-2">
               {ehServidor
-                ? 'Recebemos seu cadastro! A Secretaria ou a Gestão vai conferir seus dados antes de liberar o acesso. Volte a entrar em alguns dias.'
+                ? 'Recebemos seu cadastro e seus documentos! A Secretaria ou a Gestão vai conferir tudo antes de liberar o acesso. Volte a entrar em alguns dias.'
                 : 'Recebemos seu pedido para o BiblioClube! A Secretaria vai conferir seus dados de matrícula antes de liberar o acesso. Volte a tentar entrar em alguns dias.'}
             </p>
           </>

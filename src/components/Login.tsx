@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import { signInWithPassword, registerFirstAccess, resetPassword } from '../services/authService';
 import { AlunoAuth } from './AlunoAuth';
 import { CadastroServidorCampos } from './CadastroServidorCampos';
-import { emailJaCadastradoPelaEscola, solicitarCadastroServidor } from '../services/cadastroServidorService';
+import { emailJaCadastradoPelaEscola, iniciarCadastroServidor } from '../services/cadastroServidorService';
 import { CAMPOS_SERVIDOR_VAZIOS, validarCpf, type CamposServidor } from '../utils/cadastroServidor';
 
 const EMAIL_ADMIN = 'gestaoescolarjbr@gmail.com';
@@ -85,8 +85,8 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
           }
           if (!validarCpf(dadosServidor.cpf)) throw new Error('CPF inválido. Confira os números digitados.');
           if (dadosServidor.telefone.replace(/\D/g, '').length < 10) throw new Error('Informe o telefone com DDD.');
-          await solicitarCadastroServidor({ email: emailLimpo, senha: password, ...dadosServidor });
-          setSuccess('Cadastro enviado! Você poderá entrar assim que a Secretaria ou a Gestão aprovar.');
+          await iniciarCadastroServidor({ email: emailLimpo, senha: password, ...dadosServidor });
+          setSuccess('Conta criada! Falta enviar seus documentos para concluir o cadastro.');
           setView('LOGIN');
           setEmailNaBase(null);
           setPassword('');
@@ -254,7 +254,7 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
                   </>
                 ) : (
                   view === 'LOGIN' ? 'Entrar no Sistema' : 
-                  view === 'REGISTER' ? (emailNaBase === null ? 'Continuar' : emailNaBase ? 'Criar senha e entrar' : 'Enviar cadastro para aprovação') : 
+                  view === 'REGISTER' ? (emailNaBase === null ? 'Continuar' : emailNaBase ? 'Criar senha e entrar' : 'Criar conta e continuar') : 
                   'Enviar Recuperação'
                 )}
               </button>
