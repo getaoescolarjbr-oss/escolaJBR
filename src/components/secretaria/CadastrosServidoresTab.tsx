@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Eye, FileText } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import type { Papel } from '../../types/rbac';
-import type { CadastroServidorPendente } from '../../services/cadastroServidorService';
+import type { CadastroServidorPendente, DocumentoDoCadastro } from '../../services/cadastroServidorService';
+import { listarDocumentosDoCadastro, urlDocumentoDoCadastro } from '../../services/cadastroServidorService';
 import {
   listarCadastrosServidoresPendentes,
   aprovarCadastroServidor,
@@ -19,6 +20,7 @@ export function CadastrosServidoresTab() {
   const [processandoId, setProcessandoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [papelPorCadastro, setPapelPorCadastro] = useState<Record<string, Papel | ''>>({});
+  const [docsPorCadastro, setDocsPorCadastro] = useState<Record<string, DocumentoDoCadastro[]>>({});
 
   // Só a Gestão concede papéis que dão poder sobre os outros (o banco também confere).
   const papeisDisponiveis = PAPEIS_SERVIDOR.filter((p) => hasRole('GESTAO') || (p !== 'GESTAO' && p !== 'SECRETARIA'));
@@ -28,6 +30,10 @@ export function CadastrosServidoresTab() {
     try {
       const lista = await listarCadastrosServidoresPendentes();
       setCadastros(lista);
+      const docs = await listarDocumentosDoCadastro(lista.map((c) => c.id));
+      const agrupado: Record<string, DocumentoDoCadastro[]> = {};
+      docs.forEach((d) => { (agrupado[d.cadastro_id] ??= []).push(d); });
+      setDocsPorCadastro(agrupado);
       setPapelPorCadastro((atual) => {
         const proximo = { ...atual };
         lista.forEach((c) => {
@@ -101,7 +107,32 @@ export function CadastrosServidoresTab() {
                 CPF {formatarCpf(c.cpf)} · Nascimento {new Date(c.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR')} · {formatarTelefone(c.telefone)}
               </p>
               {c.area_conhecimento && <p className="text-[11px] text-gray-500">Área: {c.area_conhecimento}</p>}
-              <p className="text-[11px] text-gray-500">Enviado em {new Date(c.criado_em).toLocaleString('pt-BR')}</p>
+              <p className="text-[11px] text-gray-500">
+                RG {c.rg || '—'}{c.titulo_eleitor ? ` · Título ${c.titulo_eleitor}${c.zona_eleitoral ? `, zona ${c.zona_eleitoral}` : ''}${c.secao_eleitoral ? `, seção ${c.secao_eleitoral}` : ''}` : ''}
+              </p>
+              <p className="text-[11px] text-gray-500">Endereço: {c.endereco || '—'}{c.telefone_fixo ? ` · Fixo ${formatarTelefone(c.telefone_fixo)}` : ''}</p>
+              {c.formacao && <p className="text-[11px] text-gray-500">Formação: {c.formacao}</p>}
+              <p className="text-[11px] text-gray-500">Enviado em {new Date(c.enviado_em ?? c.criado_em).toLocaleString('pt-BR')}</p>
+            </div>
+
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">Documentos enviados ({(docsPorCadastro[c.id] ?? []).length})</p>
+              {(docsPorCadastro[c.id] ?? []).length === 0 ? (
+                <p className="text-[11px] text-amber-400">Nenhum documento anexado.</p>
+              ) : (
+                (docsPorCadastro[c.id] ?? []).map((d) => (
+                  <div key={d.id} className="flex items-center justify-between gap-2 px-3 py-1.5 bg-ms-dark border border-gray-800 rounded-lg">
+                    <span className="flex items-center gap-2 min-w-0 text-xs text-ms-main">
+                      <FileText className="w-3.5 h-3.5 text-ms-blueText shrink-0" />
+                      <span className="truncate"><b>{d.rotulo}</b>{d.descricao ? ` — ${d.descricao}` : ''}</span>
+                    </span>
+                    <button
+                      onClick={async () => { try { window.open(await urlDocumentoDoCadastro(d), '_blank'); } catch (err) { setErro(err instanceof Error ? err.message : 'Erro ao abrir o documento.'); } }}
+                      className="p-1.5 text-ms-blueText hover:bg-ms-blue/20 rounded-lg shrink-0" title="Abrir"
+                    ><Eye className="w-4 h-4" /></button>
+                  </div>
+                ))
+              )}
             </div>
 
             <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400">

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Users, Link as LinkIcon } from 'lucide-react';
+import { Users, Link as LinkIcon, FileCheck } from 'lucide-react';
 import { ProfessorManager } from '../admin/ProfessorManager';
 import { AllocationManager } from '../admin/AllocationManager';
+import { DocumentosExigidosPanel } from './DocumentosExigidosPanel';
 
 // Ponto único para tudo que é feito com um servidor: cadastro, atestado/substituto e
 // transferência definitiva ficam dentro do ProfessorManager (uma aba); alocação de turmas
@@ -10,11 +11,12 @@ import { AllocationManager } from '../admin/AllocationManager';
 // acessam igualmente, sem depender do Painel Admin (que continua só GESTAO, para o resto:
 // turmas, disciplinas, alunos, ocorrências, horários, calendário, parâmetros RAV).
 export function ServidoresPanel({ theme }: { theme: 'dark' | 'light' }) {
-  const [aba, setAba] = useState<'cadastro' | 'alocacoes'>('cadastro');
+  const [aba, setAba] = useState<'cadastro' | 'alocacoes' | 'documentos'>('cadastro');
 
   const abas = [
     { id: 'cadastro' as const, label: 'Servidores', icon: Users },
     { id: 'alocacoes' as const, label: 'Alocação de Turmas', icon: LinkIcon },
+    { id: 'documentos' as const, label: 'Documentos exigidos', icon: FileCheck },
   ];
 
   return (
@@ -36,6 +38,7 @@ export function ServidoresPanel({ theme }: { theme: 'dark' | 'light' }) {
 
       {aba === 'cadastro' && <ProfessorManager theme={theme} />}
       {aba === 'alocacoes' && <AllocationManager />}
+      {aba === 'documentos' && <DocumentosExigidosPanel />}
     </div>
   );
 }
