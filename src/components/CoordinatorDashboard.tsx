@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase';
 import type { Professor, Turma, Student } from '../types';
 import { Filter, Users, Search, LayoutDashboard, ChevronDown, BookOpen, UserCheck, UserX, FileText, Loader2, GraduationCap, Globe, Activity, Calendar, ShieldCheck, Printer, AlertTriangle, CheckCheck, Clock, Mail, MessageSquare, BarChart2, Send, X, Cake, Pencil, Lock, Archive, ArchiveRestore, Eye } from 'lucide-react';
 import { printReport } from '../utils/printUtils';
-import { getCurrentBimestre, getBimestreFromDate, pesoDoVisto } from '../utils/academicUtils';
+import { getCurrentBimestre, getBimestreFromDate, pesoDoVisto, arredondarNotaMS, getCorGradiente, calcularMediaAnual } from '../utils/academicUtils';
 import { autoUpdateExpiredAbsences } from '../utils/studentUtils';
 import { StudentProfileModal } from './StudentProfileModal';
 import { TeacherDiaryModal } from './TeacherDiaryModal';
@@ -158,11 +158,16 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   const [avaliacoesAgenda, setAvaliacoesAgenda] = useState<any[]>([]);
   const [loadingAgenda, setLoadingAgenda] = useState(false);
   const agendaTableRef = useRef<HTMLTableElement>(null);
+  // Dados do Painel da Turma sempre guardados por bimestre (1-4), independente do filtro
+  // selecionado: a view "Todos os Bimestres" calcula a média ANUAL de verdade (igual ao
+  // Desempenho Anual dos Relatórios — média dos 4 bimestres já arredondados, não um
+  // somatório de tudo junto), e o pop-up de cada célula mostra o detalhamento por bimestre.
   const [painelData, setPainelData] = useState<{
-    atividades: Record<string, number>;
-    vistos: Record<string, Record<string, number>>;
-    notas?: Record<string, Record<string, { total: number; detalhes: any[] }>>;
-  }>({ atividades: {}, vistos: {} });
+    disciplinas: string[];
+    atividadesPorBimestre: Record<string, Record<number, number>>; // [disc][bim] = contagem de atividades
+    vistosPorBimestre: Record<string, Record<string, Record<number, number>>>; // [aluno][disc][bim] = soma de pesos
+    notasPorBimestre: Record<string, Record<string, Record<number, { somaSemRav: number; notaRav?: number; detalhes: { nome: string; nota: number; valorMaximo: number }[] }>>>; // [aluno][disc][bim]
+  }>({ disciplinas: [], atividadesPorBimestre: {}, vistosPorBimestre: {}, notasPorBimestre: {} });
   const [loadingPainel, setLoadingPainel] = useState(false);
   const [selectedBimestre, setSelectedBimestre] = useState<number>(getCurrentBimestre);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
@@ -324,53 +329,51 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
   async function fetchPainelTurma() {
       setLoadingPainel(true);
       try {
-          let atividadesData;
-          if (selectedBimestre > 0) {
-            const { data } = await supabase
-              .from('atividades_diárias')
-              .select('id, disciplinas(nome)')
-              .eq('turma_id', selectedTurma)
-              .eq('bimestre_id', selectedBimestre);
-            atividadesData = data;
-          } else {
-            const { data } = await supabase
-              .from('atividades_diárias')
-              .select('id, disciplinas(nome)')
-              .eq('turma_id', selectedTurma);
-            atividadesData = data;
-          }
+          // Busca o ano inteiro de uma vez (não filtra por selectedBimestre) — a view "Todos os
+          // Bimestres" precisa da média de cada bimestre separada pra calcular a média anual de
+          // verdade, e o pop-up de cada célula mostra o detalhamento bimestre a bimestre.
+          const { data: atividadesData } = await supabase
+            .from('atividades_diárias')
+            .select('id, bimestre_id, disciplinas(nome)')
+            .eq('turma_id', selectedTurma);
 
-          const contagemAtividades: Record<string, number> = {};
+          const atividadesPorBimestre: Record<string, Record<number, number>> = {};
           const ativIds: string[] = [];
+          const ativDiscPorId: Record<string, string> = {};
+          const ativBimestrePorId: Record<string, number> = {};
+          const disciplinasSet = new Set<string>();
 
-          if (atividadesData) {
-              atividadesData.forEach((a: any) => {
-                  const discNome = a.disciplinas?.nome;
-                  if (discNome) {
-                      contagemAtividades[discNome] = (contagemAtividades[discNome] || 0) + 1;
-                      ativIds.push(a.id);
-                  }
-              });
-          }
+          (atividadesData || []).forEach((a: any) => {
+              const discNome = a.disciplinas?.nome;
+              const bim = a.bimestre_id;
+              if (discNome && bim) {
+                  disciplinasSet.add(discNome);
+                  atividadesPorBimestre[discNome] = atividadesPorBimestre[discNome] || {};
+                  atividadesPorBimestre[discNome][bim] = (atividadesPorBimestre[discNome][bim] || 0) + 1;
+                  ativIds.push(a.id);
+                  ativDiscPorId[a.id] = discNome;
+                  ativBimestrePorId[a.id] = bim;
+              }
+          });
 
-          const vistosAcumulados: Record<string, Record<string, number>> = {};
-          
+          const vistosPorBimestre: Record<string, Record<string, Record<number, number>>> = {};
+
           if (ativIds.length > 0) {
               const { data: vistosData } = await supabase
                  .from('vistos_v2')
-                 .select('aluno_id, valor, atividade_id!inner(disciplinas(nome))')
+                 .select('aluno_id, valor, atividade_id')
                  .in('atividade_id', ativIds);
-              
-              if (vistosData) {
-                  vistosData.forEach((v: any) => {
-                     const disc = v.atividade_id?.disciplinas?.nome;
-                     const alunoId = v.aluno_id;
-                     if (disc && alunoId) {
-                         if (!vistosAcumulados[alunoId]) vistosAcumulados[alunoId] = {};
-                         vistosAcumulados[alunoId][disc] = (vistosAcumulados[alunoId][disc] || 0) + pesoDoVisto(v.valor);
-                     }
-                  });
-              }
+
+              (vistosData || []).forEach((v: any) => {
+                 const disc = ativDiscPorId[v.atividade_id];
+                 const bim = ativBimestrePorId[v.atividade_id];
+                 const alunoId = v.aluno_id;
+                 if (disc && bim && alunoId) {
+                     vistosPorBimestre[alunoId] = vistosPorBimestre[alunoId] || {};
+                     vistosPorBimestre[alunoId][disc] = vistosPorBimestre[alunoId][disc] || {};
+                     vistosPorBimestre[alunoId][disc][bim] = (vistosPorBimestre[alunoId][disc][bim] || 0) + pesoDoVisto(v.valor);
+                 }
+              });
           }
 
           // ── Mapear Disciplinas (ID -> Nome) ──
@@ -380,22 +383,11 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
               discData.forEach((d: any) => discMap[d.id] = d.nome);
           }
 
-          // ── Buscar Avaliações e Notas ──
-          let avaliacoesData;
-          if (selectedBimestre > 0) {
-            const { data } = await supabase
-              .from('avaliacoes')
-              .select('id, valor_maximo, nome, disciplina_id')
-              .eq('turma_id', selectedTurma)
-              .eq('bimestre_id', selectedBimestre);
-            avaliacoesData = data;
-          } else {
-            const { data } = await supabase
-              .from('avaliacoes')
-              .select('id, valor_maximo, nome, disciplina_id')
-              .eq('turma_id', selectedTurma);
-            avaliacoesData = data;
-          }
+          // ── Buscar Avaliações e Notas do ano inteiro ──
+          const { data: avaliacoesData } = await supabase
+            .from('avaliacoes')
+            .select('id, valor_maximo, nome, disciplina_id, bimestre_id')
+            .eq('turma_id', selectedTurma);
 
           const avalIds = avaliacoesData?.map((a: any) => a.id) || [];
           let notasData: any[] = [];
@@ -407,67 +399,94 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
               notasData = data || [];
           }
 
-          // Agrupar notas por aluno e disciplina
-          const notasAcumuladas: Record<string, Record<string, { total: number; detalhes: any[] }>> = {};
-          
-          if (avaliacoesData && notasData) {
-              notasData.forEach((nota: any) => {
-                  const aval = avaliacoesData.find((a: any) => a.id === nota.avaliacao_id);
-                  if (aval && aval.disciplina_id) {
-                      const discNome = discMap[aval.disciplina_id] || 'Desconhecida';
-                      const alunoId = nota.aluno_id;
-                      
-                      if (!notasAcumuladas[alunoId]) notasAcumuladas[alunoId] = {};
-                      if (!notasAcumuladas[alunoId][discNome]) {
-                          notasAcumuladas[alunoId][discNome] = { total: 0, detalhes: [] };
-                      }
-                      
-                      notasAcumuladas[alunoId][discNome].total += nota.nota;
-                      notasAcumuladas[alunoId][discNome].detalhes.push({
-                          nome: aval.nome,
-                          nota: nota.nota,
-                          valorMaximo: aval.valor_maximo
-                      });
-                  }
-              });
-          }
+          // Agrupar notas por aluno, disciplina e bimestre — RAV fica separado (substitui a
+          // média do bimestre quando é maior, nunca soma junto, igual ao Boletim da Turma).
+          const notasPorBimestre: Record<string, Record<string, Record<number, { somaSemRav: number; notaRav?: number; detalhes: { nome: string; nota: number; valorMaximo: number }[] }>>> = {};
+
+          notasData.forEach((nota: any) => {
+              const aval = (avaliacoesData || []).find((a: any) => a.id === nota.avaliacao_id);
+              if (!aval || !aval.disciplina_id || !aval.bimestre_id) return;
+
+              const discNome = discMap[aval.disciplina_id] || 'Desconhecida';
+              const alunoId = nota.aluno_id;
+              const bim = aval.bimestre_id;
+              disciplinasSet.add(discNome);
+
+              notasPorBimestre[alunoId] = notasPorBimestre[alunoId] || {};
+              notasPorBimestre[alunoId][discNome] = notasPorBimestre[alunoId][discNome] || {};
+              const slot = notasPorBimestre[alunoId][discNome][bim] || { somaSemRav: 0, detalhes: [] };
+
+              if (aval.nome === 'RAV') {
+                  slot.notaRav = nota.nota;
+              } else {
+                  slot.somaSemRav += nota.nota;
+              }
+              slot.detalhes.push({ nome: aval.nome, nota: nota.nota, valorMaximo: aval.valor_maximo });
+              notasPorBimestre[alunoId][discNome][bim] = slot;
+          });
 
           // ── Garantir que todas as disciplinas da turma apareçam no painel consolidado ──
-          // 1. A partir das alocações da turma
           const { data: localAllocs } = await supabase
             .from('alocacoes_v2')
             .select('disciplinas(nome)')
             .eq('turma_id', selectedTurma);
-          
-          if (localAllocs) {
-              localAllocs.forEach((a: any) => {
-                  const discNome = a.disciplinas?.nome;
-                  if (discNome && !contagemAtividades[discNome]) {
-                      contagemAtividades[discNome] = 0;
-                  }
-              });
-          }
 
-          // 2. A partir das avaliações do bimestre/turma
-          if (avaliacoesData) {
-              avaliacoesData.forEach((av: any) => {
-                  const discNome = discMap[av.disciplina_id];
-                  if (discNome && !contagemAtividades[discNome]) {
-                      contagemAtividades[discNome] = 0;
-                  }
-              });
-          }
+          (localAllocs || []).forEach((a: any) => {
+              const discNome = a.disciplinas?.nome;
+              if (discNome) disciplinasSet.add(discNome);
+          });
 
-          setPainelData({ 
-            atividades: contagemAtividades, 
-            vistos: vistosAcumulados,
-            notas: notasAcumuladas
+          setPainelData({
+            disciplinas: Array.from(disciplinasSet).sort(),
+            atividadesPorBimestre,
+            vistosPorBimestre,
+            notasPorBimestre
           });
       } catch (err) {
           console.error(err);
       } finally {
           setLoadingPainel(false);
       }
+  }
+
+  // Combina notas + vistos de um bimestre específico numa única "célula" de média — mesma
+  // regra do Boletim da Turma (GradesPanel): RAV substitui quando é maior (nunca soma), e o
+  // resultado final nunca ultrapassa 10 (arredondarNotaMS já aplica o teto).
+  function calcularCelulaBimestre(alunoId: string, disc: string, bim: number) {
+    const totalAtiv = painelData.atividadesPorBimestre[disc]?.[bim] || 0;
+    const acumulado = painelData.vistosPorBimestre[alunoId]?.[disc]?.[bim] || 0;
+    const alloc = allocations.find((a: any) => a.disciplinas?.nome === disc);
+    const maxVistos = alloc?.professores?.config_visto_valor_total || 2.0;
+    const notaVistos = totalAtiv > 0 ? (acumulado / totalAtiv) * maxVistos : 0;
+
+    const brutas = painelData.notasPorBimestre[alunoId]?.[disc]?.[bim];
+    const somaSemRav = brutas?.somaSemRav || 0;
+    const notaRav = brutas?.notaRav;
+    const somaComVistos = somaSemRav + notaVistos;
+    const mediaCrua = notaRav !== undefined && notaRav > somaComVistos ? notaRav : somaComVistos;
+    const temDados = totalAtiv > 0 || (brutas?.detalhes.length || 0) > 0;
+
+    return {
+      media: arredondarNotaMS(mediaCrua),
+      notaVistos,
+      maxVistos,
+      notaRav,
+      detalhes: brutas?.detalhes || [],
+      temDados
+    };
+  }
+
+  // Média exibida na célula: um bimestre específico, ou a média ANUAL (igual aos Relatórios de
+  // Desempenho Anual — média dos 4 bimestres já arredondados, não a soma bruta de tudo junto).
+  function calcularMediaExibida(alunoId: string, disc: string) {
+    if (selectedBimestre > 0) {
+      const c = calcularCelulaBimestre(alunoId, disc, selectedBimestre);
+      return { media: c.media, temDados: c.temDados };
+    }
+    const porBimestre = [1, 2, 3, 4].map(b => calcularCelulaBimestre(alunoId, disc, b));
+    const temDados = porBimestre.some(b => b.temDados);
+    const media = calcularMediaAnual(porBimestre.map(b => b.media));
+    return { media, temDados };
   }
 
   async function fetchAgendaAvaliacoes() {
@@ -1682,7 +1701,11 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                          <thead className="sticky top-0 z-20 bg-[#0a1a3a]">
                          <tr>
                              <th className="px-4 py-3 text-left text-[10px] font-black text-white uppercase tracking-widest sticky left-0 top-0 z-30 bg-[#0a1a3a] border-r border-[#002677]/30 shadow-[2px_0_5px_rgba(0,0,0,0.1)] align-bottom pb-3">Estudante</th>
-                             {Object.keys(painelData.atividades).sort().map(disc => (
+                             {painelData.disciplinas.map(disc => {
+                                 const totalAtivExibido = selectedBimestre > 0
+                                   ? (painelData.atividadesPorBimestre[disc]?.[selectedBimestre] || 0)
+                                   : [1,2,3,4].reduce((soma, b) => soma + (painelData.atividadesPorBimestre[disc]?.[b] || 0), 0);
+                                 return (
                                  <th key={disc} className="px-0.5 py-2 text-center text-[10px] font-semibold text-white uppercase tracking-widest min-w-[46px] max-w-[50px] align-bottom border-b border-ms-border/30 bg-[#0a1a3a]">
                                      <div className={`flex flex-col items-center justify-end pb-2 transition-all duration-200 ${painelScrolled ? 'h-[72px]' : 'h-[110px]'}`}>
                                          <span
@@ -1698,10 +1721,11 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                                          </span>
                                      </div>
                                      <div className="text-[8px] text-gray-400 mt-1 pt-1.5 border-t border-ms-border/20 whitespace-nowrap font-medium">
-                                         {painelData.atividades[disc]} ativ.
+                                         {totalAtivExibido} ativ.
                                      </div>
                                  </th>
-                             ))}
+                                 );
+                             })}
                          </tr>
                          </thead>
                          <tbody className="divide-y divide-ms-border/30">
@@ -1753,19 +1777,13 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                                        </div>
                                    </div>
                                  </td>
-                                 {Object.keys(painelData.atividades).sort().map(disc => {
-                                     const totalAtiv = painelData.atividades[disc] || 0;
-                                     const acumulado = painelData.vistos[aluno.id]?.[disc] || 0;
-                                     
-                                     // Config de vistos do professor dessa disciplina
-                                     const alloc = allocations.find((a: any) => a.disciplinas?.nome === disc);
-                                     const maxVistos = alloc?.professores?.config_visto_valor_total || 2.0;
-                                     const notaVistos = totalAtiv > 0 ? (acumulado / totalAtiv) * maxVistos : 0;
-
-                                     const notasInfo = painelData.notas?.[aluno.id]?.[disc] || { total: 0, detalhes: [] };
-                                     // Teto de 10: ver mesmo comentário em StudentList.tsx.
-                                     const mediaFinal = Math.min(10, notasInfo.total + notaVistos);
-                                     const hasAnyData = totalAtiv > 0 || notasInfo.detalhes.length > 0;
+                                 {painelData.disciplinas.map(disc => {
+                                     const { media: mediaFinal, temDados: hasAnyData } = calcularMediaExibida(aluno.id, disc);
+                                     const corMedia = getCorGradiente(mediaFinal, theme);
+                                     // Pop-up: um bimestre específico, ou os 4 bimestres + total anual (igual ao
+                                     // Desempenho Anual dos Relatórios).
+                                     const bimestresParaExibir = selectedBimestre > 0 ? [selectedBimestre] : [1, 2, 3, 4];
+                                     const celulasPorBimestre = bimestresParaExibir.map(b => ({ bim: b, ...calcularCelulaBimestre(aluno.id, disc, b) }));
 
                                      return (
                                      <td key={disc} className={`px-1 py-2 text-center group/cell border-r border-ms-border/10 ${
@@ -1802,39 +1820,55 @@ export function CoordinatorDashboard({ professor, theme }: CoordinatorDashboardP
                                               )
                                             ) : hasAnyData ? (
                                               <div className="relative group/tooltip">
-                                                <button className={`flex items-center justify-center px-1.5 py-0.5 rounded border shadow-sm transition-all hover:scale-105 active:scale-95 ${
-                                                  mediaFinal >= 6.0 
-                                                    ? 'border-blue-500/30 text-blue-600 bg-blue-500/5 hover:bg-blue-500/10' 
-                                                    : 'border-red-500/30 text-red-500 bg-red-500/5 hover:bg-red-500/10'
-                                                }`}>
+                                                <button
+                                                  className="flex items-center justify-center px-1.5 py-0.5 rounded border shadow-sm transition-all hover:scale-105 active:scale-95"
+                                                  style={{ borderColor: `${corMedia}4D`, color: corMedia, backgroundColor: `${corMedia}0D` }}
+                                                >
                                                   <span className="text-xs leading-none font-black">{mediaFinal.toFixed(1)}</span>
                                                 </button>
 
-                                                <div className={`absolute left-1/2 -translate-x-1/2 w-56 rounded-2xl shadow-2xl z-[100] border p-4 backdrop-blur-md opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 bg-white/95 dark:bg-[#0a1a3a]/95 border-blue-100 dark:border-blue-900 shadow-blue-900/20 ${
+                                                <div className={`absolute left-1/2 -translate-x-1/2 w-64 rounded-2xl shadow-2xl z-[100] border p-4 backdrop-blur-md opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all duration-200 bg-white/95 dark:bg-[#0a1a3a]/95 border-blue-100 dark:border-blue-900 shadow-blue-900/20 ${
                                                   idx < 2 ? 'top-full mt-3' : 'bottom-full mb-3'
                                                 }`}>
                                                   <div className={`absolute left-1/2 -translate-x-1/2 w-4 h-4 rotate-45 bg-white dark:bg-[#0a1a3a] border-blue-100 dark:border-blue-900 ${
                                                     idx < 2 ? '-top-2 border-t border-l' : '-bottom-2 border-b border-r'
                                                   }`} />
-                                                  <div className="relative z-10 text-left">
+                                                  <div className="relative z-10 text-left max-h-80 overflow-y-auto">
                                                     <p className="text-[10px] font-black uppercase tracking-widest border-b pb-2 mb-3 text-center text-blue-800 dark:text-blue-300 border-blue-100 dark:border-blue-900">
-                                                      Composição da Média
+                                                      {bimestresParaExibir.length > 1 ? 'Composição da Média Anual' : 'Composição da Média'}
                                                     </p>
-                                                    <div className="space-y-3">
-                                                      {notasInfo.detalhes.map((av: any, i: number) => (
-                                                        <div key={i} className="flex justify-between items-center text-xs">
-                                                          <span className="font-semibold text-gray-700 dark:text-gray-300 truncate pr-2 max-w-[120px]">{av.nome}</span>
-                                                          <span className="font-black text-blue-600 dark:text-blue-400 whitespace-nowrap">{av.nota.toFixed(1)} <span className="text-[9px] font-bold text-gray-400">/ {av.valorMaximo}</span></span>
+                                                    <div className="space-y-4">
+                                                      {celulasPorBimestre.map(c => (
+                                                        <div key={c.bim} className="space-y-1.5">
+                                                          {bimestresParaExibir.length > 1 && (
+                                                            <p className="text-[9px] font-black uppercase tracking-widest text-blue-700 dark:text-blue-400">{c.bim}º Bimestre</p>
+                                                          )}
+                                                          {c.detalhes.length === 0 && c.notaVistos === 0 ? (
+                                                            <p className="text-[11px] text-gray-400 italic pl-1">Sem lançamentos</p>
+                                                          ) : (
+                                                            <>
+                                                              {c.detalhes.map((av, i) => (
+                                                                <div key={i} className="flex justify-between items-center text-xs pl-1">
+                                                                  <span className="font-semibold text-gray-700 dark:text-gray-300 truncate pr-2 max-w-[130px]">{av.nome}</span>
+                                                                  <span className="font-black text-blue-600 dark:text-blue-400 whitespace-nowrap">{av.nota.toFixed(1)} <span className="text-[9px] font-bold text-gray-400">/ {av.valorMaximo}</span></span>
+                                                                </div>
+                                                              ))}
+                                                              <div className="flex justify-between items-center text-xs pl-1">
+                                                                <span className="font-semibold text-gray-700 dark:text-gray-300">Vistos na Rotina</span>
+                                                                <span className="font-black text-blue-600 dark:text-blue-400 whitespace-nowrap">{c.notaVistos.toFixed(1)} <span className="text-[9px] font-bold text-gray-400">/ {c.maxVistos}</span></span>
+                                                              </div>
+                                                            </>
+                                                          )}
+                                                          <div className="flex justify-between items-center text-xs font-black pl-1" style={{ color: getCorGradiente(c.media, theme) }}>
+                                                            <span className="uppercase tracking-wide">{bimestresParaExibir.length > 1 ? `Média B${c.bim}` : 'Subtotal'}</span>
+                                                            <span>{c.media.toFixed(1)}</span>
+                                                          </div>
                                                         </div>
                                                       ))}
-                                                      <div className="flex justify-between items-center text-xs">
-                                                        <span className="font-semibold text-gray-700 dark:text-gray-300">Vistos na Rotina</span>
-                                                        <span className="font-black text-blue-600 dark:text-blue-400 whitespace-nowrap">{notaVistos.toFixed(1)} <span className="text-[9px] font-bold text-gray-400">/ {maxVistos}</span></span>
-                                                      </div>
                                                     </div>
                                                     <div className="mt-4 pt-3 border-t border-blue-100 dark:border-blue-900 flex justify-between items-center">
-                                                      <span className="text-[11px] font-black uppercase text-blue-900 dark:text-white">Média Final</span>
-                                                      <span className={`text-base font-black ${mediaFinal >= 6.0 ? 'text-green-500' : 'text-red-500'}`}>
+                                                      <span className="text-[11px] font-black uppercase text-blue-900 dark:text-white">{bimestresParaExibir.length > 1 ? 'Média Anual' : 'Média Final'}</span>
+                                                      <span className="text-base font-black" style={{ color: corMedia }}>
                                                         {mediaFinal.toFixed(1)}
                                                       </span>
                                                     </div>
