@@ -5,6 +5,7 @@ export interface ServidorLista {
   nome: string;
   cargo: string | null;
   pessoa_id: string | null;
+  user_id: string | null;
 }
 
 export interface DadosServidorTermo {
@@ -36,7 +37,7 @@ interface Complementares {
 }
 
 export async function listarServidores(): Promise<ServidorLista[]> {
-  const { data, error } = await supabase.from('professores').select('id, nome, cargo, pessoa_id').order('nome');
+  const { data, error } = await supabase.from('professores').select('id, nome, cargo, pessoa_id, user_id').order('nome');
   if (error) throw error;
   return (data ?? []) as ServidorLista[];
 }

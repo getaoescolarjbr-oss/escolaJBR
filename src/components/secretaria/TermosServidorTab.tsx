@@ -11,6 +11,9 @@ import {
 import { FUNDAMENTO_VALOR_PADRAO, gerarHtmlTermoConvocado, type DadosTermoConvocado } from '../../utils/termoConvocado';
 import { formatarCpf, formatarTelefone } from '../../utils/cadastroServidor';
 import { DocumentosServidor } from './DocumentosServidor';
+import { TermoAssinaturaDigital } from './TermoAssinaturaDigital';
+import { convocacaoDoServidor } from '../../services/cadastroServidorService';
+import { convocacaoParaTermo } from '../../utils/termoDoCadastro';
 
 const CHAVE_PREFS = 'termo-convocado-prefs';
 const hoje = () => new Date().toISOString().slice(0, 10);
@@ -105,6 +108,9 @@ export function TermosServidorTab() {
   const [salvando, setSalvando] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [modoAssinatura, setModoAssinatura] = useState<'PAPEL' | 'DIGITAL'>('PAPEL');
+  const [recarregarDocs, setRecarregarDocs] = useState(0);
+  const [convocacaoVeioDoCadastro, setConvocacaoVeioDoCadastro] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   useEffect(() => {
@@ -131,8 +137,12 @@ export function TermosServidorTab() {
     try {
       const x = await obterDadosServidor(s);
       setDisciplinas(x.disciplinas);
+      // Convocação já combinada no cadastro (preenchida pelo servidor e/ou pela Secretaria).
+      const conv = s.user_id ? convocacaoParaTermo(await convocacaoDoServidor(s.user_id).catch(() => ({}))) : {};
+      setConvocacaoVeioDoCadastro(Object.keys(conv).length > 0);
       setDados((d) => ({
         ...d,
+        ...conv,
         nome: x.nome, email: x.email, cpf: formatarCpf(x.cpf), dataNascimento: x.dataNascimento,
         celular: formatarTelefone(x.telefone), rg: x.rg, tituloEleitor: x.tituloEleitor, zonaEleitoral: x.zonaEleitoral,
         secaoEleitoral: x.secaoEleitoral, endereco: x.endereco, telefoneFixo: x.telefoneFixo, formacao: x.formacao,
@@ -196,7 +206,7 @@ export function TermosServidorTab() {
           {carregando ? (
             <Loader2 className="w-5 h-5 animate-spin text-ms-blueText" />
           ) : (
-            <SeletorServidor servidores={servidores} valor={servidor} onEscolher={escolherServidor} onLimpar={() => { setServidor(null); setDados({ ...VAZIO, ...lerPrefs() }); setDisciplinas([]); }} placeholder="Digite o nome do professor..." />
+            <SeletorServidor servidores={servidores} valor={servidor} onEscolher={escolherServidor} onLimpar={() => { setServidor(null); setDados({ ...VAZIO, ...lerPrefs() }); setDisciplinas([]); setConvocacaoVeioDoCadastro(false); }} placeholder="Digite o nome do professor..." />
           )}
           {!servidor && <p className="text-[11px] text-gray-500">Escolha na lista para preencher sozinho. Se ele não estiver na lista, você pode digitar os campos abaixo e imprimir mesmo assim (só não dá para salvar no cadastro).</p>}
 
@@ -228,6 +238,7 @@ export function TermosServidorTab() {
 
         <div className="bg-ms-card border border-gray-800 rounded-2xl p-5 space-y-3">
           <p className="text-xs font-black uppercase tracking-wider text-ms-main">2. Dados da convocação</p>
+          {convocacaoVeioDoCadastro && <p className="text-[11px] text-green-400">Preenchido a partir do cadastro do servidor. Confira e ajuste se precisar.</p>}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Campo rotulo="1) Horas semanais"><input value={dados.horasSemanais} onChange={(e) => set('horasSemanais', e.target.value)} placeholder="Ex.: 20 horas" className={classeInput} /></Campo>
             <Campo rotulo="4) Período — de"><input type="date" value={dados.periodoDe} onChange={(e) => set('periodoDe', e.target.value)} className={classeInput} /></Campo>
@@ -269,9 +280,22 @@ export function TermosServidorTab() {
         </div>
 
         <div className="bg-ms-card border border-gray-800 rounded-2xl p-5 space-y-3">
-          <p className="text-xs font-black uppercase tracking-wider text-ms-main">4. Termo assinado (escaneado)</p>
+          <p className="text-xs font-black uppercase tracking-wider text-ms-main">4. Termo assinado</p>
+          <div className="flex gap-2">
+            {([['PAPEL', 'Em papel (escaneado)'], ['DIGITAL', 'Digital (gov.br)']] as const).map(([valor, rotulo]) => (
+              <button key={valor} type="button" onClick={() => setModoAssinatura(valor)}
+                className={`flex-1 px-3 py-2 rounded-lg text-xs font-bold border transition-all ${modoAssinatura === valor ? 'bg-ms-blue text-white border-ms-blue' : 'bg-ms-dark text-gray-300 border-gray-700 hover:border-ms-blue'}`}>{rotulo}</button>
+            ))}
+          </div>
           {servidor?.pessoa_id ? (
-            <DocumentosServidor pessoaId={servidor.pessoa_id} tipo="TERMO_CONVOCACAO_ASSINADO" nomeServidor={servidor.nome} />
+            modoAssinatura === 'PAPEL' ? (
+              <DocumentosServidor pessoaId={servidor.pessoa_id} tipo="TERMO_CONVOCACAO_ASSINADO" nomeServidor={servidor.nome} recarregarChave={recarregarDocs} />
+            ) : (
+              <>
+                <TermoAssinaturaDigital pessoaId={servidor.pessoa_id} onEnviado={() => setRecarregarDocs((n) => n + 1)} />
+                <DocumentosServidor pessoaId={servidor.pessoa_id} tipo="TERMO_CONVOCACAO_ASSINADO" nomeServidor={servidor.nome} somenteLista recarregarChave={recarregarDocs} />
+              </>
+            )
           ) : (
             <p className="text-[11px] text-gray-500">Escolha o professor na lista (passo 1) para guardar o termo assinado na ficha dele.</p>
           )}

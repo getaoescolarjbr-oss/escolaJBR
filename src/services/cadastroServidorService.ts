@@ -87,6 +87,8 @@ export interface CadastroServidorPendente {
   telefone_fixo: string | null;
   formacao: string | null;
   convite_id: string | null;
+  correcao_motivo: string | null;
+  correcao_em: string | null;
   convocacao: Record<string, string>;
   convocacao_modos: Record<string, ModoPreenchimento>;
 }
@@ -276,6 +278,25 @@ export async function listarCadastrosServidoresPendentes(): Promise<CadastroServ
 export async function aprovarCadastroServidor(cadastroId: string, papel: Papel): Promise<void> {
   const { error } = await supabase.rpc('rpc_aprovar_cadastro_servidor', { p_cadastro_id: cadastroId, p_papel: papel });
   if (error) throw error;
+}
+
+// Devolve o cadastro em análise ao servidor (volta a RASCUNHO) com o que precisa ser corrigido.
+export async function devolverCadastroServidor(cadastroId: string, motivo: string): Promise<void> {
+  const { error } = await supabase.rpc('rpc_devolver_cadastro_servidor', { p_cadastro_id: cadastroId, p_motivo: motivo });
+  if (error) throw new Error(error.message);
+}
+
+// Convocação do cadastro mais recente do servidor (para preencher o termo depois da aprovação).
+export async function convocacaoDoServidor(authUserId: string): Promise<Record<string, string>> {
+  const { data, error } = await supabase
+    .from('cadastros_servidores_pendentes')
+    .select('convocacao')
+    .eq('auth_user_id', authUserId)
+    .order('criado_em', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  return (data?.convocacao as Record<string, string> | undefined) ?? {};
 }
 
 export async function rejeitarCadastroServidor(cadastroId: string, observacoes: string): Promise<void> {
