@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Clock, XCircle, Loader2, BookOpen } from 'lucide-react';
 import { signOut } from '../../services/authService';
 import { meuCadastroPendente } from '../../services/cadastroBibliotecaService';
-import { meuCadastroServidor, type CadastroServidorPendente } from '../../services/cadastroServidorService';
+import { criarCadastroDosMetadados, meuCadastroServidor, type CadastroServidorPendente } from '../../services/cadastroServidorService';
 import { CadastroServidorRascunho } from '../cadastroServidor/CadastroServidorRascunho';
 
 interface CadastroPendenteScreenProps {
@@ -21,11 +21,14 @@ export function CadastroPendenteScreen({ authUserId, onLogout }: CadastroPendent
   const [observacoes, setObservacoes] = useState<string | null>(null);
   const [rascunho, setRascunho] = useState<CadastroServidorPendente | null>(null);
   const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
 
   const carregar = useCallback(async () => {
     try {
       // Servidor (Portal do Servidor) primeiro; se não houver pedido, é o aluno do BiblioClube.
-      const servidor = await meuCadastroServidor(authUserId);
+      let servidor = await meuCadastroServidor(authUserId);
+      // Cadastro feito com a confirmação de e-mail ligada: o pedido nasce agora, no primeiro login.
+      if (!servidor && (await criarCadastroDosMetadados())) servidor = await meuCadastroServidor(authUserId);
       if (servidor) {
         setEhServidor(true);
         setRascunho(servidor.status === 'RASCUNHO' ? servidor : null);
@@ -36,6 +39,8 @@ export function CadastroPendenteScreen({ authUserId, onLogout }: CadastroPendent
       const cadastro = await meuCadastroPendente(authUserId);
       setStatus(cadastro ? (cadastro.status === 'APROVADO' ? 'DESCONHECIDO' : cadastro.status) : 'DESCONHECIDO');
       setObservacoes(cadastro?.observacoes_analise ?? null);
+    } catch (e) {
+      setErro(e instanceof Error ? e.message : 'Não foi possível carregar seu cadastro.');
     } finally {
       setLoading(false);
     }
@@ -89,6 +94,7 @@ export function CadastroPendenteScreen({ authUserId, onLogout }: CadastroPendent
           <>
             <h1 className="text-lg font-bold text-ms-main">Sua conta ainda não tem acesso liberado</h1>
             <p className="text-sm text-gray-400 mt-2">Fale com a Secretaria da escola.</p>
+            {erro && <p className="text-xs text-red-400 mt-3">{erro}</p>}
           </>
         )}
         <button onClick={handleLogout} className="mt-6 px-6 py-2 bg-ms-blue text-white rounded-lg font-bold">Sair</button>

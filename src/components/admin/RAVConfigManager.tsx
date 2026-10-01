@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Settings, Save, Loader2, CheckCircle, HelpCircle, Calendar, Layers, DoorOpen } from 'lucide-react';
+import { ConfirmacaoEmailPanel } from './ConfirmacaoEmailPanel';
 
 interface RAVConfigManagerProps {
   theme: 'dark' | 'light';
@@ -362,6 +363,8 @@ export function RAVConfigManager({ theme }: RAVConfigManagerProps) {
           </div>
         )}
       </div>
+
+      <ConfirmacaoEmailPanel />
     </div>
     </div>
   );

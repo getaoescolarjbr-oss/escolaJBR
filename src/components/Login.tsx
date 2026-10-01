@@ -116,9 +116,11 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor', conviteToken 
           }
           if (!validarCpf(dadosServidor.cpf)) throw new Error('CPF inválido. Confira os números digitados.');
           if (dadosServidor.telefone.replace(/\D/g, '').length < 10) throw new Error('Informe o telefone com DDD.');
-          await iniciarCadastroServidor({ email: emailLimpo, senha: password, ...dadosServidor }, conviteValido ? conviteToken : null);
+          const { precisaConfirmarEmail } = await iniciarCadastroServidor({ email: emailLimpo, senha: password, ...dadosServidor }, conviteValido ? conviteToken : null);
           if (conviteToken) window.history.replaceState({}, '', '/');
-          setSuccess('Conta criada! Falta enviar seus documentos para concluir o cadastro.');
+          setSuccess(precisaConfirmarEmail
+            ? `Conta criada! Enviamos um e-mail para ${emailLimpo}. Abra o link de confirmação e depois entre aqui para enviar seus documentos.`
+            : 'Conta criada! Falta enviar seus documentos para concluir o cadastro.');
           setView('LOGIN');
           setEmailNaBase(null);
           setPassword('');
@@ -131,6 +133,16 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor', conviteToken 
         if (authError) throw authError;
 
         if (authData.user) {
+          // Com a confirmação de e-mail ligada não há sessão agora: o vínculo é feito no primeiro login
+          // (o App liga o professor pelo e-mail), então não há o que atualizar aqui.
+          if (!authData.session) {
+            setSuccess(`Conta criada! Enviamos um e-mail para ${emailLimpo}. Abra o link de confirmação e depois faça o login.`);
+            setView('LOGIN');
+            setEmailNaBase(null);
+            setPassword('');
+            return;
+          }
+
           if (ehProfessor) {
             // Vincula pelo e-mail: sem o SELECT anterior nao ha mais o id em maos. A
             // policy "Permitir auto-vinculacao no primeiro acesso" ja restringe a linha

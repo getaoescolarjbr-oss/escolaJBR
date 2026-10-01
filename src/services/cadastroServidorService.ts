@@ -151,33 +151,86 @@ export async function emailJaCadastradoPelaEscola(email: string): Promise<boolea
 // Cria a conta e o pedido em RASCUNHO. Os documentos vêm na etapa seguinte (tela "Cadastro
 // incompleto"), que já abre sozinha porque a conta criada fica logada.
 // `conviteToken` (link da Secretaria) traz os campos da convocação já combinados; sem ele valem os modos padrão.
-// Devolve false se o convite não pôde ser aplicado (ex.: usado entre a consulta e o envio): o cadastro segue normal.
-export async function iniciarCadastroServidor(dados: DadosCadastroServidor, conviteToken?: string | null): Promise<boolean> {
-  const email = dados.email.trim().toLowerCase();
-  const { data: authData, error: authError } = await supabase.auth.signUp({ email, password: dados.senha });
-  if (authError) throw authError;
-  if (!authData.user) throw new Error('Não foi possível criar a conta. Tente novamente.');
-  // Com confirmação de e-mail ligada o signUp não devolve sessão e o INSERT abaixo seria
-  // negado pela RLS: falha aqui com mensagem clara em vez de deixar conta sem pedido.
-  if (!authData.session) {
-    throw new Error('Conta criada, mas é preciso confirmar o e-mail antes de continuar o cadastro. Confirme e tente novamente.');
-  }
+//
+// Com a confirmação de e-mail ligada (Parâmetros Gerais) o signUp não devolve sessão e o pedido não
+// pode ser criado agora (a RLS exige login). Os dados seguem guardados na própria conta
+// (user_metadata) e o pedido é criado no primeiro login depois da confirmação:
+// ver criarCadastroDosMetadados.
+export interface ResultadoInicioCadastro {
+  precisaConfirmarEmail: boolean;
+  // false se o convite não pôde ser aplicado (ex.: usado entre a consulta e o envio): o cadastro segue normal.
+  conviteAplicado: boolean;
+}
 
-  const { data: pedido, error } = await supabase.from('cadastros_servidores_pendentes').insert([{
-    auth_user_id: authData.user.id,
+type PedidoServidor = ReturnType<typeof camposDoPedido>;
+
+// Colunas do pedido que o servidor pode informar. Também filtra o que volta dos metadados da conta,
+// que o próprio usuário consegue editar: nada fora desta lista chega ao INSERT.
+const COLUNAS_DO_PEDIDO: (keyof PedidoServidor)[] = [
+  'nome', 'cargo', 'cpf', 'data_nascimento', 'telefone', 'area_conhecimento', 'status_servidor', 'aceite_lgpd',
+  'rg', 'titulo_eleitor', 'zona_eleitoral', 'secao_eleitoral', 'endereco', 'telefone_fixo', 'formacao',
+];
+
+function filtrarPedido(bruto: Record<string, unknown>): Partial<PedidoServidor> {
+  const limpo: Record<string, string | boolean | null> = {};
+  COLUNAS_DO_PEDIDO.forEach((c) => {
+    const v = bruto[c];
+    if (typeof v === 'string' || typeof v === 'boolean' || v === null) limpo[c] = v;
+  });
+  return limpo as Partial<PedidoServidor>;
+}
+
+async function criarPedidoRascunho(userId: string, email: string, pedido: Partial<PedidoServidor>, conviteToken: string | null): Promise<boolean> {
+  const { data, error } = await supabase.from('cadastros_servidores_pendentes').insert([{
+    auth_user_id: userId,
     email,
     status: 'RASCUNHO',
-    ...camposDoPedido(dados),
+    ...pedido,
   }]).select('id').single();
   if (error) throw error;
 
   if (conviteToken) {
-    const { error: erroConvite } = await supabase.rpc('rpc_aplicar_convite', { p_cadastro_id: pedido.id, p_token: conviteToken });
+    const { error: erroConvite } = await supabase.rpc('rpc_aplicar_convite', { p_cadastro_id: data.id, p_token: conviteToken });
     if (!erroConvite) return true;
   }
-  const { error: erroPadrao } = await supabase.rpc('rpc_aplicar_convite', { p_cadastro_id: pedido.id, p_token: null });
+  const { error: erroPadrao } = await supabase.rpc('rpc_aplicar_convite', { p_cadastro_id: data.id, p_token: null });
   if (erroPadrao) throw new Error(erroPadrao.message);
   return false;
+}
+
+export async function iniciarCadastroServidor(dados: DadosCadastroServidor, conviteToken?: string | null): Promise<ResultadoInicioCadastro> {
+  const email = dados.email.trim().toLowerCase();
+  const pedido = camposDoPedido(dados);
+  const { data: authData, error: authError } = await supabase.auth.signUp({
+    email,
+    password: dados.senha,
+    options: { data: { cadastro_servidor: { pedido, convite: conviteToken ?? null } } },
+  });
+  if (authError) throw authError;
+  if (!authData.user) throw new Error('Não foi possível criar a conta. Tente novamente.');
+  if (!authData.session) return { precisaConfirmarEmail: true, conviteAplicado: false };
+
+  const conviteAplicado = await criarPedidoRascunho(authData.user.id, email, pedido, conviteToken ?? null);
+  // Os dados já estão no pedido: tira o rascunho guardado na conta (best-effort).
+  await supabase.auth.updateUser({ data: { cadastro_servidor: null } }).catch(() => undefined);
+  return { precisaConfirmarEmail: false, conviteAplicado };
+}
+
+// Primeiro login depois de confirmar o e-mail: cria o pedido a partir dos dados guardados na conta.
+// Devolve false se não há nada guardado (conta que não veio deste cadastro).
+export async function criarCadastroDosMetadados(): Promise<boolean> {
+  const { data: { user } } = await supabase.auth.getUser();
+  const guardado = user?.user_metadata?.cadastro_servidor as { pedido?: Record<string, unknown>; convite?: unknown } | null | undefined;
+  if (!user?.email || !guardado?.pedido || typeof guardado.pedido !== 'object') return false;
+
+  try {
+    await criarPedidoRascunho(user.id, user.email.toLowerCase(), filtrarPedido(guardado.pedido), typeof guardado.convite === 'string' ? guardado.convite : null);
+  } catch (e) {
+    // 23505: o pedido já existe (duas abas, ou recarregou no meio): segue com o que há.
+    if ((e as { code?: string }).code !== '23505') throw e;
+  }
+  await supabase.auth.updateUser({ data: { cadastro_servidor: null } }).catch(() => undefined);
+  return true;
 }
 
 // Link da Secretaria: vale? (chamado antes do cadastro, sem login).
