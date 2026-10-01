@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { signInWithPassword, registerFirstAccess, resetPassword } from '../services/authService';
 import { AlunoAuth } from './AlunoAuth';
 import { CadastroServidorCampos } from './CadastroServidorCampos';
-import { emailJaCadastradoPelaEscola, iniciarCadastroServidor } from '../services/cadastroServidorService';
+import { consultarConvite, emailJaCadastradoPelaEscola, iniciarCadastroServidor, type ConsultaConvite } from '../services/cadastroServidorService';
 import { CAMPOS_SERVIDOR_VAZIOS, validarCpf, type CamposServidor } from '../utils/cadastroServidor';
 
 const EMAIL_ADMIN = 'gestaoescolarjbr@gmail.com';
@@ -13,13 +13,15 @@ interface LoginProps {
   onBack?: () => void;
   // 'aluno' abre já no modo BiblioClube (atalho "Biblioteca" da home pública).
   modoInicial?: 'servidor' | 'aluno';
+  // Link de convite da Secretaria (?convite=...): abre direto o cadastro, com e-mail/nome já preenchidos.
+  conviteToken?: string | null;
 }
 
 type ViewState = 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD';
 
-export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps) {
+export function Login({ onLogin, onBack, modoInicial = 'servidor', conviteToken = null }: LoginProps) {
   const [modoAluno, setModoAluno] = useState(modoInicial === 'aluno');
-  const [view, setView] = useState<ViewState>('LOGIN');
+  const [view, setView] = useState<ViewState>(conviteToken ? 'REGISTER' : 'LOGIN');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
@@ -34,6 +36,35 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
   // escola (fluxo antigo: só cria a senha). false = e-mail novo: formulário completo + senha,
   // e o acesso só sai depois da aprovação da Secretaria/Gestão.
   const [emailNaBase, setEmailNaBase] = useState<boolean | null>(null);
+
+  // Resultado da conferência do link de convite (null enquanto confere, ou se não há link).
+  const [convite, setConvite] = useState<ConsultaConvite | null>(null);
+
+  useEffect(() => {
+    if (!conviteToken) return;
+    let ativo = true;
+    consultarConvite(conviteToken)
+      .then((c) => {
+        if (!ativo) return;
+        setConvite(c);
+        if (c.valido) {
+          if (c.email) setEmail(c.email);
+          if (c.nome) setDadosServidor((d) => ({ ...d, nome: c.nome ?? '' }));
+        } else {
+          setView('LOGIN');
+          setError(c.motivo ?? 'Convite inválido.');
+        }
+      })
+      .catch(() => {
+        if (!ativo) return;
+        setConvite({ valido: false, motivo: 'Não foi possível conferir o convite. Tente novamente.' });
+        setView('LOGIN');
+        setError('Não foi possível conferir o convite. Tente novamente.');
+      });
+    return () => { ativo = false; };
+  }, [conviteToken]);
+
+  const conviteValido = convite?.valido === true;
 
   const mudarView = (v: ViewState) => {
     setView(v);
@@ -85,7 +116,8 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
           }
           if (!validarCpf(dadosServidor.cpf)) throw new Error('CPF inválido. Confira os números digitados.');
           if (dadosServidor.telefone.replace(/\D/g, '').length < 10) throw new Error('Informe o telefone com DDD.');
-          await iniciarCadastroServidor({ email: emailLimpo, senha: password, ...dadosServidor });
+          await iniciarCadastroServidor({ email: emailLimpo, senha: password, ...dadosServidor }, conviteValido ? conviteToken : null);
+          if (conviteToken) window.history.replaceState({}, '', '/');
           setSuccess('Conta criada! Falta enviar seus documentos para concluir o cadastro.');
           setView('LOGIN');
           setEmailNaBase(null);
@@ -184,12 +216,18 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
                   placeholder="professor@escola.edu.br"
                   className="w-full px-4 py-3 bg-[#F0F2F5] border border-[#003366]/30 text-[#003366] rounded-lg focus:ring-2 focus:ring-[#003366] focus:border-[#003366] outline-none transition-all placeholder:text-gray-400 font-medium disabled:opacity-70"
                 />
-                {view === 'REGISTER' && emailNaBase !== null && (
+                {view === 'REGISTER' && emailNaBase !== null && !convite?.email && (
                   <button type="button" onClick={() => { setEmailNaBase(null); setPassword(''); setError(null); }} className="mt-2 text-xs font-bold text-blue-600 hover:text-blue-800 underline underline-offset-2">
                     Trocar e-mail
                   </button>
                 )}
               </div>
+
+              {view === 'REGISTER' && conviteValido && (
+                <p className="text-xs text-gray-600 bg-blue-50 border border-blue-100 rounded-lg p-3">
+                  Você recebeu um convite da Secretaria{convite?.nome ? `, ${convite.nome.split(' ')[0]}` : ''}. Continue para fazer seu cadastro.
+                </p>
+              )}
 
               {view === 'REGISTER' && emailNaBase === true && (
                 <p className="text-xs text-gray-600 bg-green-50 border border-green-100 rounded-lg p-3">

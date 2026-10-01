@@ -28,6 +28,38 @@ export interface DadosCadastroServidor {
   formacao: string;
 }
 
+// Quem preenche cada campo da convocação (termo de convocado): só a Secretaria, só o servidor ou os dois.
+export type ModoPreenchimento = 'SECRETARIA' | 'PROFESSOR' | 'AMBOS';
+
+export interface CampoConvocacao {
+  id: string;
+  campo: string;
+  rotulo: string;
+  dica: string | null;
+  modo: ModoPreenchimento;
+  ordem: number;
+}
+
+export interface ConviteCadastro {
+  id: string;
+  token: string;
+  email: string | null;
+  nome: string | null;
+  campos: Record<string, { modo?: ModoPreenchimento; valor?: string }>;
+  criado_em: string;
+  expira_em: string;
+  usado_em: string | null;
+  cadastro_id: string | null;
+  revogado: boolean;
+}
+
+export interface ConsultaConvite {
+  valido: boolean;
+  motivo?: string;
+  email?: string | null;
+  nome?: string | null;
+}
+
 export type StatusCadastroServidor = 'RASCUNHO' | 'PENDENTE' | 'APROVADO' | 'REJEITADO';
 
 export interface CadastroServidorPendente {
@@ -54,6 +86,9 @@ export interface CadastroServidorPendente {
   endereco: string | null;
   telefone_fixo: string | null;
   formacao: string | null;
+  convite_id: string | null;
+  convocacao: Record<string, string>;
+  convocacao_modos: Record<string, ModoPreenchimento>;
 }
 
 export type TipoDocumentoExigido = 'DOCUMENTO_PESSOAL' | 'CERTIFICADO' | 'ATESTADO_MEDICO' | 'OUTRO';
@@ -113,7 +148,9 @@ export async function emailJaCadastradoPelaEscola(email: string): Promise<boolea
 
 // Cria a conta e o pedido em RASCUNHO. Os documentos vêm na etapa seguinte (tela "Cadastro
 // incompleto"), que já abre sozinha porque a conta criada fica logada.
-export async function iniciarCadastroServidor(dados: DadosCadastroServidor): Promise<void> {
+// `conviteToken` (link da Secretaria) traz os campos da convocação já combinados; sem ele valem os modos padrão.
+// Devolve false se o convite não pôde ser aplicado (ex.: usado entre a consulta e o envio): o cadastro segue normal.
+export async function iniciarCadastroServidor(dados: DadosCadastroServidor, conviteToken?: string | null): Promise<boolean> {
   const email = dados.email.trim().toLowerCase();
   const { data: authData, error: authError } = await supabase.auth.signUp({ email, password: dados.senha });
   if (authError) throw authError;
@@ -124,13 +161,28 @@ export async function iniciarCadastroServidor(dados: DadosCadastroServidor): Pro
     throw new Error('Conta criada, mas é preciso confirmar o e-mail antes de continuar o cadastro. Confirme e tente novamente.');
   }
 
-  const { error } = await supabase.from('cadastros_servidores_pendentes').insert([{
+  const { data: pedido, error } = await supabase.from('cadastros_servidores_pendentes').insert([{
     auth_user_id: authData.user.id,
     email,
     status: 'RASCUNHO',
     ...camposDoPedido(dados),
-  }]);
+  }]).select('id').single();
   if (error) throw error;
+
+  if (conviteToken) {
+    const { error: erroConvite } = await supabase.rpc('rpc_aplicar_convite', { p_cadastro_id: pedido.id, p_token: conviteToken });
+    if (!erroConvite) return true;
+  }
+  const { error: erroPadrao } = await supabase.rpc('rpc_aplicar_convite', { p_cadastro_id: pedido.id, p_token: null });
+  if (erroPadrao) throw new Error(erroPadrao.message);
+  return false;
+}
+
+// Link da Secretaria: vale? (chamado antes do cadastro, sem login).
+export async function consultarConvite(token: string): Promise<ConsultaConvite> {
+  const { data, error } = await supabase.rpc('rpc_consultar_convite', { p_token: token });
+  if (error) throw new Error(error.message);
+  return data as ConsultaConvite;
 }
 
 export async function atualizarRascunhoCadastro(id: string, dados: Omit<DadosCadastroServidor, 'email' | 'senha'>): Promise<void> {
@@ -246,4 +298,57 @@ export async function salvarDocumentoExigido(doc: Partial<DocumentoExigido> & { 
 export async function excluirDocumentoExigido(id: string): Promise<void> {
   const { error } = await supabase.from('documentos_exigidos').delete().eq('id', id);
   if (error) throw error;
+}
+
+// ---- Campos da convocação e convites (Fase 2) ----
+export async function listarCamposConvocacao(): Promise<CampoConvocacao[]> {
+  const { data, error } = await supabase.from('convocacao_campos').select('*').order('ordem');
+  if (error) throw error;
+  return (data ?? []) as CampoConvocacao[];
+}
+
+export async function salvarModoCampoConvocacao(id: string, modo: ModoPreenchimento): Promise<void> {
+  const { error } = await supabase.from('convocacao_campos').update({ modo }).eq('id', id);
+  if (error) throw error;
+}
+
+// Servidor: grava os campos da convocação que ele pode preencher (o banco ignora os demais).
+export async function salvarConvocacaoDoRascunho(cadastroId: string, convocacao: Record<string, string>): Promise<void> {
+  const { error } = await supabase.from('cadastros_servidores_pendentes').update({ convocacao }).eq('id', cadastroId);
+  if (error) throw error;
+}
+
+// Secretaria/Gestão: edita qualquer campo da convocação, em rascunho ou em análise.
+export async function salvarConvocacaoDoCadastro(cadastroId: string, convocacao: Record<string, string>): Promise<void> {
+  const { error } = await supabase.rpc('rpc_salvar_convocacao_cadastro', { p_cadastro_id: cadastroId, p_convocacao: convocacao });
+  if (error) throw new Error(error.message);
+}
+
+export async function listarConvites(): Promise<ConviteCadastro[]> {
+  const { data, error } = await supabase.from('convites_cadastro_servidor').select('*').order('criado_em', { ascending: false }).limit(100);
+  if (error) throw error;
+  return (data ?? []) as ConviteCadastro[];
+}
+
+export async function criarConvite(dados: { email: string; nome: string; campos: ConviteCadastro['campos'] }): Promise<ConviteCadastro> {
+  const { data, error } = await supabase
+    .from('convites_cadastro_servidor')
+    .insert([{ email: dados.email.trim().toLowerCase() || null, nome: dados.nome.trim() || null, campos: dados.campos }])
+    .select()
+    .single();
+  if (error) throw error;
+  return data as ConviteCadastro;
+}
+
+export async function revogarConvite(id: string): Promise<void> {
+  const { error } = await supabase.from('convites_cadastro_servidor').update({ revogado: true }).eq('id', id);
+  if (error) throw error;
+}
+
+export const linkDoConvite = (token: string) => `${window.location.origin}/?convite=${token}`;
+
+// Cadastro criado antes da Fase 2 (ou sem passar pelo convite): congela os modos padrão.
+export async function aplicarModosPadraoNoCadastro(cadastroId: string): Promise<void> {
+  const { error } = await supabase.rpc('rpc_aplicar_convite', { p_cadastro_id: cadastroId, p_token: null });
+  if (error) throw new Error(error.message);
 }

@@ -2,10 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Camera, CheckCircle2, Eye, FileText, Loader2, Pencil, Trash2, Upload } from 'lucide-react';
 import { signOut } from '../../services/authService';
 import {
-  atualizarRascunhoCadastro, enviarCadastroParaAnalise, enviarDocumentoDoCadastro, excluirDocumentoDoCadastro,
-  listarDocumentosDoCadastro, listarDocumentosExigidos, urlDocumentoDoCadastro,
-  type CadastroServidorPendente, type DocumentoDoCadastro, type DocumentoExigido,
+  aplicarModosPadraoNoCadastro, atualizarRascunhoCadastro, enviarCadastroParaAnalise, enviarDocumentoDoCadastro, excluirDocumentoDoCadastro,
+  listarCamposConvocacao, listarDocumentosDoCadastro, listarDocumentosExigidos, salvarConvocacaoDoRascunho, urlDocumentoDoCadastro,
+  type CadastroServidorPendente, type CampoConvocacao, type DocumentoDoCadastro, type DocumentoExigido,
 } from '../../services/cadastroServidorService';
+import { ConvocacaoCampos } from './ConvocacaoCampos';
 import { CadastroServidorCampos } from '../CadastroServidorCampos';
 import { ScannerDocumento } from '../secretaria/ScannerDocumento';
 import { formatarCpf, formatarTelefone, validarCpf, type CamposServidor } from '../../utils/cadastroServidor';
@@ -41,25 +42,56 @@ export function CadastroServidorRascunho({ cadastro, onRecarregar, onLogout }: P
   const [editando, setEditando] = useState(false);
   const [dados, setDados] = useState<CamposServidor>(() => paraCampos(cadastro));
   const [salvando, setSalvando] = useState(false);
+  const [camposConv, setCamposConv] = useState<CampoConvocacao[]>([]);
+  // Edição em andamento dos campos da convocação (null = sem alterações; vale o que está salvo no cadastro).
+  const [editConv, setEditConv] = useState<Record<string, string> | null>(null);
+  const [salvandoConv, setSalvandoConv] = useState(false);
   const arquivoRef = useRef<HTMLInputElement>(null);
   const exigidoDoArquivo = useRef<DocumentoExigido | null>(null);
 
   const carregar = useCallback(async () => {
     try {
-      const [ex, d] = await Promise.all([listarDocumentosExigidos(true), listarDocumentosDoCadastro([cadastro.id])]);
+      const [ex, d, campos] = await Promise.all([listarDocumentosExigidos(true), listarDocumentosDoCadastro([cadastro.id]), listarCamposConvocacao()]);
       setExigidos(ex);
       setDocs(d);
+      setCamposConv(campos);
+      // Cadastro sem os modos de preenchimento definidos (criado fora do fluxo atual): aplica o padrão.
+      if (Object.keys(cadastro.convocacao_modos ?? {}).length === 0) {
+        await aplicarModosPadraoNoCadastro(cadastro.id);
+        onRecarregar();
+      }
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Erro ao carregar os documentos.');
     } finally {
       setCarregando(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [cadastro.id]);
 
   useEffect(() => {
     const t = setTimeout(carregar, 0);
     return () => clearTimeout(t);
   }, [carregar]);
+
+  const convocacao = editConv ?? cadastro.convocacao ?? {};
+  const convocacaoMudou = editConv !== null
+    && JSON.stringify(Object.entries(editConv).filter(([, v]) => v.trim()).sort()) !== JSON.stringify(Object.entries(cadastro.convocacao ?? {}).sort());
+  const modosConv = cadastro.convocacao_modos ?? {};
+  const temCamposConv = camposConv.some((c) => (modosConv[c.campo] ?? 'SECRETARIA') !== 'SECRETARIA' || Boolean(cadastro.convocacao?.[c.campo]));
+
+  async function salvarConvocacao() {
+    setSalvandoConv(true);
+    setErro(null);
+    try {
+      await salvarConvocacaoDoRascunho(cadastro.id, convocacao);
+      setEditConv(null);
+      onRecarregar();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Erro ao salvar os dados da convocação.');
+    } finally {
+      setSalvandoConv(false);
+    }
+  }
 
   const docsPorExigido = useMemo(() => {
     const m = new Map<string, DocumentoDoCadastro[]>();
@@ -135,6 +167,7 @@ export function CadastroServidorRascunho({ cadastro, onRecarregar, onLogout }: P
     setEnviando(true);
     setErro(null);
     try {
+      if (convocacaoMudou) await salvarConvocacaoDoRascunho(cadastro.id, convocacao);
       await enviarCadastroParaAnalise(cadastro.id);
       onRecarregar();
     } catch (err) {
@@ -182,6 +215,22 @@ export function CadastroServidorRascunho({ cadastro, onRecarregar, onLogout }: P
             </p>
           )}
         </div>
+
+        {temCamposConv && (
+          <div className="bg-ms-card border border-gray-800 rounded-2xl p-5 space-y-3">
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider text-gray-400">Dados da convocação</p>
+              <p className="text-xs text-gray-500 mt-1">Preencha o que souber. A Secretaria confere e completa o restante.</p>
+            </div>
+            <ConvocacaoCampos campos={camposConv} modos={modosConv} valores={convocacao} quem="PROFESSOR"
+              onChange={(campo, valor) => setEditConv({ ...convocacao, [campo]: valor })} />
+            {convocacaoMudou && (
+              <button onClick={salvarConvocacao} disabled={salvandoConv} className="flex items-center gap-2 px-4 py-2 bg-ms-blue text-white rounded-lg text-sm font-bold hover:bg-blue-600 disabled:opacity-50">
+                {salvandoConv && <Loader2 className="w-4 h-4 animate-spin" />} Salvar dados da convocação
+              </button>
+            )}
+          </div>
+        )}
 
         {carregando ? (
           <div className="py-8 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-ms-blueText" /></div>

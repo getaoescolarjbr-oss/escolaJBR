@@ -134,3 +134,6 @@ export const CAMPOS_SERVIDOR_VAZIOS: CamposServidor = {
   telefoneFixo: '',
   formacao: '',
 };
+
+// Campos da convocação que são datas (os demais são texto livre).
+export const campoEhData = (campo: string) => campo === 'periodo_de' || campo === 'periodo_ate';
