@@ -416,7 +416,7 @@ function App() {
         onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
       />
       <main className="flex-1 overflow-auto">
-        <div className={(isAdmin && view === 'admin') || (MODULOS_COM_SHELL as readonly string[]).includes(view) ? "w-full p-4 h-full" : "max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8"}>
+        <div className={(isAdmin && view === 'admin') || view === 'coordenacao' || (MODULOS_COM_SHELL as readonly string[]).includes(view) ? "w-full p-4 h-full" : "max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8"}>
           <Suspense fallback={<Carregando />}>
           {isAdmin && view === 'admin' ? (
              <AdminPanel onBack={() => navegarPara('dashboard')} theme={theme} />
