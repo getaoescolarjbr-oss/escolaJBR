@@ -61,13 +61,23 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   
   const [turmas, setTurmas] = useState<Array<{ id: string; nome: string }>>([]);
   const [disciplinas, setDisciplinas] = useState<Array<{ id: string; nome: string }>>([]);
-  
+  // Turma à qual a lista `disciplinas` pertence (a lista é carregada de forma assíncrona e, logo
+  // após trocar de turma, ainda é a da turma anterior).
+  const [disciplinasDaTurma, setDisciplinasDaTurma] = useState('');
+
   const [selectedTurma, setSelectedTurma] = useState(() => {
     return localStorage.getItem('last-turma') || '';
   });
-  const [selectedDisciplina, setSelectedDisciplina] = useState(() => {
+  const [disciplinaEscolhida, setSelectedDisciplina] = useState(() => {
     return localStorage.getItem('last-disciplina') || '';
   });
+  // Disciplina efetiva: a escolhida SÓ vale se pertence à lista da turma atual. Tudo que grava
+  // (atividades, notas, vistos, chamada) e tudo que é exibido usa este valor, então o que aparece
+  // na tela é sempre a disciplina em que os dados são salvos — nunca uma escolha "presa" de outra turma.
+  const selectedDisciplina =
+    selectedTurma && disciplinasDaTurma === selectedTurma && disciplinas.some((d) => d.id === disciplinaEscolhida)
+      ? disciplinaEscolhida
+      : '';
   const [selectedBimestre, setSelectedBimestre] = useState<number>(professor.bimestre_atual || 1);
   const [descricaoAtividade, setDescricaoAtividade] = useState<string>(() => {
     return localStorage.getItem('last-description') || '';
@@ -434,9 +444,14 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   useEffect(() => {
     if (!selectedTurma) {
       setDisciplinas([]);
+      setDisciplinasDaTurma('');
       setSelectedDisciplina('');
       return;
     }
+
+    // Se a turma mudar de novo antes desta carga terminar, descarta o resultado (senão uma resposta
+    // atrasada da turma anterior sobrescreveria a lista da turma atual).
+    let cancelado = false;
 
     async function loadDisciplinas() {
       const combinedMap = new Map();
@@ -484,13 +499,22 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
         console.error("Erro Disciplinas:", e);
       }
 
+      if (cancelado) return;
       const finalDiscs = Array.from(combinedMap.values()).sort((a, b) => a.nome.localeCompare(b.nome));
       setDisciplinas(finalDiscs);
-      if (finalDiscs.length === 1 && !selectedDisciplina) {
-        setSelectedDisciplina(finalDiscs[0].id);
-      }
+      setDisciplinasDaTurma(selectedTurma);
+      // A disciplina escolhida numa turma anterior não pode "sobreviver" à troca de turma (antes, o
+      // <select> mostrava outra opção mas o estado guardava a antiga, e atividades/notas eram gravadas
+      // na disciplina errada — ex.: Biologia no 7º ano, onde a pessoa só leciona Ciências).
+      // Mantém a escolha só se pertence à lista desta turma; com uma única disciplina, escolhe-a
+      // automaticamente; com mais de uma, o professor escolhe.
+      setSelectedDisciplina((atual) => {
+        if (atual && finalDiscs.some((d) => d.id === atual)) return atual;
+        return finalDiscs.length === 1 ? finalDiscs[0].id : '';
+      });
     }
     loadDisciplinas();
+    return () => { cancelado = true; };
   }, [selectedTurma, professor.id, professor.email, professor.nome]);
 
   // Automação da Seleção da Aula Baseado no Horário
