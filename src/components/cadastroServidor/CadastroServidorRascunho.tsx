@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Camera, CheckCircle2, Eye, FileText, Loader2, Pencil, Trash2, Upload } from 'lucide-react';
 import { signOut } from '../../services/authService';
 import {
-  aplicarModosPadraoNoCadastro, atualizarRascunhoCadastro, enviarCadastroParaAnalise, enviarDocumentoDoCadastro, excluirDocumentoDoCadastro,
+  aplicarModosPadraoNoCadastro, atualizarRascunhoCadastro, avisarEquipeNovoCadastro, enviarCadastroParaAnalise, enviarDocumentoDoCadastro, excluirDocumentoDoCadastro,
   listarCamposConvocacao, listarDocumentosDoCadastro, listarDocumentosExigidos, salvarConvocacaoDoRascunho, urlDocumentoDoCadastro,
   type CadastroServidorPendente, type CampoConvocacao, type DocumentoDoCadastro, type DocumentoExigido,
 } from '../../services/cadastroServidorService';
@@ -169,6 +169,7 @@ export function CadastroServidorRascunho({ cadastro, onRecarregar, onLogout }: P
     try {
       if (convocacaoMudou) await salvarConvocacaoDoRascunho(cadastro.id, convocacao);
       await enviarCadastroParaAnalise(cadastro.id);
+      void avisarEquipeNovoCadastro(cadastro.nome);
       onRecarregar();
     } catch (err) {
       setErro(err instanceof Error ? err.message : 'Erro ao enviar o cadastro.');

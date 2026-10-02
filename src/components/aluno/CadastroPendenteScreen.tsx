@@ -4,6 +4,7 @@ import { signOut } from '../../services/authService';
 import { meuCadastroPendente } from '../../services/cadastroBibliotecaService';
 import { criarCadastroDosMetadados, meuCadastroServidor, type CadastroServidorPendente } from '../../services/cadastroServidorService';
 import { CadastroServidorRascunho } from '../cadastroServidor/CadastroServidorRascunho';
+import { RefazerCadastroServidor } from '../cadastroServidor/RefazerCadastroServidor';
 
 interface CadastroPendenteScreenProps {
   authUserId: string;
@@ -22,6 +23,7 @@ export function CadastroPendenteScreen({ authUserId, onLogout }: CadastroPendent
   const [rascunho, setRascunho] = useState<CadastroServidorPendente | null>(null);
   const [loading, setLoading] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [refazendo, setRefazendo] = useState(false);
 
   const carregar = useCallback(async () => {
     try {
@@ -60,6 +62,16 @@ export function CadastroPendenteScreen({ authUserId, onLogout }: CadastroPendent
     return <CadastroServidorRascunho cadastro={rascunho} onRecarregar={carregar} onLogout={onLogout} />;
   }
 
+  if (refazendo) {
+    return (
+      <div className="min-h-screen bg-ms-dark p-4 sm:p-6">
+        <div className="max-w-lg mx-auto">
+          <RefazerCadastroServidor onCancelar={() => setRefazendo(false)} onCriado={() => { setRefazendo(false); setLoading(true); void carregar(); }} />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-ms-dark p-6">
       <div className="max-w-md w-full text-center bg-ms-card border border-gray-800 rounded-2xl p-8">
@@ -95,6 +107,9 @@ export function CadastroPendenteScreen({ authUserId, onLogout }: CadastroPendent
             <h1 className="text-lg font-bold text-ms-main">Sua conta ainda não tem acesso liberado</h1>
             <p className="text-sm text-gray-400 mt-2">Fale com a Secretaria da escola.</p>
             {erro && <p className="text-xs text-red-400 mt-3">{erro}</p>}
+            <button onClick={() => setRefazendo(true)} className="mt-4 text-xs font-bold text-ms-blueText underline underline-offset-2">
+              Sou servidor da escola e preciso refazer meu cadastro
+            </button>
           </>
         )}
         <button onClick={handleLogout} className="mt-6 px-6 py-2 bg-ms-blue text-white rounded-lg font-bold">Sair</button>
