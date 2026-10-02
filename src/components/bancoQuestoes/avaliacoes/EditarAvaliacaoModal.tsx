@@ -15,7 +15,7 @@ interface Props {
 }
 
 // Edita uma avaliação/simulado já salvo (rascunho, publicado ou até encerrado): reabre o
-// mesmo wizard de questões + configuração do fluxo de criação (NovaAvaliacaoTab), só que
+// mesmo passo de questões + configuração usado ao cadastrar (NovaAvaliacaoModal), só que
 // pré-preenchido e persistindo com atualizarAvaliacao (update) em vez de criarAvaliacao
 // (insert). Se algum aluno já enviou resposta, mostra um aviso antes de deixar salvar —
 // mudar questão/gabarito depois de respostas registradas pode deixar o resultado já
@@ -93,7 +93,7 @@ export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo }: Props) {
       <div className="bg-ms-card border border-gray-800 rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
           <div>
-            <h2 className="text-lg font-bold text-ms-main">Editar — {avaliacao.titulo}</h2>
+            <h2 className="text-lg font-bold text-ms-main">{(avaliacao.total_questoes ?? 0) === 0 ? 'Inserir questões' : 'Editar'} — {avaliacao.titulo}</h2>
             <p className="text-xs text-ms-muted">
               {avaliacao.status === 'PUBLICADA' ? 'Publicada' : avaliacao.status === 'ENCERRADA' ? 'Encerrada' : 'Rascunho'}
               {' · '}Passo {passo === 'questoes' ? '1' : '2'} de 2

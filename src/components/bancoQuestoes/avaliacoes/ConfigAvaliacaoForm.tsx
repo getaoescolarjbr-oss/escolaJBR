@@ -48,6 +48,7 @@ interface Props {
   inicial?: ConfigAvaliacaoInicial;
   salvando?: boolean;
   textoBotaoContinuar?: string;
+  textoBotaoVoltar?: string;
   onVoltar: () => void;
   onContinuar: (
     config: Omit<NovaAvaliacaoInput, 'questoes'>,
@@ -62,7 +63,7 @@ interface Props {
 // entre as questões selecionadas, mas editável por questão), turma(s) alvo e modo de
 // aplicação. Quando `inicial` é passado, os campos partem preenchidos com os dados já
 // salvos em vez dos valores padrão de uma avaliação nova.
-export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoContinuar, onVoltar, onContinuar }: Props) {
+export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoContinuar, textoBotaoVoltar, onVoltar, onContinuar }: Props) {
   const [titulo, setTitulo] = useState(inicial?.titulo ?? 'Avaliação');
   const [disciplinas, setDisciplinas] = useState<{ id: string; nome: string }[]>([]);
   const [disciplinaId, setDisciplinaId] = useState<string>(inicial?.disciplinaId ?? '');
@@ -147,7 +148,9 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
   useEffect(() => {
     if (primeiraDistribuicao.current) {
       primeiraDistribuicao.current = false;
-      if (inicial) return;
+      // Só pula se já há valores salvos por questão; uma avaliação cadastrada sem questões
+      // (que ganhou as questões agora) precisa da divisão igual do valor total.
+      if (inicial && Object.keys(inicial.valoresPorQuestao ?? {}).length > 0) return;
     }
     const valorPorQuestao = questoes.length > 0 ? Math.round((valorTotal / questoes.length) * 100) / 100 : 0;
     setValoresPorQuestao(Object.fromEntries(questoes.map((q) => [q.id, valorPorQuestao])));
@@ -464,6 +467,11 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
         )}
       </div>
 
+      {questoes.length === 0 ? (
+        <p className="text-xs text-ms-muted">
+          As questões são inseridas depois, pelo botão “Inserir questões” da avaliação. O valor total será dividido entre elas.
+        </p>
+      ) : (
       <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-bold text-ms-main">Ordem e valor das questões</p>
@@ -509,10 +517,11 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
           ))}
         </div>
       </div>
+      )}
 
       <div className="flex items-center justify-between">
         <button onClick={onVoltar} className="px-5 py-2.5 rounded-xl border border-gray-800 text-ms-main text-sm font-bold hover:bg-gray-800">
-          Voltar
+          {textoBotaoVoltar ?? 'Voltar'}
         </button>
         <button
           disabled={!podeContinuar || !!salvando}
