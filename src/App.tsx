@@ -85,7 +85,7 @@ const TITULOS_MODULO: Record<ModuloComShell, { titulo: string; subtitulo?: strin
   cozinha: { titulo: 'Cozinha', subtitulo: 'Cardápio, estoque, fornecedores e indicadores PNAE' },
   agendamento: { titulo: 'Agendamento de Recursos', subtitulo: 'Recursos, bloqueios de manutenção e reservas' },
   biblioteca: { titulo: 'Biblioteca', subtitulo: 'Acervo, empréstimos e clube de leitura' },
-  'banco-questoes': { titulo: 'Banco de Questões', subtitulo: 'Consulte e monte provas com questões organizadas por disciplina' },
+  'banco-questoes': { titulo: 'Avaliações', subtitulo: 'Monte e acompanhe avaliações e consulte o banco de questões por disciplina' },
   gestao: { titulo: 'Gestão Escolar', subtitulo: 'Indicadores, Almoxarifado e demais sub-módulos administrativos' },
   'coordenacao-area': { titulo: 'Coordenação de Área', subtitulo: 'Gestão pedagógica, acompanhamento docente e avaliações colaborativas' },
   lgpd: { titulo: 'LGPD — Exportar e Excluir Dados', subtitulo: 'Solicitações de titulares de dados' },
