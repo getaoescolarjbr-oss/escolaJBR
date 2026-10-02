@@ -77,12 +77,10 @@ export function QuestaoAlunoView({
             value={textoResposta}
             onChange={(e) => onEscrever?.(e.target.value)}
             readOnly={somenteLeitura}
-            rows={tipo === 'REDACAO' ? 14 : 6}
+            rows={6}
             placeholder={
               somenteLeitura
                 ? 'Sem resposta escrita.'
-                : tipo === 'REDACAO'
-                ? 'Escreva sua redação aqui...'
                 : 'Escreva sua resposta aqui...'
             }
             className={`w-full px-3 py-2 bg-ms-dark border rounded-lg text-sm text-ms-main resize-y outline-none focus:ring-2 focus:ring-ms-blue ${
