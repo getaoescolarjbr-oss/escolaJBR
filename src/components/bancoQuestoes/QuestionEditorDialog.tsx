@@ -307,13 +307,13 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
           <div className="space-y-4">
             <div>
               <p className="mb-1 text-xs font-black uppercase tracking-wider text-ms-main">
-                {tipo === 'REDACAO' ? 'Competências avaliadas' : 'Resposta esperada / critérios de correção'}
+                {discipline === 'Redação' ? 'Competências avaliadas' : 'Resposta esperada / critérios de correção'}
               </p>
               <CampoComMarcacao
                 value={criteriosCorrecao}
                 onChange={setCriteriosCorrecao}
                 placeholder={
-                  tipo === 'REDACAO'
+                  discipline === 'Redação'
                     ? 'Ex.: domínio da norma culta, coerência, proposta de intervenção...'
                     : 'O que a resposta do aluno precisa conter para valer a pontuação'
                 }
