@@ -235,7 +235,10 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
   }
 
   function toggleProfessor(key: string) {
-    if (qtdInseridaPorKey[key] > 0) return;
+    if (qtdInseridaPorKey[key] > 0) {
+      setErro(`Este professor já inseriu ${qtdInseridaPorKey[key]} questão(ões): não pode ser removido nem ter a cota reduzida abaixo disso.`);
+      return;
+    }
     setSelecionados((prev) => ({
       ...prev,
       [key]: !prev[key],
@@ -243,6 +246,12 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
   }
 
   function setCotaQtd(key: string, qtd: number) {
+    // Zerar = tirar o professor da avaliação (só enquanto ele não inseriu nenhuma questão).
+    if (qtd <= 0 && !(qtdInseridaPorKey[key] > 0)) {
+      setSelecionados((prev) => ({ ...prev, [key]: false }));
+      setCotas((prev) => ({ ...prev, [key]: 1 }));
+      return;
+    }
     setCotas((prev) => ({ ...prev, [key]: Math.max(1, qtdInseridaPorKey[key] ?? 1, qtd) }));
   }
 
@@ -509,10 +518,10 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
                             <span className="text-xs text-ms-muted">Questões:</span>
                             <input
                               type="number"
-                              min={Math.max(1, qtdInserida)}
+                              min={qtdInserida > 0 ? qtdInserida : 0}
                               max={50}
                               disabled={!ativo}
-                              value={qtd}
+                              value={ativo ? qtd : 0}
                               onChange={(e) => setCotaQtd(key, Number(e.target.value))}
                               className="w-16 px-2 py-1 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-bold text-center text-ms-main outline-none focus:ring-2 focus:ring-ms-blue disabled:opacity-40 disabled:bg-gray-200 dark:disabled:bg-gray-800"
                             />
