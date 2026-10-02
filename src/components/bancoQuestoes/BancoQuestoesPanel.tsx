@@ -9,8 +9,8 @@ type Aba = 'minhas-avaliacoes' | 'consultar' | 'gerenciar' | 'categorias';
 
 // Gerador de avaliações: abre em Minhas Avaliações (onde a avaliação individual é cadastrada e,
 // depois de salva, recebe as questões); o banco de questões (Banco de questões/Gerenciar/
-// Categorias) vive ao lado, dentro do mesmo módulo. Criar avaliação liberado para PROFESSOR/GESTAO/COORDENACAO (já dá acesso às
-// questões via seleção); Consultar (banco de questões bruto) restrito a GESTAO.
+// Categorias) vive ao lado, dentro do mesmo módulo. Criar avaliação e consultar o banco de questões
+// (somente leitura) são liberados para PROFESSOR/GESTAO/COORDENACAO — o professor consulta sem precisar criar avaliação.
 // Gerenciar Questões e Categorias também abrem pra COORDENACAO_AREA: pode excluir/editar
 // questões e gerenciar termos de assunto/tópico, mas não criar questão nem mexer nos outros
 // campos de taxonomia — RLS libera só isso pra esse papel (ver
@@ -26,7 +26,7 @@ export function BancoQuestoesPanel() {
 
   const abas: { id: Aba; label: string }[] = [
     ...(podeCriarAvaliacao ? [{ id: 'minhas-avaliacoes' as const, label: 'Minhas Avaliações' }] : []),
-    ...(isGestao ? [{ id: 'consultar' as const, label: 'Banco de questões' }] : []),
+    ...(podeCriarAvaliacao ? [{ id: 'consultar' as const, label: 'Banco de questões' }] : []),
     ...(podeGerenciarQuestoes ? [{ id: 'gerenciar' as const, label: 'Gerenciar Questões' }] : []),
     ...(podeGerenciarQuestoes ? [{ id: 'categorias' as const, label: 'Categorias' }] : []),
   ];
@@ -51,7 +51,7 @@ export function BancoQuestoesPanel() {
       </div>
 
       {aba === 'minhas-avaliacoes' && podeCriarAvaliacao && <MinhasAvaliacoesTab />}
-      {aba === 'consultar' && isGestao && <QuestoesTab />}
+      {aba === 'consultar' && podeCriarAvaliacao && <QuestoesTab />}
       {aba === 'gerenciar' && podeGerenciarQuestoes && <GerenciarTab podeCriar={isGestao} />}
       {aba === 'categorias' && podeGerenciarQuestoes && <CategoriasTab />}
     </div>
