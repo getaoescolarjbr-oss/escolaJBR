@@ -3,6 +3,7 @@ import { Search } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import type { Pessoa } from '../../types/pessoas';
 import { listarPessoas } from '../../services/pessoasService';
+import { contarCadastrosEmAnalise } from '../../services/cadastroServidorService';
 import { MatriculaTab } from './MatriculaTab';
 import { DocumentosTab } from './DocumentosTab';
 import { EmissaoTab } from './EmissaoTab';
@@ -24,6 +25,14 @@ export function SecretariaPanel() {
   const [busca, setBusca] = useState('');
   const [resultados, setResultados] = useState<Pessoa[]>([]);
   const [pessoa, setPessoa] = useState<Pessoa | null>(null);
+  const [emAnalise, setEmAnalise] = useState(0);
+
+  // Selo "Cadastros Servidores (N)": atualiza ao abrir o painel e ao trocar de aba (depois de aprovar, por exemplo).
+  useEffect(() => {
+    let ativo = true;
+    contarCadastrosEmAnalise().then((n) => { if (ativo) setEmAnalise(n); });
+    return () => { ativo = false; };
+  }, [aba]);
 
   useEffect(() => {
     const timeout = setTimeout(async () => {
@@ -40,7 +49,7 @@ export function SecretariaPanel() {
     { id: 'divergencias', label: 'Divergências' },
     { id: 'series', label: 'Séries', somenteGestao: true },
     { id: 'biblioteca', label: 'Cadastros Biblioteca' },
-    { id: 'servidores', label: 'Cadastros Servidores' },
+    { id: 'servidores', label: emAnalise > 0 ? `Cadastros Servidores (${emAnalise})` : 'Cadastros Servidores' },
     { id: 'termos', label: 'Termos de Servidores' },
     // Mesmo RH da Gestão Escolar (frequência, escala, ausências/atestados com substituto, terceirizados).
     { id: 'rh', label: 'RH' },

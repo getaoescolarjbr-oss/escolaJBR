@@ -12,6 +12,7 @@ import {
   rejeitarCadastroServidor,
 } from '../../services/cadastroServidorService';
 import { TermoCadastroModal } from './TermoCadastroModal';
+import { AcompanhamentoCadastrosServidores } from './AcompanhamentoCadastrosServidores';
 import { PAPEIS_SERVIDOR, formatarCpf, formatarTelefone, papelSugeridoPorCargo } from '../../utils/cadastroServidor';
 
 // Aprovação dos servidores que se cadastraram sozinhos no Portal do Servidor. Até aqui a
@@ -28,6 +29,7 @@ export function CadastrosServidoresTab() {
   const [convPorCadastro, setConvPorCadastro] = useState<Record<string, Record<string, string>>>({});
   const [salvandoConvId, setSalvandoConvId] = useState<string | null>(null);
   const [termoDe, setTermoDe] = useState<CadastroServidorPendente | null>(null);
+  const [vista, setVista] = useState<'analise' | 'acompanhamento'>('analise');
 
   // Só a Gestão concede papéis que dão poder sobre os outros (o banco também confere).
   const papeisDisponiveis = PAPEIS_SERVIDOR.filter((p) => hasRole('GESTAO') || (p !== 'GESTAO' && p !== 'SECRETARIA'));
@@ -125,8 +127,22 @@ export function CadastrosServidoresTab() {
     }
   }
 
+  const seletor = (
+    <div className="flex gap-2">
+      {([['analise', `Em análise (${cadastros.length})`], ['acompanhamento', 'Acompanhamento']] as const).map(([id, rotulo]) => (
+        <button key={id} onClick={() => setVista(id)}
+          className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${vista === id ? 'bg-ms-blue text-white border-ms-blue' : 'bg-ms-card text-gray-400 border-gray-800 hover:text-gray-200'}`}>{rotulo}</button>
+      ))}
+    </div>
+  );
+
+  if (vista === 'acompanhamento') {
+    return <div className="space-y-4">{seletor}<AcompanhamentoCadastrosServidores /></div>;
+  }
+
   return (
     <div className="space-y-4 max-w-3xl">
+      {seletor}
       <p className="text-xs font-black uppercase tracking-wider text-ms-main">Cadastros de servidores pendentes ({cadastros.length})</p>
       {erro && <p className="text-xs text-red-400">{erro}</p>}
 

@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabase';
 import type { Papel } from '../types/rbac';
 import { soDigitos } from '../utils/cadastroServidor';
+import { sendPushToUsers } from './pushService';
 
 // Cadastro de servidor com aprovação (create_cadastro_servidor_com_aprovacao.sql e
 // create_cadastro_servidor_fase1.sql). Quem se cadastra cria a conta + um pedido em RASCUNHO,
@@ -89,6 +90,7 @@ export interface CadastroServidorPendente {
   convite_id: string | null;
   correcao_motivo: string | null;
   correcao_em: string | null;
+  analisado_em: string | null;
   convocacao: Record<string, string>;
   convocacao_modos: Record<string, ModoPreenchimento>;
 }
@@ -425,4 +427,54 @@ export const linkDoConvite = (token: string) => `${window.location.origin}/?conv
 export async function aplicarModosPadraoNoCadastro(cadastroId: string): Promise<void> {
   const { error } = await supabase.rpc('rpc_aplicar_convite', { p_cadastro_id: cadastroId, p_token: null });
   if (error) throw new Error(error.message);
+}
+
+// ---- Acompanhamento, aviso à equipe e rascunhos abandonados (Fase 5) ----
+export async function listarCadastrosServidores(status: StatusCadastroServidor[], limite = 100): Promise<CadastroServidorPendente[]> {
+  const { data, error } = await supabase
+    .from('cadastros_servidores_pendentes')
+    .select('*')
+    .in('status', status)
+    .order('criado_em', { ascending: false })
+    .limit(limite);
+  if (error) throw error;
+  return (data ?? []) as CadastroServidorPendente[];
+}
+
+// Quantos cadastros esperam análise (selo na aba da Secretaria). Quem não é da equipe vê 0 pela RLS.
+export async function contarCadastrosEmAnalise(): Promise<number> {
+  const { count, error } = await supabase.from('cadastros_servidores_pendentes').select('id', { count: 'exact', head: true }).eq('status', 'PENDENTE');
+  return error ? 0 : (count ?? 0);
+}
+
+// Apaga o rascunho (e os registros dos documentos) pelo banco, que devolve os caminhos dos arquivos;
+// os arquivos saem pela API de Storage (apagar por SQL deixaria o arquivo no bucket).
+export async function removerRascunhoCadastro(cadastroId: string): Promise<void> {
+  const { data, error } = await supabase.rpc('rpc_remover_rascunho_cadastro', { p_cadastro_id: cadastroId });
+  if (error) throw new Error(error.message);
+  const caminhos = (data as string[] | null) ?? [];
+  if (caminhos.length) await supabase.storage.from(BUCKET).remove(caminhos);
+}
+
+// Avisa (push) a Secretaria/Gestão que chegou um cadastro. É só um extra: nunca atrapalha o envio.
+export async function avisarEquipeNovoCadastro(nome: string): Promise<void> {
+  try {
+    const { data } = await supabase.rpc('rpc_destinatarios_novo_cadastro');
+    const ids = (data as string[] | null) ?? [];
+    if (ids.length === 0) return;
+    await sendPushToUsers({
+      user_ids: ids,
+      title: 'Novo cadastro de servidor',
+      message: `${nome} enviou o cadastro para análise.`,
+      url: '/?modulo=secretaria',
+      tag: 'cadastro-servidor',
+    });
+  } catch { /* sem aviso, o cadastro continua na fila */ }
+}
+
+// Quem já está logado (conta criada antes) e ficou sem pedido, por exemplo depois de um rascunho removido.
+export async function refazerCadastroServidor(dados: Omit<DadosCadastroServidor, 'email' | 'senha'>): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user?.email) throw new Error('Sessão inválida. Entre novamente.');
+  await criarPedidoRascunho(user.id, user.email.toLowerCase(), camposDoPedido(dados), null);
 }
