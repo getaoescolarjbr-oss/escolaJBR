@@ -38,6 +38,8 @@ export type ChaveCompetencia = 'c1' | 'c2' | 'c3' | 'c4' | 'c5';
 export const CHAVES_COMPETENCIA: ChaveCompetencia[] = ['c1', 'c2', 'c3', 'c4', 'c5'];
 
 export interface CorrecaoIa {
+  /** Rubrica usada pela IA (ENEM, UFMS, UFGD) e os nomes dos 5 critérios. */
+  rubrica?: { chave: string; nome: string; rotulos: Record<ChaveCompetencia, string> };
   competencias: Record<ChaveCompetencia, CompetenciaIa>;
   nota_total: number;
   desvios: string[];
@@ -60,6 +62,8 @@ export interface RedacaoDetalhe {
   turma_nome: string | null;
   question_id: string;
   tema: string | null;
+  /** Banca da questão (INEP, UFMS, UFGD...): escolhe a rubrica da correção. */
+  banca: string | null;
   enunciado: string;
   criterios: string | null;
   valor: number | string | null;
@@ -214,8 +218,8 @@ export async function transcreverRedacao(imagemBase64: string): Promise<{ linhas
   return chamarRedacaoIa('transcrever', { imagemBase64, mimeType: 'image/jpeg' });
 }
 
-export async function corrigirRedacaoComIa(linhas: string[], tema: string, criterios?: string): Promise<CorrecaoIa> {
-  return chamarRedacaoIa('corrigir', { linhas, tema, criterios });
+export async function corrigirRedacaoComIa(linhas: string[], tema: string, rubrica: string, criterios?: string): Promise<CorrecaoIa> {
+  return chamarRedacaoIa('corrigir', { linhas, tema, rubrica, criterios });
 }
 
 /** Ids das provas que têm questão de redação — decide se o botão "Corrigir redação" aparece. */

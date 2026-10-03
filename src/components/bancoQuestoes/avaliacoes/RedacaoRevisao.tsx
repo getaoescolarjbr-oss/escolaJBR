@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AlertTriangle, ArrowLeft, Check, Loader2, Save, Sparkles } from 'lucide-react';
 import { renderLightMarkup } from '../../../lib/questionMarkup';
+import { RUBRICAS, criteriosCustomizados, rubricaDaBanca } from '../../../utils/rubricasRedacao';
 import {
   CHAVES_COMPETENCIA,
   confirmarRedacao,
@@ -18,13 +19,6 @@ import {
 // decisão do professor (concordo / discordo, com a nota e o comentário dele). A nota que vale é
 // sempre a do professor; a da IA é só uma sugestão.
 
-const NOMES: Record<ChaveCompetencia, string> = {
-  c1: 'C1 — Norma padrão da língua',
-  c2: 'C2 — Tema e tipo textual',
-  c3: 'C3 — Argumentos e projeto de texto',
-  c4: 'C4 — Coesão',
-  c5: 'C5 — Proposta de intervenção',
-};
 const NOTAS = [0, 40, 80, 120, 160, 200];
 const CONFIANCA_BAIXA = 0.85;
 
@@ -89,9 +83,12 @@ export function RedacaoRevisao({ envioId, onVoltar, onConfirmada }: Props) {
   const total = notas ? CHAVES_COMPETENCIA.reduce((s, k) => s + notas[k], 0) : null;
   const valorProva = det?.valor != null ? Number(det.valor) : null;
 
-  // Critérios próprios da banca vão para a IA; os do ENEM ela já conhece (rubrica completa no servidor).
-  const criteriosCustom = det?.criterios && !det.criterios.startsWith('Critérios ENEM') && !det.criterios.startsWith('Critérios próprios')
-    ? det.criterios : undefined;
+  // Rubrica da banca da questão (ENEM, UFMS, UFGD). Critérios que o professor escreveu na própria
+  // questão, se houver, vão para a IA no lugar da rubrica embutida.
+  const chaveRubrica = rubricaDaBanca(det?.banca);
+  const rubrica = RUBRICAS[chaveRubrica];
+  const nomes = ia?.rubrica?.rotulos ?? rubrica.rotulos;
+  const criteriosCustom = criteriosCustomizados(det?.criterios);
 
   async function salvarTexto() {
     setOcupado('salvar');
@@ -107,7 +104,7 @@ export function RedacaoRevisao({ envioId, onVoltar, onConfirmada }: Props) {
     setErro(null);
     try {
       await salvarRedacao(envioId, { textoFinal: texto });
-      const r = await corrigirRedacaoComIa(texto.split('\n'), det.tema ?? '', criteriosCustom);
+      const r = await corrigirRedacaoComIa(texto.split('\n'), det.tema ?? '', chaveRubrica, criteriosCustom);
       await salvarRedacao(envioId, { correcaoIa: r });
       setIa(r);
       // Só preenche as notas do professor com as da IA se ele ainda não decidiu nada.
@@ -238,7 +235,7 @@ export function RedacaoRevisao({ envioId, onVoltar, onConfirmada }: Props) {
       {/* Competências: prévia da IA x decisão do professor */}
       {notas && (
         <div className="space-y-3">
-          <h3 className="text-sm font-bold text-ms-main">Competências — a nota final é a sua</h3>
+          <h3 className="text-sm font-bold text-ms-main">Critérios ({ia?.rubrica?.nome ?? rubrica.nome}) — a nota final é a sua</h3>
           <div className="grid md:grid-cols-2 gap-3">
             {CHAVES_COMPETENCIA.map((k) => {
               const c = ia?.competencias[k];
@@ -246,7 +243,7 @@ export function RedacaoRevisao({ envioId, onVoltar, onConfirmada }: Props) {
               return (
                 <div key={k} className="border border-gray-800 rounded-xl p-3 space-y-2 bg-ms-dark/40">
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-xs font-bold text-ms-main">{NOMES[k]}</p>
+                    <p className="text-xs font-bold text-ms-main">{nomes[k]}</p>
                     {c && <span className="text-[11px] px-2 py-0.5 rounded-full bg-ms-dark border border-gray-800 text-ms-muted">IA: {c.nota}</span>}
                   </div>
                   {c && <p className="text-xs text-ms-muted leading-relaxed">{c.justificativa}</p>}
