@@ -27,7 +27,7 @@ import type { ModoNota, PonderadaEscopo } from '../types/correcaoOmr';
 import { QUESTION_SELECT_FIELDS, type Question } from '../types/bancoQuestoes';
 import { ACERVO_EXTERNO, acervo, garantirQuestoesNoPrincipal } from './acervoClient';
 
-const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at, embaralhar, qtd_versoes, cartao_separado, cartao_posicao, folha_redacao, modo_nota, ponderada_escopo, lancar_no_boletim, eh_prova_area, eh_prova_geral, somente_nota, area_conhecimento';
+const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at, embaralhar, qtd_versoes, cartao_separado, cartao_posicao, folha_redacao, rubrica_redacao_id, modo_nota, ponderada_escopo, lancar_no_boletim, eh_prova_area, eh_prova_geral, somente_nota, area_conhecimento';
 
 function mapAvaliacaoRow(row: Record<string, unknown>): Avaliacao {
   const turmas = (row.prova_turmas as { turmas: { id: string; nome: string } | null }[] | undefined) ?? [];
@@ -110,6 +110,7 @@ export async function criarAvaliacao(dados: NovaAvaliacaoInput, status: StatusAv
       cartao_separado: dados.cartaoSeparado,
       cartao_posicao: dados.cartaoPosicao,
       folha_redacao: dados.folhaRedacao,
+      rubrica_redacao_id: dados.rubricaRedacaoId,
       modo_nota: dados.modoNota,
       ponderada_escopo: dados.ponderadaEscopo,
       lancar_no_boletim: dados.lancarNoBoletim,
@@ -255,6 +256,7 @@ export async function atualizarAvaliacao(id: string, dados: NovaAvaliacaoInput, 
       cartao_separado: dados.cartaoSeparado,
       cartao_posicao: dados.cartaoPosicao,
       folha_redacao: dados.folhaRedacao,
+      rubrica_redacao_id: dados.rubricaRedacaoId,
       modo_nota: dados.modoNota,
       ponderada_escopo: dados.ponderadaEscopo,
       lancar_no_boletim: dados.lancarNoBoletim,

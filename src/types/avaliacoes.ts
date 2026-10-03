@@ -34,6 +34,8 @@ export interface Avaliacao {
   cartao_posicao: 'INICIO' | 'FIM';
   /** Imprimir a folha de redação (30 linhas, QR) quando a avaliação tem questão de redação. */
   folha_redacao: boolean;
+  /** Modo de correção de redação (critérios e pesos) padrão desta avaliação; nulo = o da banca da proposta. */
+  rubrica_redacao_id: string | null;
   modo_nota: ModoNota;
   ponderada_escopo: PonderadaEscopo;
   lancar_no_boletim: boolean;
@@ -79,6 +81,7 @@ export interface NovaAvaliacaoInput {
   cartaoSeparado: boolean;
   cartaoPosicao: 'INICIO' | 'FIM';
   folhaRedacao: boolean;
+  rubricaRedacaoId: string | null;
   modoNota: ModoNota;
   ponderadaEscopo: PonderadaEscopo;
   lancarNoBoletim: boolean;

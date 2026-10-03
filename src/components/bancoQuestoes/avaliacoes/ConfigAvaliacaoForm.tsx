@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Loader2 } from 'lucide-react';
 import { ehQuestaoRedacao, type Question } from '../../../types/bancoQuestoes';
+import { listarRubricas, type RubricaRedacao } from '../../../services/redacaoService';
+import { RubricasModal } from './RubricasModal';
 import type { ModoAvaliacao, NovaAvaliacaoInput, TipoAvaliacao } from '../../../types/avaliacoes';
 import type { ModoEmbaralhar, ModoNota, PonderadaEscopo } from '../../../types/correcaoOmr';
 import { MODO_EMBARALHAR_LABEL, MODO_NOTA_LABEL } from '../../../types/correcaoOmr';
@@ -39,6 +41,7 @@ export interface ConfigAvaliacaoInicial {
   cartaoSeparado?: boolean;
   cartaoPosicao?: 'INICIO' | 'FIM';
   folhaRedacao?: boolean;
+  rubricaRedacaoId?: string | null;
   modoNota?: ModoNota;
   ponderadaEscopo?: PonderadaEscopo;
   lancarNoBoletim?: boolean;
@@ -95,6 +98,10 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
   // Folha de redação: ligada por padrão; só aparece quando há questão de redação na avaliação.
   const [folhaRedacao, setFolhaRedacao] = useState<boolean>(inicial?.folhaRedacao ?? true);
   const temRedacao = questoes.some((q) => ehQuestaoRedacao(q));
+  // Modo de correção da redação (critérios e pesos). Vazio = o modelo da banca de cada proposta.
+  const [rubricaRedacaoId, setRubricaRedacaoId] = useState<string>(inicial?.rubricaRedacaoId ?? '');
+  const [rubricasRedacao, setRubricasRedacao] = useState<RubricaRedacao[]>([]);
+  const [gerenciandoRubricas, setGerenciandoRubricas] = useState(false);
   const [modoNota, setModoNota] = useState<ModoNota>(
     inicial?.modoNota ?? ((inicial?.tipo ?? 'AVALIACAO') === 'SIMULADO' ? 'SEM_NOTA' : 'DIRETA')
   );
@@ -117,6 +124,11 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
       return proxima;
     });
   }
+
+  useEffect(() => {
+    if (!temRedacao) return;
+    listarRubricas().then((l) => setRubricasRedacao(l.filter((r) => r.ativa))).catch(() => setRubricasRedacao([]));
+  }, [temRedacao, gerenciandoRubricas]);
 
   useEffect(() => {
     listarTurmas().then(setTurmas).catch(() => setTurmas([])).finally(() => setLoadingTurmas(false));
@@ -234,6 +246,7 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
         cartaoSeparado: posicaoCartao === 'SEPARADO',
         cartaoPosicao: posicaoCartao === 'INICIO' ? 'INICIO' : 'FIM',
         folhaRedacao,
+        rubricaRedacaoId: rubricaRedacaoId || null,
         modoNota,
         ponderadaEscopo,
         lancarNoBoletim,
@@ -465,6 +478,31 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
           )}
         </div>
       )}
+
+      {temRedacao && (
+        <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-2">
+          <label className="text-sm font-bold text-ms-main" htmlFor="modo-correcao-redacao">Modo de correção da redação</label>
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              id="modo-correcao-redacao"
+              className={`${inputClass} !w-auto min-w-64`}
+              value={rubricaRedacaoId}
+              onChange={(e) => setRubricaRedacaoId(e.target.value)}
+            >
+              <option value="">Da banca de cada proposta (padrão)</option>
+              {rubricasRedacao.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+            </select>
+            <button type="button" onClick={() => setGerenciandoRubricas(true)} className="text-xs text-ms-blue underline">
+              Gerenciar critérios e pesos
+            </button>
+          </div>
+          <p className="text-xs text-ms-muted leading-relaxed">
+            Define por quais critérios e pesos as redações desta avaliação serão corrigidas. Pode ser qualquer modo, mesmo de outra banca
+            (um tema da UFMS corrigido pelos critérios do ENEM, por exemplo), e ainda dá para trocar em cada redação na hora de corrigir.
+          </p>
+        </div>
+      )}
+      {gerenciandoRubricas && <RubricasModal onClose={() => setGerenciandoRubricas(false)} />}
 
       <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-3">
         <div className="flex items-center justify-between">

@@ -13,6 +13,7 @@ import {
   type StatusRedacao,
 } from '../../../services/redacaoService';
 import { RedacaoRevisao } from './RedacaoRevisao';
+import { RubricasModal } from './RubricasModal';
 
 // Correção de redação de uma prova impressa: o professor fotografa/envia as folhas (a leitura do QR
 // identifica o aluno e as 4 marcas endireitam a foto), o portal recorta SÓ a caixa de texto, a IA
@@ -75,6 +76,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
   const [questaoId, setQuestaoId] = useState('');
   const [ocupadoAluno, setOcupadoAluno] = useState<string | null>(null);
   const [houveNota, setHouveNota] = useState(false);
+  const [gerenciando, setGerenciando] = useState(false);
   const seq = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -217,6 +219,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                       {questoes.map((q, i) => <option key={q.id} value={q.id}>Redação {i + 1}{q.tema ? ` — ${q.tema.slice(0, 50)}` : ''}</option>)}
                     </select>
                   )}
+                  <button onClick={() => setGerenciando(true)} className="text-xs text-ms-blue underline">Critérios de correção</button>
                   <span className="text-xs text-ms-muted">
                     Enquadre a folha inteira (QR e os 4 quadrados pretos dos cantos visíveis). Pode escolher várias fotos de uma vez.
                   </span>
@@ -273,7 +276,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                             <td className="px-3 py-2 text-ms-main font-medium">{r.aluno_nome}</td>
                             <td className="px-3 py-2 text-ms-muted hidden sm:table-cell">{r.turma_nome ?? '—'}</td>
                             <td className="px-3 py-2"><span className={`text-[11px] px-2 py-0.5 rounded-full border ${st.classe}`}>{st.texto}</span></td>
-                            <td className="px-3 py-2 text-right text-ms-main">{r.nota_total != null ? `${r.nota_total}/1000` : '—'}</td>
+                            <td className="px-3 py-2 text-right text-ms-main">{r.nota_total != null ? `${r.nota_total}/${r.nota_maxima ?? 1000}` : '—'}</td>
                             <td className="px-3 py-2 text-right">
                               {r.envio_id ? (
                                 <button onClick={() => setAbertoId(r.envio_id)} className="px-3 py-1 rounded-lg border border-gray-800 text-xs font-bold text-ms-main hover:bg-gray-800">
@@ -301,6 +304,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
           )}
         </div>
       </div>
+      {gerenciando && <RubricasModal onClose={() => setGerenciando(false)} />}
     </div>
   );
 }
