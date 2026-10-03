@@ -37,6 +37,16 @@ export function normalizarTipoQuestao(tipo: TipoQuestao | null | undefined): Tip
   return tipo === 'DISSERTATIVA' || tipo === 'REDACAO' ? 'DISSERTATIVA' : 'OBJETIVA';
 }
 
+/**
+ * Proposta de redação: questão escrita da disciplina "Redação" (ou, em linha antiga, tipo REDACAO).
+ * O tipo no banco é DISSERTATIVA; a disciplina é o que identifica a redação, e é ela que liga a
+ * folha de redação (30 linhas, QR, leitura por câmera).
+ */
+export function ehQuestaoRedacao(q: { tipo?: TipoQuestao | null; discipline?: string | null }): boolean {
+  if (q.tipo === 'REDACAO') return true;
+  return normalizarTipoQuestao(q.tipo) === 'DISSERTATIVA' && (q.discipline ?? '').trim().toLowerCase() === 'redação';
+}
+
 export function ehQuestaoEscrita(tipo: TipoQuestao | null | undefined): boolean {
   return normalizarTipoQuestao(tipo) !== 'OBJETIVA';
 }
