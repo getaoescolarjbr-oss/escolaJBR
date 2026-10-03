@@ -13,6 +13,8 @@ import {
 } from '../../../services/avaliacoesService';
 import { AvaliacaoResultadosModal } from './AvaliacaoResultadosModal';
 import { CorrigirDissertativasModal } from './CorrigirDissertativasModal';
+import { CorrigirRedacaoModal } from './CorrigirRedacaoModal';
+import { obterProvasComRedacao } from '../../../services/redacaoService';
 import { EditarAvaliacaoModal } from './EditarAvaliacaoModal';
 import { NovaAvaliacaoModal } from './NovaAvaliacaoModal';
 import { PreviewAvaliacaoAlunoModal } from './PreviewAvaliacaoAlunoModal';
@@ -48,6 +50,9 @@ export function MinhasAvaliacoesTab() {
   const [reimprimirDe, setReimprimirDe] = useState<Avaliacao | null>(null);
   const [previewDe, setPreviewDe] = useState<Avaliacao | null>(null);
   const [corrigindoDe, setCorrigindoDe] = useState<Avaliacao | null>(null);
+  const [corrigindoRedacaoDe, setCorrigindoRedacaoDe] = useState<Avaliacao | null>(null);
+  // Ids das provas que têm questão de redação — decide se o botão "Corrigir redações" aparece.
+  const [comRedacao, setComRedacao] = useState<Set<string>>(new Set());
   const [inserindoCota, setInserindoCota] = useState<{ avaliacao: AvaliacaoArea; cota: ProvaAreaCota } | null>(null);
   const [previewAreaDe, setPreviewAreaDe] = useState<AvaliacaoArea | null>(null);
   // Ids das provas com resposta escrita ainda sem nota — decide se o botão "Corrigir" aparece.
@@ -82,13 +87,15 @@ export function MinhasAvaliacoesTab() {
     setLoading(true);
     setErro(null);
     try {
-      const [lista, pendentes, listaArea] = await Promise.all([
+      const [lista, pendentes, listaArea, redacoes] = await Promise.all([
         listarMinhasAvaliacoes(),
         obterProvasComCorrecaoPendente(),
         listarAvaliacoesArea().catch(() => []),
+        obterProvasComRedacao(),
       ]);
       setAvaliacoes(lista);
       setComCorrecaoPendente(pendentes);
+      setComRedacao(redacoes);
       setAvaliacoesArea(listaArea.filter((av) => av.status !== 'PUBLICADA' || av.cotas?.some((c) => c.qtd_questoes > 0)));
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível carregar as avaliações.');
@@ -388,6 +395,15 @@ export function MinhasAvaliacoesTab() {
                       <Camera className="w-3.5 h-3.5" /> Corrigir pela câmera
                     </button>
                   )}
+                  {(a.modo === 'IMPRESSA' || a.modo === 'AMBAS') && a.status !== 'RASCUNHO' && comRedacao.has(a.id) && (
+                    <button
+                      onClick={() => setCorrigindoRedacaoDe(a)}
+                      className={btnSecondary}
+                      title="Fotografar as folhas de redação, transcrever e corrigir com prévia da IA"
+                    >
+                      <FileText className="w-3.5 h-3.5" /> Corrigir redações
+                    </button>
+                  )}
                   {a.modo_nota !== 'SEM_NOTA' && a.lancar_no_boletim && a.status !== 'RASCUNHO' && (
                     <button
                       disabled={processando === a.id}
@@ -564,6 +580,13 @@ export function MinhasAvaliacoesTab() {
             setInserindoCota(null);
             carregar();
           }}
+        />
+      )}
+      {corrigindoRedacaoDe && (
+        <CorrigirRedacaoModal
+          avaliacao={corrigindoRedacaoDe}
+          onClose={() => setCorrigindoRedacaoDe(null)}
+          onCorrigido={() => { void carregar(); }}
         />
       )}
       {corrigindoDe && (

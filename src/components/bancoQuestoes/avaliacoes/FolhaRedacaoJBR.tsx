@@ -60,9 +60,9 @@ export function FolhaRedacaoJBR({ aluno, versao, qrDataUrl, titulo, tema, dataAp
         src={`${window.location.origin}/logo.png.png`}
         alt=""
         className="folha-red-abs"
-        style={{ left: mm(14), top: mm(12), width: mm(22), height: mm(22), objectFit: 'contain' }}
+        style={{ left: mm(166), top: mm(12), width: mm(20), height: mm(20), objectFit: 'contain' }}
       />
-      <div className="folha-red-abs" style={{ left: mm(40), top: mm(12), width: mm(118) }}>
+      <div className="folha-red-abs" style={{ left: mm(44), top: mm(12), width: mm(118) }}>
         <div className="folha-red-escola">E.E. José Barbosa Rodrigues</div>
         <div className="folha-red-titulo">FOLHA DE REDAÇÃO{numeroQuestao ? ` — Questão ${numeroQuestao}` : ''}</div>
         <div className="folha-red-dados">
@@ -72,9 +72,9 @@ export function FolhaRedacaoJBR({ aluno, versao, qrDataUrl, titulo, tema, dataAp
           {aluno.numeroChamada != null ? ` · Nº ${aluno.numeroChamada}` : ''} · SGDE {sgde} · {dataAplicacao}
         </div>
       </div>
-      <img src={qrDataUrl} alt="" className="folha-red-abs" style={{ left: mm(162), top: mm(12), width: mm(24), height: mm(24) }} />
+      <img src={qrDataUrl} alt="" className="folha-red-abs" style={{ left: mm(14), top: mm(12), width: mm(26), height: mm(26) }} />
 
-      <div className="folha-red-abs folha-red-dados" style={{ left: mm(14), top: mm(38.5), width: mm(172) }}>
+      <div className="folha-red-abs folha-red-dados" style={{ left: mm(14), top: mm(41), width: mm(172) }}>
         <strong>{titulo}</strong>
         {tema ? ` — Tema: ${tema}` : ''}
       </div>
