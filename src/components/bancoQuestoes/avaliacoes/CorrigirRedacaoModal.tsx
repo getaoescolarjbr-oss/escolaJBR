@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AlertTriangle, Camera, CheckCircle2, Loader2, Pencil, X } from 'lucide-react';
 import type { Avaliacao } from '../../../types/avaliacoes';
 import { arquivoParaImagem, recortarCaixaRedacao, recorteParaJpeg } from '../../../lib/recorteFolhaRedacao';
-import { listarAlocacoes } from '../../../services/correcaoOmrService';
 import {
   enviarImagemRedacao,
   listarRedacoes,
   prepararRedacao,
+  prepararRedacaoAluno,
   salvarRedacao,
   transcreverRedacao,
   type RedacaoDaLista,
@@ -43,7 +43,8 @@ const ROTULO_ETAPA: Record<Etapa, string> = {
   erro: 'Não deu',
 };
 
-const ROTULO_STATUS: Record<StatusRedacao | 'SEM', { texto: string; classe: string }> = {
+const ROTULO_STATUS: Record<StatusRedacao | 'SEM' | 'DIGITADA_PELO_ALUNO', { texto: string; classe: string }> = {
+  DIGITADA_PELO_ALUNO: { texto: 'Digitada pelo aluno', classe: 'bg-violet-100 text-violet-900 border-violet-300 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-900' },
   SEM: { texto: 'Sem folha', classe: 'bg-ms-dark text-ms-muted border-gray-800' },
   ENVIADA: { texto: 'Enviada', classe: 'bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-900' },
   TRANSCRITA: { texto: 'Transcrita', classe: 'bg-sky-100 text-sky-900 border-sky-300 dark:bg-sky-950/40 dark:text-sky-300 dark:border-sky-900' },
@@ -135,15 +136,13 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
     await recarregar();
   }
 
-  // Aluno sem folha escaneada: abre o registro pelo código dele (para digitar ou colar o texto).
+  // Aluno sem folha escaneada: abre o registro dele (texto digitado online, ou em branco para o
+  // professor digitar/colar). Não depende de folha sorteada nem de QR.
   async function abrirManual(r: RedacaoDaLista) {
     setOcupadoAluno(r.aluno_id);
     setErro(null);
     try {
-      const alocs = await listarAlocacoes(avaliacao.id);
-      const aloc = alocs.find((a) => a.aluno_id === r.aluno_id);
-      if (!aloc) throw new Error('Este aluno não tem folha sorteada nesta prova.');
-      const prep = await prepararRedacao(aloc.codigo, r.question_id);
+      const prep = await prepararRedacaoAluno(avaliacao.id, r.aluno_id, r.question_id);
       if (prep.precisa_escolher_questao) throw new Error('Escolha a questão de redação.');
       await recarregar();
       setAbertoId(prep.envio_id);
@@ -250,7 +249,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                 <div className="flex items-center gap-2 text-ms-muted py-8 justify-center"><Loader2 className="w-5 h-5 animate-spin" /> Carregando…</div>
               ) : visiveis.length === 0 ? (
                 <p className="text-sm text-ms-muted text-center py-6">
-                  Nenhum aluno com folha sorteada para esta prova. Sorteie as versões e imprima as folhas primeiro.
+                  Nenhum aluno encontrado para esta prova. Confira as turmas da avaliação.
                 </p>
               ) : (
                 <div className="border border-gray-800 rounded-xl overflow-hidden">
@@ -267,7 +266,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                     </thead>
                     <tbody>
                       {visiveis.map((r) => {
-                        const st = ROTULO_STATUS[r.status ?? 'SEM'];
+                        const st = ROTULO_STATUS[r.status ?? (r.tem_texto_digitado ? 'DIGITADA_PELO_ALUNO' : 'SEM')];
                         return (
                           <tr key={`${r.aluno_id}-${r.question_id}`} className="border-t border-gray-800">
                             <td className="px-3 py-2 text-ms-muted">{r.numero_chamada ?? '—'}</td>
@@ -285,9 +284,9 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                                   onClick={() => void abrirManual(r)}
                                   disabled={ocupadoAluno === r.aluno_id}
                                   className="inline-flex items-center gap-1 px-3 py-1 rounded-lg border border-gray-800 text-xs text-ms-muted hover:text-ms-main disabled:opacity-40"
-                                  title="Digitar ou colar o texto, sem foto"
+                                  title={r.tem_texto_digitado ? 'Revisar a redação que o aluno digitou' : 'Digitar ou colar o texto, sem foto'}
                                 >
-                                  {ocupadoAluno === r.aluno_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Pencil className="w-3 h-3" />} Digitar
+                                  {ocupadoAluno === r.aluno_id ? <Loader2 className="w-3 h-3 animate-spin" /> : <Pencil className="w-3 h-3" />} {r.tem_texto_digitado ? 'Revisar' : 'Digitar'}
                                 </button>
                               )}
                             </td>

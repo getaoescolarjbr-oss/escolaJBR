@@ -114,6 +114,8 @@ export interface QuestaoParaAluno {
   letra_marcada: string | null;
   /** Resposta escrita já enviada (dissertativa/redação). */
   resposta_texto?: string | null;
+  /** Disciplina da questão: "Redação" liga o editor de redação (contador de linhas, sem colar). */
+  discipline?: string | null;
 }
 
 // Um item do payload de rpc_submeter_resposta_avaliacao: `letra` para objetiva,

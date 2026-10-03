@@ -24,6 +24,8 @@ export interface RedacaoDaLista {
   nota_total: number | null;
   tem_imagem: boolean | null;
   origem: string | null;
+  /** O aluno digitou a redação na avaliação online. */
+  tem_texto_digitado: boolean | null;
 }
 
 export interface CompetenciaIa {
@@ -104,6 +106,35 @@ export async function prepararRedacao(codigo: string, questionId?: string): Prom
   const { data, error } = await supabase.rpc('rpc_redacao_preparar', { p_codigo: codigo, p_question_id: questionId ?? null });
   if (error) throw error;
   return data as PreparoRedacao;
+}
+
+/** Abre a redação de um aluno sem QR (digitada online ou para o professor digitar/colar). */
+export async function prepararRedacaoAluno(provaId: string, alunoId: string, questionId?: string): Promise<PreparoRedacao> {
+  const { data, error } = await supabase.rpc('rpc_redacao_preparar_aluno', {
+    p_prova_id: provaId,
+    p_aluno_id: alunoId,
+    p_question_id: questionId ?? null,
+  });
+  if (error) throw error;
+  return data as PreparoRedacao;
+}
+
+// ---- rascunho da redação digitada pelo aluno (tabela à parte; não conta como resposta enviada) ----
+
+export async function salvarRascunhoRedacao(avaliacaoId: string, questionId: string, texto: string): Promise<string> {
+  const { data, error } = await supabase.rpc('rpc_redacao_rascunho_salvar', {
+    p_avaliacao_id: avaliacaoId,
+    p_question_id: questionId,
+    p_texto: texto,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+export async function obterRascunhosRedacao(avaliacaoId: string): Promise<Record<string, string>> {
+  const { data, error } = await supabase.rpc('rpc_redacao_rascunho_obter', { p_avaliacao_id: avaliacaoId });
+  if (error) throw error;
+  return Object.fromEntries(((data ?? []) as { question_id: string; texto: string }[]).map((r) => [r.question_id, r.texto]));
 }
 
 export async function obterRedacao(envioId: string): Promise<RedacaoDetalhe> {
