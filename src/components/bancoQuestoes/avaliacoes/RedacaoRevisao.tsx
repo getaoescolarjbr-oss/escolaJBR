@@ -127,7 +127,7 @@ export function RedacaoRevisao({ envioId, onVoltar, onConfirmada }: Props) {
     setErro(null);
     try {
       await salvarRedacao(envioId, { textoFinal: texto });
-      const r = await corrigirRedacaoComIa(texto.split('\n'), det.tema ?? '', rubrica);
+      const r = await corrigirRedacaoComIa(texto.split('\n'), det.tema ?? '', rubrica, det.observacoes);
       await salvarRedacao(envioId, { correcaoIa: r });
       setIa(r);
       // Preenche as notas do professor com as da IA só se ele ainda não decidiu nada neste modo.
@@ -231,6 +231,12 @@ export function RedacaoRevisao({ envioId, onVoltar, onConfirmada }: Props) {
             <div className="text-xs text-ms-main bg-white dark:bg-ms-dark border border-gray-800 rounded-lg p-3 max-h-80 overflow-y-auto leading-relaxed">
               {renderLightMarkup(det.enunciado, 'redacao-enunciado')}
             </div>
+          )}
+          {det.observacoes?.trim() && (
+            <details className="text-xs text-ms-main border border-gray-800 rounded-lg bg-ms-dark/40">
+              <summary className="cursor-pointer px-3 py-2 font-bold">O que se espera neste tema (observações para o professor)</summary>
+              <div className="px-3 pb-3 leading-relaxed max-h-80 overflow-y-auto">{renderLightMarkup(det.observacoes, 'redacao-observacoes')}</div>
+            </details>
           )}
         </div>
 

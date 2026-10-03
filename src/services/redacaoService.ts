@@ -107,6 +107,8 @@ export interface RedacaoDetalhe {
   tema: string | null;
   banca: string | null;
   enunciado: string;
+  /** "Observações para o professor" da questão: o que se espera que o aluno aborde. */
+  observacoes: string | null;
   valor: number | string | null;
   origem: string;
   imagem_path: string | null;
@@ -313,10 +315,11 @@ export async function transcreverRedacao(imagemBase64: string): Promise<{ linhas
   return chamarRedacaoIa('transcrever', { imagemBase64, mimeType: 'image/jpeg' });
 }
 
-export async function corrigirRedacaoComIa(linhas: string[], tema: string, rubrica: RubricaEfetiva): Promise<CorrecaoIa> {
+export async function corrigirRedacaoComIa(linhas: string[], tema: string, rubrica: RubricaEfetiva, esperado?: string | null): Promise<CorrecaoIa> {
   return chamarRedacaoIa('corrigir', {
     linhas,
     tema,
+    esperado: esperado ?? undefined,
     rubrica: {
       id: rubrica.id,
       nome: rubrica.nome,
