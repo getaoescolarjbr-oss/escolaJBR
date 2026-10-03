@@ -1,9 +1,14 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Send, X } from 'lucide-react';
 import type { AvaliacaoAluno, ItemResultadoSubmissao, QuestaoParaAluno, RespostaEnvio } from '../../types/avaliacoes';
-import { ehQuestaoEscrita } from '../../types/bancoQuestoes';
+import { ehQuestaoEscrita, ehQuestaoRedacao } from '../../types/bancoQuestoes';
 import { obterQuestoesAvaliacaoAluno, submeterRespostasAvaliacao } from '../../services/avaliacoesService';
+import { obterRascunhosRedacao, salvarRascunhoRedacao } from '../../services/redacaoService';
 import { QuestaoAlunoView } from './QuestaoAlunoView';
+import type { EstadoSalvamento } from './RedacaoEditor';
+
+// Espera depois da última tecla antes de salvar o rascunho da redação.
+const ATRASO_RASCUNHO_MS = 2500;
 
 interface Props {
   avaliacao: AvaliacaoAluno;
@@ -22,6 +27,9 @@ export function RealizarAvaliacaoModal({ avaliacao, onClose, onEnviada }: Props)
   const [enviando, setEnviando] = useState(false);
   const [resultado, setResultado] = useState<ItemResultadoSubmissao[] | null>(null);
   const [erro, setErro] = useState<string | null>(null);
+  const [salvamento, setSalvamento] = useState<Record<string, EstadoSalvamento>>({});
+  // Último texto de redação que o servidor já tem (rascunho ou resposta), por questão.
+  const ultimoSalvo = useRef<Record<string, string>>({});
 
   const jaEnviada = avaliacao.resposta_status === 'ENVIADA';
 
@@ -31,9 +39,18 @@ export function RealizarAvaliacaoModal({ avaliacao, onClose, onEnviada }: Props)
         setQuestoes(qs);
         setRespostas(Object.fromEntries(qs.filter((q) => q.letra_marcada).map((q) => [q.question_id, q.letra_marcada as string])));
         setTextos(Object.fromEntries(qs.filter((q) => q.resposta_texto).map((q) => [q.question_id, q.resposta_texto as string])));
+        // Redação em andamento: devolve o rascunho salvo no servidor (se não há resposta enviada).
+        if (avaliacao.resposta_status !== 'ENVIADA' && qs.some((q) => ehQuestaoRedacao(q))) {
+          obterRascunhosRedacao(avaliacao.avaliacao_id)
+            .then((rascunhos) => {
+              ultimoSalvo.current = { ...rascunhos };
+              setTextos((prev) => ({ ...rascunhos, ...Object.fromEntries(Object.entries(prev).filter(([, v]) => v)) }));
+            })
+            .catch(() => { /* sem rascunho salvo: segue em branco */ });
+        }
       })
       .catch((e) => setErro(e instanceof Error ? e.message : 'Não foi possível carregar as questões.'));
-  }, [avaliacao.avaliacao_id]);
+  }, [avaliacao.avaliacao_id, avaliacao.resposta_status]);
 
   // Uma dissertativa/redação só conta como respondida se tiver texto de fato — espaço
   // em branco não vale. Este mesmo array é o payload enviado à RPC.
@@ -54,6 +71,28 @@ export function RealizarAvaliacaoModal({ avaliacao, onClose, onEnviada }: Props)
   const resultadoPorQuestao = useMemo(() => new Map((resultado ?? []).map((r) => [r.question_id, r])), [resultado]);
 
   const bloqueado = jaEnviada || !!resultado;
+
+  // Salvamento automático do rascunho da redação (debounce): uma redação é longa e o envio da
+  // avaliação é um só, então perder a aba não pode significar perder o texto.
+  const idsRedacao = useMemo(() => (questoes ?? []).filter((q) => ehQuestaoRedacao(q)).map((q) => q.question_id), [questoes]);
+  useEffect(() => {
+    if (bloqueado || idsRedacao.length === 0) return;
+    const pendentes = idsRedacao.filter((id) => (textos[id] ?? '') !== (ultimoSalvo.current[id] ?? ''));
+    if (pendentes.length === 0) return;
+    const t = window.setTimeout(() => {
+      for (const id of pendentes) {
+        const texto = textos[id] ?? '';
+        setSalvamento((s) => ({ ...s, [id]: { tipo: 'salvando' } }));
+        salvarRascunhoRedacao(avaliacao.avaliacao_id, id, texto)
+          .then((quando) => {
+            ultimoSalvo.current[id] = texto;
+            setSalvamento((s) => ({ ...s, [id]: { tipo: 'salvo', hora: new Date(quando).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) } }));
+          })
+          .catch((e) => setSalvamento((s) => ({ ...s, [id]: { tipo: 'erro', mensagem: e instanceof Error ? e.message : 'tente de novo' } })));
+      }
+    }, ATRASO_RASCUNHO_MS);
+    return () => window.clearTimeout(t);
+  }, [textos, idsRedacao, bloqueado, avaliacao.avaliacao_id]);
 
   function marcar(questionId: string, letra: string) {
     if (bloqueado) return;
@@ -138,6 +177,7 @@ export function RealizarAvaliacaoModal({ avaliacao, onClose, onEnviada }: Props)
               somenteLeitura={bloqueado}
               onMarcar={(letra) => marcar(q.question_id, letra)}
               onEscrever={(texto) => escrever(q.question_id, texto)}
+              salvamento={ehQuestaoRedacao(q) ? (salvamento[q.question_id] ?? null) : undefined}
             />
           ))}
         </div>

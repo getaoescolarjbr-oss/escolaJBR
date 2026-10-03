@@ -1,6 +1,7 @@
 import { Check, PenLine, XCircle } from 'lucide-react';
 import type { ItemResultadoSubmissao, QuestaoParaAluno } from '../../types/avaliacoes';
-import { TIPO_QUESTAO_LABEL, ehQuestaoEscrita, normalizarTipoQuestao, ordenarAlternativas } from '../../types/bancoQuestoes';
+import { TIPO_QUESTAO_LABEL, ehQuestaoEscrita, ehQuestaoRedacao, normalizarTipoQuestao, ordenarAlternativas } from '../../types/bancoQuestoes';
+import { RedacaoEditor, type EstadoSalvamento } from './RedacaoEditor';
 import { renderLightMarkup } from '../../lib/questionMarkup';
 
 interface Props {
@@ -14,6 +15,8 @@ interface Props {
   somenteLeitura: boolean;
   onMarcar?: (letra: string) => void;
   onEscrever?: (texto: string) => void;
+  /** Estado do salvamento automático do rascunho (só redação). */
+  salvamento?: EstadoSalvamento;
 }
 
 // Renderização de UMA questão na visão do aluno. Fica num componente próprio
@@ -33,9 +36,11 @@ export function QuestaoAlunoView({
   somenteLeitura,
   onMarcar,
   onEscrever,
+  salvamento,
 }: Props) {
   const tipo = normalizarTipoQuestao(questao.tipo);
   const escrita = ehQuestaoEscrita(tipo);
+  const redacao = escrita && ehQuestaoRedacao({ tipo: questao.tipo, discipline: questao.discipline });
 
   const numeroPrefixo = (
     <span className="font-bold text-ms-blueText">
@@ -71,7 +76,9 @@ export function QuestaoAlunoView({
       </div>
       {questao.image_url && <img src={questao.image_url} alt="" className="max-w-full rounded-lg my-2" />}
 
-      {escrita ? (
+      {redacao ? (
+        <RedacaoEditor value={textoResposta} onChange={onEscrever} somenteLeitura={somenteLeitura} salvamento={salvamento} />
+      ) : escrita ? (
         <div className="mt-2 space-y-1.5">
           <textarea
             value={textoResposta}
