@@ -53,13 +53,19 @@ interface Props {
    * que o usa — é assim que a prova original faz.
    */
   ocultarTextoApoio?: boolean;
+  /**
+   * Redação com folha própria (FolhaRedacaoJBR): em vez das 30 linhas pautadas no meio da
+   * prova, imprime só o aviso de onde escrever.
+   */
+  semLinhasResposta?: boolean;
 }
 
-export function QuestaoImpressa({ questao: q, indice, valor, ocultarTextoApoio }: Props) {
+export function QuestaoImpressa({ questao: q, indice, valor, ocultarTextoApoio, semLinhasResposta }: Props) {
   const tipo = normalizarTipoQuestao(q.tipo);
   const escrita = ehQuestaoEscrita(tipo);
   const linhas = escrita ? linhasParaResposta(tipo, q.linhas_resposta) : 0;
-  const longa = escrita && linhas > LIMITE_LINHAS_COLUNA;
+  const usaFolhaPropria = !!semLinhasResposta && tipo === 'REDACAO';
+  const longa = escrita && !usaFolhaPropria && linhas > LIMITE_LINHAS_COLUNA;
   const apoio = ocultarTextoApoio ? null : q.support_texts;
 
   return (
@@ -92,7 +98,11 @@ export function QuestaoImpressa({ questao: q, indice, valor, ocultarTextoApoio }
       })()}
       {q.image_url && <img src={q.image_url} alt="" className="questao-img" />}
 
-      {escrita ? (
+      {usaFolhaPropria ? (
+        <div style={{ fontSize: '0.85em', fontStyle: 'italic', color: '#444', margin: '4px 0' }}>
+          Escreva a sua redação na FOLHA DE REDAÇÃO.
+        </div>
+      ) : escrita ? (
         <div className="linhas-resposta">
           {Array.from({ length: linhas }, (_, i) => (
             <div className="linha-resposta" key={i} />
