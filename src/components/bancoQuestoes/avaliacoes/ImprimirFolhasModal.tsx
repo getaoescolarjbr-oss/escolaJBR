@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { AlertTriangle, Loader2, Printer, RefreshCw, UserPlus, X } from 'lucide-react';
-import { normalizarTipoQuestao, type Question } from '../../../types/bancoQuestoes';
+import { ehQuestaoRedacao, type Question } from '../../../types/bancoQuestoes';
 import type { Avaliacao } from '../../../types/avaliacoes';
 import type { AlocacaoProva } from '../../../types/correcaoOmr';
 import { PROVA_LAYOUT_CSS, PROVA_QUESTOES_CSS, printProva } from '../../../utils/printProva';
@@ -479,7 +479,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
         folhaRedacao && conteudo !== 'SO_CARTAO' && qr
           ? daVersao
               .map((q, i) => ({ q, i }))
-              .filter(({ q }) => normalizarTipoQuestao(q.tipo) === 'REDACAO')
+              .filter(({ q }) => ehQuestaoRedacao(q))
           : [];
       for (const { q, i } of redacoes) {
         blocos.push(
@@ -551,7 +551,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
   }
 
   const semVersoes = alocacoes !== null && alocacoes.length === 0;
-  const temRedacao = questoes.some((q) => normalizarTipoQuestao(q.tipo) === 'REDACAO');
+  const temRedacao = questoes.some((q) => ehQuestaoRedacao(q));
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">

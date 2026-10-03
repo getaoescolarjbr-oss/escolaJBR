@@ -1,5 +1,5 @@
 import type { Question } from '../../types/bancoQuestoes';
-import { ehQuestaoEscrita, linhasParaResposta, normalizarTipoQuestao, ordenarAlternativas } from '../../types/bancoQuestoes';
+import { ehQuestaoEscrita, ehQuestaoRedacao, linhasParaResposta, normalizarTipoQuestao, ordenarAlternativas } from '../../types/bancoQuestoes';
 import { renderLightMarkup } from '../../lib/questionMarkup';
 
 // entraNoCartaoResposta vive em utils/printProva.ts: este arquivo só pode exportar
@@ -64,7 +64,7 @@ export function QuestaoImpressa({ questao: q, indice, valor, ocultarTextoApoio, 
   const tipo = normalizarTipoQuestao(q.tipo);
   const escrita = ehQuestaoEscrita(tipo);
   const linhas = escrita ? linhasParaResposta(tipo, q.linhas_resposta) : 0;
-  const usaFolhaPropria = !!semLinhasResposta && tipo === 'REDACAO';
+  const usaFolhaPropria = !!semLinhasResposta && ehQuestaoRedacao(q);
   const longa = escrita && !usaFolhaPropria && linhas > LIMITE_LINHAS_COLUNA;
   const apoio = ocultarTextoApoio ? null : q.support_texts;
 
