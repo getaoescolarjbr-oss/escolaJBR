@@ -169,6 +169,7 @@ export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo, questoesExtr
                   qtdVersoes: avaliacao.qtd_versoes,
                   cartaoSeparado: avaliacao.cartao_separado,
                   cartaoPosicao: avaliacao.cartao_posicao,
+                  folhaRedacao: avaliacao.folha_redacao,
                   modoNota: avaliacao.modo_nota,
                   ponderadaEscopo: avaliacao.ponderada_escopo,
                   lancarNoBoletim: avaliacao.lancar_no_boletim,

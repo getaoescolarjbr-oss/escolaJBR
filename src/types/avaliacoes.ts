@@ -32,6 +32,8 @@ export interface Avaliacao {
   cartao_separado: boolean;
   /** Só importa quando cartao_separado = false: cartão antes ou depois das questões. */
   cartao_posicao: 'INICIO' | 'FIM';
+  /** Imprimir a folha de redação (30 linhas, QR) quando a avaliação tem questão de redação. */
+  folha_redacao: boolean;
   modo_nota: ModoNota;
   ponderada_escopo: PonderadaEscopo;
   lancar_no_boletim: boolean;
@@ -76,6 +78,7 @@ export interface NovaAvaliacaoInput {
   qtdVersoes: number;
   cartaoSeparado: boolean;
   cartaoPosicao: 'INICIO' | 'FIM';
+  folhaRedacao: boolean;
   modoNota: ModoNota;
   ponderadaEscopo: PonderadaEscopo;
   lancarNoBoletim: boolean;

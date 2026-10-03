@@ -230,7 +230,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
   const [conteudo, setConteudo] = useState<Conteudo>('PROVA_E_CARTAO');
   const [colunas, setColunas] = useState<1 | 2>(2);
   // Folha de redação (30 linhas) impressa à parte para cada questão de redação da prova.
-  const [folhaRedacao, setFolhaRedacao] = useState(true);
+  const [folhaRedacao, setFolhaRedacao] = useState(avaliacao.folha_redacao ?? true);
   const [modoSeparador, setModoSeparador] = useState<ModoSeparador>('RASCUNHO_VERSO');
   // Vem da configuração da avaliação, mas é ajustável aqui: reimprimir de outro jeito não
   // deveria obrigar o professor a voltar e editar a avaliação inteira. cartao_separado é

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Loader2 } from 'lucide-react';
-import type { Question } from '../../../types/bancoQuestoes';
+import { ehQuestaoRedacao, type Question } from '../../../types/bancoQuestoes';
 import type { ModoAvaliacao, NovaAvaliacaoInput, TipoAvaliacao } from '../../../types/avaliacoes';
 import type { ModoEmbaralhar, ModoNota, PonderadaEscopo } from '../../../types/correcaoOmr';
 import { MODO_EMBARALHAR_LABEL, MODO_NOTA_LABEL } from '../../../types/correcaoOmr';
@@ -38,6 +38,7 @@ export interface ConfigAvaliacaoInicial {
   qtdVersoes?: number;
   cartaoSeparado?: boolean;
   cartaoPosicao?: 'INICIO' | 'FIM';
+  folhaRedacao?: boolean;
   modoNota?: ModoNota;
   ponderadaEscopo?: PonderadaEscopo;
   lancarNoBoletim?: boolean;
@@ -91,6 +92,9 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
   const posicaoInicial: PosicaoCartao =
     inicial?.cartaoSeparado ? 'SEPARADO' : (inicial?.cartaoPosicao ?? 'FIM');
   const [posicaoCartao, setPosicaoCartao] = useState<PosicaoCartao>(posicaoInicial);
+  // Folha de redação: ligada por padrão; só aparece quando há questão de redação na avaliação.
+  const [folhaRedacao, setFolhaRedacao] = useState<boolean>(inicial?.folhaRedacao ?? true);
+  const temRedacao = questoes.some((q) => ehQuestaoRedacao(q));
   const [modoNota, setModoNota] = useState<ModoNota>(
     inicial?.modoNota ?? ((inicial?.tipo ?? 'AVALIACAO') === 'SIMULADO' ? 'SEM_NOTA' : 'DIRETA')
   );
@@ -229,6 +233,7 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
         qtdVersoes: versoesEfetivas,
         cartaoSeparado: posicaoCartao === 'SEPARADO',
         cartaoPosicao: posicaoCartao === 'INICIO' ? 'INICIO' : 'FIM',
+        folhaRedacao,
         modoNota,
         ponderadaEscopo,
         lancarNoBoletim,
@@ -445,6 +450,19 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
               'O cartão sai logo no início, antes da primeira questão.'}
             {embaralhar !== 'NENHUM' && ' A versão A nunca é embaralhada: ela é a sua cópia de referência.'}
           </p>
+
+          {temRedacao && (
+            <label className="flex items-start gap-2 text-sm text-ms-main cursor-pointer">
+              <input type="checkbox" checked={folhaRedacao} onChange={(e) => setFolhaRedacao(e.target.checked)} className="mt-0.5 accent-ms-blue" />
+              <span>
+                <strong>Gerar a folha de redação</strong>
+                <span className="block text-xs text-ms-muted">
+                  Esta avaliação tem questão de redação. Cada aluno recebe uma folha de 30 linhas com o nome, o QR Code
+                  e as marcas para a leitura pela câmera. A questão deixa de imprimir as linhas pautadas e avisa onde escrever.
+                </span>
+              </span>
+            </label>
+          )}
         </div>
       )}
 
