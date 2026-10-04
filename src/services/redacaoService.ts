@@ -1,7 +1,9 @@
 import { supabase } from '../lib/supabase';
 
-// Correção de redação (add_redacao_correcao.sql + função redacao-ia). A nota NÃO é gravada aqui:
-// rpc_redacao_confirmar chama rpc_corrigir_item_dissertativo, o mesmo caminho da correção manual.
+// Correção de redação (add_redacao_correcao.sql + add_redacao_digitada.sql + add_redacao_modos_correcao.sql
+// + função redacao-ia). A nota NÃO é gravada aqui: rpc_redacao_confirmar chama rpc_corrigir_item_dissertativo,
+// o mesmo caminho da correção manual. O MODO de correção (critérios e pesos) é uma rubrica escolhida pelo
+// professor: ver rubricas_redacao.
 
 export interface LinhaTranscrita {
   n: number;
@@ -10,6 +12,48 @@ export interface LinhaTranscrita {
 }
 
 export type StatusRedacao = 'ENVIADA' | 'TRANSCRITA' | 'COM_PREVIA' | 'REVISADA';
+
+// ---- modos de correção (rubricas) ----
+
+export interface CriterioRubrica {
+  /** c1, c2... (1 a 10 por rubrica). */
+  chave: string;
+  rotulo: string;
+  /** Pontos máximos do critério (o peso). */
+  max: number;
+  /** Notas permitidas = múltiplos do passo, de 0 até o max. */
+  passo: number;
+  /** Texto que orienta a IA e o professor. */
+  descritores: string;
+}
+
+export interface RubricaRedacao {
+  id: string;
+  chave: string | null;
+  nome: string;
+  descricao: string | null;
+  /** Modelo do sistema (ENEM, UFMS, UFGD): não se edita, só se duplica. */
+  sistema: boolean;
+  criterios: CriterioRubrica[];
+  instrucoes: string | null;
+  linhas_min: number;
+  linhas_max: number;
+  aviso_linhas_min: string | null;
+  ativa: boolean;
+  criado_por: string | null;
+}
+
+/** A rubrica que vale para uma redação: escolhida nela, padrão da avaliação, ou a da banca da proposta. */
+export interface RubricaEfetiva {
+  id: string;
+  nome: string;
+  criterios: CriterioRubrica[];
+  instrucoes: string | null;
+  linhas_min: number;
+  linhas_max: number;
+  aviso_linhas_min: string | null;
+  origem: 'REDACAO' | 'AVALIACAO' | 'BANCA' | 'CONFIRMADA';
+}
 
 export interface RedacaoDaLista {
   aluno_id: string;
@@ -22,6 +66,7 @@ export interface RedacaoDaLista {
   envio_id: string | null;
   status: StatusRedacao | null;
   nota_total: number | null;
+  nota_maxima: number | null;
   tem_imagem: boolean | null;
   origem: string | null;
   /** O aluno digitou a redação na avaliação online. */
@@ -34,12 +79,12 @@ export interface CompetenciaIa {
   trechos: string[];
 }
 
-export type ChaveCompetencia = 'c1' | 'c2' | 'c3' | 'c4' | 'c5';
-export const CHAVES_COMPETENCIA: ChaveCompetencia[] = ['c1', 'c2', 'c3', 'c4', 'c5'];
-
 export interface CorrecaoIa {
-  competencias: Record<ChaveCompetencia, CompetenciaIa>;
+  /** Rubrica que a IA usou: se for outra que a atual, a prévia está desatualizada. */
+  rubrica?: { id?: string; nome: string; criterios: Pick<CriterioRubrica, 'chave' | 'rotulo' | 'max' | 'passo'>[] };
+  competencias: Record<string, CompetenciaIa>;
   nota_total: number;
+  nota_maxima?: number;
   desvios: string[];
   alertas: string[];
   linhas_preenchidas: number;
@@ -60,17 +105,23 @@ export interface RedacaoDetalhe {
   turma_nome: string | null;
   question_id: string;
   tema: string | null;
+  banca: string | null;
   enunciado: string;
-  criterios: string | null;
+  /** "Observações para o professor" da questão: o que se espera que o aluno aborde. */
+  observacoes: string | null;
   valor: number | string | null;
   origem: string;
   imagem_path: string | null;
   linhas: LinhaTranscrita[] | null;
   texto_final: string | null;
   correcao_ia: CorrecaoIa | null;
-  correcao_prof: { competencias: Record<ChaveCompetencia, CompetenciaProf>; comentario_geral: string | null; ia_nota_total: number | null } | null;
+  correcao_prof: { competencias: Record<string, CompetenciaProf>; comentario_geral: string | null; ia_nota_total: number | null } | null;
   nota_total: number | null;
+  nota_maxima: number | null;
   status: StatusRedacao;
+  rubrica: RubricaEfetiva | null;
+  /** Modo escolhido nesta redação (nulo = usa o padrão da avaliação/banca). */
+  rubrica_escolhida_id: string | null;
 }
 
 export type PreparoRedacao =
@@ -90,10 +141,18 @@ export type PreparoRedacao =
 
 export interface ResultadoConfirmacao {
   nota_total: number;
+  nota_maxima: number;
   valor_obtido: number;
   nota_resposta: number;
   status_correcao: string;
   ainda_pendentes: number;
+}
+
+/** Notas que o critério aceita: múltiplos do passo, de 0 até o max. */
+export function valoresPermitidos(c: Pick<CriterioRubrica, 'max' | 'passo'>): number[] {
+  const out: number[] = [];
+  for (let v = 0; v <= c.max; v += c.passo) out.push(v);
+  return out;
 }
 
 export async function listarRedacoes(provaId: string): Promise<RedacaoDaLista[]> {
@@ -160,7 +219,7 @@ export async function salvarRedacao(
 
 export async function confirmarRedacao(
   envioId: string,
-  competencias: Record<ChaveCompetencia, CompetenciaProf>,
+  competencias: Record<string, CompetenciaProf>,
   comentario: string | null,
 ): Promise<ResultadoConfirmacao> {
   const { data, error } = await supabase.rpc('rpc_redacao_confirmar', {
@@ -170,6 +229,48 @@ export async function confirmarRedacao(
   });
   if (error) throw error;
   return data as ResultadoConfirmacao;
+}
+
+// ---- modo de correção (rubricas) ----
+
+const CAMPOS_RUBRICA = 'id, chave, nome, descricao, sistema, criterios, instrucoes, linhas_min, linhas_max, aviso_linhas_min, ativa, criado_por';
+
+/** Rubricas visíveis ao professor: modelos do sistema primeiro. */
+export async function listarRubricas(): Promise<RubricaRedacao[]> {
+  const { data, error } = await supabase.from('rubricas_redacao').select(CAMPOS_RUBRICA).order('sistema', { ascending: false }).order('nome');
+  if (error) throw error;
+  return (data ?? []) as RubricaRedacao[];
+}
+
+export type DadosRubrica = Pick<RubricaRedacao, 'nome' | 'descricao' | 'criterios' | 'instrucoes' | 'linhas_min' | 'linhas_max' | 'aviso_linhas_min' | 'ativa'>;
+
+export async function criarRubrica(dados: DadosRubrica): Promise<RubricaRedacao> {
+  const { data: u } = await supabase.auth.getUser();
+  const { data, error } = await supabase
+    .from('rubricas_redacao')
+    .insert({ ...dados, sistema: false, chave: null, criado_por: u.user?.id })
+    .select(CAMPOS_RUBRICA)
+    .single();
+  if (error) throw error;
+  return data as RubricaRedacao;
+}
+
+export async function atualizarRubrica(id: string, dados: DadosRubrica): Promise<void> {
+  const { error } = await supabase.from('rubricas_redacao').update({ ...dados, atualizado_em: new Date().toISOString() }).eq('id', id);
+  if (error) throw error;
+}
+
+/** Apaga uma rubrica própria. Redação já confirmada guarda cópia da rubrica usada, então não muda. */
+export async function apagarRubrica(id: string): Promise<void> {
+  const { error } = await supabase.from('rubricas_redacao').delete().eq('id', id);
+  if (error) throw error;
+}
+
+/** Escolhe o modo de correção desta redação (nulo = volta ao padrão da avaliação/banca). */
+export async function definirRubricaRedacao(envioId: string, rubricaId: string | null): Promise<RubricaEfetiva> {
+  const { data, error } = await supabase.rpc('rpc_redacao_definir_rubrica', { p_envio_id: envioId, p_rubrica_id: rubricaId });
+  if (error) throw error;
+  return data as RubricaEfetiva;
 }
 
 // ---- imagem recortada (bucket privado redacoes-scans; a pasta de topo é o prova_id) ----
@@ -214,11 +315,24 @@ export async function transcreverRedacao(imagemBase64: string): Promise<{ linhas
   return chamarRedacaoIa('transcrever', { imagemBase64, mimeType: 'image/jpeg' });
 }
 
-export async function corrigirRedacaoComIa(linhas: string[], tema: string, criterios?: string): Promise<CorrecaoIa> {
-  return chamarRedacaoIa('corrigir', { linhas, tema, criterios });
+export async function corrigirRedacaoComIa(linhas: string[], tema: string, rubrica: RubricaEfetiva, esperado?: string | null): Promise<CorrecaoIa> {
+  return chamarRedacaoIa('corrigir', {
+    linhas,
+    tema,
+    esperado: esperado ?? undefined,
+    rubrica: {
+      id: rubrica.id,
+      nome: rubrica.nome,
+      criterios: rubrica.criterios,
+      instrucoes: rubrica.instrucoes,
+      linhas_min: rubrica.linhas_min,
+      linhas_max: rubrica.linhas_max,
+      aviso_linhas_min: rubrica.aviso_linhas_min,
+    },
+  });
 }
 
-/** Ids das provas que têm questão de redação — decide se o botão "Corrigir redação" aparece. */
+/** Ids das provas que têm questão de redação — decide se o botão "Corrigir redações" aparece. */
 export async function obterProvasComRedacao(): Promise<Set<string>> {
   const { data, error } = await supabase
     .from('prova_questoes')
