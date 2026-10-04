@@ -122,6 +122,8 @@ export interface RedacaoDetalhe {
   rubrica: RubricaEfetiva | null;
   /** Modo escolhido nesta redação (nulo = usa o padrão da avaliação/banca). */
   rubrica_escolhida_id: string | null;
+  /** O aluno vê "o que se esperava neste tema" na devolutiva? */
+  mostrar_esperado: boolean;
 }
 
 export type PreparoRedacao =
@@ -146,6 +148,23 @@ export interface ResultadoConfirmacao {
   nota_resposta: number;
   status_correcao: string;
   ainda_pendentes: number;
+}
+
+/** Devolutiva de UMA redação já confirmada, como o aluno a vê. Nunca traz a prévia da IA. */
+export interface DevolutivaRedacao {
+  question_id: string;
+  tema: string | null;
+  valor: number | string;
+  nota_total: number;
+  nota_maxima: number;
+  /** Pontos que a redação valeu na prova (nota/máximo × valor da questão). */
+  valor_obtido: number | string;
+  rubrica_nome: string | null;
+  criterios: { rotulo: string; max: number; nota: number; descritores: string | null; comentario: string | null }[];
+  comentario_geral: string | null;
+  texto: string | null;
+  /** Só vem preenchido se o professor liberou. */
+  esperado: string | null;
 }
 
 /** Notas que o critério aceita: múltiplos do passo, de 0 até o max. */
@@ -264,6 +283,20 @@ export async function atualizarRubrica(id: string, dados: DadosRubrica): Promise
 export async function apagarRubrica(id: string): Promise<void> {
   const { error } = await supabase.from('rubricas_redacao').delete().eq('id', id);
   if (error) throw error;
+}
+
+/** Professor: mostrar ou não ao aluno o que se esperava no tema (as observações da questão). */
+export async function definirMostrarEsperado(envioId: string, valor: boolean): Promise<boolean> {
+  const { data, error } = await supabase.rpc('rpc_redacao_mostrar_esperado', { p_envio_id: envioId, p_valor: valor });
+  if (error) throw error;
+  return data as boolean;
+}
+
+/** Aluno: devolutivas das próprias redações desta avaliação (só as que o professor confirmou), por questão. */
+export async function obterDevolutivasRedacao(avaliacaoId: string): Promise<Record<string, DevolutivaRedacao>> {
+  const { data, error } = await supabase.rpc('rpc_redacao_devolutiva', { p_avaliacao_id: avaliacaoId });
+  if (error) throw error;
+  return Object.fromEntries(((data ?? []) as DevolutivaRedacao[]).map((d) => [d.question_id, d]));
 }
 
 /** Escolhe o modo de correção desta redação (nulo = volta ao padrão da avaliação/banca). */

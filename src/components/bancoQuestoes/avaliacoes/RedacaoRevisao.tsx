@@ -4,6 +4,7 @@ import { renderLightMarkup } from '../../../lib/questionMarkup';
 import {
   confirmarRedacao,
   corrigirRedacaoComIa,
+  definirMostrarEsperado,
   definirRubricaRedacao,
   listarRubricas,
   obterRedacao,
@@ -62,12 +63,24 @@ export function RedacaoRevisao({ envioId, onVoltar, onConfirmada }: Props) {
   const [resultado, setResultado] = useState<ResultadoConfirmacao | null>(null);
   const [mostrarEnunciado, setMostrarEnunciado] = useState(false);
   const [gerenciando, setGerenciando] = useState(false);
+  const [mostrarEsperado, setMostrarEsperado] = useState(false);
+
+  async function alternarEsperado(valor: boolean) {
+    setMostrarEsperado(valor);
+    try {
+      await definirMostrarEsperado(envioId, valor);
+    } catch (e) {
+      setMostrarEsperado(!valor);
+      setErro(mensagemErro(e));
+    }
+  }
 
   const carregar = useCallback(async () => {
     const d = await obterRedacao(envioId);
     setDet(d);
     setTexto((atual) => atual || (d.texto_final ?? (d.linhas ?? []).map((l) => l.texto).join('\n')));
     setIa(d.correcao_ia);
+    setMostrarEsperado(d.mostrar_esperado ?? false);
     const prof = d.correcao_prof?.competencias;
     const iaValida = d.correcao_ia?.rubrica?.id === d.rubrica?.id ? d.correcao_ia : null;
     if (prof && d.status === 'REVISADA') {
@@ -237,6 +250,15 @@ export function RedacaoRevisao({ envioId, onVoltar, onConfirmada }: Props) {
               <summary className="cursor-pointer px-3 py-2 font-bold">O que se espera neste tema (observações para o professor)</summary>
               <div className="px-3 pb-3 leading-relaxed max-h-80 overflow-y-auto">{renderLightMarkup(det.observacoes, 'redacao-observacoes')}</div>
             </details>
+          )}
+          {det.observacoes?.trim() && (
+            <label className="flex items-start gap-2 text-xs text-ms-main cursor-pointer">
+              <input type="checkbox" checked={mostrarEsperado} onChange={(e) => void alternarEsperado(e.target.checked)} className="mt-0.5 accent-ms-blue" />
+              <span>
+                Mostrar ao aluno, na devolutiva, o que se esperava neste tema
+                <span className="block text-[11px] text-ms-muted">Revise o texto antes: boa parte das observações é gerada por IA. A prévia da IA nunca aparece para o aluno.</span>
+              </span>
+            </label>
           )}
         </div>
 
