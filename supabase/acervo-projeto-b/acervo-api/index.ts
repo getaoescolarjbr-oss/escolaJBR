@@ -150,9 +150,12 @@ const OPS: Record<string, (a: Args, roles: string[], userId: string | null) => P
       if (!data?.length) throw new ErroHttp(404, "Nenhum texto associado foi atualizado.");
       return a.id;
     }
-    const { data: existente, error: e1 } = await supabase.from("support_texts").select("id").eq("content", a.content).limit(1);
+    // Filtrar por .eq("content", textoLongo) estoura o limite de URL do HTTP/2; busca por prefixo curto e compara aqui.
+    const prefixo = a.content.slice(0, 100).replace(/[\\%_]/g, "\\$&");
+    const { data: candidatos, error: e1 } = await supabase.from("support_texts").select("id, content").like("content", `${prefixo}%`).limit(20);
     if (e1) falha(e1);
-    if (existente?.length) return existente[0].id;
+    const existente = candidatos?.find((t: { content: string }) => t.content === a.content);
+    if (existente) return existente.id;
     const { data, error } = await supabase.from("support_texts").insert([{ discipline: a.discipline, content: a.content }]).select("id");
     if (error) falha(error);
     if (!data?.length) throw new ErroHttp(500, "Falha ao criar o texto associado.");
