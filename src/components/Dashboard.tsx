@@ -11,7 +11,7 @@ import { ProfessorMensagensPanel } from './ProfessorMensagensPanel';
 import { MinhasOcorrenciasPanel } from './MinhasOcorrenciasPanel';
 import { AniversariantesPanel } from './AniversariantesPanel';
 import { CalendarioLetivoModal } from './CalendarioLetivoModal';
-import { getCurrentBimestre } from '../utils/academicUtils';
+import { getCurrentBimestre, getConfigPorTurma } from '../utils/academicUtils';
 
 
 const TEMPO_RANGES = [
@@ -61,13 +61,23 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   
   const [turmas, setTurmas] = useState<Array<{ id: string; nome: string }>>([]);
   const [disciplinas, setDisciplinas] = useState<Array<{ id: string; nome: string }>>([]);
-  
+  // Turma à qual a lista `disciplinas` pertence (a lista é carregada de forma assíncrona e, logo
+  // após trocar de turma, ainda é a da turma anterior).
+  const [disciplinasDaTurma, setDisciplinasDaTurma] = useState('');
+
   const [selectedTurma, setSelectedTurma] = useState(() => {
     return localStorage.getItem('last-turma') || '';
   });
-  const [selectedDisciplina, setSelectedDisciplina] = useState(() => {
+  const [disciplinaEscolhida, setSelectedDisciplina] = useState(() => {
     return localStorage.getItem('last-disciplina') || '';
   });
+  // Disciplina efetiva: a escolhida SÓ vale se pertence à lista da turma atual. Tudo que grava
+  // (atividades, notas, vistos, chamada) e tudo que é exibido usa este valor, então o que aparece
+  // na tela é sempre a disciplina em que os dados são salvos — nunca uma escolha "presa" de outra turma.
+  const selectedDisciplina =
+    selectedTurma && disciplinasDaTurma === selectedTurma && disciplinas.some((d) => d.id === disciplinaEscolhida)
+      ? disciplinaEscolhida
+      : '';
   const [selectedBimestre, setSelectedBimestre] = useState<number>(professor.bimestre_atual || 1);
   const [descricaoAtividade, setDescricaoAtividade] = useState<string>(() => {
     return localStorage.getItem('last-description') || '';
@@ -274,16 +284,15 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   // Professor "de dados": numa turma/disciplina que o professor logado assume como substituto, as
   // atividades, avaliações, notas, vistos e chamadas continuam no diário do TITULAR (é um só conjunto
   // por turma+disciplina; se cada um lançasse no seu nome a nota do bimestre ficaria partida em duas).
-  // Só o id e a configuração de vistos vêm do titular; nome, e-mail e cargo continuam os de quem está logado.
+  // O id do titular é usado para registrar e vincular as atividades ao diário, mas a configuração de
+  // vistos (método de lançamento, valor total e regras por turma) aplicada aos alunos é a do professor
+  // substituto logado (que é quem está ministrando e avaliando as aulas).
   const professorDados = useMemo<Professor>(() => {
     const titular = espelhos[`${selectedTurma}|${selectedDisciplina}`];
     if (!titular) return professor;
     return {
       ...professor,
       id: titular.id,
-      config_visto_metodo: titular.config_visto_metodo,
-      config_visto_valor_total: titular.config_visto_valor_total,
-      config_turmas: titular.config_turmas,
     };
   }, [espelhos, professor, selectedTurma, selectedDisciplina]);
 
@@ -382,51 +391,38 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
       const combinedMap = new Map();
 
       try {
-        const firstName = professor.nome.split(' ')[0];
-
-        // 1. Coleta IDs por múltiplos critérios
+        // Identifica o professor só por chaves exatas (id / e-mail) — nunca por nome: um
+        // casamento por substring de primeiro nome (ex.: "Juliana") pega qualquer outro
+        // professor homônimo da escola e mistura as turmas dele nesta lista (bug real
+        // encontrado em produção: Janaina/Fabio/Juliana/Luciana têm mais de uma pessoa).
         const { data: profsByEmail } = await supabase.from('professores').select('id').eq('email', professor.email);
-        const { data: profsByName } = await supabase.from('professores').select('id').ilike('nome', `%${firstName}%`);
 
         const allIds = Array.from(new Set([
           professor.id,
-          ...(profsByEmail?.map(p => p.id) || []),
-          ...(profsByName?.map(p => p.id) || [])
+          ...(profsByEmail?.map(p => p.id) || [])
         ])).filter(Boolean);
 
-        // 2. BUSCA BRUTA (Se falhar a específica, tenta geral)
-        let { data: allocs } = await supabase
+        const { data: allocs } = await supabase
           .from('alocacoes_v2')
           .select(`turma_id, turmas (nome, nivel)`)
           .in('professor_id', allIds);
 
-        // FALLBACK RADICAL: Se não veio nada, busca TUDO de alocacoes e filtra no código
-        if (!allocs || allocs.length === 0) {
-           const { data: allData } = await supabase
-             .from('alocacoes_v2')
-             .select(`turma_id, professor_id, professores(nome), turmas (nome, nivel)`);
-           
-           allocs = allData?.filter(a => 
-             (a as any).professores?.nome?.toLowerCase().includes(firstName.toLowerCase())
-           ) || [];
-        }
-
         if (allocs) {
           allocs.forEach((a: any) => {
             if (a.turma_id && a.turmas) {
-              combinedMap.set(a.turma_id, { 
-                id: a.turma_id, 
-                nome: `${a.turmas.nome} - ${a.turmas.nivel || ''}`.trim() 
+              combinedMap.set(a.turma_id, {
+                id: a.turma_id,
+                nome: `${a.turmas.nome} - ${a.turmas.nivel || ''}`.trim()
               });
             }
           });
         }
 
-        // 3. Busca no Legado (também com fallback por nome)
+        // 3. Busca no Legado (só por e-mail exato — mesmo motivo acima)
         const { data: legacy } = await supabase
           .from('lista_para_vistos')
           .select('turma_id, turma_nome, professor_nome')
-          .or(`professor_email.eq.${professor.email},professor_nome.ilike.%${firstName}%`);
+          .eq('professor_email', professor.email);
 
         if (legacy) {
           legacy.forEach(a => {
@@ -448,39 +444,31 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
   useEffect(() => {
     if (!selectedTurma) {
       setDisciplinas([]);
+      setDisciplinasDaTurma('');
       setSelectedDisciplina('');
       return;
     }
+
+    // Se a turma mudar de novo antes desta carga terminar, descarta o resultado (senão uma resposta
+    // atrasada da turma anterior sobrescreveria a lista da turma atual).
+    let cancelado = false;
 
     async function loadDisciplinas() {
       const combinedMap = new Map();
 
       try {
-        const firstName = professor.nome.split(' ')[0];
+        // Mesma identificação exata (id / e-mail) usada em loadTurmas — ver comentário lá.
         const { data: profsByEmail } = await supabase.from('professores').select('id').eq('email', professor.email);
-        const { data: profsByName } = await supabase.from('professores').select('id').ilike('nome', `%${firstName}%`);
         const allIds = Array.from(new Set([
           professor.id,
-          ...(profsByEmail?.map(p => p.id) || []),
-          ...(profsByName?.map(p => p.id) || [])
+          ...(profsByEmail?.map(p => p.id) || [])
         ])).filter(Boolean);
 
-        let { data: allocs } = await supabase
+        const { data: allocs } = await supabase
           .from('alocacoes_v2')
           .select(`disciplina_id, disciplinas (nome)`)
           .eq('turma_id', selectedTurma)
           .in('professor_id', allIds);
-
-        if (!allocs || allocs.length === 0) {
-          const { data: allData } = await supabase
-            .from('alocacoes_v2')
-            .select(`disciplina_id, professor_id, professores(nome), disciplinas (nome)`)
-            .eq('turma_id', selectedTurma);
-          
-          allocs = allData?.filter(a => 
-            (a as any).professores?.nome?.toLowerCase().includes(firstName.toLowerCase())
-          ) || [];
-        }
 
         if (allocs) {
           allocs.forEach((a: any) => {
@@ -493,12 +481,12 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
           });
         }
 
-        // Legado
+        // Legado — só por e-mail exato
         const { data: legacy } = await supabase
           .from('lista_para_vistos')
           .select('disciplina_id, disciplina_nome')
           .eq('turma_id', selectedTurma)
-          .or(`professor_email.eq.${professor.email},professor_nome.ilike.%${firstName}%`);
+          .eq('professor_email', professor.email);
 
         if (legacy) {
           legacy.forEach(a => {
@@ -511,13 +499,22 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
         console.error("Erro Disciplinas:", e);
       }
 
+      if (cancelado) return;
       const finalDiscs = Array.from(combinedMap.values()).sort((a, b) => a.nome.localeCompare(b.nome));
       setDisciplinas(finalDiscs);
-      if (finalDiscs.length === 1 && !selectedDisciplina) {
-        setSelectedDisciplina(finalDiscs[0].id);
-      }
+      setDisciplinasDaTurma(selectedTurma);
+      // A disciplina escolhida numa turma anterior não pode "sobreviver" à troca de turma (antes, o
+      // <select> mostrava outra opção mas o estado guardava a antiga, e atividades/notas eram gravadas
+      // na disciplina errada — ex.: Biologia no 7º ano, onde a pessoa só leciona Ciências).
+      // Mantém a escolha só se pertence à lista desta turma; com uma única disciplina, escolhe-a
+      // automaticamente; com mais de uma, o professor escolhe.
+      setSelectedDisciplina((atual) => {
+        if (atual && finalDiscs.some((d) => d.id === atual)) return atual;
+        return finalDiscs.length === 1 ? finalDiscs[0].id : '';
+      });
     }
     loadDisciplinas();
+    return () => { cancelado = true; };
   }, [selectedTurma, professor.id, professor.email, professor.nome]);
 
   // Automação da Seleção da Aula Baseado no Horário
@@ -1069,7 +1066,10 @@ export function Dashboard({ professor, theme, onUpdateProfessor }: DashboardProp
                   <h4 className="font-black text-sm uppercase tracking-wider text-amber-400">Modo Substituto Ativo</h4>
                   <p className="text-xs text-amber-300/80 font-bold mt-1">
                     Você está substituindo <span className="text-amber-300">{substituicaoAtiva.titularNome}</span> até <span className="text-amber-300">{new Date(substituicaoAtiva.atestado.data_fim + 'T12:00:00').toLocaleDateString('pt-BR')}</span>.
-                    Você trabalha sobre o diário dele: atividades, vistos, chamadas e notas ficam nos registros de {substituicaoAtiva.titularNome}.
+                    Você trabalha sobre o diário dele (atividades, chamadas e notas), e a sua configuração de vistos ({(() => {
+                      const cfg = getConfigPorTurma(professorDados, selectedTurma);
+                      return `modo ${cfg.config_visto_metodo}, valor total ${cfg.config_visto_valor_total} pts`;
+                    })()}) está ativa para os alunos.
                   </p>
                 </div>
               </div>

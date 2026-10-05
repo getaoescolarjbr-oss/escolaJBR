@@ -59,7 +59,7 @@ const TOLERANCIA_ASPECTO = 0.35;
 // Pré-processamento
 // ------------------------------------------------------------------------------------
 
-function paraCinza(img: ImageData): Uint8ClampedArray {
+export function paraCinza(img: ImageData): Uint8ClampedArray {
   const { data, width, height } = img;
   const cinza = new Uint8ClampedArray(width * height);
   for (let i = 0, p = 0; i < data.length; i += 4, p++) {
@@ -74,7 +74,7 @@ function paraCinza(img: ImageData): Uint8ClampedArray {
  * Limiar adaptativo de Bradley: compara cada pixel com a média da vizinhança, calculada
  * em O(1) por pixel via imagem integral. Devolve 1 para pixel escuro (tinta).
  */
-function binarizar(cinza: Uint8ClampedArray, width: number, height: number): Uint8Array {
+export function binarizar(cinza: Uint8ClampedArray, width: number, height: number): Uint8Array {
   const integral = new Float64Array((width + 1) * (height + 1));
   for (let y = 0; y < height; y++) {
     let soma = 0;
@@ -117,7 +117,7 @@ interface Componente {
 }
 
 /** Componentes conexos (4-vizinhança) dos pixels escuros, por varredura em fila. */
-function componentes(bin: Uint8Array, width: number, height: number): Componente[] {
+export function componentes(bin: Uint8Array, width: number, height: number): Componente[] {
   const visitado = new Uint8Array(width * height);
   const lista: Componente[] = [];
   const fila = new Int32Array(width * height);
@@ -175,7 +175,7 @@ function componentes(bin: Uint8Array, width: number, height: number): Componente
  * (que já foi localizado com precisão) e escolhendo o quarteto que minimiza o erro
  * de aspecto em relação à geometria conhecida do cartão.
  */
-function acharMarcas(
+export function acharMarcas(
   comps: Componente[],
   width: number,
   height: number,
@@ -354,7 +354,7 @@ function areaPoligono(p: Ponto[]): number {
  * Homografia que leva os quatro pontos de `origem` (mm no papel) nos de `destino` (px
  * na foto). Monta o sistema 8x8 do DLT e resolve por eliminação de Gauss com pivoteamento.
  */
-function calcularHomografia(origem: Ponto[], destino: Ponto[]): number[] | null {
+export function calcularHomografia(origem: Ponto[], destino: Ponto[]): number[] | null {
   const A: number[][] = [];
   for (let i = 0; i < 4; i++) {
     const { x, y } = origem[i];
@@ -381,7 +381,7 @@ function calcularHomografia(origem: Ponto[], destino: Ponto[]): number[] | null 
   return [...h, 1];
 }
 
-function projetar(h: number[], x: number, y: number): Ponto {
+export function projetar(h: number[], x: number, y: number): Ponto {
   const w = h[6] * x + h[7] * y + h[8];
   return {
     x: (h[0] * x + h[1] * y + h[2]) / w,

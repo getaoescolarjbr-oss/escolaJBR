@@ -171,7 +171,7 @@ export function CorrigirDissertativasModal({ avaliacao, onClose, onCorrigido }: 
                     {item.criterios_correcao && (
                       <div className="border-l-4 border-ms-gold pl-3 text-xs text-ms-muted">
                         <p className="font-black uppercase tracking-wider text-ms-gold mb-0.5">
-                          {tipo === 'REDACAO' ? 'Competências avaliadas' : 'Resposta esperada'}
+                          Resposta esperada
                         </p>
                         {renderLightMarkup(item.criterios_correcao, `crit-${item.item_id}`)}
                       </div>

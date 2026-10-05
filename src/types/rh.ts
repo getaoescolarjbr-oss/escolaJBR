@@ -75,3 +75,48 @@ export interface Substituicao {
   registrado_por: string;
   criado_em: string;
 }
+
+// Controle de lançamento de folha — professor substituto (create_folha_substituto_lancamentos.sql)
+export type PagamentoSubstituto = 'SED' | 'PARTICULAR';
+
+export interface LancamentoFolhaSubstituto {
+  id: string;
+  competencia: string; // AAAA-MM-01
+  data: string; // dia da substituição (ou 1º dia do período)
+  data_fim: string | null; // último dia do período; null = um dia só
+  substituto_id: string | null;
+  substituto_nome: string;
+  titular_id: string | null;
+  titular_nome: string;
+  motivo: string;
+  periodo: string | null;
+  turma_ids: string[]; // turmas substituídas
+  carga_horaria: number | null;
+  pagamento: PagamentoSubstituto | null; // null = a definir
+  termo_ok: boolean;
+  justificativa_ok: boolean;
+  lancado_folha: boolean;
+  lancado_em: string | null;
+  observacoes: string | null;
+  origem: 'MANUAL' | 'ATESTADO' | 'SUBSTITUICAO';
+  atestado_id: string | null;
+  substituicao_id: string | null;
+  substituto_rapido_id: string | null;
+  registrado_por: string | null;
+  criado_em: string;
+  atualizado_em: string;
+}
+
+export type NovoLancamentoFolha = Pick<LancamentoFolhaSubstituto,
+  'competencia' | 'data' | 'data_fim' | 'turma_ids' | 'substituto_id' | 'substituto_rapido_id' | 'substituto_nome' | 'titular_id' | 'titular_nome' | 'motivo' | 'periodo' | 'carga_horaria' | 'pagamento' | 'observacoes'>;
+
+// Cadastro rápido de substituto (add_substitutos_rapidos.sql)
+export interface SubstitutoRapido {
+  id: string;
+  nome: string;
+  telefone: string | null;
+  cpf: string | null;
+  observacoes: string | null;
+  ativo: boolean;
+  criado_em: string;
+}

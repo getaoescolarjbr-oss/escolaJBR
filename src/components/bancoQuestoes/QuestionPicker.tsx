@@ -20,7 +20,7 @@ interface QuestionPickerProps {
 }
 
 // Filtros + lista + seleção do banco de questões — extraído de QuestoesTab.tsx pra ser
-// reaproveitado também no passo 1 do gerador de avaliações (ver avaliacoes/NovaAvaliacaoTab.tsx).
+// reaproveitado também ao inserir as questões de uma avaliação (ver avaliacoes/EditarAvaliacaoModal.tsx).
 // O contador de selecionadas fica com quem usa este componente (selecionadas.size), pra cada
 // tela decidir onde/como mostrar. Criar/editar questão também fica autocontido aqui — a
 // questão criada/editada entra no banco compartilhado, visível para todos.

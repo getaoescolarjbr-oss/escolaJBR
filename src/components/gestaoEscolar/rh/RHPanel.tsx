@@ -3,7 +3,7 @@ import { EscalaTab } from './EscalaTab';
 import { FrequenciaTab } from './FrequenciaTab';
 import { AusenciasTab } from './AusenciasTab';
 import { TerceirizadosTab } from './TerceirizadosTab';
-import { SubstituicaoTab } from './SubstituicaoTab';
+import { SubstituicaoPanel } from './SubstituicaoPanel';
 
 type Aba = 'frequencia' | 'escala' | 'ausencias' | 'terceirizados' | 'substituicao';
 
@@ -45,7 +45,7 @@ export function RHPanel() {
       {aba === 'frequencia' && <FrequenciaTab />}
       {aba === 'escala' && <EscalaTab />}
       {aba === 'ausencias' && <AusenciasTab />}
-      {aba === 'substituicao' && <SubstituicaoTab />}
+      {aba === 'substituicao' && <SubstituicaoPanel />}
       {aba === 'terceirizados' && <TerceirizadosTab />}
     </div>
   );

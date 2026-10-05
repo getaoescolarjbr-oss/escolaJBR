@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabase';
 import type { Professor, Avaliacao, Student } from '../types';
 import { Calculator, Save, AlertCircle, TrendingUp, Printer } from 'lucide-react';
-import { arredondarNotaMS, getCorGradiente, calcularMediaAnual, calcularNotaNecessariaExame, calcularFrequenciaAnual, calcularMediaFinalPosExame, pesoDoVisto } from '../utils/academicUtils';
+import { arredondarNotaMS, getConfigPorTurma, getCorGradiente, calcularMediaAnual, calcularNotaNecessariaExame, calcularFrequenciaAnual, calcularMediaFinalPosExame, pesoDoVisto } from '../utils/academicUtils';
 import { printReport } from '../utils/printUtils';
 import { DecimalInput } from './DecimalInput';
 
@@ -15,6 +15,7 @@ interface ExameFinalPanelProps {
 }
 
 export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLocked = false }: ExameFinalPanelProps) {
+  const configEfetivo = getConfigPorTurma(professor, turmaId);
   const tableRef = useRef<HTMLTableElement>(null);
   const [alunos, setAlunos] = useState<Student[]>([]);
   const [mediasAnuais, setMediasAnuais] = useState<Record<string, number>>({});
@@ -121,7 +122,7 @@ export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLoc
           const totalAtivBim = ativsDoBimestre.length;
           let notaVistos = 0;
           if (totalAtivBim > 0) {
-            notaVistos = (somaPesosVistos / totalAtivBim) * (professor.config_visto_valor_total || 2.0);
+            notaVistos = (somaPesosVistos / totalAtivBim) * (configEfetivo.config_visto_valor_total || 2.0);
           }
           
           somaNotas += Number(notaVistos.toFixed(2));
@@ -185,7 +186,7 @@ export function ExameFinalPanel({ professor, turmaId, disciplinaId, theme, isLoc
     }
     
     fetchAllAnualData();
-  }, [professor.id, turmaId, disciplinaId]);
+  }, [professor.id, turmaId, disciplinaId, configEfetivo.config_visto_valor_total]);
 
   const handleCreateExameAvaliacao = async () => {
     setIsSaving(true);

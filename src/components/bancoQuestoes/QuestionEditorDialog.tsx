@@ -25,6 +25,17 @@ interface Props {
   onSalvo: () => void;
 }
 
+// Dificuldade é uma lista fechada (o banco só aceita estes 3 valores): só seleção, nunca digitada,
+// para não surgir variações como "Fácil" ao lado de "FÁCIL".
+const DIFICULDADES = ['FÁCIL', 'MÉDIO', 'DIFÍCIL'] as const;
+
+// Valor antigo digitado de outro jeito ("Fácil", "facil") vira o padrão correspondente.
+function normalizarDificuldade(valor: string | null | undefined): string {
+  const semAcento = (t: string) => t.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  const v = semAcento((valor ?? '').trim());
+  return DIFICULDADES.find((d) => semAcento(d) === v) ?? '';
+}
+
 const inputClass = 'w-full px-4 py-2.5 bg-ms-dark border border-gray-800 rounded-xl text-ms-main text-sm outline-none focus:ring-2 focus:ring-ms-blue';
 
 function novaAlternativa(letter: string): Alternative {
@@ -75,7 +86,7 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
   const [orgao, setOrgao] = useState(questao?.orgao ?? '');
   const [cargo, setCargo] = useState(questao?.cargo ?? '');
   const [ano, setAno] = useState(questao?.ano ? String(questao.ano) : '');
-  const [difficulty, setDifficulty] = useState(questao?.difficulty ?? '');
+  const [difficulty, setDifficulty] = useState(normalizarDificuldade(questao?.difficulty));
   const [assunto, setAssunto] = useState(questao?.assunto ?? '');
   const [topico, setTopico] = useState(questao?.topico ?? '');
   const [tipo, setTipo] = useState<TipoQuestao>(normalizarTipoQuestao(questao?.tipo));
@@ -236,6 +247,7 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
             value={discipline}
             onChange={setDiscipline}
             options={opcoes?.disciplines ?? []}
+            allowCreate={false}
           />
           <AutocompleteField label="Nível" placeholder="Nível" value={level} onChange={setLevel} options={opcoes?.levels ?? []} />
           <AutocompleteField label="Área" placeholder="Área" value={area} onChange={setArea} options={opcoes?.areas ?? []} />
@@ -257,7 +269,15 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
             options={topicosDoAssunto}
             disabled={!assunto}
           />
-          <AutocompleteField label="Dificuldade" placeholder="Dificuldade" value={difficulty} onChange={setDifficulty} options={opcoes?.difficulties ?? []} />
+          <div>
+            <label className="block text-[10px] font-black uppercase tracking-wider text-ms-muted mb-1">Dificuldade</label>
+            <select value={difficulty} onChange={(e) => setDifficulty(e.target.value)} className={inputClass}>
+              <option value="">Selecione...</option>
+              {DIFICULDADES.map((d) => (
+                <option key={d} value={d}>{d}</option>
+              ))}
+            </select>
+          </div>
           <div>
             <label className="block text-[10px] font-black uppercase tracking-wider text-ms-muted mb-1">Ano</label>
             <input placeholder="Ano" value={ano} onChange={(e) => setAno(e.target.value.replace(/\D/g, ''))} className={inputClass} />
@@ -287,13 +307,13 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
           <div className="space-y-4">
             <div>
               <p className="mb-1 text-xs font-black uppercase tracking-wider text-ms-main">
-                {tipo === 'REDACAO' ? 'Competências avaliadas' : 'Resposta esperada / critérios de correção'}
+                {discipline === 'Redação' ? 'Competências avaliadas' : 'Resposta esperada / critérios de correção'}
               </p>
               <CampoComMarcacao
                 value={criteriosCorrecao}
                 onChange={setCriteriosCorrecao}
                 placeholder={
-                  tipo === 'REDACAO'
+                  discipline === 'Redação'
                     ? 'Ex.: domínio da norma culta, coerência, proposta de intervenção...'
                     : 'O que a resposta do aluno precisa conter para valer a pontuação'
                 }

@@ -4,6 +4,7 @@ import { BarrasPorTurma } from './BarrasPorTurma';
 import { MESES, ROTULOS_TIPO_AUSENCIA, carregarEstatisticasAtestados } from './atestadosStats';
 import type { EstatisticasAtestados, RegistroAtestado } from './atestadosStats';
 import { ModalShell } from './ModalShell';
+import { SubstituicoesResumo } from './SubstituicoesResumo';
 
 function formatarDias(n: number): string {
   return n.toLocaleString('pt-BR', { maximumFractionDigits: 1 });
@@ -139,6 +140,7 @@ export function AtestadosEstatisticas() {
           )}
         </div>
       </div>
+      <SubstituicoesResumo versao={stats.registros} />
       {detalhe && <DetalheModal titulo={detalhe.titulo} registros={detalhe.registros} onClose={() => setDetalhe(null)} />}
     </section>
   );

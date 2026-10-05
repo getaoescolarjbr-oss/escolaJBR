@@ -108,6 +108,13 @@ export interface CamposServidor {
   areaConhecimento: string;
   statusServidor: string;
   aceiteLgpd: boolean;
+  rg: string;
+  tituloEleitor: string;
+  zonaEleitoral: string;
+  secaoEleitoral: string;
+  endereco: string;
+  telefoneFixo: string;
+  formacao: string;
 }
 
 export const CAMPOS_SERVIDOR_VAZIOS: CamposServidor = {
@@ -119,4 +126,14 @@ export const CAMPOS_SERVIDOR_VAZIOS: CamposServidor = {
   areaConhecimento: '',
   statusServidor: 'Efetivo(a)',
   aceiteLgpd: false,
+  rg: '',
+  tituloEleitor: '',
+  zonaEleitoral: '',
+  secaoEleitoral: '',
+  endereco: '',
+  telefoneFixo: '',
+  formacao: '',
 };
+
+// Campos da convocação que são datas (os demais são texto livre).
+export const campoEhData = (campo: string) => campo === 'periodo_de' || campo === 'periodo_ate';

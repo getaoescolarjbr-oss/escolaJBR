@@ -21,7 +21,10 @@ export async function enviarDocumento(
   enviadoPor: string,
   observacoes?: string
 ): Promise<DocumentoPessoa> {
-  const path = `pessoas/${pessoaId}/${Date.now()}-${arquivo.name}`;
+  // Chave do Storage só aceita caracteres simples: tira acentos/espaços do nome (o nome
+  // original continua em nome_arquivo para exibir).
+  const nomeSeguro = arquivo.name.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-zA-Z0-9._-]+/g, '_');
+  const path = `pessoas/${pessoaId}/${Date.now()}-${nomeSeguro}`;
 
   const { error: uploadError } = await supabase.storage.from(BUCKET).upload(path, arquivo, { upsert: false });
   if (uploadError) throw uploadError;

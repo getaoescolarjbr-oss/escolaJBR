@@ -117,7 +117,11 @@ export function ConfigurarAreaGeralModal({ avaliacao, area, onClose, onSalvo }: 
   }
 
   function toggleInsere(k: string) {
-    if ((qtdInseridaPorKey[k] ?? 0) > 0) return;
+    const jaInseridas = qtdInseridaPorKey[k] ?? 0;
+    if (jaInseridas > 0) {
+      setErro(`${porChave.get(k)?.professor_nome ?? 'Este professor'} já inseriu ${jaInseridas} questão(ões): a cota não pode ser removida nem ficar abaixo disso.`);
+      return;
+    }
     if (!insere[k] && maximoDaCota(k) < 1) {
       setErro(`A área já está com todas as suas ${qtdArea} questão(ões) distribuídas. Diminua outra cota (ou as sorteadas) antes de incluir mais alguém.`);
       return;
@@ -130,6 +134,14 @@ export function ConfigurarAreaGeralModal({ avaliacao, area, onClose, onSalvo }: 
   // Ao digitar, a cota não passa do que ainda cabe na área (nem fica abaixo do já inserido).
   function alterarQtdCota(k: string, valor: number) {
     const inserida = qtdInseridaPorKey[k] ?? 0;
+    // Zerar = deixar de inserir questões (mesmo efeito de desmarcar). Só vale enquanto não há
+    // questão inserida; com questão inserida o mínimo é o que já foi inserido.
+    if (valor <= 0 && inserida === 0) {
+      setErro(null);
+      setInsere((prev) => ({ ...prev, [k]: false }));
+      setQtdCota((prev) => ({ ...prev, [k]: 1 }));
+      return;
+    }
     const teto = Math.max(inserida, maximoDaCota(k));
     setQtdCota((prev) => ({ ...prev, [k]: Math.min(teto, Math.max(1, inserida, valor || 1)) }));
   }
@@ -283,10 +295,10 @@ export function ConfigurarAreaGeralModal({ avaliacao, area, onClose, onSalvo }: 
                           </button>
                           <input
                             type="number"
-                            min={Math.max(1, inserida)}
+                            min={inserida > 0 ? inserida : 0}
                             max={Math.max(inserida, maximoDaCota(k))}
                             disabled={!insere[k]}
-                            value={qtdCota[k] ?? 1}
+                            value={insere[k] ? (qtdCota[k] ?? 1) : 0}
                             onChange={(e) => alterarQtdCota(k, Number(e.target.value))}
                             className="w-14 sm:w-16 px-2 py-1 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-700 rounded-lg text-sm font-bold text-center text-ms-main outline-none focus:ring-2 focus:ring-ms-blue disabled:opacity-40"
                           />

@@ -1,13 +1,18 @@
 import { useEffect, useState } from 'react';
-import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle, Eye, FileText, Undo2, ScrollText } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import type { Papel } from '../../types/rbac';
-import type { CadastroServidorPendente } from '../../services/cadastroServidorService';
+import type { CadastroServidorPendente, CampoConvocacao, DocumentoDoCadastro } from '../../services/cadastroServidorService';
+import { listarCamposConvocacao, listarDocumentosDoCadastro, salvarConvocacaoDoCadastro, urlDocumentoDoCadastro } from '../../services/cadastroServidorService';
+import { ConvocacaoCampos } from '../cadastroServidor/ConvocacaoCampos';
 import {
   listarCadastrosServidoresPendentes,
   aprovarCadastroServidor,
+  devolverCadastroServidor,
   rejeitarCadastroServidor,
 } from '../../services/cadastroServidorService';
+import { TermoCadastroModal } from './TermoCadastroModal';
+import { AcompanhamentoCadastrosServidores } from './AcompanhamentoCadastrosServidores';
 import { PAPEIS_SERVIDOR, formatarCpf, formatarTelefone, papelSugeridoPorCargo } from '../../utils/cadastroServidor';
 
 // Aprovação dos servidores que se cadastraram sozinhos no Portal do Servidor. Até aqui a
@@ -19,6 +24,12 @@ export function CadastrosServidoresTab() {
   const [processandoId, setProcessandoId] = useState<string | null>(null);
   const [erro, setErro] = useState<string | null>(null);
   const [papelPorCadastro, setPapelPorCadastro] = useState<Record<string, Papel | ''>>({});
+  const [docsPorCadastro, setDocsPorCadastro] = useState<Record<string, DocumentoDoCadastro[]>>({});
+  const [camposConv, setCamposConv] = useState<CampoConvocacao[]>([]);
+  const [convPorCadastro, setConvPorCadastro] = useState<Record<string, Record<string, string>>>({});
+  const [salvandoConvId, setSalvandoConvId] = useState<string | null>(null);
+  const [termoDe, setTermoDe] = useState<CadastroServidorPendente | null>(null);
+  const [vista, setVista] = useState<'analise' | 'acompanhamento'>('analise');
 
   // Só a Gestão concede papéis que dão poder sobre os outros (o banco também confere).
   const papeisDisponiveis = PAPEIS_SERVIDOR.filter((p) => hasRole('GESTAO') || (p !== 'GESTAO' && p !== 'SECRETARIA'));
@@ -28,6 +39,12 @@ export function CadastrosServidoresTab() {
     try {
       const lista = await listarCadastrosServidoresPendentes();
       setCadastros(lista);
+      setCamposConv(await listarCamposConvocacao());
+      setConvPorCadastro(Object.fromEntries(lista.map((c) => [c.id, c.convocacao ?? {}])));
+      const docs = await listarDocumentosDoCadastro(lista.map((c) => c.id));
+      const agrupado: Record<string, DocumentoDoCadastro[]> = {};
+      docs.forEach((d) => { (agrupado[d.cadastro_id] ??= []).push(d); });
+      setDocsPorCadastro(agrupado);
       setPapelPorCadastro((atual) => {
         const proximo = { ...atual };
         lista.forEach((c) => {
@@ -67,6 +84,34 @@ export function CadastrosServidoresTab() {
     }
   }
 
+  async function salvarConvocacao(c: CadastroServidorPendente) {
+    setSalvandoConvId(c.id);
+    setErro(null);
+    try {
+      await salvarConvocacaoDoCadastro(c.id, convPorCadastro[c.id] ?? {});
+      setCadastros((l) => l.map((x) => (x.id === c.id ? { ...x, convocacao: convPorCadastro[c.id] ?? {} } : x)));
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Erro ao salvar a convocação.');
+    } finally {
+      setSalvandoConvId(null);
+    }
+  }
+
+  async function handleDevolver(c: CadastroServidorPendente) {
+    const motivo = window.prompt('O que o servidor precisa corrigir? (ele verá esta mensagem)');
+    if (motivo === null) return;
+    setProcessandoId(c.id);
+    setErro(null);
+    try {
+      await devolverCadastroServidor(c.id, motivo);
+      await carregar();
+    } catch (err) {
+      setErro(err instanceof Error ? err.message : 'Erro ao devolver o cadastro.');
+    } finally {
+      setProcessandoId(null);
+    }
+  }
+
   async function handleRejeitar(c: CadastroServidorPendente) {
     const motivo = window.prompt('Motivo da rejeição (opcional):');
     if (motivo === null) return;
@@ -82,8 +127,22 @@ export function CadastrosServidoresTab() {
     }
   }
 
+  const seletor = (
+    <div className="flex gap-2">
+      {([['analise', `Em análise (${cadastros.length})`], ['acompanhamento', 'Acompanhamento']] as const).map(([id, rotulo]) => (
+        <button key={id} onClick={() => setVista(id)}
+          className={`px-4 py-2 rounded-lg text-xs font-bold border transition-all ${vista === id ? 'bg-ms-blue text-white border-ms-blue' : 'bg-ms-card text-gray-400 border-gray-800 hover:text-gray-200'}`}>{rotulo}</button>
+      ))}
+    </div>
+  );
+
+  if (vista === 'acompanhamento') {
+    return <div className="space-y-4">{seletor}<AcompanhamentoCadastrosServidores /></div>;
+  }
+
   return (
     <div className="space-y-4 max-w-3xl">
+      {seletor}
       <p className="text-xs font-black uppercase tracking-wider text-ms-main">Cadastros de servidores pendentes ({cadastros.length})</p>
       {erro && <p className="text-xs text-red-400">{erro}</p>}
 
@@ -101,8 +160,46 @@ export function CadastrosServidoresTab() {
                 CPF {formatarCpf(c.cpf)} · Nascimento {new Date(c.data_nascimento + 'T00:00:00').toLocaleDateString('pt-BR')} · {formatarTelefone(c.telefone)}
               </p>
               {c.area_conhecimento && <p className="text-[11px] text-gray-500">Área: {c.area_conhecimento}</p>}
-              <p className="text-[11px] text-gray-500">Enviado em {new Date(c.criado_em).toLocaleString('pt-BR')}</p>
+              <p className="text-[11px] text-gray-500">
+                RG {c.rg || '—'}{c.titulo_eleitor ? ` · Título ${c.titulo_eleitor}${c.zona_eleitoral ? `, zona ${c.zona_eleitoral}` : ''}${c.secao_eleitoral ? `, seção ${c.secao_eleitoral}` : ''}` : ''}
+              </p>
+              <p className="text-[11px] text-gray-500">Endereço: {c.endereco || '—'}{c.telefone_fixo ? ` · Fixo ${formatarTelefone(c.telefone_fixo)}` : ''}</p>
+              {c.formacao && <p className="text-[11px] text-gray-500">Formação: {c.formacao}</p>}
+              <p className="text-[11px] text-gray-500">Enviado em {new Date(c.enviado_em ?? c.criado_em).toLocaleString('pt-BR')}</p>
             </div>
+
+            <div className="space-y-1.5">
+              <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">Documentos enviados ({(docsPorCadastro[c.id] ?? []).length})</p>
+              {(docsPorCadastro[c.id] ?? []).length === 0 ? (
+                <p className="text-[11px] text-amber-400">Nenhum documento anexado.</p>
+              ) : (
+                (docsPorCadastro[c.id] ?? []).map((d) => (
+                  <div key={d.id} className="flex items-center justify-between gap-2 px-3 py-1.5 bg-ms-dark border border-gray-800 rounded-lg">
+                    <span className="flex items-center gap-2 min-w-0 text-xs text-ms-main">
+                      <FileText className="w-3.5 h-3.5 text-ms-blueText shrink-0" />
+                      <span className="truncate"><b>{d.rotulo}</b>{d.descricao ? ` — ${d.descricao}` : ''}</span>
+                    </span>
+                    <button
+                      onClick={async () => { try { window.open(await urlDocumentoDoCadastro(d), '_blank'); } catch (err) { setErro(err instanceof Error ? err.message : 'Erro ao abrir o documento.'); } }}
+                      className="p-1.5 text-ms-blueText hover:bg-ms-blue/20 rounded-lg shrink-0" title="Abrir"
+                    ><Eye className="w-4 h-4" /></button>
+                  </div>
+                ))
+              )}
+            </div>
+
+            {camposConv.length > 0 && (
+              <div className="space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-wider text-gray-400">Dados da convocação (termo de convocado)</p>
+                <ConvocacaoCampos campos={camposConv} modos={c.convocacao_modos ?? {}} valores={convPorCadastro[c.id] ?? {}} quem="SECRETARIA"
+                  onChange={(campo, valor) => setConvPorCadastro((s) => ({ ...s, [c.id]: { ...(s[c.id] ?? {}), [campo]: valor } }))} />
+                {JSON.stringify(Object.entries(convPorCadastro[c.id] ?? {}).filter(([, v]) => v.trim()).sort()) !== JSON.stringify(Object.entries(c.convocacao ?? {}).sort()) && (
+                  <button onClick={() => salvarConvocacao(c)} disabled={salvandoConvId === c.id} className="flex items-center gap-2 px-3 py-1.5 bg-ms-blue text-white rounded-lg text-xs font-bold hover:bg-blue-600 disabled:opacity-50">
+                    {salvandoConvId === c.id && <Loader2 className="w-3.5 h-3.5 animate-spin" />} Salvar convocação
+                  </button>
+                )}
+              </div>
+            )}
 
             <label className="block text-[10px] font-black uppercase tracking-wider text-gray-400">
               Papel de acesso
@@ -125,6 +222,19 @@ export function CadastrosServidoresTab() {
                 {processandoId === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />} Aprovar
               </button>
               <button
+                onClick={() => setTermoDe(c)}
+                className="flex items-center gap-1 px-4 py-2 bg-ms-dark border border-gray-800 rounded-lg text-xs text-gray-300 hover:border-ms-blue transition-colors"
+              >
+                <ScrollText className="w-3.5 h-3.5" /> Termo
+              </button>
+              <button
+                onClick={() => handleDevolver(c)}
+                disabled={processandoId === c.id}
+                className="flex items-center gap-1 px-4 py-2 bg-ms-dark border border-gray-800 rounded-lg text-xs text-amber-400 hover:border-amber-500/40 transition-colors disabled:opacity-50"
+              >
+                <Undo2 className="w-3.5 h-3.5" /> Pedir correção
+              </button>
+              <button
                 onClick={() => handleRejeitar(c)}
                 disabled={processandoId === c.id}
                 className="flex items-center gap-1 px-4 py-2 bg-ms-dark border border-gray-800 rounded-lg text-xs text-gray-400 hover:border-red-500/40 hover:text-red-400 transition-colors disabled:opacity-50"
@@ -135,6 +245,7 @@ export function CadastrosServidoresTab() {
           </div>
         ))
       )}
+      {termoDe && <TermoCadastroModal cadastro={{ ...termoDe, convocacao: convPorCadastro[termoDe.id] ?? termoDe.convocacao }} onFechar={() => setTermoDe(null)} />}
     </div>
   );
 }

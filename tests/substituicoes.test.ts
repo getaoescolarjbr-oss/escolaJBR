@@ -36,4 +36,48 @@ assert.deepEqual(r, [item('B', 'Bruno', 'mat')]);
 r = aplicarSubstituicoes([{ ...item('B', 'Bruno', 'fis'), disciplina_nome: 'Física', area: 'N' }], esp);
 assert.equal((r[0] as { disciplina_nome: string }).disciplina_nome, 'Física');
 
-console.log('substituicoes: 6 casos ok');
+// 7) Configuração de vistos no modo substituto: a configuração do substituto se aplica
+import { getConfigPorTurma } from '../src/utils/academicUtils';
+
+const professorSubstituto = {
+  id: 'F',
+  nome: 'Francielly',
+  email: 'f@escola.ms.gov.br',
+  cargo: 'Professor',
+  config_visto_metodo: 'ponto' as const,
+  config_visto_valor_total: 3.0,
+  config_turmas: {
+    'turma-101': { config_visto_metodo: 'simbolico' as const, config_visto_valor_total: 4.0 },
+  },
+};
+
+const titular = {
+  id: 'B',
+  nome: 'Bruno',
+  email: 'b@escola.ms.gov.br',
+  cargo: 'Professor',
+  config_visto_metodo: 'gradual' as const,
+  config_visto_valor_total: 2.0,
+  config_turmas: {
+    'turma-101': { config_visto_metodo: 'aberto' as const, config_visto_valor_total: 10.0 },
+  },
+};
+
+// Quando professorDados é montado no modo substituto, o ID do titular é preservado para consultas de banco,
+// mas a configuração de vistos aplicada aos alunos vem do substituto ativo:
+const professorDados = {
+  ...professorSubstituto,
+  id: titular.id, // Grava no titular
+};
+
+// Na turma com config específica do substituto:
+const configTurmaEspecifica = getConfigPorTurma(professorDados, 'turma-101');
+assert.equal(configTurmaEspecifica.config_visto_metodo, 'simbolico');
+assert.equal(configTurmaEspecifica.config_visto_valor_total, 4.0);
+
+// Em outra turma sem config específica: usa a global do substituto (não a do titular!)
+const configTurmaGlobal = getConfigPorTurma(professorDados, 'turma-102');
+assert.equal(configTurmaGlobal.config_visto_metodo, 'ponto');
+assert.equal(configTurmaGlobal.config_visto_valor_total, 3.0);
+
+console.log('substituicoes: 7 casos ok (incluindo configuracao de vistos do substituto)');

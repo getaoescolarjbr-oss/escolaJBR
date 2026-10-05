@@ -11,6 +11,7 @@ import { RequireRole } from './components/rbac/RequireRole';
 import { ModuleShell } from './components/shell/ModuleShell';
 import { UsoBancoDados } from './components/admin/UsoBancoDados';
 import { MODULOS_NAV, modulosVisiveis } from './config/moduleNav';
+import { recarregarSeChunkAntigo } from './utils/recarregarSeChunkAntigo';
 
 // Cada módulo vira um chunk próprio, baixado só quando a tela é aberta. Antes tudo ia
 // num bundle único (~3 MB) que todo usuário baixava no primeiro acesso. Login, Header,
@@ -18,7 +19,16 @@ import { MODULOS_NAV, modulosVisiveis } from './config/moduleNav';
 // Os componentes são exports nomeados, daí o `.then` que os expõe como `default`.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 function carregar<T extends ComponentType<any>>(importar: () => Promise<Record<string, unknown>>, nome: string) {
-  return lazy(() => importar().then((m) => ({ default: m[nome] as T })));
+  return lazy(() =>
+    importar()
+      .then((m) => ({ default: m[nome] as T }))
+      .catch((erro) => {
+        // Arquivo da tela não existe mais (deploy novo com a aba aberta): atualiza a página uma vez.
+        // O spinner continua até a recarga; se já recarregou há pouco, o erro segue para o aviso.
+        if (recarregarSeChunkAntigo()) return new Promise<never>(() => {});
+        throw erro;
+      }),
+  );
 }
 
 const Dashboard = carregar<typeof import('./components/Dashboard').Dashboard>(() => import('./components/Dashboard'), 'Dashboard');
@@ -75,7 +85,7 @@ const TITULOS_MODULO: Record<ModuloComShell, { titulo: string; subtitulo?: strin
   cozinha: { titulo: 'Cozinha', subtitulo: 'Cardápio, estoque, fornecedores e indicadores PNAE' },
   agendamento: { titulo: 'Agendamento de Recursos', subtitulo: 'Recursos, bloqueios de manutenção e reservas' },
   biblioteca: { titulo: 'Biblioteca', subtitulo: 'Acervo, empréstimos e clube de leitura' },
-  'banco-questoes': { titulo: 'Banco de Questões', subtitulo: 'Consulte e monte provas com questões organizadas por disciplina' },
+  'banco-questoes': { titulo: 'Avaliações', subtitulo: 'Monte e acompanhe avaliações e consulte o banco de questões por disciplina' },
   gestao: { titulo: 'Gestão Escolar', subtitulo: 'Indicadores, Almoxarifado e demais sub-módulos administrativos' },
   'coordenacao-area': { titulo: 'Coordenação de Área', subtitulo: 'Gestão pedagógica, acompanhamento docente e avaliações colaborativas' },
   lgpd: { titulo: 'LGPD — Exportar e Excluir Dados', subtitulo: 'Solicitações de titulares de dados' },
@@ -88,7 +98,9 @@ function App() {
   const { session, hasRole, hasAnyRole, papeis, loading: authLoading } = useAuth();
   const [professor, setProfessor] = useState<Professor | null>(null);
   const [loading, setLoading] = useState(true);
-  const [showLogin, setShowLogin] = useState(false);
+  // Link de convite da Secretaria (?convite=...): abre direto o cadastro de servidor.
+  const conviteToken = useMemo(() => new URLSearchParams(window.location.search).get('convite'), []);
+  const [showLogin, setShowLogin] = useState(() => Boolean(new URLSearchParams(window.location.search).get('convite')));
   // Atalho "Biblioteca" do Acesso Rápido da LandingPage abre o login já no modo
   // BiblioClube (aluno), em vez do login padrão de servidor.
   const [loginModoAluno, setLoginModoAluno] = useState(false);
@@ -151,7 +163,8 @@ function App() {
         theme,
         config_visto_metodo: professor.config_visto_metodo,
         config_visto_valor_total: professor.config_visto_valor_total,
-        bimestre_atual: professor.bimestre_atual
+        bimestre_atual: professor.bimestre_atual,
+        ...(professor.config_turmas ? { config_turmas: professor.config_turmas } : {})
       };
       
       localStorage.setItem(configKey, JSON.stringify(updates));
@@ -206,6 +219,7 @@ function App() {
         ...data,
         config_visto_metodo: configBackup.config_visto_metodo || data.config_visto_metodo || 'gradual',
         config_visto_valor_total: configBackup.config_visto_valor_total || data.config_visto_valor_total || 10,
+        config_turmas: configBackup.config_turmas || data.config_turmas,
         bimestre_atual: getCurrentBimestre()
       };
 
@@ -347,7 +361,7 @@ function App() {
 
   if (!session) {
     if (showLogin) {
-      return <Login onLogin={() => setShowLogin(false)} onBack={() => setShowLogin(false)} modoInicial={loginModoAluno ? 'aluno' : 'servidor'} />;
+      return <Login onLogin={() => setShowLogin(false)} onBack={() => setShowLogin(false)} modoInicial={loginModoAluno ? 'aluno' : 'servidor'} conviteToken={conviteToken} />;
     }
     return <LandingPage onEnterPortal={handleEnterPortal} />;
   }
@@ -412,7 +426,7 @@ function App() {
         onToggleTheme={() => setTheme(t => t === 'dark' ? 'light' : 'dark')}
       />
       <main className="flex-1 overflow-auto">
-        <div className={(isAdmin && view === 'admin') || (MODULOS_COM_SHELL as readonly string[]).includes(view) ? "w-full p-4 h-full" : "max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8"}>
+        <div className={(isAdmin && view === 'admin') || view === 'coordenacao' || (MODULOS_COM_SHELL as readonly string[]).includes(view) ? "w-full p-4 h-full" : "max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8"}>
           <Suspense fallback={<Carregando />}>
           {isAdmin && view === 'admin' ? (
              <AdminPanel onBack={() => navegarPara('dashboard')} theme={theme} />

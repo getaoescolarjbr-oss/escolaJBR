@@ -32,6 +32,10 @@ export interface Avaliacao {
   cartao_separado: boolean;
   /** Só importa quando cartao_separado = false: cartão antes ou depois das questões. */
   cartao_posicao: 'INICIO' | 'FIM';
+  /** Imprimir a folha de redação (30 linhas, QR) quando a avaliação tem questão de redação. */
+  folha_redacao: boolean;
+  /** Modo de correção de redação (critérios e pesos) padrão desta avaliação; nulo = o da banca da proposta. */
+  rubrica_redacao_id: string | null;
   modo_nota: ModoNota;
   ponderada_escopo: PonderadaEscopo;
   lancar_no_boletim: boolean;
@@ -76,6 +80,8 @@ export interface NovaAvaliacaoInput {
   qtdVersoes: number;
   cartaoSeparado: boolean;
   cartaoPosicao: 'INICIO' | 'FIM';
+  folhaRedacao: boolean;
+  rubricaRedacaoId: string | null;
   modoNota: ModoNota;
   ponderadaEscopo: PonderadaEscopo;
   lancarNoBoletim: boolean;
@@ -111,6 +117,8 @@ export interface QuestaoParaAluno {
   letra_marcada: string | null;
   /** Resposta escrita já enviada (dissertativa/redação). */
   resposta_texto?: string | null;
+  /** Disciplina da questão: "Redação" liga o editor de redação (contador de linhas, sem colar). */
+  discipline?: string | null;
 }
 
 // Um item do payload de rpc_submeter_resposta_avaliacao: `letra` para objetiva,

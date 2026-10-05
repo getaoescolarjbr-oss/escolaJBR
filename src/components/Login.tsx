@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { signInWithPassword, registerFirstAccess, resetPassword } from '../services/authService';
 import { AlunoAuth } from './AlunoAuth';
 import { CadastroServidorCampos } from './CadastroServidorCampos';
-import { emailJaCadastradoPelaEscola, solicitarCadastroServidor } from '../services/cadastroServidorService';
+import { consultarConvite, emailJaCadastradoPelaEscola, iniciarCadastroServidor, type ConsultaConvite } from '../services/cadastroServidorService';
 import { CAMPOS_SERVIDOR_VAZIOS, validarCpf, type CamposServidor } from '../utils/cadastroServidor';
 
 const EMAIL_ADMIN = 'gestaoescolarjbr@gmail.com';
@@ -13,13 +13,15 @@ interface LoginProps {
   onBack?: () => void;
   // 'aluno' abre já no modo BiblioClube (atalho "Biblioteca" da home pública).
   modoInicial?: 'servidor' | 'aluno';
+  // Link de convite da Secretaria (?convite=...): abre direto o cadastro, com e-mail/nome já preenchidos.
+  conviteToken?: string | null;
 }
 
 type ViewState = 'LOGIN' | 'REGISTER' | 'FORGOT_PASSWORD';
 
-export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps) {
+export function Login({ onLogin, onBack, modoInicial = 'servidor', conviteToken = null }: LoginProps) {
   const [modoAluno, setModoAluno] = useState(modoInicial === 'aluno');
-  const [view, setView] = useState<ViewState>('LOGIN');
+  const [view, setView] = useState<ViewState>(conviteToken ? 'REGISTER' : 'LOGIN');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   
@@ -30,18 +32,46 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
   const [showPassword, setShowPassword] = useState(false);
 
   const [dadosServidor, setDadosServidor] = useState<CamposServidor>(CAMPOS_SERVIDOR_VAZIOS);
-  // null = ainda não consultado. true = e-mail já está na base da escola (fluxo antigo,
-  // só cria a senha). false = e-mail novo: pede os dados completos e aguarda aprovação.
+  // Primeiro acesso em passos. null = passo 1 (só o e-mail). true = e-mail já está na base da
+  // escola (fluxo antigo: só cria a senha). false = e-mail novo: formulário completo + senha,
+  // e o acesso só sai depois da aprovação da Secretaria/Gestão.
   const [emailNaBase, setEmailNaBase] = useState<boolean | null>(null);
 
-  const consultarEmail = async () => {
-    const valor = email.trim().toLowerCase();
-    if (!valor.includes('@')) { setEmailNaBase(null); return; }
-    try {
-      setEmailNaBase(valor === EMAIL_ADMIN || await emailJaCadastradoPelaEscola(valor));
-    } catch {
-      setEmailNaBase(null);
-    }
+  // Resultado da conferência do link de convite (null enquanto confere, ou se não há link).
+  const [convite, setConvite] = useState<ConsultaConvite | null>(null);
+
+  useEffect(() => {
+    if (!conviteToken) return;
+    let ativo = true;
+    consultarConvite(conviteToken)
+      .then((c) => {
+        if (!ativo) return;
+        setConvite(c);
+        if (c.valido) {
+          if (c.email) setEmail(c.email);
+          if (c.nome) setDadosServidor((d) => ({ ...d, nome: c.nome ?? '' }));
+        } else {
+          setView('LOGIN');
+          setError(c.motivo ?? 'Convite inválido.');
+        }
+      })
+      .catch(() => {
+        if (!ativo) return;
+        setConvite({ valido: false, motivo: 'Não foi possível conferir o convite. Tente novamente.' });
+        setView('LOGIN');
+        setError('Não foi possível conferir o convite. Tente novamente.');
+      });
+    return () => { ativo = false; };
+  }, [conviteToken]);
+
+  const conviteValido = convite?.valido === true;
+
+  const mudarView = (v: ViewState) => {
+    setView(v);
+    setError(null);
+    setSuccess(null);
+    setEmailNaBase(null);
+    setPassword('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,22 +94,35 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
         // entao ler `professores` aqui exigia deixar a tabela legivel sem login — e isso
         // entregava os 67 e-mails da escola a quem pedisse. A RPC responde so sim ou nao
         // (ver fechar_exposicao_anon.sql).
-        const ehProfessor = await emailJaCadastradoPelaEscola(email);
-        const isAdminEmail = email === EMAIL_ADMIN;
+        const emailLimpo = email.trim().toLowerCase();
+
+        // Passo 1: só o e-mail. Descobre se é servidor já cadastrado (só cria a senha) ou novo
+        // (formulário completo). Não cria conta nem grava nada.
+        if (emailNaBase === null) {
+          setEmailNaBase(emailLimpo === EMAIL_ADMIN || (await emailJaCadastradoPelaEscola(emailLimpo)));
+          return;
+        }
+
+        const ehProfessor = await emailJaCadastradoPelaEscola(emailLimpo);
+        const isAdminEmail = emailLimpo === EMAIL_ADMIN;
 
         // E-mail novo: cadastro completo, sem acesso até a Secretaria/Gestão aprovar
         // (ver create_cadastro_servidor_com_aprovacao.sql).
         if (!ehProfessor && !isAdminEmail) {
           if (emailNaBase !== false) {
-            // Enviou antes de o formulário completo aparecer (ex.: Enter sem sair do campo).
+            // A base mudou entre o passo 1 e o envio: mostra o formulário completo.
             setEmailNaBase(false);
-            throw new Error('Seu e-mail ainda não está na base da escola. Preencha os dados que apareceram e envie de novo.');
+            throw new Error('Seu e-mail não está na base da escola. Complete os dados abaixo e envie.');
           }
           if (!validarCpf(dadosServidor.cpf)) throw new Error('CPF inválido. Confira os números digitados.');
           if (dadosServidor.telefone.replace(/\D/g, '').length < 10) throw new Error('Informe o telefone com DDD.');
-          await solicitarCadastroServidor({ email, senha: password, ...dadosServidor });
-          setSuccess('Cadastro enviado! Você poderá entrar assim que a Secretaria ou a Gestão aprovar.');
+          const { precisaConfirmarEmail } = await iniciarCadastroServidor({ email: emailLimpo, senha: password, ...dadosServidor }, conviteValido ? conviteToken : null);
+          if (conviteToken) window.history.replaceState({}, '', '/');
+          setSuccess(precisaConfirmarEmail
+            ? `Conta criada! Enviamos um e-mail para ${emailLimpo}. Abra o link de confirmação e depois entre aqui para enviar seus documentos.`
+            : 'Conta criada! Falta enviar seus documentos para concluir o cadastro.');
           setView('LOGIN');
+          setEmailNaBase(null);
           setPassword('');
           return;
         }
@@ -90,6 +133,16 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
         if (authError) throw authError;
 
         if (authData.user) {
+          // Com a confirmação de e-mail ligada não há sessão agora: o vínculo é feito no primeiro login
+          // (o App liga o professor pelo e-mail), então não há o que atualizar aqui.
+          if (!authData.session) {
+            setSuccess(`Conta criada! Enviamos um e-mail para ${emailLimpo}. Abra o link de confirmação e depois faça o login.`);
+            setView('LOGIN');
+            setEmailNaBase(null);
+            setPassword('');
+            return;
+          }
+
           if (ehProfessor) {
             // Vincula pelo e-mail: sem o SELECT anterior nao ha mais o id em maos. A
             // policy "Permitir auto-vinculacao no primeiro acesso" ja restringe a linha
@@ -105,6 +158,7 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
           
           setSuccess("Cadastro realizado com sucesso! Você já pode fazer o login.");
           setView('LOGIN');
+          setEmailNaBase(null);
           setPassword('');
         }
       } 
@@ -153,7 +207,7 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
             <h2 className="text-2xl font-bold text-white uppercase tracking-tight">Portal do Servidor</h2>
             <p className="text-blue-100/60 mt-2 text-sm">
               {view === 'LOGIN' ? "Faça login com seu e-mail institucional" : 
-               view === 'REGISTER' ? "Primeiro Acesso: Crie sua senha" : 
+               view === 'REGISTER' ? (emailNaBase === null ? 'Primeiro acesso: informe seu e-mail' : emailNaBase ? 'Primeiro acesso: crie sua senha' : 'Novo servidor: complete seu cadastro') : 
                "Recuperação de Senha"}
             </p>
           </div>
@@ -169,14 +223,35 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
                   type="email"
                   required
                   value={email}
-                  onChange={(e) => { setEmail(e.target.value); setEmailNaBase(null); }}
-                  onBlur={view === 'REGISTER' ? consultarEmail : undefined}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={view === 'REGISTER' && emailNaBase !== null}
                   placeholder="professor@escola.edu.br"
-                  className="w-full px-4 py-3 bg-[#F0F2F5] border border-[#003366]/30 text-[#003366] rounded-lg focus:ring-2 focus:ring-[#003366] focus:border-[#003366] outline-none transition-all placeholder:text-gray-400 font-medium"
+                  className="w-full px-4 py-3 bg-[#F0F2F5] border border-[#003366]/30 text-[#003366] rounded-lg focus:ring-2 focus:ring-[#003366] focus:border-[#003366] outline-none transition-all placeholder:text-gray-400 font-medium disabled:opacity-70"
                 />
+                {view === 'REGISTER' && emailNaBase !== null && !convite?.email && (
+                  <button type="button" onClick={() => { setEmailNaBase(null); setPassword(''); setError(null); }} className="mt-2 text-xs font-bold text-blue-600 hover:text-blue-800 underline underline-offset-2">
+                    Trocar e-mail
+                  </button>
+                )}
               </div>
 
-              {(view === 'LOGIN' || view === 'REGISTER') && (
+              {view === 'REGISTER' && conviteValido && (
+                <p className="text-xs text-gray-600 bg-blue-50 border border-blue-100 rounded-lg p-3">
+                  Você recebeu um convite da Secretaria{convite?.nome ? `, ${convite.nome.split(' ')[0]}` : ''}. Continue para fazer seu cadastro.
+                </p>
+              )}
+
+              {view === 'REGISTER' && emailNaBase === true && (
+                <p className="text-xs text-gray-600 bg-green-50 border border-green-100 rounded-lg p-3">
+                  Seu e-mail já está cadastrado na escola. Crie sua senha para fazer o primeiro acesso.
+                </p>
+              )}
+
+              {view === 'REGISTER' && emailNaBase === false && (
+                <CadastroServidorCampos valores={dadosServidor} onChange={setDadosServidor} />
+              )}
+
+              {(view === 'LOGIN' || (view === 'REGISTER' && emailNaBase !== null)) && (
                 <div>
                   <label className="block text-xs font-bold text-[#003366] uppercase tracking-widest mb-2">
                     Senha
@@ -205,10 +280,6 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
                 </div>
               )}
 
-              {view === 'REGISTER' && emailNaBase === false && (
-                <CadastroServidorCampos valores={dadosServidor} onChange={setDadosServidor} />
-              )}
-
               {error && (
                 <div className="p-3 bg-red-950/20 border border-red-900/50 rounded-lg text-sm text-red-400">
                   {error}
@@ -233,7 +304,7 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
                   </>
                 ) : (
                   view === 'LOGIN' ? 'Entrar no Sistema' : 
-                  view === 'REGISTER' ? 'Cadastrar e Entrar' : 
+                  view === 'REGISTER' ? (emailNaBase === null ? 'Continuar' : emailNaBase ? 'Criar senha e entrar' : 'Criar conta e continuar') : 
                   'Enviar Recuperação'
                 )}
               </button>
@@ -244,15 +315,15 @@ export function Login({ onLogin, onBack, modoInicial = 'servidor' }: LoginProps)
         <div className="mt-8 flex flex-col gap-4 text-center text-sm">
           {view === 'LOGIN' ? (
             <div className="flex flex-col gap-3">
-              <button type="button" onClick={() => { setView('FORGOT_PASSWORD'); setError(null); setSuccess(null); }} className="text-blue-600 hover:text-blue-800 transition-colors font-medium">
+              <button type="button" onClick={() => mudarView('FORGOT_PASSWORD')} className="text-blue-600 hover:text-blue-800 transition-colors font-medium">
                 Esqueceu a senha?
               </button>
-              <button type="button" onClick={() => { setView('REGISTER'); setError(null); setSuccess(null); }} className="text-gray-600 hover:text-gray-800 transition-colors">
-                Primeiro acesso? <span className="font-bold text-ms-blueText underline decoration-ms-blue/30 underline-offset-4">Cadastre sua senha</span>
+              <button type="button" onClick={() => mudarView('REGISTER')} className="text-gray-600 hover:text-gray-800 transition-colors">
+                Primeiro acesso ou novo servidor? <span className="font-bold text-ms-blueText underline decoration-ms-blue/30 underline-offset-4">Cadastre-se</span>
               </button>
             </div>
           ) : (
-            <button type="button" onClick={() => { setView('LOGIN'); setError(null); setSuccess(null); }} className="text-gray-600 hover:text-blue-900 flex items-center justify-center gap-2 transition-colors font-bold">
+            <button type="button" onClick={() => mudarView('LOGIN')} className="text-gray-600 hover:text-blue-900 flex items-center justify-center gap-2 transition-colors font-bold">
               &larr; Voltar para o Login
             </button>
           )}

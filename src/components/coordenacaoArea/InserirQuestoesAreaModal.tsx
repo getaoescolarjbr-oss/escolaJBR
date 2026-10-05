@@ -85,9 +85,15 @@ export function InserirQuestoesAreaModal({ avaliacao, cota, onClose, onSalvo }: 
 
   async function handleSalvar() {
     if (bloqueada) return;
+    if (carregandoAtuais) return;
+    // Zerar é permitido (desmarcar tudo para escolher outras depois): o banco aceita lista vazia e
+    // libera a cota. Como apaga o que já estava gravado, pede confirmação.
     if (qtdSelecionada === 0) {
-      setErro('Selecione pelo menos uma questão.');
-      return;
+      if (cota.qtd_inserida === 0) {
+        setErro('Nenhuma questão selecionada: não há nada para gravar.');
+        return;
+      }
+      if (!window.confirm(`Remover as ${cota.qtd_inserida} questão(ões) já gravadas desta cota? Você poderá escolher outras depois.`)) return;
     }
     setSalvando(true);
     setErro(null);
@@ -168,11 +174,22 @@ export function InserirQuestoesAreaModal({ avaliacao, cota, onClose, onSalvo }: 
                 {totalQuestoesPlanejado} questões no total)
               </span>
             </div>
-            {cotaAtingida && (
-              <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
-                <Check className="w-3.5 h-3.5" /> Cota preenchida!
-              </span>
-            )}
+            <div className="flex items-center gap-3">
+              {qtdSelecionada > 0 && !bloqueada && (
+                <button
+                  type="button"
+                  onClick={() => setSelecionadas(new Map())}
+                  className="text-xs font-bold text-ms-muted hover:text-ms-main underline"
+                >
+                  Limpar seleção
+                </button>
+              )}
+              {cotaAtingida && (
+                <span className="text-xs text-emerald-400 font-bold flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5" /> Cota preenchida!
+                </span>
+              )}
+            </div>
           </div>
 
           <QuestionPicker
@@ -196,13 +213,13 @@ export function InserirQuestoesAreaModal({ avaliacao, cota, onClose, onSalvo }: 
             </button>
             <button
               type="button"
-              disabled={salvando || qtdSelecionada === 0 || bloqueada}
+              disabled={salvando || carregandoAtuais || bloqueada || (qtdSelecionada === 0 && cota.qtd_inserida === 0)}
               onClick={handleSalvar}
               title={bloqueada ? 'Edição bloqueada pelo coordenador' : undefined}
               className="flex items-center gap-2 px-5 py-2 bg-ms-blue text-white rounded-lg text-sm font-bold hover:bg-blue-600 disabled:opacity-40"
             >
               {salvando && <Loader2 className="w-4 h-4 animate-spin" />}
-              Gravar Questões na Avaliação
+              {qtdSelecionada === 0 && cota.qtd_inserida > 0 ? 'Remover todas as questões' : 'Gravar Questões na Avaliação'}
             </button>
           </div>
         </div>

@@ -12,15 +12,17 @@ interface Props {
   avaliacao: Avaliacao;
   onClose: () => void;
   onSalvo: () => void;
+  /** Questões marcadas no Banco de questões para entrarem nesta avaliação junto com as que ela já tem. */
+  questoesExtras?: Question[];
 }
 
 // Edita uma avaliação/simulado já salvo (rascunho, publicado ou até encerrado): reabre o
-// mesmo wizard de questões + configuração do fluxo de criação (NovaAvaliacaoTab), só que
+// mesmo passo de questões + configuração usado ao cadastrar (NovaAvaliacaoModal), só que
 // pré-preenchido e persistindo com atualizarAvaliacao (update) em vez de criarAvaliacao
 // (insert). Se algum aluno já enviou resposta, mostra um aviso antes de deixar salvar —
 // mudar questão/gabarito depois de respostas registradas pode deixar o resultado já
 // calculado fora de sincronia com a nova versão.
-export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo }: Props) {
+export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo, questoesExtras }: Props) {
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
   const [passo, setPasso] = useState<Passo>('questoes');
@@ -30,6 +32,7 @@ export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo }: Props) {
   const [folhasGeradas, setFolhasGeradas] = useState(0);
   const [salvando, setSalvando] = useState(false);
   const [erroSalvar, setErroSalvar] = useState<string | null>(null);
+  const [qtdAdicionadas, setQtdAdicionadas] = useState(0);
 
   useEffect(() => {
     Promise.all([
@@ -38,13 +41,19 @@ export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo }: Props) {
       contarFolhasGeradas(avaliacao.id),
     ])
       .then(([{ questoes, valoresPorQuestao }, respostas, folhas]) => {
-        setSelecionadas(new Map(questoes.map((q) => [q.id, q])));
-        setValoresIniciais(valoresPorQuestao);
+        const mapa = new Map(questoes.map((q) => [q.id, q]));
+        const antes = mapa.size;
+        for (const q of questoesExtras ?? []) if (!mapa.has(q.id)) mapa.set(q.id, q);
+        setSelecionadas(mapa);
+        setQtdAdicionadas(mapa.size - antes);
+        // Com questões novas, o valor total é redividido entre todas (as novas não têm valor ainda).
+        setValoresIniciais(mapa.size > antes ? {} : valoresPorQuestao);
         setRespostasEnviadas(respostas);
         setFolhasGeradas(folhas);
       })
       .catch((e) => setErro(e instanceof Error ? e.message : 'Não foi possível carregar a avaliação.'))
       .finally(() => setCarregando(false));
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- questoesExtras só vale na abertura do modal
   }, [avaliacao.id]);
 
   function toggleSelecionar(q: Question) {
@@ -93,7 +102,7 @@ export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo }: Props) {
       <div className="bg-ms-card border border-gray-800 rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
           <div>
-            <h2 className="text-lg font-bold text-ms-main">Editar — {avaliacao.titulo}</h2>
+            <h2 className="text-lg font-bold text-ms-main">{(avaliacao.total_questoes ?? 0) === 0 ? 'Inserir questões' : 'Editar'} — {avaliacao.titulo}</h2>
             <p className="text-xs text-ms-muted">
               {avaliacao.status === 'PUBLICADA' ? 'Publicada' : avaliacao.status === 'ENCERRADA' ? 'Encerrada' : 'Rascunho'}
               {' · '}Passo {passo === 'questoes' ? '1' : '2'} de 2
@@ -116,6 +125,12 @@ export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo }: Props) {
                 Alterar questões, gabarito ou valores agora pode deixar os resultados já registrados fora de sincronia com a nova versão.
               </p>
             </div>
+          )}
+
+          {!carregando && !erro && qtdAdicionadas > 0 && passo === 'questoes' && (
+            <p className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+              {qtdAdicionadas} {qtdAdicionadas === 1 ? 'questão do banco foi adicionada' : 'questões do banco foram adicionadas'}. Revise a seleção e clique em Continuar para ajustar os valores e salvar.
+            </p>
           )}
 
           {!carregando && !erro && passo === 'questoes' && (
@@ -154,6 +169,8 @@ export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo }: Props) {
                   qtdVersoes: avaliacao.qtd_versoes,
                   cartaoSeparado: avaliacao.cartao_separado,
                   cartaoPosicao: avaliacao.cartao_posicao,
+                  folhaRedacao: avaliacao.folha_redacao,
+                  rubricaRedacaoId: avaliacao.rubrica_redacao_id,
                   modoNota: avaliacao.modo_nota,
                   ponderadaEscopo: avaliacao.ponderada_escopo,
                   lancarNoBoletim: avaliacao.lancar_no_boletim,

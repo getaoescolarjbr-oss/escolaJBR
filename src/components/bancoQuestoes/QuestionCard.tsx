@@ -135,7 +135,7 @@ export function QuestionCard({ question: q, selecionada, onToggleSelecionar, onE
           {q.criterios_correcao && (
             <div className="space-y-1">
               <p className="text-xs font-black uppercase tracking-wider text-ms-gold">
-                {tipo === 'REDACAO' ? 'Competências avaliadas' : 'Resposta esperada'}
+                {q.discipline === 'Redação' ? 'Competências avaliadas' : 'Resposta esperada'}
               </p>
               {renderLightMarkup(q.criterios_correcao, `crit-${q.id}`)}
             </div>

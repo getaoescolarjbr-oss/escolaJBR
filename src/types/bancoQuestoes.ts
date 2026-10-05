@@ -9,31 +9,42 @@ export function ordenarAlternativas<T extends { letter: string }>(alternatives: 
   return [...alternatives].sort((a, b) => a.letter.localeCompare(b.letter));
 }
 
-// OBJETIVA = múltipla escolha (alternatives + correct_letter). DISSERTATIVA e REDACAO
-// são respondidas por escrito: `alternatives` fica `[]` e `correct_letter` fica null
+// OBJETIVA = múltipla escolha (alternatives + correct_letter). DISSERTATIVA é respondida
+// por escrito (redações ficam na disciplina "Redação" com tipo DISSERTATIVA; REDACAO só
+// permanece no tipo por compatibilidade com linhas antigas e é tratado como DISSERTATIVA): `alternatives` fica `[]` e `correct_letter` fica null
 // (há CHECK no banco garantindo isso), a correção é manual pelo professor e a
 // impressão sai com linhas pautadas em vez de alternativas.
 export type TipoQuestao = 'OBJETIVA' | 'DISSERTATIVA' | 'REDACAO';
 
-export const TIPOS_QUESTAO: TipoQuestao[] = ['OBJETIVA', 'DISSERTATIVA', 'REDACAO'];
+export const TIPOS_QUESTAO: TipoQuestao[] = ['OBJETIVA', 'DISSERTATIVA'];
 
 export const TIPO_QUESTAO_LABEL: Record<TipoQuestao, string> = {
   OBJETIVA: 'Objetiva',
   DISSERTATIVA: 'Dissertativa',
-  REDACAO: 'Redação',
+  REDACAO: 'Dissertativa',
 };
 
 // Quantas linhas pautadas imprimir quando questions.linhas_resposta é NULL.
 export const LINHAS_RESPOSTA_PADRAO: Record<TipoQuestao, number> = {
   OBJETIVA: 0,
   DISSERTATIVA: 8,
-  REDACAO: 30,
+  REDACAO: 8,
 };
 
 // Questões gravadas antes da coluna `tipo` existir (e RPCs que ainda não a devolvem)
 // chegam com tipo undefined — tudo que não for dissertativa/redação é objetiva.
 export function normalizarTipoQuestao(tipo: TipoQuestao | null | undefined): TipoQuestao {
-  return tipo === 'DISSERTATIVA' || tipo === 'REDACAO' ? tipo : 'OBJETIVA';
+  return tipo === 'DISSERTATIVA' || tipo === 'REDACAO' ? 'DISSERTATIVA' : 'OBJETIVA';
+}
+
+/**
+ * Proposta de redação: questão escrita da disciplina "Redação" (ou, em linha antiga, tipo REDACAO).
+ * O tipo no banco é DISSERTATIVA; a disciplina é o que identifica a redação, e é ela que liga a
+ * folha de redação (30 linhas, QR, leitura por câmera).
+ */
+export function ehQuestaoRedacao(q: { tipo?: TipoQuestao | null; discipline?: string | null }): boolean {
+  if (q.tipo === 'REDACAO') return true;
+  return normalizarTipoQuestao(q.tipo) === 'DISSERTATIVA' && (q.discipline ?? '').trim().toLowerCase() === 'redação';
 }
 
 export function ehQuestaoEscrita(tipo: TipoQuestao | null | undefined): boolean {

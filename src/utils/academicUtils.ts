@@ -9,13 +9,19 @@ export const BIMESTRES = [1, 2, 3, 4];
  * Regra de Arredondamento JBR:
  * ,3 e ,8 aproximam para cima (0.5 e 1.0 respectivamente)
  * Menos que ,3 ou ,8 aproximam para baixo (0.0 e 0.5 respectivamente)
+ *
+ * Toda média/nota final do sistema passa por aqui antes de ser exibida ou usada em
+ * aprovação — por isso o teto de 10 (e piso de 0) é aplicado aqui, uma vez só, em vez
+ * de em cada tela. O professor pode cadastrar avaliações que somem mais que 10 (ex.:
+ * várias provas de peso alto), mas a nota final do aluno nunca deve ultrapassar 10.
  */
 export function arredondarNotaMS(nota: number): number {
-  const inteiro = Math.floor(nota);
-  const decimal = nota - inteiro;
+  const notaLimitada = Math.min(10, Math.max(0, nota));
+  const inteiro = Math.floor(notaLimitada);
+  const decimal = notaLimitada - inteiro;
 
   if (decimal >= 0.8) {
-    return inteiro + 1.0;
+    return Math.min(10, inteiro + 1.0);
   } else if (decimal >= 0.3) {
     return inteiro + 0.5;
   } else {
@@ -50,18 +56,24 @@ export function estaAprovado(totalPontos: number, meta: number): boolean {
  * 0-3: Vermelho
  * 3.1-5.9: Vermelho -> Amarelo
  * 6-10: Verde Claro -> Verde Escuro
+ *
+ * Usa a média já arredondada (mesma regra de arredondarNotaMS), não o somatório bruto —
+ * senão uma média que soma 5,85 mas É EXIBIDA como 6,0 (arredondada) ficava com a cor de
+ * reprovado (< 6), confundindo o professor: o valor que vale é o arredondado, a cor tem
+ * que bater com o número que a pessoa está vendo na tela.
  */
 export function getCorGradiente(media: number, theme: 'light' | 'dark' = 'dark'): string {
+  const mediaArredondada = arredondarNotaMS(media);
   if (theme === 'light') {
     // Tons 700/800: os 600 davam contraste ~3:1 no branco (âmbar, verde) — abaixo de 4,5.
-    if (media <= 3.0) return '#b91c1c'; // Red-700
-    if (media < 6.0) return '#b45309';  // Amber-700
-    if (media < 8.0) return '#15803d';  // Green-700
+    if (mediaArredondada <= 3.0) return '#b91c1c'; // Red-700
+    if (mediaArredondada < 6.0) return '#b45309';  // Amber-700
+    if (mediaArredondada < 8.0) return '#15803d';  // Green-700
     return '#166534'; // Green-800
   } else {
-    if (media <= 3.0) return '#ef4444'; // Red-500
-    if (media < 6.0) return '#f59e0b';  // Amber-500
-    if (media < 8.0) return '#4ade80';  // Green-400 (Mais legível no escuro do que Green-300)
+    if (mediaArredondada <= 3.0) return '#ef4444'; // Red-500
+    if (mediaArredondada < 6.0) return '#f59e0b';  // Amber-500
+    if (mediaArredondada < 8.0) return '#4ade80';  // Green-400 (Mais legível no escuro do que Green-300)
     return '#22c55e'; // Green-500 (Muito legível no escuro)
   }
 }

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowDown, ArrowUp, Loader2 } from 'lucide-react';
-import type { Question } from '../../../types/bancoQuestoes';
+import { ehQuestaoRedacao, type Question } from '../../../types/bancoQuestoes';
+import { listarRubricas, type RubricaRedacao } from '../../../services/redacaoService';
+import { RubricasModal } from './RubricasModal';
 import type { ModoAvaliacao, NovaAvaliacaoInput, TipoAvaliacao } from '../../../types/avaliacoes';
 import type { ModoEmbaralhar, ModoNota, PonderadaEscopo } from '../../../types/correcaoOmr';
 import { MODO_EMBARALHAR_LABEL, MODO_NOTA_LABEL } from '../../../types/correcaoOmr';
@@ -38,6 +40,8 @@ export interface ConfigAvaliacaoInicial {
   qtdVersoes?: number;
   cartaoSeparado?: boolean;
   cartaoPosicao?: 'INICIO' | 'FIM';
+  folhaRedacao?: boolean;
+  rubricaRedacaoId?: string | null;
   modoNota?: ModoNota;
   ponderadaEscopo?: PonderadaEscopo;
   lancarNoBoletim?: boolean;
@@ -48,6 +52,7 @@ interface Props {
   inicial?: ConfigAvaliacaoInicial;
   salvando?: boolean;
   textoBotaoContinuar?: string;
+  textoBotaoVoltar?: string;
   onVoltar: () => void;
   onContinuar: (
     config: Omit<NovaAvaliacaoInput, 'questoes'>,
@@ -62,7 +67,7 @@ interface Props {
 // entre as questões selecionadas, mas editável por questão), turma(s) alvo e modo de
 // aplicação. Quando `inicial` é passado, os campos partem preenchidos com os dados já
 // salvos em vez dos valores padrão de uma avaliação nova.
-export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoContinuar, onVoltar, onContinuar }: Props) {
+export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoContinuar, textoBotaoVoltar, onVoltar, onContinuar }: Props) {
   const [titulo, setTitulo] = useState(inicial?.titulo ?? 'Avaliação');
   const [disciplinas, setDisciplinas] = useState<{ id: string; nome: string }[]>([]);
   const [disciplinaId, setDisciplinaId] = useState<string>(inicial?.disciplinaId ?? '');
@@ -90,6 +95,13 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
   const posicaoInicial: PosicaoCartao =
     inicial?.cartaoSeparado ? 'SEPARADO' : (inicial?.cartaoPosicao ?? 'FIM');
   const [posicaoCartao, setPosicaoCartao] = useState<PosicaoCartao>(posicaoInicial);
+  // Folha de redação: ligada por padrão; só aparece quando há questão de redação na avaliação.
+  const [folhaRedacao, setFolhaRedacao] = useState<boolean>(inicial?.folhaRedacao ?? true);
+  const temRedacao = questoes.some((q) => ehQuestaoRedacao(q));
+  // Modo de correção da redação (critérios e pesos). Vazio = o modelo da banca de cada proposta.
+  const [rubricaRedacaoId, setRubricaRedacaoId] = useState<string>(inicial?.rubricaRedacaoId ?? '');
+  const [rubricasRedacao, setRubricasRedacao] = useState<RubricaRedacao[]>([]);
+  const [gerenciandoRubricas, setGerenciandoRubricas] = useState(false);
   const [modoNota, setModoNota] = useState<ModoNota>(
     inicial?.modoNota ?? ((inicial?.tipo ?? 'AVALIACAO') === 'SIMULADO' ? 'SEM_NOTA' : 'DIRETA')
   );
@@ -112,6 +124,11 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
       return proxima;
     });
   }
+
+  useEffect(() => {
+    if (!temRedacao) return;
+    listarRubricas().then((l) => setRubricasRedacao(l.filter((r) => r.ativa))).catch(() => setRubricasRedacao([]));
+  }, [temRedacao, gerenciandoRubricas]);
 
   useEffect(() => {
     listarTurmas().then(setTurmas).catch(() => setTurmas([])).finally(() => setLoadingTurmas(false));
@@ -147,7 +164,9 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
   useEffect(() => {
     if (primeiraDistribuicao.current) {
       primeiraDistribuicao.current = false;
-      if (inicial) return;
+      // Só pula se já há valores salvos por questão; uma avaliação cadastrada sem questões
+      // (que ganhou as questões agora) precisa da divisão igual do valor total.
+      if (inicial && Object.keys(inicial.valoresPorQuestao ?? {}).length > 0) return;
     }
     const valorPorQuestao = questoes.length > 0 ? Math.round((valorTotal / questoes.length) * 100) / 100 : 0;
     setValoresPorQuestao(Object.fromEntries(questoes.map((q) => [q.id, valorPorQuestao])));
@@ -226,6 +245,8 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
         qtdVersoes: versoesEfetivas,
         cartaoSeparado: posicaoCartao === 'SEPARADO',
         cartaoPosicao: posicaoCartao === 'INICIO' ? 'INICIO' : 'FIM',
+        folhaRedacao,
+        rubricaRedacaoId: rubricaRedacaoId || null,
         modoNota,
         ponderadaEscopo,
         lancarNoBoletim,
@@ -442,8 +463,46 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
               'O cartão sai logo no início, antes da primeira questão.'}
             {embaralhar !== 'NENHUM' && ' A versão A nunca é embaralhada: ela é a sua cópia de referência.'}
           </p>
+
+          {temRedacao && (
+            <label className="flex items-start gap-2 text-sm text-ms-main cursor-pointer">
+              <input type="checkbox" checked={folhaRedacao} onChange={(e) => setFolhaRedacao(e.target.checked)} className="mt-0.5 accent-ms-blue" />
+              <span>
+                <strong>Gerar a folha de redação</strong>
+                <span className="block text-xs text-ms-muted">
+                  Esta avaliação tem questão de redação. Cada aluno recebe uma folha de 30 linhas com o nome, o QR Code
+                  e as marcas para a leitura pela câmera. A questão deixa de imprimir as linhas pautadas e avisa onde escrever.
+                </span>
+              </span>
+            </label>
+          )}
         </div>
       )}
+
+      {temRedacao && (
+        <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-2">
+          <label className="text-sm font-bold text-ms-main" htmlFor="modo-correcao-redacao">Modo de correção da redação</label>
+          <div className="flex flex-wrap items-center gap-3">
+            <select
+              id="modo-correcao-redacao"
+              className={`${inputClass} !w-auto min-w-64`}
+              value={rubricaRedacaoId}
+              onChange={(e) => setRubricaRedacaoId(e.target.value)}
+            >
+              <option value="">Da banca de cada proposta (padrão)</option>
+              {rubricasRedacao.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+            </select>
+            <button type="button" onClick={() => setGerenciandoRubricas(true)} className="text-xs text-ms-blue underline">
+              Gerenciar critérios e pesos
+            </button>
+          </div>
+          <p className="text-xs text-ms-muted leading-relaxed">
+            Define por quais critérios e pesos as redações desta avaliação serão corrigidas. Pode ser qualquer modo, mesmo de outra banca
+            (um tema da UFMS corrigido pelos critérios do ENEM, por exemplo), e ainda dá para trocar em cada redação na hora de corrigir.
+          </p>
+        </div>
+      )}
+      {gerenciandoRubricas && <RubricasModal onClose={() => setGerenciandoRubricas(false)} />}
 
       <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-3">
         <div className="flex items-center justify-between">
@@ -464,6 +523,11 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
         )}
       </div>
 
+      {questoes.length === 0 ? (
+        <p className="text-xs text-ms-muted">
+          As questões são inseridas depois, pelo botão “Inserir questões” da avaliação. O valor total será dividido entre elas.
+        </p>
+      ) : (
       <div className="bg-ms-card border border-gray-800 rounded-2xl p-6 space-y-3">
         <div className="flex items-center justify-between">
           <p className="text-sm font-bold text-ms-main">Ordem e valor das questões</p>
@@ -509,10 +573,11 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
           ))}
         </div>
       </div>
+      )}
 
       <div className="flex items-center justify-between">
         <button onClick={onVoltar} className="px-5 py-2.5 rounded-xl border border-gray-800 text-ms-main text-sm font-bold hover:bg-gray-800">
-          Voltar
+          {textoBotaoVoltar ?? 'Voltar'}
         </button>
         <button
           disabled={!podeContinuar || !!salvando}

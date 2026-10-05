@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { AlertTriangle, Loader2, Printer, RefreshCw, UserPlus, X } from 'lucide-react';
-import type { Question } from '../../../types/bancoQuestoes';
+import { ehQuestaoRedacao, type Question } from '../../../types/bancoQuestoes';
 import type { Avaliacao } from '../../../types/avaliacoes';
 import type { AlocacaoProva } from '../../../types/correcaoOmr';
 import { PROVA_LAYOUT_CSS, PROVA_QUESTOES_CSS, printProva } from '../../../utils/printProva';
 import { CARTAO_CSS, calcularGeometria } from '../../../utils/cartaoResposta';
+import { FOLHA_REDACAO_CSS } from '../../../utils/folhaRedacao';
 import { aplicarVersao, itensCartaoDaVersao } from '../../../utils/versaoProva';
 import { adicionarAlunosNovos, gerarVersoes, listarAlocacoes } from '../../../services/correcaoOmrService';
 import { obterQuestoesCompletasDaAvaliacao } from '../../../services/avaliacoesService';
 import { QuestaoImpressa } from '../QuestaoImpressa';
 import { CartaoRespostaFolha } from './CartaoRespostaFolha';
+import { FolhaRedacaoJBR } from './FolhaRedacaoJBR';
 
 // Impressão em lote: uma prova personalizada por aluno, cada uma com o cartão-resposta
 // que carrega o QR daquele aluno.
@@ -23,6 +25,9 @@ import { CartaoRespostaFolha } from './CartaoRespostaFolha';
 // Só o que a impressão em lote acrescenta ao CSS de prova que já existe.
 const CSS_LOTE = `
   ${CARTAO_CSS}
+  ${FOLHA_REDACAO_CSS}
+
+  .pagina-folha-redacao { padding: 0; min-height: 0; }
 
   /* Quebras de página: entre alunos e entre páginas do mesmo aluno */
   .bloco-aluno + .bloco-aluno { break-before: page; page-break-before: always; }
@@ -224,6 +229,8 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
   const [alunoFiltro, setAlunoFiltro] = useState('');
   const [conteudo, setConteudo] = useState<Conteudo>('PROVA_E_CARTAO');
   const [colunas, setColunas] = useState<1 | 2>(2);
+  // Folha de redação (30 linhas) impressa à parte para cada questão de redação da prova.
+  const [folhaRedacao, setFolhaRedacao] = useState(avaliacao.folha_redacao ?? true);
   const [modoSeparador, setModoSeparador] = useState<ModoSeparador>('RASCUNHO_VERSO');
   // Vem da configuração da avaliação, mas é ajustável aqui: reimprimir de outro jeito não
   // deveria obrigar o professor a voltar e editar a avaliação inteira. cartao_separado é
@@ -444,7 +451,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
 
             <div className={`questoes-coluna${colunas === 2 ? ' duas-colunas' : ''}`}>
               {daVersao.map((q, i) => (
-                <QuestaoImpressa key={q.id} questao={q} indice={i} valor={valores[q.id] ?? 0} />
+                <QuestaoImpressa key={q.id} questao={q} indice={i} valor={valores[q.id] ?? 0} semLinhasResposta={folhaRedacao} />
               ))}
             </div>
 
@@ -467,7 +474,36 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
       // Se a prova já possui páginas pares (ex: 2 páginas):
       // ela já preenche frente-e-verso perfeitamente! Adicionar um rascunho a tornaria 3 páginas
       // (ímpar), fazendo a primeira página do próximo aluno sair ao lado do rascunho na mesma folha.
-      const pagsCalculadas = estimarPaginasProva(daVersao, conteudo, posicaoCartao, colunas);
+      // Uma folha de redação (página própria) para cada questão de redação desta versão.
+      const redacoes =
+        folhaRedacao && conteudo !== 'SO_CARTAO' && qr
+          ? daVersao
+              .map((q, i) => ({ q, i }))
+              .filter(({ q }) => ehQuestaoRedacao(q))
+          : [];
+      for (const { q, i } of redacoes) {
+        blocos.push(
+          <div className="pagina pagina-folha-redacao" key={`fr-${aloc.codigo}-${q.id}`}>
+            <FolhaRedacaoJBR
+              aluno={{
+                nome: aloc.aluno_nome,
+                numeroChamada: aloc.numero_chamada,
+                codigoSgde: aloc.codigo_sgde,
+                turma: aloc.turma_nome,
+                serie: aloc.serie_nome,
+              }}
+              versao={aloc.rotulo}
+              qrDataUrl={qr}
+              titulo={avaliacao.titulo}
+              tema={q.topico}
+              dataAplicacao={dataFormatada}
+              numeroQuestao={redacoes.length > 1 ? i + 1 : undefined}
+            />
+          </div>
+        );
+      }
+
+      const pagsCalculadas = estimarPaginasProva(daVersao, conteudo, posicaoCartao, colunas) + redacoes.length;
       const ehPar = pagsCalculadas % 2 === 0;
 
       if (conteudo !== 'SO_CARTAO') {
@@ -515,6 +551,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
   }
 
   const semVersoes = alocacoes !== null && alocacoes.length === 0;
+  const temRedacao = questoes.some((q) => ehQuestaoRedacao(q));
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4">
@@ -628,6 +665,19 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                     ))}
                   </select>
                 </Campo>
+                {temRedacao && (
+                  <Campo label="Folha de redação">
+                    <select
+                      value={folhaRedacao ? 'SIM' : 'NAO'}
+                      onChange={(e) => setFolhaRedacao(e.target.value === 'SIM')}
+                      className={SELECT_CLS}
+                      title="Imprime a folha de 30 linhas com QR Code, nome do aluno e marcas para leitura pela câmera"
+                    >
+                      <option value="SIM">Incluir (30 linhas, com QR)</option>
+                      <option value="NAO">Não (linhas na própria prova)</option>
+                    </select>
+                  </Campo>
+                )}
                 <Campo label="Separar provas (Frente/Verso / 2 pág)">
                   <select
                     value={modoSeparador}

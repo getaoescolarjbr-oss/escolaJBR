@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { BookUp, Camera, Check, ClipboardCheck, Copy, Eye, Loader2, Pencil, Printer, QrCode, Send, Square, Trash2, Undo2, Users, Layers, FileText, User } from 'lucide-react';
+import { BookUp, Camera, Check, ClipboardCheck, Copy, Eye, Loader2, Pencil, Printer, QrCode, Send, Square, Trash2, Undo2, Users, Layers, FileText, User, Plus } from 'lucide-react';
 import type { Avaliacao, AvaliacaoArea, ProvaAreaCota, StatusAvaliacao } from '../../../types/avaliacoes';
 import {
   atualizarStatusAvaliacao,
@@ -13,7 +13,10 @@ import {
 } from '../../../services/avaliacoesService';
 import { AvaliacaoResultadosModal } from './AvaliacaoResultadosModal';
 import { CorrigirDissertativasModal } from './CorrigirDissertativasModal';
+import { CorrigirRedacaoModal } from './CorrigirRedacaoModal';
+import { obterProvasComRedacao } from '../../../services/redacaoService';
 import { EditarAvaliacaoModal } from './EditarAvaliacaoModal';
+import { NovaAvaliacaoModal } from './NovaAvaliacaoModal';
 import { PreviewAvaliacaoAlunoModal } from './PreviewAvaliacaoAlunoModal';
 import { ReimprimirAvaliacaoModal } from './ReimprimirAvaliacaoModal';
 import { ImprimirFolhasModal } from './ImprimirFolhasModal';
@@ -47,11 +50,16 @@ export function MinhasAvaliacoesTab() {
   const [reimprimirDe, setReimprimirDe] = useState<Avaliacao | null>(null);
   const [previewDe, setPreviewDe] = useState<Avaliacao | null>(null);
   const [corrigindoDe, setCorrigindoDe] = useState<Avaliacao | null>(null);
+  const [corrigindoRedacaoDe, setCorrigindoRedacaoDe] = useState<Avaliacao | null>(null);
+  // Ids das provas que têm questão de redação — decide se o botão "Corrigir redações" aparece.
+  const [comRedacao, setComRedacao] = useState<Set<string>>(new Set());
   const [inserindoCota, setInserindoCota] = useState<{ avaliacao: AvaliacaoArea; cota: ProvaAreaCota } | null>(null);
   const [previewAreaDe, setPreviewAreaDe] = useState<AvaliacaoArea | null>(null);
   // Ids das provas com resposta escrita ainda sem nota — decide se o botão "Corrigir" aparece.
   const [comCorrecaoPendente, setComCorrecaoPendente] = useState<Set<string>>(new Set());
   const [editandoDe, setEditandoDe] = useState<Avaliacao | null>(null);
+  const [criandoNova, setCriandoNova] = useState(false);
+  const [aviso, setAviso] = useState<string | null>(null);
   const [processando, setProcessando] = useState<string | null>(null);
   const [linkCopiadoId, setLinkCopiadoId] = useState<string | null>(null);
   const [folhasDe, setFolhasDe] = useState<Avaliacao | null>(null);
@@ -79,13 +87,15 @@ export function MinhasAvaliacoesTab() {
     setLoading(true);
     setErro(null);
     try {
-      const [lista, pendentes, listaArea] = await Promise.all([
+      const [lista, pendentes, listaArea, redacoes] = await Promise.all([
         listarMinhasAvaliacoes(),
         obterProvasComCorrecaoPendente(),
         listarAvaliacoesArea().catch(() => []),
+        obterProvasComRedacao(),
       ]);
       setAvaliacoes(lista);
       setComCorrecaoPendente(pendentes);
+      setComRedacao(redacoes);
       setAvaliacoesArea(listaArea.filter((av) => av.status !== 'PUBLICADA' || av.cotas?.some((c) => c.qtd_questoes > 0)));
     } catch (e) {
       setErro(e instanceof Error ? e.message : 'Não foi possível carregar as avaliações.');
@@ -219,6 +229,7 @@ export function MinhasAvaliacoesTab() {
   return (
     <div className="space-y-4">
       {erro && <p className="text-sm text-red-600 dark:text-red-400 font-bold">{erro}</p>}
+      {aviso && <p className="text-sm text-emerald-700 dark:text-emerald-400 font-bold">{aviso}</p>}
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {([
@@ -248,10 +259,22 @@ export function MinhasAvaliacoesTab() {
         })}
       </div>
 
+      {grupo === 'INDIVIDUAL' && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => { setAviso(null); setCriandoNova(true); }}
+            className="flex items-center gap-2 px-4 py-2 bg-ms-blue hover:bg-blue-600 text-white rounded-xl text-sm font-bold shadow-sm transition-colors"
+          >
+            <Plus className="w-4 h-4" /> Nova avaliação
+          </button>
+        </div>
+      )}
+
       {proprias.length === 0 && cotasDoGrupo.length === 0 ? (
         <p className="text-center text-ms-muted py-12">
           {grupo === 'INDIVIDUAL'
-            ? 'Nenhuma avaliação individual ainda. Use a aba "Nova Avaliação" para montar a primeira.'
+            ? 'Nenhuma avaliação individual ainda. Clique em “Nova avaliação” para cadastrar a primeira.'
             : grupo === 'GERAL'
             ? 'Nenhuma avaliação geral para você ainda.'
             : 'Nenhuma avaliação da área para você ainda.'}
@@ -298,12 +321,13 @@ export function MinhasAvaliacoesTab() {
                     onClick={() => setEditandoDe(a)}
                     className={btnSecondary}
                   >
-                    <Pencil className="w-3.5 h-3.5" /> Editar
+                    <Pencil className="w-3.5 h-3.5" /> {(a.total_questoes ?? 0) === 0 ? 'Inserir questões' : 'Editar'}
                   </button>
                   )}
                   {a.status === 'RASCUNHO' && !a.eh_prova_area && (
                     <button
-                      disabled={processando === a.id}
+                      disabled={processando === a.id || (a.total_questoes ?? 0) === 0}
+                      title={(a.total_questoes ?? 0) === 0 ? 'Insira as questões antes de publicar' : undefined}
                       onClick={() => mudarStatus(a.id, 'PUBLICADA')}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-bold disabled:opacity-40 shadow-sm transition-colors"
                     >
@@ -369,6 +393,15 @@ export function MinhasAvaliacoesTab() {
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-blue text-white rounded-lg text-xs font-bold hover:bg-blue-600 shadow-sm transition-colors"
                     >
                       <Camera className="w-3.5 h-3.5" /> Corrigir pela câmera
+                    </button>
+                  )}
+                  {(a.modo === 'IMPRESSA' || a.modo === 'AMBAS') && a.status !== 'RASCUNHO' && comRedacao.has(a.id) && (
+                    <button
+                      onClick={() => setCorrigindoRedacaoDe(a)}
+                      className={btnSecondary}
+                      title="Fotografar as folhas de redação, transcrever e corrigir com prévia da IA"
+                    >
+                      <FileText className="w-3.5 h-3.5" /> Corrigir redações
                     </button>
                   )}
                   {a.modo_nota !== 'SEM_NOTA' && a.lancar_no_boletim && a.status !== 'RASCUNHO' && (
@@ -549,12 +582,30 @@ export function MinhasAvaliacoesTab() {
           }}
         />
       )}
+      {corrigindoRedacaoDe && (
+        <CorrigirRedacaoModal
+          avaliacao={corrigindoRedacaoDe}
+          onClose={() => setCorrigindoRedacaoDe(null)}
+          onCorrigido={() => { void carregar(); }}
+        />
+      )}
       {corrigindoDe && (
         <CorrigirDissertativasModal
           avaliacao={corrigindoDe}
           onClose={() => setCorrigindoDe(null)}
           onCorrigido={() => {
             setCorrigindoDe(null);
+            carregar();
+          }}
+        />
+      )}
+      {criandoNova && (
+        <NovaAvaliacaoModal
+          onClose={() => setCriandoNova(false)}
+          onCriada={() => {
+            setCriandoNova(false);
+            setAviso('Avaliação salva como rascunho. Agora clique em “Inserir questões” nela.');
+            escolherGrupo('INDIVIDUAL');
             carregar();
           }}
         />

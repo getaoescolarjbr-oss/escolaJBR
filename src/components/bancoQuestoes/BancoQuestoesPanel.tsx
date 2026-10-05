@@ -3,15 +3,14 @@ import { useAuth } from '../../hooks/useAuth';
 import { QuestoesTab } from './QuestoesTab';
 import { CategoriasTab } from './admin/CategoriasTab';
 import { GerenciarTab } from './admin/GerenciarTab';
-import { NovaAvaliacaoTab } from './avaliacoes/NovaAvaliacaoTab';
 import { MinhasAvaliacoesTab } from './avaliacoes/MinhasAvaliacoesTab';
 
-type Aba = 'nova-avaliacao' | 'minhas-avaliacoes' | 'consultar' | 'gerenciar' | 'categorias';
+type Aba = 'minhas-avaliacoes' | 'consultar' | 'gerenciar' | 'categorias';
 
-// Gerador de avaliações: o banco de questões (Consultar/Gerenciar/Categorias) vive dentro
-// deste módulo, junto com o fluxo de montar e publicar avaliações (Nova Avaliação/Minhas
-// Avaliações). Criar avaliação liberado para PROFESSOR/GESTAO/COORDENACAO (já dá acesso às
-// questões via seleção); Consultar (banco de questões bruto) restrito a GESTAO.
+// Gerador de avaliações: abre em Minhas Avaliações (onde a avaliação individual é cadastrada e,
+// depois de salva, recebe as questões); o banco de questões (Banco de questões/Gerenciar/
+// Categorias) vive ao lado, dentro do mesmo módulo. Criar avaliação e consultar o banco de questões
+// (somente leitura) são liberados para PROFESSOR/GESTAO/COORDENACAO — o professor consulta sem precisar criar avaliação.
 // Gerenciar Questões e Categorias também abrem pra COORDENACAO_AREA: pode excluir/editar
 // questões e gerenciar termos de assunto/tópico, mas não criar questão nem mexer nos outros
 // campos de taxonomia — RLS libera só isso pra esse papel (ver
@@ -23,12 +22,11 @@ export function BancoQuestoesPanel() {
   const isGestao = hasAnyRole(['GESTAO']);
   const podeCriarAvaliacao = hasAnyRole(['GESTAO', 'PROFESSOR', 'COORDENACAO']);
   const podeGerenciarQuestoes = hasAnyRole(['GESTAO', 'COORDENACAO_AREA']);
-  const [aba, setAba] = useState<Aba>(podeCriarAvaliacao ? 'nova-avaliacao' : isGestao ? 'consultar' : podeGerenciarQuestoes ? 'gerenciar' : 'nova-avaliacao');
+  const [aba, setAba] = useState<Aba>(podeCriarAvaliacao ? 'minhas-avaliacoes' : isGestao ? 'consultar' : podeGerenciarQuestoes ? 'gerenciar' : 'minhas-avaliacoes');
 
   const abas: { id: Aba; label: string }[] = [
-    ...(podeCriarAvaliacao ? [{ id: 'nova-avaliacao' as const, label: 'Nova Avaliação' }] : []),
     ...(podeCriarAvaliacao ? [{ id: 'minhas-avaliacoes' as const, label: 'Minhas Avaliações' }] : []),
-    ...(isGestao ? [{ id: 'consultar' as const, label: 'Consultar' }] : []),
+    ...(podeCriarAvaliacao ? [{ id: 'consultar' as const, label: 'Banco de questões' }] : []),
     ...(podeGerenciarQuestoes ? [{ id: 'gerenciar' as const, label: 'Gerenciar Questões' }] : []),
     ...(podeGerenciarQuestoes ? [{ id: 'categorias' as const, label: 'Categorias' }] : []),
   ];
@@ -52,9 +50,8 @@ export function BancoQuestoesPanel() {
         ))}
       </div>
 
-      {aba === 'nova-avaliacao' && podeCriarAvaliacao && <NovaAvaliacaoTab onAvaliacaoSalva={() => setAba('minhas-avaliacoes')} />}
       {aba === 'minhas-avaliacoes' && podeCriarAvaliacao && <MinhasAvaliacoesTab />}
-      {aba === 'consultar' && isGestao && <QuestoesTab />}
+      {aba === 'consultar' && podeCriarAvaliacao && <QuestoesTab />}
       {aba === 'gerenciar' && podeGerenciarQuestoes && <GerenciarTab podeCriar={isGestao} />}
       {aba === 'categorias' && podeGerenciarQuestoes && <CategoriasTab />}
     </div>

@@ -150,22 +150,20 @@ export function PessoaVinculosModal({ pessoa, onClose }: PessoaVinculosModalProp
                 <div className="p-3 bg-red-950/20 border border-red-900/50 rounded-lg text-sm text-red-400">{error}</div>
               )}
 
-              {/* Aluno */}
-              <div className="flex items-start gap-3 p-4 rounded-xl border border-gray-800 bg-ms-dark/30">
-                <GraduationCap className="w-5 h-5 text-ms-blueText mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wider text-ms-main">Aluno</p>
-                  {vinculos?.aluno ? (
+              {/* Aluno — só aparece quando a pessoa de fato tem matrícula */}
+              {vinculos?.aluno && (
+                <div className="flex items-start gap-3 p-4 rounded-xl border border-gray-800 bg-ms-dark/30">
+                  <GraduationCap className="w-5 h-5 text-ms-blueText mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider text-ms-main">Aluno</p>
                     <p className="text-sm text-gray-400 mt-1">
                       Matriculado{vinculos.aluno.status ? ` — ${vinculos.aluno.status}` : ''}
                       {vinculos.aluno.aluno_numero ? ` (nº ${vinculos.aluno.aluno_numero})` : ''}. Edite matrícula/turma em
                       Painel Admin &gt; Alunos.
                     </p>
-                  ) : (
-                    <p className="text-sm text-gray-500 mt-1">Não é aluno. Matrícula é feita em Painel Admin &gt; Alunos.</p>
-                  )}
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Consentimento LGPD (só faz sentido para quem é Aluno) */}
               {vinculos?.aluno && (
@@ -229,18 +227,22 @@ export function PessoaVinculosModal({ pessoa, onClose }: PessoaVinculosModalProp
                 </div>
               )}
 
-              {/* Servidor */}
-              <div className="flex items-start gap-3 p-4 rounded-xl border border-gray-800 bg-ms-dark/30">
-                <Briefcase className="w-5 h-5 text-ms-blueText mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-xs font-black uppercase tracking-wider text-ms-main">Servidor</p>
-                  {vinculos?.servidor ? (
+              {/* Servidor — só aparece quando a pessoa de fato está cadastrada como servidor */}
+              {vinculos?.servidor && (
+                <div className="flex items-start gap-3 p-4 rounded-xl border border-gray-800 bg-ms-dark/30">
+                  <Briefcase className="w-5 h-5 text-ms-blueText mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-wider text-ms-main">Servidor</p>
                     <p className="text-sm text-gray-400 mt-1">Cargo: {vinculos.servidor.cargo}. Edite no módulo Servidores.</p>
-                  ) : (
-                    <p className="text-sm text-gray-500 mt-1">Não é servidor.</p>
-                  )}
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {!vinculos?.aluno && !vinculos?.servidor && (
+                <p className="text-sm text-gray-500">
+                  Esta pessoa ainda não tem matrícula de aluno nem cadastro de servidor.
+                </p>
+              )}
 
               {/* Responsável */}
               <div className="p-4 rounded-xl border border-gray-800 bg-ms-dark/30">

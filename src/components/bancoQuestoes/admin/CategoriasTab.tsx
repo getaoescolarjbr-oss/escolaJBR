@@ -13,7 +13,7 @@ import {
 } from '../../../services/bancoQuestoesService';
 import { useAuth } from '../../../hooks/useAuth';
 
-const CAMPOS_GESTAO: TaxonomyField[] = ['discipline', 'level', 'area', 'difficulty', 'assunto', 'topico', 'banca', 'orgao', 'cargo'];
+const CAMPOS_GESTAO: TaxonomyField[] = ['discipline', 'level', 'area', 'assunto', 'topico', 'banca', 'orgao', 'cargo'];
 // Coordenação de área só pode mexer em assunto/tópico (RLS libera só esses dois campos pra
 // esse papel — ver permitir_coordenacao_area_editar_assunto_topico.sql).
 const CAMPOS_COORDENACAO: TaxonomyField[] = ['assunto', 'topico'];
