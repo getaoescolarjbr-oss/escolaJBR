@@ -1,7 +1,7 @@
 -- Adiciona coluna content_hash para otimizar buscas de textos duplicados
 -- Evita URLs gigantes ao comparar textos muito longos
 ALTER TABLE support_texts
-ADD COLUMN IF NOT EXISTS content_hash VARCHAR(64) UNIQUE;
+ADD COLUMN IF NOT EXISTS content_hash VARCHAR(64);
 
 -- Popula o hash para registros existentes
 UPDATE support_texts
