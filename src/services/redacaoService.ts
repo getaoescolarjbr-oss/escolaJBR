@@ -174,6 +174,30 @@ export function valoresPermitidos(c: Pick<CriterioRubrica, 'max' | 'passo'>): nu
   return out;
 }
 
+/** Uma redação com nota confirmada, com as notas por critério (professor e prévia da IA). */
+export interface LinhaRelatorioRedacao {
+  envio_id: string;
+  aluno_id: string;
+  aluno_nome: string;
+  turma_nome: string | null;
+  question_id: string;
+  tema: string | null;
+  valor: number | string | null;
+  nota_total: number;
+  nota_maxima: number | null;
+  rubrica_nome: string | null;
+  criterios: Pick<CriterioRubrica, 'chave' | 'rotulo' | 'max'>[] | null;
+  notas_prof: Record<string, { nota: number; concorda?: boolean }> | null;
+  notas_ia: Record<string, { nota: number }> | null;
+  ia_nota_total: number | null;
+}
+
+export async function obterRelatorioRedacoes(provaId: string): Promise<LinhaRelatorioRedacao[]> {
+  const { data, error } = await supabase.rpc('rpc_redacao_relatorio', { p_prova_id: provaId });
+  if (error) throw error;
+  return (data ?? []) as LinhaRelatorioRedacao[];
+}
+
 export async function listarRedacoes(provaId: string): Promise<RedacaoDaLista[]> {
   const { data, error } = await supabase.rpc('rpc_redacao_listar', { p_prova_id: provaId });
   if (error) throw error;

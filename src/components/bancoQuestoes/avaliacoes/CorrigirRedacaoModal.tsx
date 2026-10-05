@@ -13,6 +13,7 @@ import {
   type StatusRedacao,
 } from '../../../services/redacaoService';
 import { RedacaoRevisao } from './RedacaoRevisao';
+import { RelatorioRedacoes } from './RelatorioRedacoes';
 import { RubricasModal } from './RubricasModal';
 
 // Correção de redação de uma prova impressa: o professor fotografa/envia as folhas (a leitura do QR
@@ -77,6 +78,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
   const [ocupadoAluno, setOcupadoAluno] = useState<string | null>(null);
   const [houveNota, setHouveNota] = useState(false);
   const [gerenciando, setGerenciando] = useState(false);
+  const [relatorio, setRelatorio] = useState(false);
   const seq = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -174,7 +176,9 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {abertoId ? (
+          {relatorio ? (
+            <RelatorioRedacoes provaId={avaliacao.id} titulo={avaliacao.titulo} onVoltar={() => setRelatorio(false)} />
+          ) : abertoId ? (
             <RedacaoRevisao
               envioId={abertoId}
               onVoltar={() => { setAbertoId(null); void recarregar(); }}
@@ -220,6 +224,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                     </select>
                   )}
                   <button onClick={() => setGerenciando(true)} className="text-xs text-ms-blue underline">Critérios de correção</button>
+                  <button onClick={() => setRelatorio(true)} className="text-xs text-ms-blue underline">Relatório da turma</button>
                   <span className="text-xs text-ms-muted">
                     Enquadre a folha inteira (QR e os 4 quadrados pretos dos cantos visíveis). Pode escolher várias fotos de uma vez.
                   </span>
