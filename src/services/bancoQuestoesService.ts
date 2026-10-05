@@ -127,16 +127,26 @@ export async function salvarTextoApoio(id: string | null, discipline: string, co
   }
   // Antes de criar, reaproveita um texto já cadastrado com o mesmo conteúdo (é comum a
   // mesma passagem de apoio ser usada em várias questões) em vez de duplicar no banco.
-  const { data: existente, error: buscaErro } = await supabase.from('support_texts').select('id').eq('content', content).limit(1);
+  // Usa hash SHA-256 em vez do conteúdo direto pra evitar URLs gigantes com textos longos.
+  const contentHash = await hashContent(content);
+  const { data: existente, error: buscaErro } = await supabase.from('support_texts').select('id').eq('content_hash', contentHash).limit(1);
   if (buscaErro) throw buscaErro;
   if (existente && existente.length > 0) return existente[0].id;
 
-  const { data, error } = await supabase.from('support_texts').insert([{ discipline, content }]).select('id');
+  const { data, error } = await supabase.from('support_texts').insert([{ discipline, content, content_hash: contentHash }]).select('id');
   if (error) throw error;
   if (!data || data.length === 0) {
     throw new Error('Falha ao criar o texto associado. Verifique suas permissões.');
   }
   return data[0].id;
+}
+
+async function hashContent(content: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(content);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
 export async function criarQuestao(dados: Partial<Question>): Promise<Question> {
