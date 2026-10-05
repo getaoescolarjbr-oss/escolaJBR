@@ -63,9 +63,51 @@ function CampoComMarcacao({
   onErro: (msg: string) => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
+
+  // Mudanças vindas da barra/painel de imagens regravam o texto inteiro; sem isto o navegador
+  // joga a rolagem do campo (e do diálogo) pro fim. Guarda as posições e restaura depois que
+  // a barra reposiciona o cursor.
+  function alterarPreservandoRolagem(novo: string) {
+    const el = ref.current;
+    if (!el) {
+      onChange(novo);
+      return;
+    }
+    const topo = el.scrollTop;
+    const pais: Array<[HTMLElement, number]> = [];
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      if (p.scrollHeight > p.clientHeight) pais.push([p, p.scrollTop]);
+    }
+    onChange(novo);
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        el.scrollTop = topo;
+        pais.forEach(([p, t]) => {
+          p.scrollTop = t;
+        });
+      })
+    );
+  }
+
+  const imagens = [...value.matchAll(/\[\[IMG:([^\]]*?)\]\]/g)].map((m) => {
+    const parsed = m[1].trim().match(/^(.*)\|(\d+)$/);
+    return { url: (parsed ? parsed[1] : m[1]).trim(), largura: parsed ? Number(parsed[2]) : null };
+  });
+
+  function definirLargura(indice: number, largura: number | null) {
+    let n = -1;
+    const novo = value.replace(/\[\[IMG:([^\]]*?)\]\]/g, (_t, conteudo: string) => {
+      n += 1;
+      if (n !== indice) return `[[IMG:${conteudo}]]`;
+      const url = conteudo.trim().replace(/\|\d+$/, '');
+      return largura ? `[[IMG:${url}|${Math.max(40, Math.min(1200, Math.round(largura)))}]]` : `[[IMG:${url}]]`;
+    });
+    alterarPreservandoRolagem(novo);
+  }
+
   return (
     <div>
-      <MarkupToolbar textareaRef={ref} value={value} onChange={onChange} folder="questoes" showImage={showImage} showList={showList} onErro={onErro} />
+      <MarkupToolbar textareaRef={ref} value={value} onChange={alterarPreservandoRolagem} folder="questoes" showImage={showImage} showList={showList} onErro={onErro} />
       <textarea
         ref={ref}
         placeholder={placeholder}
@@ -74,6 +116,30 @@ function CampoComMarcacao({
         rows={rows}
         className={`${inputClass} mt-1 resize-y`}
       />
+      {imagens.length > 0 && (
+        <div className="mt-2 space-y-1.5 rounded-lg border border-gray-800 bg-ms-dark/40 p-2">
+          <p className="text-[10px] font-black uppercase tracking-wider text-ms-muted">Tamanho das imagens (largura em px)</p>
+          {imagens.map((img, i) => (
+            <div key={`${img.url}-${i}`} className="flex items-center gap-2">
+              <img src={img.url} alt="" className="h-9 w-12 shrink-0 rounded border border-gray-800 object-contain bg-white" />
+              <span className="w-14 shrink-0 text-xs text-ms-muted">Imagem {i + 1}</span>
+              <button type="button" onClick={() => definirLargura(i, (img.largura ?? 400) - 50)} className="rounded-lg border border-gray-800 px-2 py-1 text-xs font-bold text-ms-main hover:bg-ms-dark">−</button>
+              <input
+                type="number"
+                min={40}
+                max={1200}
+                step={10}
+                placeholder="auto"
+                value={img.largura ?? ''}
+                onChange={(e) => definirLargura(i, e.target.value ? Number(e.target.value) : null)}
+                className="w-20 rounded-lg border border-gray-800 bg-ms-dark px-2 py-1 text-xs text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
+              />
+              <button type="button" onClick={() => definirLargura(i, (img.largura ?? 400) + 50)} className="rounded-lg border border-gray-800 px-2 py-1 text-xs font-bold text-ms-main hover:bg-ms-dark">+</button>
+              <button type="button" onClick={() => definirLargura(i, null)} className="rounded-lg px-2 py-1 text-xs font-bold text-ms-muted hover:bg-ms-dark">Padrão</button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -206,7 +272,7 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <div className="bg-ms-card border border-gray-800 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto p-6 space-y-4">
+      <div className="bg-ms-card border border-gray-800 rounded-2xl w-full max-w-6xl max-h-[95vh] overflow-y-auto p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-black text-ms-main">{questao ? 'Editar questão' : 'Nova questão'}</h3>
           <button onClick={onClose} className="text-ms-muted hover:text-ms-main">
@@ -293,14 +359,14 @@ export function QuestionEditorDialog({ questao, onClose, onSalvo }: Props) {
             value={textoApoio}
             onChange={setTextoApoio}
             placeholder="Texto de apoio compartilhado por uma ou mais questões (opcional)"
-            rows={4}
+            rows={20}
             onErro={setErro}
           />
         </div>
 
         <div>
           <p className="mb-1 text-xs font-black uppercase tracking-wider text-ms-main">Enunciado *</p>
-          <CampoComMarcacao value={statement} onChange={setStatement} placeholder="Enunciado *" rows={8} onErro={setErro} />
+          <CampoComMarcacao value={statement} onChange={setStatement} placeholder="Enunciado *" rows={16} onErro={setErro} />
         </div>
 
         {escrita ? (

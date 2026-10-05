@@ -146,7 +146,11 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
                 key={`${key}-${imgIdx}`}
                 src={url}
                 alt=""
-                style={!isAlt && width ? { width: `${Math.min(width, 900)}px` } : undefined}
+                style={
+                  !isAlt && width
+                    ? ({ width: `${Math.min(width, 1200)}px`, '--qm-w': `${Math.min(width, 1200)}px` } as React.CSSProperties)
+                    : undefined
+                }
                 // O teto é RELATIVO À JANELA (vh), não fixo em px. Valor fixo não
                 // sabe o tamanho da tela: 420px cabe num monitor grande mas obriga
                 // a rolar num notebook, onde a área útil do card tem ~390px. Com
@@ -157,7 +161,7 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
                   isAlt
                     ? 'max-h-[14vh] max-w-[260px] sm:max-h-[16vh] sm:max-w-[310px]'
                     : width
-                    ? 'max-h-[42vh]'
+                    ? 'qm-img-manual'
                     : 'max-h-[42vh]'
                 }`}
               />

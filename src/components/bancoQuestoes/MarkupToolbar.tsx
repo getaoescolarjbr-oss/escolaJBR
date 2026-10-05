@@ -105,7 +105,7 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
     const novoInicio = start + tag.length + 2;
     const novoFim = novoInicio + selecionado.length;
     requestAnimationFrame(() => {
-      el.focus();
+      el.focus({ preventScroll: true });
       el.setSelectionRange(novoInicio, novoFim);
     });
   }
@@ -117,7 +117,7 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
     onChange(`${value.slice(0, start)}${texto}${value.slice(end)}`);
     const pos = start + texto.length;
     requestAnimationFrame(() => {
-      el.focus();
+      el.focus({ preventScroll: true });
       el.setSelectionRange(pos, pos);
     });
   }
@@ -133,7 +133,7 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
     const novoInicio = start + before.length;
     const novoFim = novoInicio + selecionado.length;
     requestAnimationFrame(() => {
-      el.focus();
+      el.focus({ preventScroll: true });
       el.setSelectionRange(novoInicio, novoFim);
     });
   }
@@ -148,7 +148,7 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
     onChange(`${value.slice(0, inicioLinha)}${marcador}${value.slice(inicioLinha)}`);
     const pos = start + marcador.length;
     requestAnimationFrame(() => {
-      el.focus();
+      el.focus({ preventScroll: true });
       el.setSelectionRange(pos, pos);
     });
   }
@@ -177,7 +177,7 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
     onChange(`${value.slice(0, inicio)}${novoParagrafo}${value.slice(fim)}`);
     const novoFim = inicio + novoParagrafo.length;
     requestAnimationFrame(() => {
-      el.focus();
+      el.focus({ preventScroll: true });
       el.setSelectionRange(novoFim, novoFim);
     });
   }

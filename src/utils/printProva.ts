@@ -198,6 +198,15 @@ export const PROVA_QUESTOES_CSS = `
   }
   .questoes-coluna:not(.duas-colunas) .qm-img { max-height: 95mm; }
 
+  /* Imagem com largura definida à mão no editor ([[IMG:url|largura]]): respeita a largura
+     pedida (limitada à coluna) e ignora o teto de altura. Fica antes das regras de
+     alternativas, que continuam compactas. */
+  .qm-img.qm-img-manual,
+  .questoes-coluna .qm-img.qm-img-manual {
+    width: var(--qm-w) !important;
+    max-height: none !important;
+  }
+
   /* Imagens dentro de alternativas. Em duas colunas (~90mm) o teto é 30mm; em
      coluna única, 40mm. */
   .alternativa .qm-img,
