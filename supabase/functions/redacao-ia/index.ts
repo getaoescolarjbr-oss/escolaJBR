@@ -26,7 +26,8 @@ async function chave(): Promise<string> {
   }
   return chaveCache;
 }
-const MODELOS = (Deno.env.get("GEMINI_MODELOS") ?? "gemini-3.8-flash,gemini-3.7-flash,gemini-3.5-flash,gemini-flash-latest")
+// Cada modelo tem a própria cota gratuita diária; a chave também é usada por scripts, então o rodízio é longo.
+const MODELOS = (Deno.env.get("GEMINI_MODELOS") ?? "gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-flash-latest,gemini-3-flash-preview,gemini-2.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite")
   .split(",").map((s) => s.trim()).filter(Boolean);
 
 const CORS = {
@@ -59,7 +60,8 @@ async function gemini(partes: unknown[], schema: unknown) {
         return { dados: JSON.parse(j.candidates[0].content.parts[0].text), modelo, uso: j.usageMetadata };
       }
       ultimo = `${modelo}: ${j.error?.status ?? r.status} ${String(j.error?.message ?? "").slice(0, 120)}`;
-      if (!["UNAVAILABLE", "RESOURCE_EXHAUSTED"].includes(j.error?.status)) break;
+      // Sem cota: tentar de novo o mesmo modelo não adianta, passa ao próximo. Sobrecarga: uma segunda tentativa.
+      if (j.error?.status !== "UNAVAILABLE") break;
       await new Promise((ok) => setTimeout(ok, 2500));
     }
   }
@@ -156,7 +158,8 @@ async function transcrever(a: { imagemBase64?: string; mimeType?: string }) {
 
 async function corrigir(a: { linhas?: string[]; texto?: string; tema?: string; rubrica?: unknown; esperado?: string }) {
   const linhas = Array.isArray(a.linhas) ? a.linhas.map(String) : String(a.texto ?? "").split("\n");
-  const preenchidas = linhas.filter((l) => l.trim().length > 0).length;
+  // Linha da folha ~ 90 caracteres: texto digitado em parágrafos conta pelas linhas que ocuparia na folha.
+  const preenchidas = linhas.reduce((n, l) => n + (l.trim().length > 0 ? Math.ceil(l.trim().length / 95) : 0), 0);
   if (preenchidas === 0) throw new Error("texto vazio");
   const numerado = linhas.map((l, i) => `${i + 1}: ${l}`).join("\n").slice(0, 20000);
   const tema = String(a.tema ?? "").slice(0, 300);
