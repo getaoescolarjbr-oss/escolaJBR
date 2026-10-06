@@ -5,6 +5,7 @@ import type { AvaliacaoArea, ProvaAreaCota } from '../../types/avaliacoes';
 import { QuestionPicker } from '../bancoQuestoes/QuestionPicker';
 import { inserirQuestoesCotaArea, inserirQuestoesCotaGeral, obterQuestoesCotaArea, obterQuestoesCotaGeral } from '../../services/avaliacoesService';
 import { buscarQuestoesPorIds } from '../../services/bancoQuestoesService';
+import { garantirQuestoesNoPrincipal } from '../../services/acervoClient';
 
 interface Props {
   avaliacao: AvaliacaoArea;
@@ -32,6 +33,8 @@ export function InserirQuestoesAreaModal({ avaliacao, cota, onClose, onSalvo }: 
     (ehGeral ? obterQuestoesCotaGeral(cota.id!) : obterQuestoesCotaArea(avaliacao.id, cota.disciplina_id))
       .then(async (linhas) => {
         if (linhas.length === 0) return;
+        // Traz do acervo a versão mais recente das cópias que ainda estão só em rascunhos.
+        await garantirQuestoesNoPrincipal(linhas.map((l) => l.question_id)).catch(() => {});
         const questoes = await buscarQuestoesPorIds(linhas.map((l) => l.question_id));
         if (cancelado) return;
         const porId = new Map(questoes.map((q) => [q.id, q]));

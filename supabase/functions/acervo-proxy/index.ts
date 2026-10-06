@@ -7,8 +7,8 @@
 //   3. repassa para a função `acervo-api` do projeto B com o segredo compartilhado (Vault).
 // A operação `importar` copia questões do acervo para `questions` do projeto principal (as
 // funções de prova/correção/simulado só conhecem questões que existem aqui, por chave
-// estrangeira). Nunca sobrescreve: uma prova já aplicada não muda se a questão for editada
-// depois no acervo.
+// estrangeira). Uma prova já publicada/aplicada não muda se a questão for editada depois no
+// acervo (cópia travada); enquanto a questão só estiver em rascunhos, a cópia acompanha o acervo.
 //
 // Implantar com verify_jwt = true. Ver docs/plano-migracao-banco-questoes.md
 import { createClient } from "jsr:@supabase/supabase-js@2";
@@ -73,36 +73,83 @@ async function chamarAcervo(op: string, args: unknown, roles: string[], userId: 
   return { status: r.status, corpo };
 }
 
-// Copia do acervo para o projeto principal as questões (e textos de apoio) que ainda não existem aqui.
+// Questões "travadas": já usadas por prova publicada/encerrada, por resposta de aluno ou por redação.
+// A cópia delas no principal nunca é sobrescrita, para que uma prova aplicada não mude.
+async function idsTravados(): Promise<Set<string>> {
+  const travados = new Set<string>();
+  const { data: provas, error: e1 } = await supabase.from("provas").select("id").neq("status", "RASCUNHO");
+  if (e1) throw new Error(e1.message);
+  const idsProvas = (provas ?? []).map((p: { id: string }) => p.id);
+  for (let i = 0; i < idsProvas.length; i += 100) {
+    const { data, error } = await supabase.from("prova_questoes").select("question_id").in("prova_id", idsProvas.slice(i, i + 100));
+    if (error) throw new Error(error.message);
+    (data ?? []).forEach((r: { question_id: string }) => travados.add(r.question_id));
+  }
+  for (const tabela of ["prova_respostas_itens", "redacao_envios", "redacao_rascunhos"]) {
+    const { data, error } = await supabase.from(tabela).select("question_id");
+    if (error) throw new Error(error.message);
+    (data ?? []).forEach((r: { question_id: string | null }) => { if (r.question_id) travados.add(r.question_id); });
+  }
+  return travados;
+}
+
+// Copia do acervo para o projeto principal as questões (e textos de apoio) que ainda não existem aqui
+// e atualiza as cópias que só aparecem em provas em rascunho, para acompanharem as edições do acervo.
 async function importar(ids: string[], roles: string[], userId: string) {
   const unicos = [...new Set(ids)].slice(0, 500);
-  if (!unicos.length) return { importadas: 0, ausentes: [] as string[] };
+  if (!unicos.length) return { importadas: 0, atualizadas: 0, ausentes: [] as string[] };
 
-  const { data: existentes, error: e0 } = await supabase.from("questions").select("id").in("id", unicos);
-  if (e0) throw new Error(e0.message);
-  const ja = new Set((existentes ?? []).map((q: { id: string }) => q.id));
+  const ja = new Set<string>();
+  for (let i = 0; i < unicos.length; i += 100) {
+    const { data, error } = await supabase.from("questions").select("id").in("id", unicos.slice(i, i + 100));
+    if (error) throw new Error(error.message);
+    (data ?? []).forEach((q: { id: string }) => ja.add(q.id));
+  }
   const faltam = unicos.filter((id) => !ja.has(id));
-  if (!faltam.length) return { importadas: 0, ausentes: [] as string[] };
+  const travados = ja.size ? await idsTravados() : new Set<string>();
+  const atualizar = unicos.filter((id) => ja.has(id) && !travados.has(id));
+  const alvo = [...faltam, ...atualizar];
+  if (!alvo.length) return { importadas: 0, atualizadas: 0, ausentes: [] as string[] };
 
-  const { status, corpo } = await chamarAcervo("exportarParaPrincipal", { ids: faltam }, roles, userId);
+  const { status, corpo } = await chamarAcervo("exportarParaPrincipal", { ids: alvo }, roles, userId);
   if (status !== 200) throw new Error(corpo.erro ?? "falha ao ler o acervo");
   const { questions, support_texts } = corpo.data as { questions: Record<string, unknown>[]; support_texts: Record<string, unknown>[] };
 
   if (support_texts.length) {
-    const { error } = await supabase.from("support_texts").upsert(support_texts, { onConflict: "id", ignoreDuplicates: true });
-    if (error) throw new Error(`textos de apoio: ${error.message}`);
+    // Texto de apoio compartilhado com alguma questão travada não é sobrescrito.
+    const travadosLista = [...travados];
+    const textosTravados = new Set<string>();
+    for (let i = 0; i < travadosLista.length; i += 100) {
+      const { data, error } = await supabase.from("questions").select("support_text_id").in("id", travadosLista.slice(i, i + 100));
+      if (error) throw new Error(error.message);
+      (data ?? []).forEach((q: { support_text_id: string | null }) => { if (q.support_text_id) textosTravados.add(q.support_text_id); });
+    }
+    const protegidos = support_texts.filter((t) => textosTravados.has(t.id as string));
+    const livres = support_texts.filter((t) => !textosTravados.has(t.id as string));
+    if (protegidos.length) {
+      const { error } = await supabase.from("support_texts").upsert(protegidos, { onConflict: "id", ignoreDuplicates: true });
+      if (error) throw new Error(`textos de apoio: ${error.message}`);
+    }
+    if (livres.length) {
+      const { error } = await supabase.from("support_texts").upsert(livres, { onConflict: "id" });
+      if (error) throw new Error(`textos de apoio: ${error.message}`);
+    }
   }
   if (questions.length) {
-    // Nunca sobrescreve (ignoreDuplicates). Se criado_por apontar para um usuário que não existe
+    // Só chegam aqui questões novas ou não travadas. Se criado_por apontar para um usuário que não existe
     // neste projeto (FK para auth.users), grava sem autor em vez de falhar a prova inteira.
-    let { error } = await supabase.from("questions").upsert(questions, { onConflict: "id", ignoreDuplicates: true });
+    let { error } = await supabase.from("questions").upsert(questions, { onConflict: "id" });
     if (error && error.code === "23503") {
-      ({ error } = await supabase.from("questions").upsert(questions.map((q) => ({ ...q, criado_por: null })), { onConflict: "id", ignoreDuplicates: true }));
+      ({ error } = await supabase.from("questions").upsert(questions.map((q) => ({ ...q, criado_por: null })), { onConflict: "id" }));
     }
     if (error) throw new Error(`questões: ${error.message}`);
   }
   const achadas = new Set(questions.map((q) => q.id as string));
-  return { importadas: questions.length, ausentes: faltam.filter((id) => !achadas.has(id)) };
+  return {
+    importadas: faltam.filter((id) => achadas.has(id)).length,
+    atualizadas: atualizar.filter((id) => achadas.has(id)).length,
+    ausentes: faltam.filter((id) => !achadas.has(id)),
+  };
 }
 
 Deno.serve(async (req: Request) => {

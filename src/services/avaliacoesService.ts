@@ -700,6 +700,9 @@ export async function inserirQuestoesCotaArea(
 }
 
 export async function publicarAvaliacaoArea(provaId: string): Promise<void> {
+  // Última atualização das cópias antes de a prova publicada congelar o conteúdo das questões.
+  const { data: itens } = await supabase.from('prova_questoes').select('question_id').eq('prova_id', provaId);
+  await garantirQuestoesNoPrincipal((itens ?? []).map((r: { question_id: string }) => r.question_id)).catch(() => {});
   const { error } = await supabase.rpc('rpc_publicar_avaliacao_area', {
     p_prova_id: provaId,
   });
