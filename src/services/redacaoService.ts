@@ -71,6 +71,15 @@ export interface RedacaoDaLista {
   origem: string | null;
   /** O aluno digitou a redação na avaliação online. */
   tem_texto_digitado: boolean | null;
+  /** Corretor que assumiu esta redação (vários corretores por turma dividem o trabalho). */
+  responsavel_nome: string | null;
+  sou_responsavel: boolean | null;
+  /** Motivo pelo qual o usuário não pode gravar nesta redação; nulo = pode. */
+  bloqueio: string | null;
+  /** Dono da avaliação ou coordenação: passa por cima da divisão e pode redistribuir. */
+  sou_gestor: boolean | null;
+  /** Quantos corretores a turma tem nesta avaliação (a divisão só aparece com 2 ou mais). */
+  n_corretores: number | null;
 }
 
 export interface CompetenciaIa {
@@ -196,6 +205,25 @@ export async function obterRelatorioRedacoes(provaId: string): Promise<LinhaRela
   const { data, error } = await supabase.rpc('rpc_redacao_relatorio', { p_prova_id: provaId });
   if (error) throw error;
   return (data ?? []) as LinhaRelatorioRedacao[];
+}
+
+/** Assume a redação para o professor logado; quem a assumiu primeiro a mantém até liberá-la. */
+export async function assumirRedacao(provaId: string, alunoId: string, questionId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('rpc_redacao_assumir', { p_prova_id: provaId, p_aluno_id: alunoId, p_question_id: questionId });
+  if (error) throw error;
+  return String(data ?? '');
+}
+
+export async function liberarRedacao(provaId: string, alunoId: string, questionId: string): Promise<void> {
+  const { error } = await supabase.rpc('rpc_redacao_liberar', { p_prova_id: provaId, p_aluno_id: alunoId, p_question_id: questionId });
+  if (error) throw error;
+}
+
+/** Reparte as redações ainda não corrigidas entre os corretores de cada turma (só dono/coordenação). */
+export async function dividirRedacoes(provaId: string, refazer = false): Promise<{ atribuidas: number; sem_corretor: number }> {
+  const { data, error } = await supabase.rpc('rpc_redacao_dividir', { p_prova_id: provaId, p_refazer: refazer });
+  if (error) throw error;
+  return data as { atribuidas: number; sem_corretor: number };
 }
 
 export async function listarRedacoes(provaId: string): Promise<RedacaoDaLista[]> {
@@ -389,12 +417,13 @@ export async function corrigirRedacaoComIa(linhas: string[], tema: string, rubri
   });
 }
 
-/** Ids das provas que têm questão de redação — decide se o botão "Corrigir redações" aparece. */
+/**
+ * Ids das provas que têm questão de redação e que o usuário pode corrigir — decide se o botão
+ * "Corrigir redações" aparece. Vem de uma função do banco porque o corretor de uma turma não lê
+ * prova_questoes direto (RLS).
+ */
 export async function obterProvasComRedacao(): Promise<Set<string>> {
-  const { data, error } = await supabase
-    .from('prova_questoes')
-    .select('prova_id, questions!inner(tipo, discipline)')
-    .eq('questions.discipline', 'Redação');
+  const { data, error } = await supabase.rpc('rpc_provas_com_redacao');
   if (error || !data) return new Set();
-  return new Set((data as { prova_id: string }[]).map((r) => r.prova_id));
+  return new Set(data as string[]);
 }

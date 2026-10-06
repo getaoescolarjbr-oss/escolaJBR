@@ -335,6 +335,8 @@ export interface AvaliacaoArea {
   somente_nota?: boolean;
   /** Quem corrige/lança a nota de cada turma (add_corretores_e_avaliacao_somente_nota.sql). */
   corretores?: CorretorTurma[];
+  /** O usuário logado é corretor de alguma turma desta avaliação (mesmo sem cota nem ser o criador). */
+  sou_corretor?: boolean;
   /** Geral: qual área corrige cada turma — definido por quem criou (add_trava_area_e_distribuicao_correcao.sql). */
   correcao_areas?: { turma_id: string; area_conhecimento: string }[];
   /** Área: sempre true. Geral: quem criou ou a coordenação geral/gestão. */
