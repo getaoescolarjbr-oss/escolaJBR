@@ -56,7 +56,7 @@ export function QuestaoAlunoView({
           o texto que ela se refere. Sempre antes do comando, com o número grudado nele. */}
       {questao.support_text_content && (
         <div className="mb-2 pl-3 border-l-2 border-gray-700 text-sm text-ms-muted">
-          {renderLightMarkup(questao.support_text_content, `st-${questao.question_id}`, numeroPrefixo)}
+          {renderLightMarkup(questao.support_text_content, `st-${questao.question_id}`, numeroPrefixo, 'center', { prefixoEmLinhaPropria: true })}
           {questao.support_text_image_url && (
             <img src={questao.support_text_image_url} alt="" className="max-w-full rounded-lg my-2" />
           )}

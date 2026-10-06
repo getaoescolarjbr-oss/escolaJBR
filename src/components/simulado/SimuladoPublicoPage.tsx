@@ -150,7 +150,9 @@ export function SimuladoPublicoPage({ token }: Props) {
                             <span className="font-bold text-blue-400">
                               {i + 1}.{' '}
                               {q.valor != null && <span className="font-normal text-ms-muted text-xs">({Number(q.valor).toFixed(2)} pt) </span>}
-                            </span>
+                            </span>,
+                            'center',
+                            { prefixoEmLinhaPropria: true }
                           )}
                           {q.support_text_image_url && (
                             <img src={q.support_text_image_url} alt="" className="max-w-full rounded-lg my-2" />

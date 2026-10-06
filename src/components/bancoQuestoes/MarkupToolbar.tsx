@@ -173,7 +173,9 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
     const { inicio, fim } = limitesParagrafo(start);
     const paragrafo = value.slice(inicio, fim);
     const semMarcador = paragrafo.replace(/^(\s*)\[\[ALIGN:(left|center|right|justify)\]\]([\s\S]*?)\[\[\/ALIGN\]\](\s*)$/, '$1$3$4');
-    const novoParagrafo = align === 'justify' ? semMarcador : `[[ALIGN:${align}]]${semMarcador.trim()}[[/ALIGN]]`;
+    // "Justificar" grava o marcador como os demais: ele junta as linhas quebradas do texto colado
+    // (sem isso o navegador não justifica linhas que terminam em quebra forçada).
+    const novoParagrafo = `[[ALIGN:${align}]]${semMarcador.trim()}[[/ALIGN]]`;
     onChange(`${value.slice(0, inicio)}${novoParagrafo}${value.slice(fim)}`);
     const novoFim = inicio + novoParagrafo.length;
     requestAnimationFrame(() => {
@@ -260,7 +262,7 @@ export function MarkupToolbar({ textareaRef, value, onChange, folder, showImage 
       <ToolbarButton title="Alinhar à direita" onClick={() => alinharParagrafo('right')}>
         <TextAlignEnd className="h-3.5 w-3.5" />
       </ToolbarButton>
-      <ToolbarButton title="Justificar" onClick={() => alinharParagrafo('justify')}>
+      <ToolbarButton title="Justificar (junta as linhas quebradas e alinha nas duas margens)" onClick={() => alinharParagrafo('justify')}>
         <TextAlignJustify className="h-3.5 w-3.5" />
       </ToolbarButton>
 

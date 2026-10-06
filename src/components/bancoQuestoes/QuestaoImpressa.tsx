@@ -86,7 +86,7 @@ export function QuestaoImpressa({ questao: q, indice, valor, ocultarTextoApoio, 
           <>
             {apoio && (
               <div className="texto-apoio">
-                {renderLightMarkup(apoio.content, `st-${q.id}`, numeroPrefixo)}
+                {renderLightMarkup(apoio.content, `st-${q.id}`, numeroPrefixo, 'center', { prefixoEmLinhaPropria: true })}
                 {apoio.image_url && <img src={apoio.image_url} alt="" className="questao-img" />}
               </div>
             )}

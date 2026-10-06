@@ -73,7 +73,25 @@ export function parseInline(text: string, keyPrefix: string): ReactNode[] {
 // vê ao digitar linha por linha (ex.: marcadores de lista, um item por linha) e esperava ver
 // igual na prévia/impressão. Uma linha em branco (Enter duas vezes) continua separando em
 // parágrafos novos, tratado antes desta função.
-function renderWithBreaks(text: string, keyPrefix: string): ReactNode[] {
+// Início de item de lista/enumeração: a quebra de linha antes dele é intencional e se mantém
+// mesmo num parágrafo justificado (• item, - item, I. item, a) item, 1. item).
+const INICIO_ITEM_RE = /^\s*(?:[•◦▪▫●○■□▸►]\s|[–—-]\s|\(?[IVXLCDM]+[.)]\s|\(?[A-Ea-e][.)]\s|\(?\d{1,3}[.)]\s)/;
+
+// Parágrafo marcado como "justificado" no editor: o texto colado de PDF/OCR vem com quebra no fim
+// de toda linha, e o navegador não justifica uma linha que termina em quebra forçada — por isso
+// o botão parecia não fazer nada. Aqui as quebras de linha viram espaço (o texto reflui e justifica),
+// exceto antes de itens de lista.
+function juntarLinhasQuebradas(texto: string): string {
+  const linhas = texto.split('\n');
+  let saida = linhas[0] ?? '';
+  for (let i = 1; i < linhas.length; i++) {
+    saida += INICIO_ITEM_RE.test(linhas[i]) ? `\n${linhas[i]}` : ` ${linhas[i].trimStart()}`;
+  }
+  return saida;
+}
+
+function renderWithBreaks(text: string, keyPrefix: string, reflow = false): ReactNode[] {
+  if (reflow) text = juntarLinhasQuebradas(text);
   const linhas = text.replace(/ {2,}/g, ' ').split('\n');
   const nodes: ReactNode[] = [];
   linhas.forEach((linha, idx) => {
@@ -94,8 +112,24 @@ function normalizeHtmlArtifacts(content: string): string {
     .replace(/<\/i>/gi, '</em>');
 }
 
-export function renderLightMarkup(content: string, keyPrefix: string, leadingPrefix?: ReactNode, imageAlign: 'center' | 'left' = 'center') {
+export interface OpcoesRenderMarkup {
+  /**
+   * O número da questão (leadingPrefix) fica numa linha só dele, à esquerda, e o texto começa
+   * na linha de baixo. Usado nos textos associados, cujo título/abertura ficava estranho
+   * deslocado na linha do número.
+   */
+  prefixoEmLinhaPropria?: boolean;
+}
+
+export function renderLightMarkup(
+  content: string,
+  keyPrefix: string,
+  leadingPrefix?: ReactNode,
+  imageAlign: 'center' | 'left' = 'center',
+  opcoes: OpcoesRenderMarkup = {}
+) {
   content = normalizeHtmlArtifacts(content);
+  let alinhamentoPrimeiroParagrafo: 'left' | 'center' | 'right' | 'justify' | null = null;
   const isAlt = imageAlign === 'left';
   const blocks: { type: 'text' | 'ref' | 'img' | 'table'; content: string }[] = [];
   let lastIndex = 0;
@@ -245,9 +279,14 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
         const conteudo = alinhado ? alinhado[2] : para;
         const alignClass =
           align === 'left' ? 'text-left' : align === 'center' ? 'text-center' : align === 'right' ? 'text-right' : 'text-justify';
+        if (alinhamentoPrimeiroParagrafo === null && nodes.length === 0) {
+          alinhamentoPrimeiroParagrafo = align as 'left' | 'center' | 'right' | 'justify';
+        }
+        // O estilo em linha garante o alinhamento na janela de impressão, que não tem as classes
+        // do Tailwind. Sem marcador, vale o padrão (justificado) herdado do container.
         nodes.push(
-          <p key={key} className={alignClass}>
-            {renderWithBreaks(conteudo.trim(), key)}
+          <p key={key} className={alignClass} style={alinhado ? { textAlign: align as 'left' | 'center' | 'right' | 'justify' } : undefined}>
+            {renderWithBreaks(conteudo.trim(), key, alinhado ? align === 'justify' : false)}
           </p>
         );
       }
@@ -256,7 +295,9 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
 
   if (leadingPrefix) {
     const idx = nodes.findIndex((n) => isValidElement(n) && n.type === 'p');
-    if (idx === 0) {
+    // Parágrafo centralizado/à direita: colar o número nele arrastaria o número junto — fica à parte.
+    const primeiroAlinhadoNormal = alinhamentoPrimeiroParagrafo === null || alinhamentoPrimeiroParagrafo === 'justify' || alinhamentoPrimeiroParagrafo === 'left';
+    if (idx === 0 && primeiroAlinhadoNormal && !opcoes.prefixoEmLinhaPropria) {
       // O primeiro bloco já é um parágrafo de texto: gruda o número/valor nele mesmo, na
       // mesma linha ("1. (1,00 pt) Enunciado...").
       const p = nodes[0] as ReactElement<{ children?: ReactNode }>;
@@ -266,7 +307,7 @@ export function renderLightMarkup(content: string, keyPrefix: string, leadingPre
       // O primeiro bloco é imagem/tabela/etc (ou não há parágrafo nenhum): número/valor vai
       // numa linha própria ANTES de tudo — nunca "escondido" depois de uma imagem que abre
       // o enunciado.
-      nodes.unshift(<p key={`${keyPrefix}-prefix`}>{leadingPrefix}</p>);
+      nodes.unshift(<p key={`${keyPrefix}-prefix`} className="text-left" style={{ textAlign: 'left' }}>{leadingPrefix}</p>);
     }
   }
 
