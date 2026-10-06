@@ -1,5 +1,5 @@
 -- ====================================================================================
--- REMANEJAMENTO: o aluno novo herda as folhas (alocações) das avaliações
+-- REMANEJAMENTO: o aluno novo herda o código SGDE e as folhas (alocações) das avaliações
 --
 -- O remanejamento (StudentManager) marca o cadastro antigo como 'Remanejado' e cria um cadastro NOVO
 -- (id novo) na turma de destino. Avaliações já sorteadas só tinham `prova_alocacoes` para o id antigo,
@@ -7,18 +7,20 @@
 -- "Adicionar alunos novos", que ainda gerava um QR diferente do da folha já impressa.
 --
 -- rpc_remanejar_herdar(antigo, novo), chamada pelo StudentManager logo depois de criar o cadastro novo:
---   nas avaliações em que a TURMA NOVA participa, o antigo tem alocação, não respondeu nada e o novo
+--   1. o código SGDE é do aluno e o acompanha: passa do cadastro antigo (que fica desativado na turma de
+--      origem) para o novo. O índice alunos_codigo_sgde_idx é único em qualquer situação, então o antigo
+--      o libera primeiro. É o que já se fazia à mão nos remanejamentos anteriores.
+--   2. nas avaliações em que a TURMA NOVA participa, o antigo tem alocação, não respondeu nada e o novo
 --      ainda não tem alocação, passa a alocação (mesmo QR, mesma versão) para o novo.
 -- Onde o antigo já respondeu, ou a turma nova não participa, nada muda (a nota segue no cadastro em que foi feita).
--- O codigo_sgde NÃO é copiado: tem índice único e continua no cadastro antigo.
 --
--- Reversão: voltar prova_alocacoes.aluno_id ao cadastro antigo nas linhas afetadas; drop function
+-- Reversão: voltar o codigo_sgde e prova_alocacoes.aluno_id ao cadastro antigo nas linhas afetadas; drop function
 --   public.rpc_remanejar_herdar(uuid, uuid);
 -- ====================================================================================
 create or replace function public.rpc_remanejar_herdar(p_antigo uuid, p_novo uuid)
 returns jsonb
 language plpgsql security definer set search_path = public as $$
-declare v_old public.alunos; v_new public.alunos; v_movidas integer := 0;
+declare v_old public.alunos; v_new public.alunos; v_movidas integer := 0; v_sgde boolean := false;
 begin
   if not (public.usuario_tem_papel('GESTAO') or public.usuario_tem_papel('COORDENACAO')
           or public.usuario_tem_papel('SECRETARIA') or public.usuario_tem_papel('SECRETARIA_GERAL')) then
@@ -32,6 +34,12 @@ begin
     raise exception 'Estes cadastros não são um remanejamento (antigo Remanejado, novo ativo, mesmo nome, turmas diferentes).';
   end if;
 
+  if v_old.codigo_sgde is not null and v_new.codigo_sgde is null then
+    update public.alunos set codigo_sgde = null where id = p_antigo;
+    update public.alunos set codigo_sgde = v_old.codigo_sgde where id = p_novo;
+    v_sgde := true;
+  end if;
+
   with mov as (
     update public.prova_alocacoes pa set aluno_id = p_novo
      where pa.aluno_id = p_antigo
@@ -41,7 +49,7 @@ begin
     returning 1)
   select count(*) into v_movidas from mov;
 
-  return jsonb_build_object('alocacoes_movidas', v_movidas);
+  return jsonb_build_object('alocacoes_movidas', v_movidas, 'sgde_passado', v_sgde);
 end;
 $$;
 revoke all on function public.rpc_remanejar_herdar(uuid, uuid) from public, anon;
