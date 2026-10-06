@@ -113,7 +113,12 @@ async function importar(ids: string[], roles: string[], userId: string) {
 
   const { status, corpo } = await chamarAcervo("exportarParaPrincipal", { ids: alvo }, roles, userId);
   if (status !== 200) throw new Error(corpo.erro ?? "falha ao ler o acervo");
-  const { questions, support_texts } = corpo.data as { questions: Record<string, unknown>[]; support_texts: Record<string, unknown>[] };
+  // `busca_texto` é coluna gerada só do acervo (índice da busca por aproximação); o principal não tem.
+  const semColunasDoAcervo = (linhas: Record<string, unknown>[]) =>
+    linhas.map((l) => { const { busca_texto: _descartada, ...resto } = l; return resto; });
+  const dados = corpo.data as { questions: Record<string, unknown>[]; support_texts: Record<string, unknown>[] };
+  const questions = semColunasDoAcervo(dados.questions);
+  const support_texts = semColunasDoAcervo(dados.support_texts);
 
   if (support_texts.length) {
     // Texto de apoio compartilhado com alguma questão travada não é sobrescrito.
