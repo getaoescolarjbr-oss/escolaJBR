@@ -90,25 +90,29 @@ export const PROVA_LAYOUT_CSS = `
 
 .cartao-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-  gap: 4px 10px;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(var(--linhas, 15), auto);
+  grid-auto-flow: column;
+  gap: 2.2mm 4mm;
 }
 
-.cartao-item { display: flex; align-items: center; gap: 4px; font-size: 0.81em; }
+.cartao-item { display: flex; align-items: center; gap: 1.5mm; font-size: 10pt; }
 
-.cartao-num { font-weight: 900; width: 14px; flex-shrink: 0; }
+.cartao-num { font-weight: 900; width: 7mm; flex-shrink: 0; text-align: right; }
 
-.cartao-bolhas { display: flex; gap: 3px; }
+.cartao-bolhas { display: flex; gap: 1.4mm; }
 
 .bolha {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 1.15em;
-  height: 1.15em;
-  border: 1.1px solid #002677;
+  box-sizing: border-box;
+  width: 4.8mm;
+  height: 4.8mm;
+  border: 0.3mm solid #002677;
   border-radius: 50%;
-  font-size: 0.62em;
+  font-size: 7.5pt;
+  line-height: 1;
   font-weight: 700;
   color: #002677;
   flex-shrink: 0;

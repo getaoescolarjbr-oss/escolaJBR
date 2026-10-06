@@ -43,7 +43,7 @@ export function GerarProvaModal({ questoes, onClose }: Props) {
   const cartaoResposta = itensCartao.length === 0 ? null : (
     <div className="cartao-resposta">
       <div className="cartao-titulo">Cartão resposta</div>
-      <div className="cartao-grid">
+      <div className="cartao-grid" style={{ '--linhas': Math.ceil(itensCartao.length / 4) } as React.CSSProperties}>
         {itensCartao.map(({ q, numero }) => (
           <div className="cartao-item" key={q.id}>
             <span className="cartao-num">{numero}.</span>

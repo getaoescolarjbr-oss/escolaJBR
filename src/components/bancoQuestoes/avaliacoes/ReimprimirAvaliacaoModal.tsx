@@ -169,7 +169,7 @@ export function ReimprimirAvaliacaoModal({ avaliacao, onClose }: Props) {
                 {questoes.some(entraNoCartaoResposta) && (
                   <div className="cartao-resposta">
                     <div className="cartao-titulo">Cartão resposta</div>
-                    <div className="cartao-grid">
+                    <div className="cartao-grid" style={{ '--linhas': Math.ceil(questoes.filter(entraNoCartaoResposta).length / 4) } as React.CSSProperties}>
                       {questoes
                         .map((q, i) => ({ q, numero: i + 1 }))
                         .filter(({ q }) => entraNoCartaoResposta(q))
