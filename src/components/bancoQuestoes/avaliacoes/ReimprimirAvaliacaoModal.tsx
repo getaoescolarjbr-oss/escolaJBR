@@ -9,6 +9,7 @@ import {
   obterQuestoesDaAvaliacao,
 } from '../../../services/avaliacoesService';
 import { buscarQuestoesPorIds } from '../../../services/bancoQuestoesService';
+import { garantirQuestoesNoPrincipal } from '../../../services/acervoClient';
 import { QuestaoImpressa } from '../QuestaoImpressa';
 
 interface Props {
@@ -30,6 +31,14 @@ export function ReimprimirAvaliacaoModal({ avaliacao, onClose }: Props) {
     (async () => {
       try {
         setErro(null);
+        // Traz a versão mais recente do acervo para as cópias que ainda estão só em rascunhos
+        // (as de prova publicada ficam congeladas pelo servidor).
+        try {
+          const atuais = await obterQuestoesDaAvaliacao(avaliacao.id);
+          await garantirQuestoesNoPrincipal((atuais ?? []).map((i) => i.question_id));
+        } catch {
+          // segue com as cópias que já existem
+        }
         // Tentativa 1: obterQuestoesCompletasDaAvaliacao (join direto de prova_questoes com questions)
         try {
           const { questoes: qCompletas, valoresPorQuestao } = await obterQuestoesCompletasDaAvaliacao(avaliacao.id);
