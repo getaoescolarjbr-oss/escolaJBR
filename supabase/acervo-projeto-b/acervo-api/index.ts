@@ -93,16 +93,30 @@ const OPS: Record<string, (a: Args, roles: string[], userId: string | null) => P
     const page = f.page ?? 0;
     const pageSize = Math.min(f.pageSize ?? 20, 100);
 
+    const termo = String(f.busca ?? "").trim();
+
+    // Busca por aproximação (função buscar_questoes_aprox): ignora acento, maiúscula e pontuação e
+    // tolera erro de letra; devolve as mais parecidas primeiro. Termo curto (1-2 letras) ou falha da
+    // função caem na busca literal de antes.
+    let ordemRelevancia: string[] | null = null;
+    if (termo.length >= 3) {
+      const { data, error } = await supabase.rpc("buscar_questoes_aprox", { p_busca: termo, p_limite: 120 });
+      if (!error) {
+        ordemRelevancia = (data ?? []).map((r: { question_id: string }) => r.question_id);
+        if (!ordemRelevancia!.length) return { questoes: [], total: 0 };
+      }
+    }
+
+    // Busca literal (termo de 1-2 letras ou função indisponível). A lista de textos associados só entra
+    // quando é curta: com muitos ids a URL do filtro estoura o limite e a busca falhava com "Bad Request".
     let idsTextoApoio: string[] = [];
-    if (f.busca) {
-      const { data } = await supabase.from("support_texts").select("id").ilike("content", `%${f.busca}%`);
+    if (termo && !ordemRelevancia) {
+      const { data } = await supabase.from("support_texts").select("id").ilike("content", `%${termo}%`).limit(60);
       idsTextoApoio = (data ?? []).map((t: { id: string }) => t.id);
     }
-    let q = supabase.from("questions").select(CAMPOS, { count: "exact" })
-      .eq("active", true)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: false })
-      .range(page * pageSize, page * pageSize + pageSize - 1);
+    let q = supabase.from("questions").select(CAMPOS, { count: "exact" }).eq("active", true);
+    if (ordemRelevancia) q = q.in("id", ordemRelevancia);
+    else q = q.order("created_at", { ascending: false }).order("id", { ascending: false }).range(page * pageSize, page * pageSize + pageSize - 1);
     if (f.discipline) q = q.eq("discipline", f.discipline);
     if (f.level) q = q.eq("level", f.level);
     if (f.area) q = q.eq("area", f.area);
@@ -112,8 +126,8 @@ const OPS: Record<string, (a: Args, roles: string[], userId: string | null) => P
     if (f.assunto) q = q.eq("assunto", f.assunto);
     if (f.topico) q = q.eq("topico", f.topico);
     if (f.tipo) q = q.eq("tipo", f.tipo);
-    if (f.busca) {
-      const b = String(f.busca).replace(/[,()]/g, "_");
+    if (termo && !ordemRelevancia) {
+      const b = termo.replace(/[,()]/g, "_");
       const cond = [`statement.ilike.%${b}%`];
       if (idsTextoApoio.length) cond.push(`support_text_id.in.(${idsTextoApoio.join(",")})`);
       q = q.or(cond.join(","));
@@ -121,6 +135,12 @@ const OPS: Record<string, (a: Args, roles: string[], userId: string | null) => P
     if (f.apenasMinhas) q = q.eq("criado_por", f.apenasMinhas);
     const { data, error, count } = await q;
     if (error) falha(error);
+    if (ordemRelevancia) {
+      // Sem paginação no banco: são no máximo 120 candidatas, ordenadas aqui pela relevância.
+      const posicao = new Map(ordemRelevancia.map((id, i) => [id, i]));
+      const ordenadas = ((data ?? []) as { id: string }[]).sort((x, y) => (posicao.get(x.id) ?? 0) - (posicao.get(y.id) ?? 0));
+      return { questoes: ordenadas.slice(page * pageSize, page * pageSize + pageSize), total: ordenadas.length };
+    }
     return { questoes: data ?? [], total: count ?? 0 };
   },
 
