@@ -78,7 +78,7 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
   // aqui mesmo, na hora, em vez de deixar pendente pra um passo de correção separado.
   const [pendentesDissert, setPendentesDissert] = useState<ItemPendenteCorrecao[]>([]);
   const [notasDissert, setNotasDissert] = useState<Record<string, string>>({});
-  const [salvandoDissertId, setSalvandoDissertId] = useState<string | null>(null);
+  const [salvandoTudo, setSalvandoTudo] = useState(false);
   // Status do lançamento automático pros professores selecionados, depois de gravar o
   // cartão — separado de `erro` porque não é um erro de LEITURA, é do passo seguinte.
   const [avisoLancamento, setAvisoLancamento] = useState<string | null>(null);
@@ -286,10 +286,10 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
 
   /**
    * Roda depois de gravar o cartão com sucesso (câmera ou botão "Gravar"): mostra o
-   * resultado, busca as questões dissertativas/redação deste aluno (se houver, pra
-   * digitar a nota delas aqui mesmo) e já lança a nota pros professores selecionados —
-   * sem confirmação, porque aqui é sempre o valor recém-corrigido substituindo o que
-   * havia antes, que é exatamente o resultado esperado de corrigir de novo.
+   * resultado e busca as questões dissertativas/redação deste aluno (se houver, pra digitar
+   * a nota delas aqui mesmo). A nota NÃO é lançada no boletim aqui: só quando o professor
+   * clica em "Salvar" (salvarEProximo), depois de conferir a leitura, anular o que for
+   * preciso e digitar as notas das questões abertas.
    */
   async function posGravar(alvo: FolhaIdentificada, r: ResultadoCorrecaoOmr) {
     setResultado(r);
@@ -302,18 +302,6 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
       setPendentesDissert(itens.filter((i) => i.aluno_id === alvo.aluno_id));
     } catch {
       setPendentesDissert([]);
-    }
-
-    try {
-      await lancarNotasNoBoletim(alvo.prova_id, true);
-      setAvisoLancamento('Nota lançada para os professores selecionados.');
-    } catch (eLancar) {
-      // "sem nota"/"não lança no boletim" são configuração normal da prova, não erro —
-      // não vale assustar o professor com isso a cada cartão gravado.
-      const msg = extrairMensagemErro(eLancar);
-      if (!/sem nota|não lança no boletim/i.test(msg)) {
-        setAvisoLancamento(`Não foi possível lançar a nota no boletim: ${msg}`);
-      }
     }
   }
 
@@ -355,40 +343,85 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
     }
   }
 
-  async function salvarNotaDissert(item: ItemPendenteCorrecao) {
+  /** Nota digitada (ou a já gravada) de uma questão aberta, como texto; vazio = sem nota. */
+  const textoNota = (item: ItemPendenteCorrecao) =>
+    (notasDissert[item.item_id] ?? (item.valor_obtido != null ? String(item.valor_obtido) : '')).replace(',', '.').trim();
+
+  /**
+   * Botão "Salvar": grava de uma vez as notas digitadas das questões abertas, lança a nota
+   * pros professores selecionados (valor já com as anulações e as notas abertas) e volta a
+   * procurar o QR — a câmera segue aberta para a próxima prova.
+   */
+  async function salvarEProximo() {
     const alvo = folhaRef.current;
-    if (!alvo) return;
-    const bruto = (notasDissert[item.item_id] ?? '').replace(',', '.').trim();
-    const valorMax = Number(item.valor) || 0;
-    const valor = Number(bruto);
-    if (bruto === '' || !Number.isFinite(valor) || valor < 0 || valor > valorMax) {
-      setErro(`Informe uma nota entre 0 e ${valorMax.toFixed(2)} para a questão ${item.ordem}.`);
-      return;
+    if (!alvo || !resultado) return;
+
+    const aSalvar: { item: ItemPendenteCorrecao; valor: number }[] = [];
+    let semNota = 0;
+    for (const item of pendentesDissert) {
+      const bruto = textoNota(item);
+      if (bruto === '') {
+        if (!item.corrigido) semNota++;
+        continue;
+      }
+      const valorMax = Number(item.valor) || 0;
+      const valor = Number(bruto);
+      if (!Number.isFinite(valor) || valor < 0 || valor > valorMax) {
+        setErro(`Informe uma nota entre 0 e ${valorMax.toFixed(2)} para a questão ${item.ordem}.`);
+        return;
+      }
+      if (!item.corrigido || Number(item.valor_obtido) !== valor) aSalvar.push({ item, valor });
     }
-    setSalvandoDissertId(item.item_id);
+    if (semNota > 0 && !window.confirm(`${semNota} questão(ões) aberta(s) está(ão) sem nota. Salvar mesmo assim? A nota lançada fica sem elas.`)) return;
+
+    setSalvandoTudo(true);
+    setErro(null);
     try {
-      await corrigirItemDissertativo(item.item_id, valor, null);
-      setPendentesDissert((atual) =>
-        atual.map((i) => (i.item_id === item.item_id ? { ...i, corrigido: true, valor_obtido: valor } : i))
-      );
-      // A nota da prova mudou — reconsulta a folha pra atualizar o total mostrado, e
-      // relança pros professores selecionados com o valor novo.
-      const atualizada = await identificarFolha(alvo.codigo);
-      setResultado((atual) => (atual ? { ...atual, nota: atualizada.nota } : atual));
+      for (const { item, valor } of aSalvar) {
+        await corrigirItemDissertativo(item.item_id, valor, null);
+        setPendentesDissert((atual) => atual.map((i) => (i.item_id === item.item_id ? { ...i, corrigido: true, valor_obtido: valor } : i)));
+      }
       try {
         await lancarNotasNoBoletim(alvo.prova_id, true);
-        setAvisoLancamento('Nota lançada para os professores selecionados.');
-      } catch {
-        // Silencioso aqui: já avisamos uma vez em posGravar; não repetir a cada questão
-        // dissertativa salva evita empilhar avisos pra um problema já sinalizado.
+      } catch (eLancar) {
+        // "sem nota"/"não lança no boletim" são configuração normal da prova, não erro.
+        const msg = extrairMensagemErro(eLancar);
+        if (!/sem nota|não lança no boletim/i.test(msg)) {
+          setErro(`As notas foram gravadas, mas não foi possível lançar no boletim: ${msg}`);
+          return;
+        }
       }
+      void bipe('sucesso');
+      reiniciar();
     } catch (e) {
-      console.error('Erro ao salvar nota da questão aberta:', e);
+      console.error('Erro ao salvar a correção:', e);
       setErro(extrairMensagemErro(e));
+      void bipe('erro');
     } finally {
-      setSalvandoDissertId(null);
+      setSalvandoTudo(false);
     }
   }
+
+  /** Há uma leitura gravada cuja nota ainda não foi lançada (o professor não clicou em Salvar). */
+  const aguardandoSalvar = !!folha && !!resultado && fase === 'PRONTO';
+
+  function fechar() {
+    if (aguardandoSalvar && !window.confirm('Esta correção ainda não foi salva: a nota não foi lançada. Sair mesmo assim?')) return;
+    onFechar();
+  }
+
+  // Nota com o que foi digitado nas questões abertas (a do servidor só conta o que já está gravado).
+  const notaPrevia = (() => {
+    if (!resultado || resultado.nota == null || pendentesDissert.length === 0) return null;
+    let n = Number(resultado.nota);
+    for (const item of pendentesDissert) {
+      const t = textoNota(item);
+      const digitada = t === '' ? null : Number(t);
+      if (digitada == null || !Number.isFinite(digitada)) continue;
+      n += digitada - (item.corrigido ? Number(item.valor_obtido ?? 0) : 0);
+    }
+    return n;
+  })();
 
   const provaDiferente =
     !!provaEsperadaId && !!folha && folha.prova_id !== provaEsperadaId;
@@ -408,7 +441,7 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
             <Keyboard className="w-3.5 h-3.5" />
             {manual ? 'Voltar à câmera' : 'Digitar'}
           </button>
-          <button onClick={onFechar} className="text-ms-muted hover:text-ms-main"><X className="w-5 h-5" /></button>
+          <button onClick={fechar} className="text-ms-muted hover:text-ms-main"><X className="w-5 h-5" /></button>
         </div>
       </div>
 
@@ -605,18 +638,23 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
                   {resultado.modo_nota !== 'SEM_NOTA' && resultado.nota != null && (
                     <p
                       className="text-3xl font-black leading-tight tracking-tight"
-                      style={{ color: corPorPorcentagem((Number(resultado.nota) / Number(resultado.valor_total)) * 100) }}
+                      style={{ color: corPorPorcentagem(((notaPrevia ?? Number(resultado.nota)) / Number(resultado.valor_total)) * 100) }}
                     >
-                      {Number(resultado.nota).toFixed(2)}
+                      {(notaPrevia ?? Number(resultado.nota)).toFixed(2)}
                       <span className="text-sm font-medium text-ms-muted"> / {Number(resultado.valor_total).toFixed(2)}</span>
                     </p>
                   )}
+                  {fase === 'PRONTO' && (
+                    <p className="text-[11px] text-amber-300 font-medium">Nota ainda não lançada — confira e clique em Salvar.</p>
+                  )}
                 </div>
                 <button
-                  onClick={reiniciar}
-                  className="px-4 py-1.5 bg-ms-blue text-white rounded-lg text-xs font-bold hover:bg-blue-600 shrink-0"
+                  onClick={() => void salvarEProximo()}
+                  disabled={salvandoTudo || fase !== 'PRONTO'}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-ms-blue text-white rounded-lg text-xs font-bold hover:bg-blue-600 shrink-0 disabled:opacity-40"
+                  title="Grava as notas das questões abertas, lança a nota e abre a câmera para a próxima prova"
                 >
-                  Próximo
+                  {salvandoTudo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Salvar e próxima
                 </button>
               </div>
             )}
@@ -624,7 +662,7 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
             {resultado && pendentesDissert.length > 0 && (
               <div className="space-y-2 bg-ms-dark border border-gray-800 rounded-lg p-2.5">
                 <p className="text-[11px] font-bold text-ms-muted">
-                  Questão(ões) aberta(s) desta prova — digite a nota agora, sem precisar corrigir depois:
+                  Questão(ões) aberta(s) desta prova — digite a nota e clique em Salvar para lançar tudo de uma vez:
                 </p>
                 {pendentesDissert.map((item) => (
                   <div key={item.item_id} className="flex items-center gap-2">
@@ -641,14 +679,7 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
                       onChange={(e) => setNotasDissert((prev) => ({ ...prev, [item.item_id]: e.target.value }))}
                       className="w-20 px-2 py-1 bg-ms-card border border-gray-700 rounded text-ms-main text-xs outline-none focus:ring-2 focus:ring-ms-blue"
                     />
-                    <button
-                      onClick={() => void salvarNotaDissert(item)}
-                      disabled={salvandoDissertId === item.item_id}
-                      className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-ms-blue text-white text-[11px] font-bold hover:bg-blue-600 disabled:opacity-40 shrink-0"
-                    >
-                      {salvandoDissertId === item.item_id ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Salvar'}
-                    </button>
-                    {item.corrigido && salvandoDissertId !== item.item_id && (
+                    {item.corrigido && (
                       <Check className="w-3.5 h-3.5 text-green-400 shrink-0" />
                     )}
                   </div>
