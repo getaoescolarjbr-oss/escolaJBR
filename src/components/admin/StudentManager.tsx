@@ -211,7 +211,7 @@ export function StudentManager({ theme, professor }: StudentManagerProps) {
             : 1;
 
           // 3. Insert new student in the target class
-          const { error: insertError } = await supabase
+          const { data: novoAluno, error: insertError } = await supabase
             .from('alunos')
             .insert([{
               nome: formData.nome,
@@ -220,9 +220,23 @@ export function StudentManager({ theme, professor }: StudentManagerProps) {
               status: 'Ativo',
               cid_codigo: formData.cid_codigo || null,
               cid_descricao: formData.cid_descricao || null
-            }]);
-          
+            }])
+            .select('id')
+            .single();
+
           if (insertError) throw insertError;
+
+          // 4. As avaliações já sorteadas só conhecem o cadastro antigo: passa as folhas (mesmo QR e
+          // versão) para o novo, senão ele não aparece na turma nova. Falha aqui não desfaz o
+          // remanejamento; o professor ainda pode usar "Adicionar alunos novos" nas folhas.
+          const { error: herdarError } = await supabase.rpc('rpc_remanejar_herdar', {
+            p_antigo: editingStudent.id,
+            p_novo: novoAluno.id,
+          });
+          if (herdarError) {
+            console.error('Erro ao repassar as avaliações ao aluno remanejado:', herdarError);
+            alert('Aluno remanejado, mas não foi possível repassar as avaliações já sorteadas a ele. Use "Adicionar alunos novos" nas folhas da avaliação.');
+          }
         } else {
           // Ativo / Cancelada
           const { error: updateError } = await supabase
