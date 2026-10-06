@@ -174,6 +174,7 @@ export function EditarAvaliacaoModal({ avaliacao, onClose, onSalvo, questoesExtr
                   modoNota: avaliacao.modo_nota,
                   ponderadaEscopo: avaliacao.ponderada_escopo,
                   lancarNoBoletim: avaliacao.lancar_no_boletim,
+                  mostrarPontuacao: avaliacao.mostrar_pontuacao ?? true,
                 }}
                 salvando={salvando}
                 textoBotaoContinuar="Salvar alterações"

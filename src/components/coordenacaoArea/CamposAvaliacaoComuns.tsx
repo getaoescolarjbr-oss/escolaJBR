@@ -29,6 +29,8 @@ export interface ValoresCamposAvaliacao {
   posicaoCartao: PosicaoCartao;
   modoNota: ModoNota;
   ponderadaEscopo: PonderadaEscopo;
+  /** Mostrar "(x,xx pt)" em cada questão na prova impressa e para o aluno. */
+  mostrarPontuacao: boolean;
 }
 
 // Com embaralhamento, versão além da A sai diferente — então no mínimo 2 versões.
@@ -45,7 +47,7 @@ interface Props {
 
 // Campos compartilhados entre NovaAvaliacaoAreaModal e NovaAvaliacaoGeralModal.
 export function CamposAvaliacaoComuns({ valores, onChange, turmasSelecionadas, onErro }: Props) {
-  const { titulo, bimestre, modo, valorTotal, dataAplicacao, prazoEntrega, instrucoes, embaralhar, qtdVersoes, modoVersoes, posicaoCartao, modoNota, ponderadaEscopo } = valores;
+  const { titulo, bimestre, modo, valorTotal, dataAplicacao, prazoEntrega, instrucoes, embaralhar, qtdVersoes, modoVersoes, posicaoCartao, modoNota, ponderadaEscopo, mostrarPontuacao } = valores;
   const [salvandoPadrao, setSalvandoPadrao] = useState(false);
   const [contandoAlunos, setContandoAlunos] = useState(false);
 
@@ -111,7 +113,11 @@ export function CamposAvaliacaoComuns({ valores, onChange, turmasSelecionadas, o
           <label className="block text-xs font-bold text-ms-muted mb-1">Como calcular a nota</label>
           <select
             value={modoNota}
-            onChange={(e) => onChange({ modoNota: e.target.value as ModoNota })}
+            onChange={(e) => {
+              const novo = e.target.value as ModoNota;
+              // Na ponderada o valor por questão não é fixo (depende do aluno de melhor desempenho).
+              onChange(novo === 'PONDERADA' ? { modoNota: novo, mostrarPontuacao: false } : { modoNota: novo });
+            }}
             className="w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm font-bold text-ms-main outline-none focus:ring-2 focus:ring-ms-blue"
           >
             {(Object.keys(MODO_NOTA_LABEL) as ModoNota[]).map((m) => (
@@ -141,6 +147,23 @@ export function CamposAvaliacaoComuns({ valores, onChange, turmasSelecionadas, o
               : 'Nada vai para o boletim: ao publicar, nenhum campo de nota é criado no diário. A correção e os relatórios continuam normalmente.'}
           </p>
         )}
+
+        <label className="sm:col-span-2 md:col-span-3 flex items-start gap-2 text-sm text-ms-main cursor-pointer">
+          <input
+            type="checkbox"
+            className="mt-0.5"
+            checked={mostrarPontuacao}
+            onChange={(e) => onChange({ mostrarPontuacao: e.target.checked })}
+          />
+          <span>
+            Mostrar a pontuação de cada questão na prova
+            <span className="block text-xs text-ms-muted">
+              {modoNota === 'PONDERADA'
+                ? 'Na nota ponderada o valor por questão não é fixo (depende do melhor desempenho), então normalmente fica desmarcado.'
+                : 'Imprime "(x,xx pt)" ao lado do número de cada questão, na prova impressa e para o aluno.'}
+            </span>
+          </span>
+        </label>
 
         <div>
           <label className="block text-xs font-bold text-ms-muted mb-1">Modo de Aplicação</label>

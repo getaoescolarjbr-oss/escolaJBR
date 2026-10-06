@@ -9,7 +9,7 @@ import { CARTAO_CSS, calcularGeometria } from '../../../utils/cartaoResposta';
 import { FOLHA_REDACAO_CSS } from '../../../utils/folhaRedacao';
 import { aplicarVersao, itensCartaoDaVersao } from '../../../utils/versaoProva';
 import { adicionarAlunosNovos, gerarVersoes, listarAlocacoes } from '../../../services/correcaoOmrService';
-import { obterQuestoesCompletasDaAvaliacao } from '../../../services/avaliacoesService';
+import { definirMostrarPontuacao, obterMostrarPontuacao, obterQuestoesCompletasDaAvaliacao } from '../../../services/avaliacoesService';
 import { QuestaoImpressa } from '../QuestaoImpressa';
 import { CartaoRespostaFolha } from './CartaoRespostaFolha';
 import { FolhaRedacaoJBR } from './FolhaRedacaoJBR';
@@ -231,6 +231,16 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
   const [colunas, setColunas] = useState<1 | 2>(2);
   // Folha de redação (30 linhas) impressa à parte para cada questão de redação da prova.
   const [folhaRedacao, setFolhaRedacao] = useState(avaliacao.folha_redacao ?? true);
+  const [mostrarPontuacao, setMostrarPontuacao] = useState<boolean>(avaliacao.mostrar_pontuacao ?? true);
+  // Avaliações de área/geral vêm de uma listagem sem essa coluna: lê o valor salvo na prova.
+  useEffect(() => {
+    obterMostrarPontuacao(avaliacao.id).then(setMostrarPontuacao).catch(() => {});
+  }, [avaliacao.id]);
+  function alternarPontuacao(mostrar: boolean) {
+    setMostrarPontuacao(mostrar);
+    // Grava na avaliação para valer nas próximas impressões; sem permissão, vale só para esta.
+    definirMostrarPontuacao(avaliacao.id, mostrar).catch(() => {});
+  }
   const [modoSeparador, setModoSeparador] = useState<ModoSeparador>('RASCUNHO_VERSO');
   // Vem da configuração da avaliação, mas é ajustável aqui: reimprimir de outro jeito não
   // deveria obrigar o professor a voltar e editar a avaliação inteira. cartao_separado é
@@ -451,7 +461,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
 
             <div className={`questoes-coluna${colunas === 2 ? ' duas-colunas' : ''}`}>
               {daVersao.map((q, i) => (
-                <QuestaoImpressa key={q.id} questao={q} indice={i} valor={valores[q.id] ?? 0} semLinhasResposta={folhaRedacao} />
+                <QuestaoImpressa key={q.id} questao={q} indice={i} valor={mostrarPontuacao ? valores[q.id] ?? 0 : undefined} semLinhasResposta={folhaRedacao} />
               ))}
             </div>
 
@@ -663,6 +673,17 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                     {(Object.keys(POSICAO_CARTAO_LABEL) as PosicaoCartao[]).map((p) => (
                       <option key={p} value={p}>{POSICAO_CARTAO_LABEL[p]}</option>
                     ))}
+                  </select>
+                </Campo>
+                <Campo label="Pontuação das questões">
+                  <select
+                    value={mostrarPontuacao ? 'SIM' : 'NAO'}
+                    onChange={(e) => alternarPontuacao(e.target.value === 'SIM')}
+                    className={SELECT_CLS}
+                    title='Mostra ou oculta o "(x,xx pt)" ao lado do número de cada questão'
+                  >
+                    <option value="SIM">Mostrar</option>
+                    <option value="NAO">Ocultar</option>
                   </select>
                 </Campo>
                 {temRedacao && (

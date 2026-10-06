@@ -4,6 +4,8 @@ import type { Question } from '../../../types/bancoQuestoes';
 import type { Avaliacao } from '../../../types/avaliacoes';
 import { PROVA_LAYOUT_CSS, PROVA_QUESTOES_CSS, entraNoCartaoResposta, printProva } from '../../../utils/printProva';
 import {
+  definirMostrarPontuacao,
+  obterMostrarPontuacao,
   obterQuestoesAvaliacaoPreview,
   obterQuestoesCompletasDaAvaliacao,
   obterQuestoesDaAvaliacao,
@@ -25,7 +27,24 @@ export function ReimprimirAvaliacaoModal({ avaliacao, onClose }: Props) {
   const [questoes, setQuestoes] = useState<Question[] | null>(null);
   const [valores, setValores] = useState<Record<string, number>>({});
   const [erro, setErro] = useState<string | null>(null);
+  const [mostrarPontuacao, setMostrarPontuacao] = useState<boolean>(avaliacao.mostrar_pontuacao ?? true);
+  const [avisoPontuacao, setAvisoPontuacao] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
+
+  // Avaliações de área/geral vêm de uma listagem sem essa coluna: lê o valor salvo na prova.
+  useEffect(() => {
+    obterMostrarPontuacao(avaliacao.id).then(setMostrarPontuacao).catch(() => {});
+  }, [avaliacao.id]);
+
+  async function alternarPontuacao(mostrar: boolean) {
+    setMostrarPontuacao(mostrar);
+    setAvisoPontuacao(null);
+    try {
+      await definirMostrarPontuacao(avaliacao.id, mostrar);
+    } catch {
+      setAvisoPontuacao('A escolha vale só para esta impressão: você não tem permissão para gravá-la na avaliação.');
+    }
+  }
 
   useEffect(() => {
     (async () => {
@@ -103,7 +122,7 @@ export function ReimprimirAvaliacaoModal({ avaliacao, onClose }: Props) {
             criado_por: null,
           }));
           setQuestoes(adaptadas);
-          setValores(Object.fromEntries(previewItens.map((p) => [p.question_id, p.valor])));
+          setValores(Object.fromEntries(previewItens.map((p) => [p.question_id, Number(p.valor ?? 0)])));
           return;
         }
 
@@ -129,6 +148,10 @@ export function ReimprimirAvaliacaoModal({ avaliacao, onClose }: Props) {
       <div className="bg-ms-card border border-gray-800 rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800 no-print">
           <h2 className="text-lg font-bold text-ms-main">Reimprimir — {avaliacao.titulo}</h2>
+          <label className="ml-auto mr-4 flex items-center gap-2 text-xs font-bold text-ms-main cursor-pointer">
+            <input type="checkbox" checked={mostrarPontuacao} onChange={(e) => alternarPontuacao(e.target.checked)} />
+            Mostrar a pontuação das questões
+          </label>
           <button onClick={onClose} className="text-ms-muted hover:text-ms-main">
             <X className="w-5 h-5" />
           </button>
@@ -136,6 +159,7 @@ export function ReimprimirAvaliacaoModal({ avaliacao, onClose }: Props) {
 
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {erro && <p className="text-sm text-red-400 font-bold">{erro}</p>}
+          {avisoPontuacao && <p className="text-xs text-amber-500 font-bold">{avisoPontuacao}</p>}
           {!questoes && !erro && <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" />}
 
           {questoes && (
@@ -170,7 +194,7 @@ export function ReimprimirAvaliacaoModal({ avaliacao, onClose }: Props) {
 
                 <div className="questoes-coluna duas-colunas">
                   {questoes.map((q, i) => (
-                    <QuestaoImpressa key={q.id} questao={q} indice={i} valor={valores[q.id] ?? 0} />
+                    <QuestaoImpressa key={q.id} questao={q} indice={i} valor={mostrarPontuacao ? valores[q.id] ?? 0 : undefined} />
                   ))}
                 </div>
 

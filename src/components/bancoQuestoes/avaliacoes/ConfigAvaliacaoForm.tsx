@@ -45,6 +45,7 @@ export interface ConfigAvaliacaoInicial {
   modoNota?: ModoNota;
   ponderadaEscopo?: PonderadaEscopo;
   lancarNoBoletim?: boolean;
+  mostrarPontuacao?: boolean;
 }
 
 interface Props {
@@ -109,6 +110,7 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
   const [lancarNoBoletim, setLancarNoBoletim] = useState<boolean>(
     inicial?.lancarNoBoletim ?? (inicial?.tipo ?? 'AVALIACAO') === 'AVALIACAO'
   );
+  const [mostrarPontuacao, setMostrarPontuacao] = useState<boolean>(inicial?.mostrarPontuacao ?? inicial?.modoNota !== 'PONDERADA');
   const [turmas, setTurmas] = useState<{ id: string; nome: string }[]>([]);
   const [turmaIds, setTurmaIds] = useState<Set<string>>(new Set(inicial?.turmaIds ?? []));
   const [loadingTurmas, setLoadingTurmas] = useState(true);
@@ -250,6 +252,7 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
         modoNota,
         ponderadaEscopo,
         lancarNoBoletim,
+        mostrarPontuacao,
       },
       valoresPorQuestao,
       turmaNomes,
@@ -346,7 +349,16 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="text-xs font-bold text-ms-muted">Como calcular a nota</label>
-            <select className={inputClass} value={modoNota} onChange={(e) => setModoNota(e.target.value as ModoNota)}>
+            <select
+              className={inputClass}
+              value={modoNota}
+              onChange={(e) => {
+                const novo = e.target.value as ModoNota;
+                setModoNota(novo);
+                // Na ponderada o valor por questão não é fixo; sugere esconder a pontuação.
+                if (novo === 'PONDERADA') setMostrarPontuacao(false);
+              }}
+            >
               {(Object.keys(MODO_NOTA_LABEL) as ModoNota[]).map((m) => (
                 <option key={m} value={m}>{MODO_NOTA_LABEL[m]}</option>
               ))}
@@ -372,6 +384,18 @@ export function ConfigAvaliacaoForm({ questoes, inicial, salvando, textoBotaoCon
             </div>
           )}
         </div>
+
+        <label className="flex items-start gap-2 text-sm text-ms-main cursor-pointer">
+          <input type="checkbox" className="mt-0.5" checked={mostrarPontuacao} onChange={(e) => setMostrarPontuacao(e.target.checked)} />
+          <span>
+            Mostrar a pontuação de cada questão na prova
+            <span className="block text-xs text-ms-muted">
+              {modoNota === 'PONDERADA'
+                ? 'Na nota ponderada o valor por questão não é fixo, então normalmente fica desmarcado.'
+                : 'Imprime "(x,xx pt)" ao lado do número de cada questão, na prova impressa e para o aluno.'}
+            </span>
+          </span>
+        </label>
 
         {modoNota === 'PONDERADA' && (
           <p className="text-xs text-ms-muted leading-relaxed">

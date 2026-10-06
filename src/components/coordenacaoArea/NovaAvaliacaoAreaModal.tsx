@@ -6,7 +6,7 @@ import type { AreaConhecimento } from '../../utils/areasConhecimento';
 import { disciplinaPertenceAArea, normalizarArea } from '../../utils/areasConhecimento';
 import type { AvaliacaoArea, CotaProfessorInput, NovaAvaliacaoAreaInput } from '../../types/avaliacoes';
 import type { ModoEmbaralhar } from '../../types/correcaoOmr';
-import { criarAvaliacaoArea, editarAvaliacaoArea, buscarInstrucoesPadrao, buscarModoNota, definirModoNota, salvarAvaliacaoAreaSoNota, listarEspelhosDeSubstituicao, aplicarSubstituicoes } from '../../services/avaliacoesService';
+import { criarAvaliacaoArea, editarAvaliacaoArea, buscarInstrucoesPadrao, buscarModoNota, definirModoNota, definirMostrarPontuacao, salvarAvaliacaoAreaSoNota, listarEspelhosDeSubstituicao, aplicarSubstituicoes } from '../../services/avaliacoesService';
 import { getCurrentBimestre } from '../../utils/academicUtils';
 import { CamposAvaliacaoComuns, CamposSoNota, versoesEfetivas, type ValoresCamposAvaliacao } from './CamposAvaliacaoComuns';
 
@@ -47,6 +47,7 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
     posicaoCartao: avaliacaoExistente?.cartao_separado ? 'SEPARADO' : (avaliacaoExistente?.cartao_posicao ?? 'FIM'),
     modoNota: eraSimulado ? 'SEM_NOTA' : 'DIRETA',
     ponderadaEscopo: 'PROVA',
+    mostrarPontuacao: true,
   }));
   const atualizarCampos = (patch: Partial<ValoresCamposAvaliacao>) => setCampos((prev) => ({ ...prev, ...patch }));
   const { titulo, bimestre, valorTotal, modo, dataAplicacao, prazoEntrega, instrucoes, embaralhar, posicaoCartao } = campos;
@@ -79,7 +80,7 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
           setTurmasSelecionadas((ptData ?? []).map((r: { turma_id: string }) => r.turma_id));
 
           const salvo = await buscarModoNota(avaliacaoExistente.id).catch(() => null);
-          if (salvo) atualizarCampos({ modoNota: eraSimulado ? 'SEM_NOTA' : salvo.modo_nota, ponderadaEscopo: salvo.ponderada_escopo });
+          if (salvo) atualizarCampos({ modoNota: eraSimulado ? 'SEM_NOTA' : salvo.modo_nota, ponderadaEscopo: salvo.ponderada_escopo, mostrarPontuacao: salvo.mostrar_pontuacao ?? true });
 
           if (avaliacaoExistente.prazo_entrega) {
             const d = new Date(avaliacaoExistente.prazo_entrega);
@@ -351,6 +352,7 @@ export function NovaAvaliacaoAreaModal({ area, onClose, onCriada, avaliacaoExist
         ? await editarAvaliacaoArea(avaliacaoExistente!.id, payload)
         : await criarAvaliacaoArea(payload);
       await definirModoNota(provaId || avaliacaoExistente!.id, campos.modoNota, campos.ponderadaEscopo);
+      await definirMostrarPontuacao(provaId || avaliacaoExistente!.id, campos.mostrarPontuacao);
       onCriada();
     } catch (e: any) {
       setErro(e.message || `Erro ao ${editando ? 'salvar' : 'criar'} avaliação de área.`);

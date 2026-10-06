@@ -27,7 +27,7 @@ import type { ModoNota, PonderadaEscopo } from '../types/correcaoOmr';
 import { QUESTION_SELECT_FIELDS, type Question } from '../types/bancoQuestoes';
 import { ACERVO_EXTERNO, acervo, garantirQuestoesNoPrincipal } from './acervoClient';
 
-const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at, embaralhar, qtd_versoes, cartao_separado, cartao_posicao, folha_redacao, rubrica_redacao_id, modo_nota, ponderada_escopo, lancar_no_boletim, eh_prova_area, eh_prova_geral, somente_nota, area_conhecimento';
+const AVALIACAO_SELECT = 'id, titulo, disciplina, disciplina_id, bimestre_id, instrucoes, valor_total, modo, tipo, token_publico, data_aplicacao, prazo_entrega, status, criado_por, created_at, updated_at, embaralhar, qtd_versoes, cartao_separado, cartao_posicao, folha_redacao, rubrica_redacao_id, modo_nota, ponderada_escopo, lancar_no_boletim, mostrar_pontuacao, eh_prova_area, eh_prova_geral, somente_nota, area_conhecimento';
 
 function mapAvaliacaoRow(row: Record<string, unknown>): Avaliacao {
   const turmas = (row.prova_turmas as { turmas: { id: string; nome: string } | null }[] | undefined) ?? [];
@@ -114,6 +114,7 @@ export async function criarAvaliacao(dados: NovaAvaliacaoInput, status: StatusAv
       modo_nota: dados.modoNota,
       ponderada_escopo: dados.ponderadaEscopo,
       lancar_no_boletim: dados.lancarNoBoletim,
+      mostrar_pontuacao: dados.mostrarPontuacao ?? true,
     }])
     .select('id')
     .single();
@@ -260,6 +261,7 @@ export async function atualizarAvaliacao(id: string, dados: NovaAvaliacaoInput, 
       modo_nota: dados.modoNota,
       ponderada_escopo: dados.ponderadaEscopo,
       lancar_no_boletim: dados.lancarNoBoletim,
+      mostrar_pontuacao: dados.mostrarPontuacao ?? true,
     })
     .eq('id', id);
   if (avErro) throw avErro;
@@ -804,10 +806,23 @@ export async function lancarNotaManual(avaliacaoId: string, alunoId: string, not
   if (error) throw error;
 }
 
-export async function buscarModoNota(provaId: string): Promise<{ modo_nota: ModoNota; ponderada_escopo: PonderadaEscopo }> {
-  const { data, error } = await supabase.from('provas').select('modo_nota, ponderada_escopo').eq('id', provaId).single();
+export async function buscarModoNota(provaId: string): Promise<{ modo_nota: ModoNota; ponderada_escopo: PonderadaEscopo; mostrar_pontuacao: boolean }> {
+  const { data, error } = await supabase.from('provas').select('modo_nota, ponderada_escopo, mostrar_pontuacao').eq('id', provaId).single();
   if (error) throw error;
-  return data as { modo_nota: ModoNota; ponderada_escopo: PonderadaEscopo };
+  return data as { modo_nota: ModoNota; ponderada_escopo: PonderadaEscopo; mostrar_pontuacao: boolean };
+}
+
+// Se a prova mostra "(x,xx pt)" em cada questão. Avaliações de área/geral vêm de uma RPC de
+// listagem que não traz essa coluna, então as telas de impressão e de edição leem direto daqui.
+export async function obterMostrarPontuacao(provaId: string): Promise<boolean> {
+  const { data, error } = await supabase.from('provas').select('mostrar_pontuacao').eq('id', provaId).maybeSingle();
+  if (error) throw error;
+  return (data as { mostrar_pontuacao: boolean | null } | null)?.mostrar_pontuacao ?? true;
+}
+
+export async function definirMostrarPontuacao(provaId: string, mostrar: boolean): Promise<void> {
+  const { error } = await supabase.rpc('rpc_definir_mostrar_pontuacao', { p_prova_id: provaId, p_mostrar: mostrar });
+  if (error) throw error;
 }
 
 export async function definirModoNota(provaId: string, modoNota: ModoNota, ponderadaEscopo: PonderadaEscopo): Promise<void> {

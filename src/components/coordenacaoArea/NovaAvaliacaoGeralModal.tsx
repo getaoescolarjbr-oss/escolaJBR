@@ -7,7 +7,7 @@ import type { AreaConhecimento } from '../../utils/areasConhecimento';
 import { AREAS_CONHECIMENTO } from '../../utils/areasConhecimento';
 import type { AvaliacaoArea, NovaAvaliacaoGeralInput } from '../../types/avaliacoes';
 import type { ModoEmbaralhar } from '../../types/correcaoOmr';
-import { buscarInstrucoesPadrao, buscarModoNota, criarAvaliacaoGeral, definirModoNota, editarAvaliacaoGeral } from '../../services/avaliacoesService';
+import { buscarInstrucoesPadrao, buscarModoNota, criarAvaliacaoGeral, definirModoNota, definirMostrarPontuacao, editarAvaliacaoGeral } from '../../services/avaliacoesService';
 import { getCurrentBimestre } from '../../utils/academicUtils';
 import { CamposAvaliacaoComuns, CamposSoNota, versoesEfetivas, type ValoresCamposAvaliacao } from './CamposAvaliacaoComuns';
 import { SortearQuestoesPanel } from './SortearQuestoesPanel';
@@ -57,6 +57,7 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
     posicaoCartao: ex?.cartao_separado ? 'SEPARADO' : (ex?.cartao_posicao ?? 'FIM'),
     modoNota: 'DIRETA',
     ponderadaEscopo: 'PROVA',
+    mostrarPontuacao: true,
   }));
   const atualizarCampos = (patch: Partial<ValoresCamposAvaliacao>) => setCampos((prev) => ({ ...prev, ...patch }));
 
@@ -91,7 +92,7 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
           if (texto) atualizarCampos({ instrucoes: texto });
         } else if (!soNota) {
           const salvo = await buscarModoNota(ex!.id).catch(() => null);
-          if (salvo) atualizarCampos({ modoNota: salvo.modo_nota, ponderadaEscopo: salvo.ponderada_escopo });
+          if (salvo) atualizarCampos({ modoNota: salvo.modo_nota, ponderadaEscopo: salvo.ponderada_escopo, mostrarPontuacao: salvo.mostrar_pontuacao ?? true });
         }
       } finally {
         setLoading(false);
@@ -175,7 +176,10 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
       if (editando) await editarAvaliacaoGeral(ex!.id, dados);
       else provaId = await criarAvaliacaoGeral(dados);
       // Só de nota: a nota é digitada à mão, não há cálculo a escolher.
-      if (!soNota) await definirModoNota(provaId, campos.modoNota, campos.ponderadaEscopo);
+      if (!soNota) {
+        await definirModoNota(provaId, campos.modoNota, campos.ponderadaEscopo);
+        await definirMostrarPontuacao(provaId, campos.mostrarPontuacao);
+      }
       onCriada();
     } catch (e: any) {
       setErro(e.message || `Erro ao ${editando ? 'salvar' : 'criar'} avaliação geral.`);

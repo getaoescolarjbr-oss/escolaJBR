@@ -39,6 +39,8 @@ export interface Avaliacao {
   modo_nota: ModoNota;
   ponderada_escopo: PonderadaEscopo;
   lancar_no_boletim: boolean;
+  /** Mostra "(x,xx pt)" em cada questão na prova impressa e para o aluno. Desligue em nota ponderada. */
+  mostrar_pontuacao?: boolean;
 
   turma_ids?: string[];
   turma_nomes?: string[];
@@ -85,6 +87,7 @@ export interface NovaAvaliacaoInput {
   modoNota: ModoNota;
   ponderadaEscopo: PonderadaEscopo;
   lancarNoBoletim: boolean;
+  mostrarPontuacao?: boolean;
 }
 
 // Vem de rpc_minhas_avaliacoes_aluno — nunca contém gabarito.
@@ -104,7 +107,8 @@ export interface AvaliacaoAluno {
 export interface QuestaoParaAluno {
   question_id: string;
   ordem: number;
-  valor: number;
+  /** Nulo quando a avaliação não mostra a pontuação por questão. */
+  valor: number | null;
   statement: string;
   image_url: string | null;
   tipo: TipoQuestao;

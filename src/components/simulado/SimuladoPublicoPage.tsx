@@ -148,7 +148,8 @@ export function SimuladoPublicoPage({ token }: Props) {
                             q.support_text_content,
                             `sp-st-${q.question_id}`,
                             <span className="font-bold text-blue-400">
-                              {i + 1}. <span className="font-normal text-ms-muted text-xs">({Number(q.valor).toFixed(2)} pt)</span>{' '}
+                              {i + 1}.{' '}
+                              {q.valor != null && <span className="font-normal text-ms-muted text-xs">({Number(q.valor).toFixed(2)} pt) </span>}
                             </span>
                           )}
                           {q.support_text_image_url && (
@@ -162,7 +163,8 @@ export function SimuladoPublicoPage({ token }: Props) {
                           `sp-${q.question_id}`,
                           q.support_text_content ? undefined : (
                             <span className="font-bold text-blue-400">
-                              {i + 1}. <span className="font-normal text-ms-muted text-xs">({Number(q.valor).toFixed(2)} pt)</span>{' '}
+                              {i + 1}.{' '}
+                              {q.valor != null && <span className="font-normal text-ms-muted text-xs">({Number(q.valor).toFixed(2)} pt) </span>}
                             </span>
                           )
                         )}

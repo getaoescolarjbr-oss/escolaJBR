@@ -44,7 +44,8 @@ export function QuestaoAlunoView({
 
   const numeroPrefixo = (
     <span className="font-bold text-ms-blueText">
-      {indice + 1}. <span className="font-normal text-ms-muted text-xs">({Number(questao.valor).toFixed(2)} pt)</span>{' '}
+      {indice + 1}.{' '}
+      {questao.valor != null && <span className="font-normal text-ms-muted text-xs">({Number(questao.valor).toFixed(2)} pt) </span>}
     </span>
   );
 
