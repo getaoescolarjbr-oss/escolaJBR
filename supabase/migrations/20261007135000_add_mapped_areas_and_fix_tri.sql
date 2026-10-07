@@ -16,7 +16,7 @@ BEGIN
   area_ranges_cota AS (
     SELECT 
       pac.prova_id, 
-      d.nome AS area,
+      pac.area_conhecimento AS area,
       pac.ordem_bloco,
       pac.qtd_questoes
     FROM public.prova_area_cotas pac
