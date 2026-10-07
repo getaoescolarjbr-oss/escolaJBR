@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import QRCode from 'qrcode';
 import { AlertTriangle, Loader2, Printer, RefreshCw, UserPlus, X } from 'lucide-react';
 import { ehQuestaoRedacao, type Question } from '../../../types/bancoQuestoes';
@@ -14,34 +14,34 @@ import { QuestaoImpressa } from '../QuestaoImpressa';
 import { CartaoRespostaFolha } from './CartaoRespostaFolha';
 import { FolhaRedacaoJBR } from './FolhaRedacaoJBR';
 
-// Impressão em lote: uma prova personalizada por aluno, cada uma com o cartão-resposta
+// ImpressÃ£o em lote: uma prova personalizada por aluno, cada uma com o cartÃ£o-resposta
 // que carrega o QR daquele aluno.
 //
-// Por que por aluno e não uma cópia genérica: o QR é o que dispensa o professor de
-// dizer ao aplicativo quem é o dono da folha. Sem ele, corrigir 120 cartões viraria 120
-// buscas na lista de alunos — que é exatamente o trabalho que este módulo existe para
+// Por que por aluno e nÃ£o uma cÃ³pia genÃ©rica: o QR Ã© o que dispensa o professor de
+// dizer ao aplicativo quem Ã© o dono da folha. Sem ele, corrigir 120 cartÃµes viraria 120
+// buscas na lista de alunos â€” que Ã© exatamente o trabalho que este mÃ³dulo existe para
 // eliminar.
 
-// Só o que a impressão em lote acrescenta ao CSS de prova que já existe.
+// SÃ³ o que a impressÃ£o em lote acrescenta ao CSS de prova que jÃ¡ existe.
 const CSS_LOTE = `
   ${CARTAO_CSS}
   ${FOLHA_REDACAO_CSS}
 
   .pagina-folha-redacao { padding: 0; min-height: 0; }
 
-  /* Quebras de página: entre alunos e entre páginas do mesmo aluno */
+  /* Quebras de pÃ¡gina: entre alunos e entre pÃ¡ginas do mesmo aluno */
   .bloco-aluno + .bloco-aluno { break-before: page; page-break-before: always; }
   .bloco-aluno .pagina + .pagina { break-before: page; page-break-before: always; }
   .pagina + .pagina { break-before: page; page-break-before: always; }
 
-  /* Garantia estrutural (não depende de eu acertar a estimativa de altura): quando o
-     modo de separação não é "contínuo", cada aluno tem que começar numa página ÍMPAR
-     (frente de folha nova, seja em frente-e-verso real ou em "2 páginas por folha").
-     break-before: right é regra nativa do motor de impressão — se a estimativa de
-     rascunho falhar e o aluno anterior sobrar com página ímpar, o navegador insere UMA
-     página em branco por conta própria pra corrigir, sem que isso jogue o aluno
+  /* Garantia estrutural (nÃ£o depende de eu acertar a estimativa de altura): quando o
+     modo de separaÃ§Ã£o nÃ£o Ã© "contÃ­nuo", cada aluno tem que comeÃ§ar numa pÃ¡gina ÃMPAR
+     (frente de folha nova, seja em frente-e-verso real ou em "2 pÃ¡ginas por folha").
+     break-before: right Ã© regra nativa do motor de impressÃ£o â€” se a estimativa de
+     rascunho falhar e o aluno anterior sobrar com pÃ¡gina Ã­mpar, o navegador insere UMA
+     pÃ¡gina em branco por conta prÃ³pria pra corrigir, sem que isso jogue o aluno
      seguinte pra dentro da folha de outro aluno. Sem isto, um erro de estimativa num
-     aluno desalinhava a sequência de TODOS os alunos depois dele. */
+     aluno desalinhava a sequÃªncia de TODOS os alunos depois dele. */
   .bloco-aluno + .bloco-aluno:not([data-separador="CONTINUO"]) {
     break-before: right;
     page-break-before: right;
@@ -74,10 +74,10 @@ const CSS_LOTE = `
     max-height: 85mm !important;
   }
 
-  /* O cartão no fim da prova: não pode partir ao meio nem se separar do que veio antes
-     sem necessidade. Sem o avoid, uma metade das bolhas cairia na página seguinte e a
-     folha ficaria impossível de ler pela câmera — as quatro marcas de referência
-     precisam estar todas na mesma página. */
+  /* O cartÃ£o no fim da prova: nÃ£o pode partir ao meio nem se separar do que veio antes
+     sem necessidade. Sem o avoid, uma metade das bolhas cairia na pÃ¡gina seguinte e a
+     folha ficaria impossÃ­vel de ler pela cÃ¢mera â€” as quatro marcas de referÃªncia
+     precisam estar todas na mesma pÃ¡gina. */
   .cartao-ao-fim {
     break-inside: avoid;
     page-break-inside: avoid;
@@ -86,7 +86,7 @@ const CSS_LOTE = `
     border-top: 1px dashed #999;
   }
 
-  /* Mesma ideia de .cartao-ao-fim, espelhada: cartão antes da primeira questão. */
+  /* Mesma ideia de .cartao-ao-fim, espelhada: cartÃ£o antes da primeira questÃ£o. */
   .cartao-ao-inicio {
     break-inside: avoid;
     page-break-inside: avoid;
@@ -95,7 +95,7 @@ const CSS_LOTE = `
     border-bottom: 1px dashed #999;
   }
 
-  /* Verso de rascunho / separador de folha física para frente-e-verso ou 2 páginas por folha */
+  /* Verso de rascunho / separador de folha fÃ­sica para frente-e-verso ou 2 pÃ¡ginas por folha */
   .pagina-rascunho {
     box-sizing: border-box;
     padding: 10mm 8mm;
@@ -142,29 +142,30 @@ interface Props {
   onClose: () => void;
 }
 
-type Conteudo = 'PROVA_E_CARTAO' | 'SO_CARTAO' | 'SO_PROVA';
+type Conteudo = 'PROVA_E_CARTAO' | 'SO_CARTAO' | 'SO_PROVA' | 'SO_REDACAO';
 
 const CONTEUDO_LABEL: Record<Conteudo, string> = {
-  PROVA_E_CARTAO: 'Prova + cartão-resposta',
-  SO_CARTAO: 'Só o cartão-resposta',
-  SO_PROVA: 'Só a prova',
+  PROVA_E_CARTAO: 'Prova + cartÃ£o-resposta',
+  SO_CARTAO: 'SÃ³ o cartÃ£o-resposta',
+  SO_PROVA: 'SÃ³ a prova',
+  SO_REDACAO: 'SÃ³ a folha de redaÃ§Ã£o',
 };
 
 type PosicaoCartao = 'INICIO' | 'FIM' | 'SEPARADO';
 
 const POSICAO_CARTAO_LABEL: Record<PosicaoCartao, string> = {
-  INICIO: 'Antes das questões',
-  FIM: 'Depois das questões, na sobra da página',
+  INICIO: 'Antes das questÃµes',
+  FIM: 'Depois das questÃµes, na sobra da pÃ¡gina',
   SEPARADO: 'Em folha separada',
 };
 
 type ModoSeparador = 'RASCUNHO_VERSO' | 'SEMPRE_RASCUNHO' | 'PAGINA_BRANCA' | 'CONTINUO';
 
 const MODO_SEPARADOR_LABEL: Record<ModoSeparador, string> = {
-  RASCUNHO_VERSO: 'Folha de rascunho no verso (Padrão - se páginas ímpares)',
-  SEMPRE_RASCUNHO: 'Sempre incluir rascunho (folha própria se páginas pares)',
-  PAGINA_BRANCA: 'Página em branco no verso (se páginas ímpares)',
-  CONTINUO: 'Contínuo (sem verso/rascunho)',
+  RASCUNHO_VERSO: 'Folha de rascunho no verso (PadrÃ£o - se pÃ¡ginas Ã­mpares)',
+  SEMPRE_RASCUNHO: 'Sempre incluir rascunho (folha prÃ³pria se pÃ¡ginas pares)',
+  PAGINA_BRANCA: 'PÃ¡gina em branco no verso (se pÃ¡ginas Ã­mpares)',
+  CONTINUO: 'ContÃ­nuo (sem verso/rascunho)',
 };
 
 function estimarPaginasProva(
@@ -174,12 +175,13 @@ function estimarPaginasProva(
   colunas: 1 | 2
 ): number {
   if (conteudo === 'SO_CARTAO') return 1;
+  if (conteudo === 'SO_REDACAO') return 0;
 
   const ALTURA_UTIL_MM = 270;
-  let alturaTotalMm = 35; // cabeçalho
+  let alturaTotalMm = 35; // cabeÃ§alho
 
   if (conteudo === 'PROVA_E_CARTAO' && posicaoCartao === 'INICIO') {
-    alturaTotalMm += 90; // cartão OMR antes das questões
+    alturaTotalMm += 90; // cartÃ£o OMR antes das questÃµes
   }
 
   let alturaQuestoesMm = 0;
@@ -219,8 +221,8 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
   const [gerando, setGerando] = useState(false);
   const [adicionando, setAdicionando] = useState(false);
   const [erro, setErro] = useState<string | null>(null);
-  // Alunos que entraram agora por "Adicionar alunos novos" — filtra a lista pra baixo,
-  // pra imprimir só a folha deles sem reimprimir a turma inteira.
+  // Alunos que entraram agora por "Adicionar alunos novos" â€” filtra a lista pra baixo,
+  // pra imprimir sÃ³ a folha deles sem reimprimir a turma inteira.
   const [alunosNovosIds, setAlunosNovosIds] = useState<Set<string>>(new Set());
   const [somenteNovos, setSomenteNovos] = useState(false);
 
@@ -229,23 +231,23 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
   const [alunoFiltro, setAlunoFiltro] = useState('');
   const [conteudo, setConteudo] = useState<Conteudo>('PROVA_E_CARTAO');
   const [colunas, setColunas] = useState<1 | 2>(2);
-  // Folha de redação (30 linhas) impressa à parte para cada questão de redação da prova.
+  // Folha de redaÃ§Ã£o (30 linhas) impressa Ã  parte para cada questÃ£o de redaÃ§Ã£o da prova.
   const [folhaRedacao, setFolhaRedacao] = useState(avaliacao.folha_redacao ?? true);
   const [mostrarPontuacao, setMostrarPontuacao] = useState<boolean>(avaliacao.mostrar_pontuacao ?? true);
-  // Avaliações de área/geral vêm de uma listagem sem essa coluna: lê o valor salvo na prova.
+  // AvaliaÃ§Ãµes de Ã¡rea/geral vÃªm de uma listagem sem essa coluna: lÃª o valor salvo na prova.
   useEffect(() => {
     obterMostrarPontuacao(avaliacao.id).then(setMostrarPontuacao).catch(() => {});
   }, [avaliacao.id]);
   function alternarPontuacao(mostrar: boolean) {
     setMostrarPontuacao(mostrar);
-    // Grava na avaliação para valer nas próximas impressões; sem permissão, vale só para esta.
+    // Grava na avaliaÃ§Ã£o para valer nas prÃ³ximas impressÃµes; sem permissÃ£o, vale sÃ³ para esta.
     definirMostrarPontuacao(avaliacao.id, mostrar).catch(() => {});
   }
   const [modoSeparador, setModoSeparador] = useState<ModoSeparador>('RASCUNHO_VERSO');
-  // Vem da configuração da avaliação, mas é ajustável aqui: reimprimir de outro jeito não
-  // deveria obrigar o professor a voltar e editar a avaliação inteira. cartao_separado é
-  // só booleano no banco (folha própria ou não); "antes das questões" é uma opção só
-  // deste diálogo, por isso o estado local é de três valores e não dois.
+  // Vem da configuraÃ§Ã£o da avaliaÃ§Ã£o, mas Ã© ajustÃ¡vel aqui: reimprimir de outro jeito nÃ£o
+  // deveria obrigar o professor a voltar e editar a avaliaÃ§Ã£o inteira. cartao_separado Ã©
+  // sÃ³ booleano no banco (folha prÃ³pria ou nÃ£o); "antes das questÃµes" Ã© uma opÃ§Ã£o sÃ³
+  // deste diÃ¡logo, por isso o estado local Ã© de trÃªs valores e nÃ£o dois.
   const [posicaoCartao, setPosicaoCartao] = useState<PosicaoCartao>(
     avaliacao.cartao_separado ? 'SEPARADO' : (avaliacao.cartao_posicao ?? 'FIM')
   );
@@ -264,9 +266,9 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
       setValores(valoresPorQuestao);
       setAlocacoes(alocs);
 
-      // Os QR ficam prontos antes de renderizar: geração é assíncrona e um <img> com
-      // src vazio no momento do window.print() sai como folha sem QR — que é uma folha
-      // impossível de corrigir pela câmera.
+      // Os QR ficam prontos antes de renderizar: geraÃ§Ã£o Ã© assÃ­ncrona e um <img> com
+      // src vazio no momento do window.print() sai como folha sem QR â€” que Ã© uma folha
+      // impossÃ­vel de corrigir pela cÃ¢mera.
       const mapa: Record<string, string> = {};
       await Promise.all(
         alocs.map(async (a) => {
@@ -285,10 +287,10 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
     }
   }, [avaliacao.id]);
 
-  // carregar() começa com setCarregando(true), o que a regra set-state-in-effect
-  // sinaliza. Aqui é intencional e é o mesmo carregar() reusado pelo botão "sortear de
-  // novo": separar as duas versões — uma para o efeito, outra para o clique — só
-  // duplicaria o corpo da função para calar a regra.
+  // carregar() comeÃ§a com setCarregando(true), o que a regra set-state-in-effect
+  // sinaliza. Aqui Ã© intencional e Ã© o mesmo carregar() reusado pelo botÃ£o "sortear de
+  // novo": separar as duas versÃµes â€” uma para o efeito, outra para o clique â€” sÃ³
+  // duplicaria o corpo da funÃ§Ã£o para calar a regra.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { void carregar(); }, [carregar]);
 
@@ -302,9 +304,9 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
     () => Array.from(new Set((alocacoes ?? []).map((a) => a.rotulo))).sort(),
     [alocacoes]
   );
-  // "Uma versão por aluno" gera um rótulo pra cada um — listar/filtrar por versão individual
-  // não ajuda ninguém aqui (o professor procura aluno, não código interno de versão), só
-  // polui a tela com dezenas de opções/selos. Detecta pelo padrão: toda versão tem 1 aluno só.
+  // "Uma versÃ£o por aluno" gera um rÃ³tulo pra cada um â€” listar/filtrar por versÃ£o individual
+  // nÃ£o ajuda ninguÃ©m aqui (o professor procura aluno, nÃ£o cÃ³digo interno de versÃ£o), sÃ³
+  // polui a tela com dezenas de opÃ§Ãµes/selos. Detecta pelo padrÃ£o: toda versÃ£o tem 1 aluno sÃ³.
   const versaoPorAluno =
     versoes.length > 1 && versoes.every((v) => (alocacoes ?? []).filter((a) => a.rotulo === v).length === 1);
 
@@ -337,8 +339,8 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
 
   async function handleGerarVersoes() {
     if (!confirm(
-      'Sortear as versões de novo troca a versão e o código de QR de cada aluno. ' +
-      'Folhas já impressas deixam de valer. Continuar?'
+      'Sortear as versÃµes de novo troca a versÃ£o e o cÃ³digo de QR de cada aluno. ' +
+      'Folhas jÃ¡ impressas deixam de valer. Continuar?'
     )) return;
 
     setGerando(true);
@@ -356,9 +358,9 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
   }
 
   /**
-   * Aluno matriculado depois do sorteio original: aloca só ele numa versão já existente,
-   * sem mexer nas folhas de quem já tinha alocação (e, com isso, sem invalidar o que já
-   * foi impresso). Ao final, filtra a lista pra mostrar/imprimir só quem entrou agora.
+   * Aluno matriculado depois do sorteio original: aloca sÃ³ ele numa versÃ£o jÃ¡ existente,
+   * sem mexer nas folhas de quem jÃ¡ tinha alocaÃ§Ã£o (e, com isso, sem invalidar o que jÃ¡
+   * foi impresso). Ao final, filtra a lista pra mostrar/imprimir sÃ³ quem entrou agora.
    */
   async function handleAdicionarAlunosNovos() {
     setAdicionando(true);
@@ -366,7 +368,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
     try {
       const novos = await adicionarAlunosNovos(avaliacao.id);
       if (novos.length === 0) {
-        setErro('Não há aluno novo nas turmas desta prova — todo mundo já tem folha.');
+        setErro('NÃ£o hÃ¡ aluno novo nas turmas desta prova â€” todo mundo jÃ¡ tem folha.');
         return;
       }
       setAlunosNovosIds(new Set(novos.map((n) => n.aluno_id)));
@@ -385,12 +387,12 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
     ? new Date(avaliacao.data_aplicacao + 'T00:00:00').toLocaleDateString('pt-BR')
     : '____/____/______';
 
-  // Cada .pagina precisa ser irmã direta das outras — não dá pra embrulhar os blocos de
+  // Cada .pagina precisa ser irmÃ£ direta das outras â€” nÃ£o dÃ¡ pra embrulhar os blocos de
   // um aluno num <div> por aluno, porque isso quebra o combinador ".pagina + .pagina" do
-  // CSS_LOTE bem na fronteira entre um aluno e o próximo, que é justamente onde a quebra
-  // de página é mais crítica (bug relatado: prova de um aluno emendando com a folha do
-  // seguinte). Por isso flatMap em vez de map: o retorno de cada aluno já é achatado no
-  // array final, todos no mesmo nível.
+  // CSS_LOTE bem na fronteira entre um aluno e o prÃ³ximo, que Ã© justamente onde a quebra
+  // de pÃ¡gina Ã© mais crÃ­tica (bug relatado: prova de um aluno emendando com a folha do
+  // seguinte). Por isso flatMap em vez de map: o retorno de cada aluno jÃ¡ Ã© achatado no
+  // array final, todos no mesmo nÃ­vel.
   function renderFolhas(lista: AlocacaoProva[]) {
     return lista.map((aloc) => {
       const daVersao = aplicarVersao(questoesPorId, aloc.ordem_questoes, aloc.mapa_alternativas);
@@ -398,12 +400,12 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
       const geom = calcularGeometria(itens);
       const qr = qrs[aloc.codigo];
 
-      // Quem decide é o professor, e só ele. Antes havia um teto de questões que forçava
-      // página própria por conta própria: era necessário quando o cartão saía ANTES das
-      // questões (um cartão alto empurrava a prova inteira para baixo), mas com ele no
-      // fim isso deixou de existir — se não couber na sobra da página, o
-      // break-inside: avoid o leva inteiro para a folha seguinte, que é a mesma coisa que
-      // o teto fazia, só que sem contrariar a escolha em provas que caberiam.
+      // Quem decide Ã© o professor, e sÃ³ ele. Antes havia um teto de questÃµes que forÃ§ava
+      // pÃ¡gina prÃ³pria por conta prÃ³pria: era necessÃ¡rio quando o cartÃ£o saÃ­a ANTES das
+      // questÃµes (um cartÃ£o alto empurrava a prova inteira para baixo), mas com ele no
+      // fim isso deixou de existir â€” se nÃ£o couber na sobra da pÃ¡gina, o
+      // break-inside: avoid o leva inteiro para a folha seguinte, que Ã© a mesma coisa que
+      // o teto fazia, sÃ³ que sem contrariar a escolha em provas que caberiam.
       const cartaoEmFolhaPropria =
         conteudo === 'SO_CARTAO' || (conteudo === 'PROVA_E_CARTAO' && posicaoCartao === 'SEPARADO');
 
@@ -428,24 +430,24 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
 
       const blocos = [];
 
-      if (conteudo !== 'SO_CARTAO') {
+      if (conteudo === 'PROVA_E_CARTAO' || conteudo === 'SO_PROVA') {
         blocos.push(
           <div className="pagina pagina-conteudo" key={`p-${aloc.codigo}`}>
             <div className="prova-header">
               <img src={`${window.location.origin}/logo.png.png`} alt="" className="prova-logo" />
               <div className="prova-header-info">
-                <div className="prova-escola">E.E. José Barbosa Rodrigues</div>
+                <div className="prova-escola">E.E. JosÃ© Barbosa Rodrigues</div>
                 <div className="prova-titulo">{avaliacao.titulo}</div>
                 {avaliacao.disciplina && <div className="prova-meta">Disciplina: {avaliacao.disciplina}</div>}
                 <div className="prova-aluno">
                   <span>Nome: <strong>{aloc.aluno_nome}</strong></span>
-                  <span>Turma: {aloc.turma_nome ?? '—'}</span>
-                  {aloc.numero_chamada != null && <span>Nº {aloc.numero_chamada}</span>}
+                  <span>Turma: {aloc.turma_nome ?? 'â€”'}</span>
+                  {aloc.numero_chamada != null && <span>NÂº {aloc.numero_chamada}</span>}
                   <span>Data: {dataFormatada}</span>
-                  {/* Mesmo cuidado do cartão-resposta: versão colada ao SGDE em vez de um
-                      rótulo "Versão: X" isolado, que convida o aluno a procurar outro com a
+                  {/* Mesmo cuidado do cartÃ£o-resposta: versÃ£o colada ao SGDE em vez de um
+                      rÃ³tulo "VersÃ£o: X" isolado, que convida o aluno a procurar outro com a
                       mesma letra na sala. */}
-                  <span>SGDE: {aloc.codigo_sgde ?? '—'}-{aloc.rotulo}</span>
+                  <span>SGDE: {aloc.codigo_sgde ?? 'â€”'}-{aloc.rotulo}</span>
                 </div>
               </div>
               <div className="prova-nota-box"><span className="prova-nota-label">Nota</span></div>
@@ -453,8 +455,8 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
 
             {avaliacao.instrucoes && <div className="prova-instrucoes">{avaliacao.instrucoes}</div>}
 
-            {/* Cartão ANTES das questões, a pedido: fica logo abaixo do cabeçalho/
-                instruções, separado por um traço, e a prova começa depois dele. */}
+            {/* CartÃ£o ANTES das questÃµes, a pedido: fica logo abaixo do cabeÃ§alho/
+                instruÃ§Ãµes, separado por um traÃ§o, e a prova comeÃ§a depois dele. */}
             {conteudo === 'PROVA_E_CARTAO' && posicaoCartao === 'INICIO' && (
               <div className="cartao-ao-inicio">{cartao}</div>
             )}
@@ -465,10 +467,10 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
               ))}
             </div>
 
-            {/* Cartão junto: DEPOIS da última questão, fluindo na sobra da página. Ficava
-                antes das questões, e o resultado no papel era a folha terminando vazia com
-                o cartão sozinho na página seguinte — desperdício que o professor via na
-                pilha impressa. Só aparece aqui no modo "depois das questões". */}
+            {/* CartÃ£o junto: DEPOIS da Ãºltima questÃ£o, fluindo na sobra da pÃ¡gina. Ficava
+                antes das questÃµes, e o resultado no papel era a folha terminando vazia com
+                o cartÃ£o sozinho na pÃ¡gina seguinte â€” desperdÃ­cio que o professor via na
+                pilha impressa. SÃ³ aparece aqui no modo "depois das questÃµes". */}
             {conteudo === 'PROVA_E_CARTAO' && posicaoCartao === 'FIM' && (
               <div className="cartao-ao-fim">{cartao}</div>
             )}
@@ -480,13 +482,13 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
         blocos.push(<div className="pagina pagina-cartao" key={`c-${aloc.codigo}`}>{cartao}</div>);
       }
 
-      // Separador para garantir início em nova folha física (frente-e-verso e 2 pág/folha).
-      // Se a prova já possui páginas pares (ex: 2 páginas):
-      // ela já preenche frente-e-verso perfeitamente! Adicionar um rascunho a tornaria 3 páginas
-      // (ímpar), fazendo a primeira página do próximo aluno sair ao lado do rascunho na mesma folha.
-      // Uma folha de redação (página própria) para cada questão de redação desta versão.
+      // Separador para garantir inÃ­cio em nova folha fÃ­sica (frente-e-verso e 2 pÃ¡g/folha).
+      // Se a prova jÃ¡ possui pÃ¡ginas pares (ex: 2 pÃ¡ginas):
+      // ela jÃ¡ preenche frente-e-verso perfeitamente! Adicionar um rascunho a tornaria 3 pÃ¡ginas
+      // (Ã­mpar), fazendo a primeira pÃ¡gina do prÃ³ximo aluno sair ao lado do rascunho na mesma folha.
+      // Uma folha de redaÃ§Ã£o (pÃ¡gina prÃ³pria) para cada questÃ£o de redaÃ§Ã£o desta versÃ£o.
       const redacoes =
-        folhaRedacao && conteudo !== 'SO_CARTAO' && qr
+        folhaRedacao && (conteudo === 'PROVA_E_CARTAO' || conteudo === 'SO_REDACAO') && qr
           ? daVersao
               .map((q, i) => ({ q, i }))
               .filter(({ q }) => ehQuestaoRedacao(q))
@@ -516,7 +518,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
       const pagsCalculadas = estimarPaginasProva(daVersao, conteudo, posicaoCartao, colunas) + redacoes.length;
       const ehPar = pagsCalculadas % 2 === 0;
 
-      if (conteudo !== 'SO_CARTAO') {
+      if (conteudo === 'PROVA_E_CARTAO' || conteudo === 'SO_PROVA') {
         const incluirRascunho =
           modoSeparador === 'SEMPRE_RASCUNHO' ||
           (modoSeparador === 'RASCUNHO_VERSO' && !ehPar);
@@ -528,9 +530,9 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
             <div className="pagina pagina-rascunho" key={`r-${aloc.codigo}`}>
               <div className="pagina-rascunho-box">
                 <div className="pagina-rascunho-header">
-                  <span className="pagina-rascunho-titulo">Espaço para Rascunho / Cálculos</span>
+                  <span className="pagina-rascunho-titulo">EspaÃ§o para Rascunho / CÃ¡lculos</span>
                   <span className="pagina-rascunho-sub">
-                    Aluno: <strong>{aloc.aluno_nome}</strong> &nbsp;·&nbsp; Turma: {aloc.turma_nome ?? '—'} &nbsp;·&nbsp; Versão: {aloc.rotulo}
+                    Aluno: <strong>{aloc.aluno_nome}</strong> &nbsp;Â·&nbsp; Turma: {aloc.turma_nome ?? 'â€”'} &nbsp;Â·&nbsp; VersÃ£o: {aloc.rotulo}
                   </span>
                 </div>
               </div>
@@ -540,8 +542,8 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
           blocos.push(<div className="pagina pagina-em-branco" key={`b-${aloc.codigo}`} />);
         }
 
-        // Se o usuário quer sempre rascunho mas a prova tem páginas pares:
-        // adiciona 1 página em branco para totalizar 4 páginas e não quebrar o alinhamento
+        // Se o usuÃ¡rio quer sempre rascunho mas a prova tem pÃ¡ginas pares:
+        // adiciona 1 pÃ¡gina em branco para totalizar 4 pÃ¡ginas e nÃ£o quebrar o alinhamento
         if (modoSeparador === 'SEMPRE_RASCUNHO' && ehPar) {
           blocos.push(<div className="pagina pagina-em-branco" key={`b2-${aloc.codigo}`} />);
         }
@@ -568,9 +570,9 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
       <div className="bg-ms-card border border-gray-800 rounded-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
           <div>
-            <h2 className="text-lg font-bold text-ms-main">Imprimir folhas — {avaliacao.titulo}</h2>
+            <h2 className="text-lg font-bold text-ms-main">Imprimir folhas â€” {avaliacao.titulo}</h2>
             <p className="text-xs text-ms-muted mt-0.5">
-              Uma prova por aluno, com QR Code para a correção pela câmera.
+              Uma prova por aluno, com QR Code para a correÃ§Ã£o pela cÃ¢mera.
             </p>
           </div>
           <button onClick={onClose} className="text-ms-muted hover:text-ms-main"><X className="w-5 h-5" /></button>
@@ -589,10 +591,10 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
               <AlertTriangle className="w-5 h-5 text-amber-400 mt-0.5 shrink-0" />
               <div className="space-y-1">
                 <p className="text-sm text-amber-900 dark:text-amber-200 font-bold">
-                  Atenção: A prova possui {discrepanciaQuestoes.totalProva} questões, mas o sorteio gravado tem {discrepanciaQuestoes.totalVersao} questões.
+                  AtenÃ§Ã£o: A prova possui {discrepanciaQuestoes.totalProva} questÃµes, mas o sorteio gravado tem {discrepanciaQuestoes.totalVersao} questÃµes.
                 </p>
                 <p className="text-xs text-amber-900 dark:text-amber-300/90 leading-relaxed">
-                  Questões foram adicionadas ou editadas após o sorteio das versões. O sistema já incluiu todas as {discrepanciaQuestoes.totalProva} questões nesta impressão para que nenhuma falte na prova, mas para sincronizar o gabarito oficial com perfeição, clique no botão <strong>Sortear de novo</strong> abaixo.
+                  QuestÃµes foram adicionadas ou editadas apÃ³s o sorteio das versÃµes. O sistema jÃ¡ incluiu todas as {discrepanciaQuestoes.totalProva} questÃµes nesta impressÃ£o para que nenhuma falte na prova, mas para sincronizar o gabarito oficial com perfeiÃ§Ã£o, clique no botÃ£o <strong>Sortear de novo</strong> abaixo.
                 </p>
               </div>
             </div>
@@ -605,8 +607,8 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
           ) : semVersoes ? (
             <div className="text-center py-10 space-y-4">
               <p className="text-sm text-ms-muted max-w-md mx-auto">
-                As versões desta prova ainda não foram sorteadas. O sorteio define a ordem das
-                questões de cada versão e distribui os alunos das turmas selecionadas — é ele que
+                As versÃµes desta prova ainda nÃ£o foram sorteadas. O sorteio define a ordem das
+                questÃµes de cada versÃ£o e distribui os alunos das turmas selecionadas â€” Ã© ele que
                 cria o QR Code de cada folha.
               </p>
               <button
@@ -615,7 +617,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-ms-blue text-white rounded-lg text-sm font-bold hover:bg-blue-600 disabled:opacity-40"
               >
                 {gerando ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />}
-                Sortear {avaliacao.qtd_versoes} versão(ões) e distribuir os alunos
+                Sortear {avaliacao.qtd_versoes} versÃ£o(Ãµes) e distribuir os alunos
               </button>
             </div>
           ) : (
@@ -627,17 +629,17 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                     {turmas.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
                 </Campo>
-                <Campo label="Versão">
+                <Campo label="VersÃ£o">
                   {versaoPorAluno ? (
-                    // Uma por aluno: listar/filtrar por rótulo individual não ajuda em nada
-                    // (ninguém procura pelo código interno da versão) — só informa o modo.
+                    // Uma por aluno: listar/filtrar por rÃ³tulo individual nÃ£o ajuda em nada
+                    // (ninguÃ©m procura pelo cÃ³digo interno da versÃ£o) â€” sÃ³ informa o modo.
                     <div className={`${SELECT_CLS} flex items-center text-ms-muted`}>
                       Uma por aluno ({versoes.length})
                     </div>
                   ) : (
                     <select value={versaoFiltro} onChange={(e) => { setVersaoFiltro(e.target.value); setAlunoFiltro(''); }} className={SELECT_CLS}>
                       <option value="">Todas</option>
-                      {versoes.map((v) => <option key={v} value={v}>Versão {v}</option>)}
+                      {versoes.map((v) => <option key={v} value={v}>VersÃ£o {v}</option>)}
                     </select>
                   )}
                 </Campo>
@@ -646,7 +648,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                     <option value="">Todos ({alunosDisponiveis.length})</option>
                     {alunosDisponiveis.map((a) => (
                       <option key={a.aluno_id} value={a.aluno_id}>
-                        {a.aluno_nome} {a.numero_chamada != null ? `(Nº ${a.numero_chamada})` : ''} - {a.rotulo}
+                        {a.aluno_nome} {a.numero_chamada != null ? `(NÂº ${a.numero_chamada})` : ''} - {a.rotulo}
                       </option>
                     ))}
                   </select>
@@ -660,11 +662,11 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                 </Campo>
                 <Campo label="Colunas">
                   <select value={colunas} onChange={(e) => setColunas(Number(e.target.value) as 1 | 2)} className={SELECT_CLS}>
-                    <option value={2}>2 colunas (Padrão)</option>
+                    <option value={2}>2 colunas (PadrÃ£o)</option>
                     <option value={1}>1 coluna</option>
                   </select>
                 </Campo>
-                <Campo label="Cartão-resposta">
+                <Campo label="CartÃ£o-resposta">
                   <select
                     value={posicaoCartao}
                     onChange={(e) => setPosicaoCartao(e.target.value as PosicaoCartao)}
@@ -675,36 +677,36 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                     ))}
                   </select>
                 </Campo>
-                <Campo label="Pontuação das questões">
+                <Campo label="PontuaÃ§Ã£o das questÃµes">
                   <select
                     value={mostrarPontuacao ? 'SIM' : 'NAO'}
                     onChange={(e) => alternarPontuacao(e.target.value === 'SIM')}
                     className={SELECT_CLS}
-                    title='Mostra ou oculta o "(x,xx pt)" ao lado do número de cada questão'
+                    title='Mostra ou oculta o "(x,xx pt)" ao lado do nÃºmero de cada questÃ£o'
                   >
                     <option value="SIM">Mostrar</option>
                     <option value="NAO">Ocultar</option>
                   </select>
                 </Campo>
                 {temRedacao && (
-                  <Campo label="Folha de redação">
+                  <Campo label="Folha de redaÃ§Ã£o">
                     <select
                       value={folhaRedacao ? 'SIM' : 'NAO'}
                       onChange={(e) => setFolhaRedacao(e.target.value === 'SIM')}
                       className={SELECT_CLS}
-                      title="Imprime a folha de 30 linhas com QR Code, nome do aluno e marcas para leitura pela câmera"
+                      title="Imprime a folha de 30 linhas com QR Code, nome do aluno e marcas para leitura pela cÃ¢mera"
                     >
                       <option value="SIM">Incluir (30 linhas, com QR)</option>
-                      <option value="NAO">Não (linhas na própria prova)</option>
+                      <option value="NAO">NÃ£o (linhas na prÃ³pria prova)</option>
                     </select>
                   </Campo>
                 )}
-                <Campo label="Separar provas (Frente/Verso / 2 pág)">
+                <Campo label="Separar provas (Frente/Verso / 2 pÃ¡g)">
                   <select
                     value={modoSeparador}
                     onChange={(e) => setModoSeparador(e.target.value as ModoSeparador)}
                     className={SELECT_CLS}
-                    title="Garante que a próxima prova inicie sempre em uma folha física limpa"
+                    title="Garante que a prÃ³xima prova inicie sempre em uma folha fÃ­sica limpa"
                   >
                     {(Object.keys(MODO_SEPARADOR_LABEL) as ModoSeparador[]).map((s) => (
                       <option key={s} value={s}>{MODO_SEPARADOR_LABEL[s]}</option>
@@ -720,7 +722,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                 {!versaoPorAluno &&
                   versoes.map((v) => (
                     <span key={v} className="px-2.5 py-1 rounded-full bg-ms-dark border border-gray-800 text-ms-muted">
-                      Versão {v}: {(alocacoes ?? []).filter((a) => a.rotulo === v).length} aluno(s)
+                      VersÃ£o {v}: {(alocacoes ?? []).filter((a) => a.rotulo === v).length} aluno(s)
                     </span>
                   ))}
                 {alunosNovosIds.size > 0 && (
@@ -731,14 +733,14 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
                       onChange={(e) => setSomenteNovos(e.target.checked)}
                       className="accent-ms-blue"
                     />
-                    Só os {alunosNovosIds.size} aluno(s) novo(s)
+                    SÃ³ os {alunosNovosIds.size} aluno(s) novo(s)
                   </label>
                 )}
                 <button
                   onClick={handleAdicionarAlunosNovos}
                   disabled={adicionando || gerando}
                   className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border border-gray-800 text-ms-muted hover:text-ms-main disabled:opacity-40"
-                  title="Aluno matriculado depois do sorteio: gera a folha só dele, sem trocar o QR de quem já tem folha impressa."
+                  title="Aluno matriculado depois do sorteio: gera a folha sÃ³ dele, sem trocar o QR de quem jÃ¡ tem folha impressa."
                 >
                   {adicionando ? <Loader2 className="w-3 h-3 animate-spin" /> : <UserPlus className="w-3 h-3" />}
                   Adicionar alunos novos
@@ -755,16 +757,16 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
 
               {posicaoCartao === 'FIM' && (
                 <p className="text-xs text-ms-muted">
-                  O cartão sai logo depois da última questão, aproveitando a sobra da página. Se não
-                  couber, vai inteiro para a folha seguinte — nunca partido, porque a câmera precisa
-                  das quatro marcas dos cantos na mesma página.
+                  O cartÃ£o sai logo depois da Ãºltima questÃ£o, aproveitando a sobra da pÃ¡gina. Se nÃ£o
+                  couber, vai inteiro para a folha seguinte â€” nunca partido, porque a cÃ¢mera precisa
+                  das quatro marcas dos cantos na mesma pÃ¡gina.
                 </p>
               )}
 
               {(alocacoes ?? []).some((a) => a.ja_corrigido) && (
                 <p className="text-xs text-amber-400 font-medium">
-                  Alguns cartões desta prova já foram corrigidos — resortear as versões está
-                  bloqueado no banco para não invalidar o que já foi lido.
+                  Alguns cartÃµes desta prova jÃ¡ foram corrigidos â€” resortear as versÃµes estÃ¡
+                  bloqueado no banco para nÃ£o invalidar o que jÃ¡ foi lido.
                 </p>
               )}
 
@@ -789,7 +791,7 @@ export function ImprimirFolhasModal({ avaliacao, onClose }: Props) {
             Fechar
           </button>
           <button
-            onClick={() => printProva(previewRef.current, `${avaliacao.titulo} — folhas`, CSS_LOTE)}
+            onClick={() => printProva(previewRef.current, `${avaliacao.titulo} â€” folhas`, CSS_LOTE)}
             disabled={carregando || selecionadas.length === 0}
             className="flex items-center gap-2 px-5 py-2 bg-ms-blue text-white rounded-lg text-sm font-bold hover:bg-blue-600 disabled:opacity-40"
           >
@@ -817,5 +819,5 @@ function Campo({ label, children }: { label: string; children: React.ReactNode }
 function mensagemErro(e: unknown): string {
   if (e instanceof Error) return e.message;
   if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message);
-  return 'Não foi possível carregar as folhas.';
+  return 'NÃ£o foi possÃ­vel carregar as folhas.';
 }
