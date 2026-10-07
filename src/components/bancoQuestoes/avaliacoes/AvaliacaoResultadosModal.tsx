@@ -71,10 +71,13 @@ const ESTILO_HEADER = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { 
 const ESTILO_ACERTO = { font: { bold: true, color: { rgb: '006100' } }, fill: { fgColor: { rgb: 'C6EFCE' } }, alignment: { horizontal: 'center' } };
 const ESTILO_ERRO = { font: { bold: true, color: { rgb: '9C0006' } }, fill: { fgColor: { rgb: 'FFC7CE' } }, alignment: { horizontal: 'center' } };
 
-function criarPlanilhaAlunos(XLSX: XLSXLib, alunosGrupo: ResultadoAlunoDetalhado[], questoes: QuestaoInfoRelatorio[]) {
-  const header = ['Aluno', 'Turma', 'SGDE', 'Status', 'Total Acertos', '% Acertos', 'Nota',
+function criarPlanilhaAlunos(XLSX: XLSXLib, alunosGrupo: ResultadoAlunoDetalhado[], questoes: QuestaoInfoRelatorio[], isPonderada: boolean) {
+  const header = ['Aluno', 'Turma', 'SGDE', 'Status', 'Total Acertos', '% Acertos', 'Nota'];
+  if (isPonderada) header.push('TRI / UFMS');
+  header.push(
     ...questoes.map((q) => `Q${String(q.ordem).padStart(2, '0')} (Gab: ${q.correct_letter || '—'})`),
-    'Data de Envio'];
+    'Data de Envio'
+  );
 
   const linhas: (string | number)[][] = [header];
   const estilos: { r: number; c: number; s: Record<string, unknown> }[] = [];
@@ -90,6 +93,10 @@ function criarPlanilhaAlunos(XLSX: XLSXLib, alunosGrupo: ResultadoAlunoDetalhado
       al.finalizado_em ? `${((al.total_acertos / (al.total_questoes || 1)) * 100).toFixed(1)}%` : '—',
       al.finalizado_em ? Number((al.nota ?? 0).toFixed(2)) : '',
     ];
+
+    if (isPonderada) {
+      linha.push(al.finalizado_em && al.nota_tri != null ? Number(al.nota_tri.toFixed(2)) : '');
+    }
 
     questoes.forEach((q, qi) => {
       const resp = al.finalizado_em ? al.respostas[q.question_id] : null;
@@ -114,7 +121,10 @@ function criarPlanilhaAlunos(XLSX: XLSXLib, alunosGrupo: ResultadoAlunoDetalhado
     const addr = XLSX.utils.encode_cell({ r, c });
     if (ws[addr]) ws[addr].s = s;
   });
-  ws['!cols'] = [{ wch: 32 }, { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 8 }, ...questoes.map(() => ({ wch: 14 })), { wch: 18 }];
+  const colSizes = [{ wch: 32 }, { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 8 }];
+  if (isPonderada) colSizes.push({ wch: 12 });
+  colSizes.push(...questoes.map(() => ({ wch: 14 })), { wch: 18 });
+  ws['!cols'] = colSizes;
   return ws;
 }
 
@@ -277,7 +287,7 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
       const estatTurma = estatisticasPorTurma.get(turma)?.porQuestao ?? [];
 
       const nomeAbaAlunos = sanitizarNomeAba(`Resp. ${turma}`, abasUsadas);
-      XLSX.utils.book_append_sheet(livro, criarPlanilhaAlunos(XLSX, alunosTurma, questoes), nomeAbaAlunos);
+      XLSX.utils.book_append_sheet(livro, criarPlanilhaAlunos(XLSX, alunosTurma, questoes, avaliacao.modo_nota === 'PONDERADA'), nomeAbaAlunos);
 
       const nomeAbaQuestoes = sanitizarNomeAba(`Acertos ${turma}`, abasUsadas);
       XLSX.utils.book_append_sheet(livro, criarPlanilhaQuestoes(XLSX, estatTurma), nomeAbaQuestoes);
@@ -474,6 +484,9 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
                                 <th className="py-2.5 px-3 text-center">SGDE</th>
                                 <th className="py-2.5 px-3 text-center">Acertos</th>
                                 <th className="py-2.5 px-3 text-center">Nota</th>
+                                {avaliacao.modo_nota === 'PONDERADA' && (
+                                  <th className="py-2.5 px-3 text-center text-[10px] uppercase tracking-wider text-purple-400" title="Escore Padronizado simulando TRI ENEM / UFMS">TRI / UFMS</th>
+                                )}
                                 <th className="py-2.5 px-3 text-center">Status</th>
                               </tr>
                             </thead>
@@ -492,6 +505,11 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
                                   <td className="py-2.5 px-3 text-center font-bold text-ms-main">
                                     {al.finalizado_em ? (al.nota ?? 0).toFixed(2) : '—'}
                                   </td>
+                                  {avaliacao.modo_nota === 'PONDERADA' && (
+                                    <td className="py-2.5 px-3 text-center font-bold text-purple-400">
+                                      {al.finalizado_em && al.nota_tri != null ? al.nota_tri.toFixed(2) : '—'}
+                                    </td>
+                                  )}
                                   <td className="py-2.5 px-3 text-center">
                                     {al.finalizado_em ? (
                                       <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-emerald-100 dark:bg-emerald-500/10 text-emerald-400">

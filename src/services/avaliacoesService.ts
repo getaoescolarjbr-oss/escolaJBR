@@ -430,7 +430,7 @@ export async function obterResultadosDetalhadosAvaliacao(avaliacaoId: string): P
   // 4. Respostas enviadas
   const { data: respostasData, error: rErr } = await supabase
     .from('prova_respostas')
-    .select('id, aluno_id, nota, nota_ponderada, finalizado_em, alunos(id, nome, codigo_sgde, turmas(nome)), prova_respostas_itens(question_id, letra_marcada, correta, valor_obtido)')
+    .select('id, aluno_id, nota, nota_ponderada, nota_tri, finalizado_em, alunos(id, nome, codigo_sgde, turmas(nome)), prova_respostas_itens(question_id, letra_marcada, correta, valor_obtido)')
     .eq('prova_id', avaliacaoId);
   if (rErr) throw rErr;
 
@@ -468,6 +468,7 @@ export async function obterResultadosDetalhadosAvaliacao(avaliacaoId: string): P
       turma_nome: al.turma_nome,
       nota: resp?.finalizado_em ? Number(resp.nota) || 0 : null,
       nota_ponderada: resp?.finalizado_em && resp.nota_ponderada != null ? Number(resp.nota_ponderada) : null,
+      nota_tri: resp?.finalizado_em && resp.nota_tri != null ? Number(resp.nota_tri) : null,
       finalizado_em: (resp?.finalizado_em as string) ?? null,
       respostas: itensMap,
       total_acertos: totalAcertos,
@@ -502,6 +503,7 @@ export async function obterResultadosDetalhadosAvaliacao(avaliacaoId: string): P
         turma_nome: alObj?.turmas?.nome ?? null,
         nota: resp.finalizado_em ? Number(resp.nota) || 0 : null,
         nota_ponderada: resp.finalizado_em && resp.nota_ponderada != null ? Number(resp.nota_ponderada) : null,
+        nota_tri: resp.finalizado_em && resp.nota_tri != null ? Number(resp.nota_tri) : null,
         finalizado_em: (resp.finalizado_em as string) ?? null,
         respostas: itensMap,
         total_acertos: totalAcertos,

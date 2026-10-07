@@ -203,6 +203,7 @@ export interface ResultadoAlunoDetalhado {
   /** A soma crua dos acertos, preservada quando `nota` foi substituída pela ponderada. */
   nota_bruta?: number | null;
   nota_ponderada?: number | null;
+  nota_tri?: number | null;
   finalizado_em: string | null;
   respostas: Record<string, RespostaItemAluno>;
   total_acertos: number;
