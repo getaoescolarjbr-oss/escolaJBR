@@ -1,8 +1,7 @@
-﻿
--- Cria fun��o helper para mapear a �rea da quest�o baseada nas cotas ou estrutura da avalia��o geral
+-- Cria função helper para mapear a área da questão baseada nas cotas ou estrutura da avaliação geral
 CREATE OR REPLACE FUNCTION public.rpc_mapear_areas_prova(p_prova_id UUID)
 RETURNS TABLE (question_id UUID, area_conhecimento TEXT)
-LANGUAGE plpgsql STABLE SECURITY DEFINER AS $
+LANGUAGE plpgsql STABLE SECURITY DEFINER AS $$
 BEGIN
   RETURN QUERY
   WITH area_ranges_geral AS (
@@ -53,27 +52,27 @@ BEGIN
     ON qo.prova_id = ar.prova_id 
    AND qo.q_ordem BETWEEN ar.range_start AND ar.range_end;
 END;
-$;
+$$;
 GRANT EXECUTE ON FUNCTION public.rpc_mapear_areas_prova TO authenticated;
 
--- Atualiza a fun��o de rec�lculo da nota ponderada e TRI para usar a nova fun��o de mapeamento
+-- Atualiza a função de recálculo da nota ponderada e TRI para usar a nova função de mapeamento
 CREATE OR REPLACE FUNCTION public.rpc_recalcular_ponderada(p_prova_id uuid)
 RETURNS integer
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = public
-AS $
+AS $$
 DECLARE
   v_prova provas;
   v_afetadas integer;
 BEGIN
   IF NOT public.pode_corrigir_prova(p_prova_id) THEN
-    RAISE EXCEPTION 'Sem permiss�o para recalcular as notas desta prova.';
+    RAISE EXCEPTION 'Sem permissão para recalcular as notas desta prova.';
   END IF;
 
   SELECT * INTO v_prova FROM provas WHERE id = p_prova_id;
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'Prova n�o encontrada.';
+    RAISE EXCEPTION 'Prova não encontrada.';
   END IF;
 
   IF v_prova.modo_nota <> 'PONDERADA' THEN
@@ -141,7 +140,7 @@ BEGIN
   estatisticas_areas AS (
     SELECT grupo, area, avg(pontos) as media, stddev_pop(pontos) as desvio_padrao
     FROM base_areas 
-    WHERE area IS NOT NULL AND trim(area) <> '' AND area <> 'Sem �rea'
+    WHERE area IS NOT NULL AND trim(area) <> '' AND area <> 'Sem Área'
     GROUP BY grupo, area
   ),
   tri_areas AS (
@@ -177,10 +176,10 @@ BEGIN
   GET DIAGNOSTICS v_afetadas = ROW_COUNT;
   RETURN v_afetadas;
 END;
-$;
+$$;
 
--- Recalcula imediatamente usando a nova fun��o
-DO $
+-- Recalcula imediatamente usando a nova função
+DO $$
 DECLARE
   v_prova RECORD;
 BEGIN
@@ -189,5 +188,4 @@ BEGIN
     PERFORM public.rpc_recalcular_ponderada(v_prova.id);
   END LOOP;
 END;
-$;
-
+$$;
