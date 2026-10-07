@@ -204,6 +204,7 @@ export interface ResultadoAlunoDetalhado {
   nota_bruta?: number | null;
   nota_ponderada?: number | null;
   nota_tri?: number | null;
+  nota_tri_areas?: Record<string, number> | null;
   finalizado_em: string | null;
   respostas: Record<string, RespostaItemAluno>;
   total_acertos: number;

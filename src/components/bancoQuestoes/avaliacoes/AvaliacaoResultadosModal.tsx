@@ -72,8 +72,21 @@ const ESTILO_ACERTO = { font: { bold: true, color: { rgb: '006100' } }, fill: { 
 const ESTILO_ERRO = { font: { bold: true, color: { rgb: '9C0006' } }, fill: { fgColor: { rgb: 'FFC7CE' } }, alignment: { horizontal: 'center' } };
 
 function criarPlanilhaAlunos(XLSX: XLSXLib, alunosGrupo: ResultadoAlunoDetalhado[], questoes: QuestaoInfoRelatorio[], isPonderada: boolean) {
+  const areasTri = new Set<string>();
+  if (isPonderada) {
+    alunosGrupo.forEach(al => {
+      if (al.nota_tri_areas) {
+        Object.keys(al.nota_tri_areas).forEach(a => areasTri.add(a));
+      }
+    });
+  }
+  const areasTriArray = Array.from(areasTri).sort();
+
   const header = ['Aluno', 'Turma', 'SGDE', 'Status', 'Total Acertos', '% Acertos', 'Nota'];
-  if (isPonderada) header.push('TRI / UFMS');
+  if (isPonderada) {
+    header.push('TRI Geral');
+    areasTriArray.forEach(area => header.push(`TRI ${area}`));
+  }
   header.push(
     ...questoes.map((q) => `Q${String(q.ordem).padStart(2, '0')} (Gab: ${q.correct_letter || '—'})`),
     'Data de Envio'
@@ -81,7 +94,7 @@ function criarPlanilhaAlunos(XLSX: XLSXLib, alunosGrupo: ResultadoAlunoDetalhado
 
   const linhas: (string | number)[][] = [header];
   const estilos: { r: number; c: number; s: Record<string, unknown> }[] = [];
-  const primeiraColQuestao = 7;
+  const primeiraColQuestao = 7 + (isPonderada ? 1 + areasTriArray.length : 0);
 
   alunosGrupo.forEach((al, idx) => {
     const linha: (string | number)[] = [
@@ -96,6 +109,9 @@ function criarPlanilhaAlunos(XLSX: XLSXLib, alunosGrupo: ResultadoAlunoDetalhado
 
     if (isPonderada) {
       linha.push(al.finalizado_em && al.nota_tri != null ? Number(al.nota_tri.toFixed(2)) : '');
+      areasTriArray.forEach(area => {
+        linha.push(al.finalizado_em && al.nota_tri_areas?.[area] != null ? Number(al.nota_tri_areas[area].toFixed(2)) : '');
+      });
     }
 
     questoes.forEach((q, qi) => {
@@ -122,7 +138,10 @@ function criarPlanilhaAlunos(XLSX: XLSXLib, alunosGrupo: ResultadoAlunoDetalhado
     if (ws[addr]) ws[addr].s = s;
   });
   const colSizes = [{ wch: 32 }, { wch: 12 }, { wch: 14 }, { wch: 10 }, { wch: 14 }, { wch: 10 }, { wch: 8 }];
-  if (isPonderada) colSizes.push({ wch: 12 });
+  if (isPonderada) {
+    colSizes.push({ wch: 12 });
+    areasTriArray.forEach(() => colSizes.push({ wch: 12 }));
+  }
   colSizes.push(...questoes.map(() => ({ wch: 14 })), { wch: 18 });
   ws['!cols'] = colSizes;
   return ws;
@@ -205,6 +224,18 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
     const nomes = new Set(alunos.map((a) => a.turma_nome || SEM_TURMA));
     return Array.from(nomes).sort((a, b) => a.localeCompare(b, 'pt-BR'));
   }, [alunos]);
+
+  const areasTriArray = useMemo(() => {
+    const areas = new Set<string>();
+    if (avaliacao.modo_nota === 'PONDERADA') {
+      alunos.forEach(al => {
+        if (al.nota_tri_areas) {
+          Object.keys(al.nota_tri_areas).forEach(a => areas.add(a));
+        }
+      });
+    }
+    return Array.from(areas).sort();
+  }, [alunos, avaliacao.modo_nota]);
 
   const alunosPorTurma = useMemo(() => {
     const mapa = new Map<string, ResultadoAlunoDetalhado[]>();
@@ -485,7 +516,12 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
                                 <th className="py-2.5 px-3 text-center">Acertos</th>
                                 <th className="py-2.5 px-3 text-center">Nota</th>
                                 {avaliacao.modo_nota === 'PONDERADA' && (
-                                  <th className="py-2.5 px-3 text-center text-[10px] uppercase tracking-wider text-purple-400" title="Escore Padronizado simulando TRI ENEM / UFMS">TRI / UFMS</th>
+                                  <>
+                                    <th className="py-2.5 px-3 text-center text-[10px] uppercase tracking-wider text-purple-400" title="Escore Padronizado simulando TRI ENEM / UFMS">TRI Geral</th>
+                                    {areasTriArray.map(area => (
+                                      <th key={area} className="py-2.5 px-3 text-center text-[10px] uppercase tracking-wider text-purple-400" title={`TRI - ${area}`}>TRI {area}</th>
+                                    ))}
+                                  </>
                                 )}
                                 <th className="py-2.5 px-3 text-center">Status</th>
                               </tr>
@@ -506,9 +542,16 @@ export function AvaliacaoResultadosModal({ avaliacao, onClose }: Props) {
                                     {al.finalizado_em ? (al.nota ?? 0).toFixed(2) : '—'}
                                   </td>
                                   {avaliacao.modo_nota === 'PONDERADA' && (
-                                    <td className="py-2.5 px-3 text-center font-bold text-purple-400">
-                                      {al.finalizado_em && al.nota_tri != null ? al.nota_tri.toFixed(2) : '—'}
-                                    </td>
+                                    <>
+                                      <td className="py-2.5 px-3 text-center font-bold text-purple-400">
+                                        {al.finalizado_em && al.nota_tri != null ? al.nota_tri.toFixed(2) : '—'}
+                                      </td>
+                                      {areasTriArray.map(area => (
+                                        <td key={area} className="py-2.5 px-3 text-center font-bold text-purple-400/80">
+                                          {al.finalizado_em && al.nota_tri_areas?.[area] != null ? al.nota_tri_areas[area].toFixed(2) : '—'}
+                                        </td>
+                                      ))}
+                                    </>
                                   )}
                                   <td className="py-2.5 px-3 text-center">
                                     {al.finalizado_em ? (
