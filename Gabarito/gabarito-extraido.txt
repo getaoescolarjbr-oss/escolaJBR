@@ -1,0 +1,435 @@
+Python
+questions_data = [
+    (1, "1980", "D", "Para aumentar a média de peso de uma população por seleção artificial, deve-se cruzar os indivíduos que possuem o fenótipo desejado de maior peso (porcos e porcas de maior peso)."),
+    (2, "1980", "B", "Em organismos sem reprodução sexuada conhecida, como as cianofíceas (bactérias fotossintetizantes), a principal fonte geradora de nova variabilidade genética é a mutação."),
+    (3, "1980", "A", "Na cisticercose humana, o homem atua como hospedeiro intermediário ao ingerir ovos de Taenia solium presentes em água ou alimentos contaminados."),
+    (4, "1980", "A", "A transpiração no cavalo, a arfagem no cão e o banho de lama no porco são mecanismos de termorregulação que visam dissipar calor e diminuir a temperatura corporal."),
+    (5, "1980", "D", "A Mata de Araucárias (Mata dos Pinhais) destaca-se pela alta frequência da gimnosperma Araucaria angustifolia (pinheiro-do-paraná)."),
+    (6, "1980", "B", "O Proálcool apoia-se na fotossíntese (fixação de energia solar em carboidratos na cana-de-açúcar) seguida do processo de fermentação alcoólica para obtenção de etanol."),
+    (7, "1980", "E", "As três características diagnósticas dos cordados na fase embrionária são: notocorda, tubo nervoso dorsal e fendas faríngeas (ou branquiais na faringe)."),
+    (8, "1980", "E", "Feijão, ervilha e soja pertencem à família Fabaceae (Leguminosae), caracterizada por frutos do tipo legume e associação com bactérias fixadoras de nitrogênio."),
+    (9, "1980", "D", "O CO2 entra pelos estômatos, dissolve-se no filme de água da parede celular das células do mesófilo, atravessa o plasmalema (membrana plasmática) e atinge o citoplasma e os cloroplastos."),
+    (10, "1080", "E", "O fenômeno da maré vermelha é provocado pela proliferação excessiva de algas dinoflageladas (pirrófitas) planctônicas, que liberam neurotoxinas na água."),
+    (11, "1981", "B", "Cruzamento Cc x Cc origina 1/4 CC, 2/4 Cc, 1/4 cc. Entre os 360 de pelos curtos (CC e Cc), a proporção de heterozigotos (Cc) é de 2/3. Logo, 2/3 de 360 = 240."),
+    (12, "1981", "A", "A derme é de origem mesodérmica; os pulmões (sistema respiratório) são de origem endodérmica; o cérebro (sistema nervoso) é de origem ectodérmica."),
+    (13, "1981", "A", "A planária (platelminto) não possui sistema respiratório especializado; as trocas gasosas ocorrem diretamente por difusão através da epiderme (respiração cutânea direta)."),
+    (14, "1981", "B", "Indivíduos do grupo sanguíneo AB possuem os aglutinogênios A e B nas membranas das suas hemácias e não possuem aglutininas no plasma."),
+    (15, "1981", "C", "Filariose é causada por verme (Wuchereria bancrofti); tuberculose por bactéria (Mycobacterium tuberculosis); malária por protozoário (Plasmodium); febre amarela por vírus."),
+    (16, "1981", "C", "O uso contínuo e inadequado de antibióticos atua como agente seletivo, selecionando linhagens de bactérias previamente resistentes."),
+    (17, "1981", "B", "Na metáfase da mitose de uma célula 2n=4, há 4 cromossomos duplicados (cada um composto por duas cromátides-irmãs) alinhados na placa equatorial."),
+    (18, "1981", "A", "Nas angiospermas, o fruto verdadeiro desenvolve-se a partir do amadurecimento das paredes do ovário da flor após a fecundação."),
+    (19, "1981", "E", "A vitamina K é essencial para a síntese hepática de prootrombina e outros fatores indispensáveis à cascata de coagulação sanguínea."),
+    (20, "1981", "C", "No interior do canal vertebral passa a medula espinhal (ou espinal), cuja lesão pode interromper a transmissão de impulsos nervosos e causar paralisia."),
+    (21, "1981", "A", "O etileno é um hormônio vegetal gasoso responsável por promover o amadurecimento dos frutos e a abscisão (queda) das folhas e frutos."),
+    (22, "1981", "C", "I está correta (membros de mesma espécie se cruzam livremente); II está incorreta (subespécies não possuem isolamento reprodutivo completo); III está correta (isolamento geográfico favorece a especiação alopátrica)."),
+    (23, "1987", "E", "Pela Segunda Lei de Mendel, um indivíduo duplo-heterozigoto (AaBb) com segregação independente produz 4 tipos de gametas na proporção de 25% AB, 25% aB, 25% Ab e 25% ab."),
+    (24, "1987", "C", "Dengue, febre amarela urbana e malária dependem da presença de insetos vetores (mosquitos); o acúmulo de água parada propicia criadouros para essas populações."),
+    (25, "1987", "B", "O gás oxigênio é gerado na etapa fotoquímica da fotossíntese, processo que necessita diretamente de luz solar (ocorre apenas durante o dia)."),
+    (26, "1987", "E", "Minhoca (anelídeo), camarão (artrópode) e peixe (vertebrado) possuem todos tubo digestivo completo (boca e ânus)."),
+    (27, "1987", "C", "Algas são organismos autótrofos fotossintetizantes e possuem clorofila; os fungos são heterótrofos por absorção e carecem inteiramente de clorofila."),
+    (28, "1987", "A", "Watson e Crick descreveram em 1953 o modelo de dupla hélice para a molécula de ácido desoxirribonucleico (DNA)."),
+    (29, "1988", "A", "Na fermentação alcoólica realizada por leveduras, a glicose é convertida em álcool etílico (essencial para o vinho) e gás CO2 (que faz a massa do pão expandir)."),
+    (30, "1988", "C", "O cerebelo é o centro do encéfalo encarregado pelo equilíbrio corporal, tônus muscular e coordenação dos movimentos motores como o andar."),
+    (31, "1988", "B", "Borboleta é holometábola (metamorfose completa: ovo, larva, pupa, adulto) e barata é hemimetábola (metamorfose gradual: ovo, ninfa, adulto)."),
+    (32, "1988", "B", "Líquens (associação entre fungos e algas/cianobactérias) atuam como organismos pioneiros na ecese de rochas nuas, iniciando a sucessão ecológica primária."),
+    (33, "1988", "D", "O endosperma (3n) das angiospermas resulta da fusão de 2 núcleos polares maternos com 1 núcleo espermático paterno, contendo 2/3 de genoma materno e 1/3 paterno."),
+    (34, "1988", "E", "A respiração celular é um processo contínuo de obtenção de energia (ATP) que ocorre em todas as células vivas do vegetal, ininterruptamente, dia e noite."),
+    (35, "1988", "E", "Os bronquíolos ramificam-se até os alvéolos pulmonares; sua obstrução impede a chegada do ar inspirado a essas estruturas onde ocorrem as trocas gasosas."),
+    (36, "1988", "B", "A minhoca (Anelídeo Oligochaeta) reúne as três características: é celomada, hermafrodita (monoica) e possui sistema circulatório fechado com vaso dorsal e ventral."),
+    (37, "1988", "C", "A associação entre bactérias Rhizobium e raízes de leguminosas é um mutualismo: as bactérias fixam N2 para a planta e recebem matéria orgânica em troca."),
+    (38, "1988", "D", "O surgimento do tubo polínico (siphonogamia) permitiu o transporte do gameta masculino até a oosfera sem necessidade da presença de água líquida."),
+    (39, "1988", "B", "A síndrome XYY decorre de uma não-disjunção das cromátides-irmãs do cromossomo Y durante a meiose II na espermatogênese, gerando um espermatozoide anormal YY (24 cromossomos)."),
+    (40, "1989", "A", "Na iluminação, o CO2 é consumido na fotossíntese, elevando o pH (alcalino). A fosforilase converte amido em glicose solúvel, aumentando a concentração osmótica celular e, portanto, a sucção/pressão osmótica."),
+    (41, "1989", "B", "O aumento acentuado de CO2 na atmosfera desde a Revolução Industrial deve-se principalmente à queima em larga escala de combustíveis fósseis (carvão, petróleo, gás)."),
+    (42, "1989", "E", "O feijão é uma leguminosa associada a bactérias fixadoras de nitrogênio, enriquecendo o solo com compostos nitrogenados em vez de esgotá-los."),
+    (43, "1989", "D", "O organismo A possui apenas cápsula proteica e ácido nucleico (vírus); o organismo B possui parede celular, membrana, citoplasma e DNA circular sem carioteca (bactéria)."),
+    (44, "1989", "D", "A frase de Darwin expressa a divergência nos modos de vida para reduzir a competição, o que corresponde ao conceito de diferenciação de nicho ecológico."),
+    (45, "1989", "A", "Se há permutação em 80% das células, a taxa de recombinação é a metade (40% de gametas recombinantes totais: 20% Ab + 20% aB). Logo, a porcentagem de gametas Ab é de 10% (espera-se 10% Ab, 10% aB, 40% AB, 40% ab)."),
+    (46, "1989", "C", "Uma segunda exposição ao mesmo antígeno ativa as células de memória imunológica, desencadeando uma resposta imunitária secundária mais rápida e intensa."),
+    (47, "1989", "E", "O baço pode ser removido cirurgicamente (esplenectomia) sem comprometer vitalmente a vida do paciente, pois suas funções são parcialmente assumidas pelo fígado e medula óssea."),
+    (48, "1989", "A", "Samambaias (pteridófitas), pinheiros (gimnospermas) e cafeeiros (angiospermas) são todas plantas vasculares (traqueófitas) e possuem tecidos condutores (xilema e floema)."),
+    (49, "1989", "E", "O anfioxo é um cordado invertebrado que possui simetria bilateral, metameria e tubo nervoso em posição dorsal."),
+    (50, "1990", "E", "A decomposição aeróbica da grande biomassa de algas mortas na eutrofização consome o oxigênio dissolvido na água, provocando anoxia e mortandade de peixes."),
+    (51, "1990", "B", "Mitocôndrias e cloroplastos são organelas semiautônomas que possuem seu próprio DNA circular, ribossomos e capacidade de autoduplicação."),
+    (52, "1990", "D", "No ciclo haplodiplobionte das samambaias, o esporófito (2n) realiza meiose espórica nos esporângios para produzir esporos haploides (n)."),
+    (53, "1990", "D", "Ovos oligolécitos possuem pouco vitelo e passam por segmentação holoblástica (total); ovos telolécitos possuem muito vitelo e passam por segmentação meroblástica (parcial)."),
+    (54, "1990", "C", "Como o pai afetado Pedro transmitiu a doença para o filho homem João e para a filha Maria, o gene não pode ser ligado ao X (pois passaria Y para o filho) nem ao Y (pois não passaria para a filha). Logo, é autossômico."),
+    (55, "1990", "B", "Tanto anelídeos (minhoca) quanto artrópodes (mosca) pertencem ao grupo dos metamerizados, apresentando o corpo dividido em segmentos repetidos (metâmeros)."),
+    (56, "1990", "B", "O catabolismo das proteínas gera grupos amina que são convertidos em amônia e posteriormente transformados em ureia no fígado para excreção."),
+    (57, "1990", "D", "A medula óssea vermelha é um tecido hematopoietico de intensa atividade mitótica contínua para renovação dos elementos figurados do sangue."),
+    (58, "1990", "D", "Cada tétrade (ou bivalente) corresponde a um par de cromossomos homólogos pareados na prófase I. Se há 16 tétrades, n = 16 e o número diploide (2n) é 32."),
+    (59, "1991", "C", "A manutenção do gradiente de concentração de Na+ e K+ contra os seus gradientes de difusão é realizada pela bomba de sódio e potássio através de transporte ativo (com gasto de ATP)."),
+    (60, "1991", "C", "Como o cruzamento entre indivíduos pretos (A x C) produziu filhotes amarelos (recessivos), a cor preta é dominante e os pais A e C são heterozigotos."),
+    (61, "1991", "A", "A queima de combustíveis fósseis lança CO2 estocado há milhões de anos na atmosfera, intensificando o efeito estufa e o aquecimento global."),
+    (62, "1991", "C", "Mãe aaCc e Pai AaCc. Probabilidade de filho albino (aa) = 1/2. Probabilidade de cabelos crespos (C_) = 3/4. Probabilidade conjunta (aa e C_) = 1/2 * 3/4 = 3/8 = 37,5%."),
+    (63, "1992", "A", "Os ribossomos são os grânulos responsáveis pela tradução do RNAm e síntese de proteínas; sua inibição por antibióticos impede a sobrevida bacteriana."),
+    (64, "1992", "E", "A rainha heterozigota para 4 genes (AaBbDdEe) produz gametas por meiose com 2^4 = 16 combinações de alelos. Os zangões surgem de óvulos não fecundados (partenogênese) e possuem o genótipo exato do gameta."),
+    (65, "1992", "D", "Em anaerobiose (falta de O2), as células musculares realizam fermentação lática para regenerar NAD+, acumulando ácido lático no tecido."),
+    (66, "1992", "A", "O fitoplâncton representa os produtores primários no ecossistema aquático; nos ecossistemas terrestres, as plantas (como as gramíneas) cumprem o mesmo papel."),
+    (67, "1992", "B", "Plasmodium, Trypanosoma e Taenia solium são todos endoparasitas que vivem no interior do corpo de seus hospedeiros."),
+    (68, "1992", "C", "Para testar isoladamente o efeito do hormônio, o grupo controle deve passar pela mesma cirurgia e receber o veículo (lanolina puramente) sem o hormônio."),
+    (69, "1993", "E", "As leguminosas são plantas (Reino Plantae): organismos eucarióticos, multicelulares e autótrofos fotossintetizantes."),
+    (70, "1993", "D", "Em ambientes privados de O2, bactérias anaeróbicas (que não utilizam O2 no metabolismo) são beneficiadas em relação aos organismos aeróbicos."),
+    (71, "1993", "C", "Os cloroplastos realizam fotofosforilação (produzem ATP) na etapa clara e utilizam esse ATP na etapa escura (Ciclo de Calvin) para fixar CO2 em matéria orgânica."),
+    (72, "1993", "B", "A ascensão da seiva bruta é movida pela transpiração foliar; hastes cortadas em solução colorida em ambiente seco transpiram mais rápido, puxando o corante."),
+    (73, "1993", "E", "Descendentes heterozigotos Vv podem ser gerados pelos cruzamentos I (VV x vv -> 100% Vv), II (Vv x Vv -> 50% Vv) e III (Vv x vv -> 50% Vv)."),
+    (74, "1994", "E", "A detecção de radioatividade nas folhas após colocar fosfato radioativo no solo demonstra o processo de absorção radicular e condução pelo xilema."),
+    (75, "1994", "C", "A equação geral da respiração aeróbica completa resulta na oxidação da glicose produzindo dióxido de carbono (CO2), água (H2O) e energia (ATP)."),
+    (76, "1994", "E", "Na população com 50% Aa e 50% aa: o alelo A está presente apenas nos indivíduos Aa. Como estes são metade da população e têm 1 alelo A de 2, a frequência do alelo A é (0,50 / 2) = 0,25."),
+    (77, "1994", "A", "600 pares de bases = fita de RNAm com 600 nucleotídeos. Como cada códon tem 3 nucleotídeos, a cadeia terá 600 / 3 = 200 aminoácidos."),
+    (78, "1994", "A", "No coração de mamíferos, o sangue entra pelo átrio (aurícula) esquerdo e passa para o ventrículo esquerdo através da válvula bicúspide (mitral)."),
+    (79, "1994", "A", "O xilema possui elementos de vaso lignificados e fibras rígidas que desempenham a função principal de sustentação mecânica do corpo vegetal."),
+    (80, "1994", "D", "O maior aproveitamento da energia dos produtores ocorre no menor nível trófico possível (consumidor primário). Pão e geleia de frutas são de origem vegetal direta."),
+    (81, "1994", "E", "Nas pteridófitas, o esporófito é a fase diploide (2n), contendo o dobro de DNA por núcleo em comparação aos gametófitos, gametas e esporos que são haploides (n)."),
+    (82, "1995", "D", "O nematoide Ascaris lumbricoides mantém altas pressões no esqueleto hidrostático graças a uma cutícula colagênica espessa e inelástica que reveste externamente o corpo."),
+    (83, "1995", "E", "Preencher uma ficha é uma ação motora voluntária e cognitiva complexa que envolve múltiplas áreas do córtex cerebral, além de órgãos sensoriais e vias motoras."),
+    (84, "1995", "A", "Decompositores degradam matéria orgânica complexa (como proteínas/aminoácidos) em substâncias inorgânicas simples/sais minerais (mineralização)."),
+    (85, "1995", "C", "A protandria (amadurecimento prévio do androceu) impede a autopolinização na mesma flor, garantindo a fecundação cruzada e a variabilidade genética."),
+    (86, "1995", "B", "A imigração maciça de indivíduos homozigotos dominantes (AA) aumenta a frequência do alelo dominante A na população, reduzindo a proporção relativa de homozigotos recessivos."),
+    (87, "1995", "D", "Genótipo do homem: Aa dd FF. Como os genes segregam independentemente, os gametas formados conterão obrigatoriamente d e F, podendo ter A ou a: AdF e adF."),
+    (88, "1995", "C", "A energia disponível para os consumidores primários é a Produtividade Primária Líquida (PPL), ou seja, a biomassa/energia retida nas substâncias químicas da planta após a respiração."),
+    (89, "1995", "A", "As células do túbulo contorcido proximal possuem microvilosidades (aumento de área de absorção) e muitas mitocôndrias (fornecimento de ATP para reabsorção ativa de íons e glicose)."),
+    (90, "1995", "E", "Estômatos situados em cavidades/criptas estomáticas reduzem a exposição ao vento e diminuem a transpiração, sendo adaptações típicas de plantas de ambientes secos (xerófitas)."),
+    (91, "1995", "A", "Mudas clonadas possuem exatamente o mesmo genótipo; expostas a condições de iluminação distintas, manifestaram fenótipos diferentes (uma verde normal e outra estiolada)."),
+    (92, "1996", "E", "Ao final da meiose, uma única ovogônia origina apenas 1 óvulo funcional (e 3 glóbulos polares). Portanto, essa ovogônia formará apenas 1 óvulo (que será D ou d)."),
+    (93, "1996", "E", "A ancilostomíase (amarelão) é transmitida pela penetração ativa das larvas L3 de Ancylostoma duodenale ou Necator americanus através da pele de pessoas andando descalças em solo contaminado."),
+    (94, "1996", "C", "A variabilidade genética nas populações é gerada por mutações genéticas, segregação independente dos cromossomos homólogos e permutação (crossing-over)."),
+    (95, "1996", "D", "A placenta realiza trocas gasosas (O2 e CO2), transferência de nutrientes e remoção de resíduos metabólicos excretados pelo feto por difusão na barreira placentária."),
+    (96, "1996", "C", "Escorbuto resulta da deficiência de Vitamina C; raquitismo de Vitamina D; cegueira noturna (hemeralopia) de Vitamina A."),
+    (97, "1996", "A", "Lípase pancreática atua em pH básico (pâncreas/duodeno); amilase salivar atua em pH neutro (boca); pepsina atua em pH ácido (estômago)."),
+    (98, "1996", "B", "Lêvedos secretam a enzima invertase (sacarase) no meio extracelular, que hidrolisa a sacarose em glicose e frutose, substâncias que são então absorvidas."),
+    (99, "1996", "B", "A teoria endossimbiótica é fortemente corroborada pelo fato de mitocôndrias e cloroplastos possuírem DNA próprio circular, semelhante ao de procariotos."),
+    (100, "1996", "D", "A curto prazo na altitude há taquicardia, hiperventilação e elevação da pressão arterial; a longo prazo, o corpo aumenta a produção de eritropoetina estimulando a eritropoiese (mais hemácias)."),
+    (101, "1996", "D", "VvRr x Vvrr -> Amarela/Lisa (V_Rr) = 3/8 (300); Amarela/Rugosa (V_rr) = 3/8 (300); Verde/Lisa (vvRr) = 1/8 (100); Verde/Rugosa (vvrr) = 1/8 (100)."),
+    (102, "1996", "D", "A alta taxa de mutação na cópia do RNA do vírus HIV (pela transcriptase reversa) altera constantemente os anticorpos de superfície, dificultando a vacinação."),
+    (103, "1996", "E", "A proporção de filhos Aa depende do genótipo do pai: se o pai for AA, será 50%; se for aa, 50%; se for Aa, 50%; se for desconhecido, não é possível determinar com certeza sem a informação paterna."),
+    (104, "1996", "B", "Gêmeos univitelinos (monozigóticos) vêm de 1 óvulo fecundado por 1 espermatozoide que se divide; fraternos (dizigóticos) vêm de 2 óvulos fecundados por 2 espermatozoides."),
+    (105, "1996", "E", "Cólera é causada pela bactéria Vibrio cholerae (água e alimentos contaminados); meningite meningocócica é causada pela bactéria Neisseria meningitidis (vias aéreas/ar)."),
+    (106, "1997", "B", "O excesso de sódio retém água no compartimento intravascular por osmose, aumentando o volume de sangue circulante (volemia) e elevando a pressão arterial."),
+    (107, "1997", "B", "Em exercícios intensos com suprimento insuficiente de O2, as fibras musculares realizam fermentação lática para obter ATP, acumulando ácido lático."),
+    (108, "1997", "E", "Mutações induzidas por radiação UV em células somáticas da pele não alteram o DNA das células germinativas (gametas), logo não são transmitidas aos descendentes."),
+    (109, "1997", "A", "Um indivíduo afetado por caráter autossômico recessivo (aa) pode ser filho de pais heterozigotos (Aa x Aa) que possuem fenótipo completamente normal."),
+    (110, "1997", "D", "Enzimas de restrição (endonucleases) clavam a fita dupla de DNA em sequências nucleotídicas específicas (sítios de restrição palíndromos)."),
+    (111, "1997", "A", "O fígado armazena e libera glicose (glicogenólise/glicogênese), converte a tóxica amônia em ureia (ciclo da ureia) e sintetiza a bile."),
+    (112, "1997", "C", "Aves (sabiá) são animais endotérmicos que mantêm alta taxa metabólica basal a 18°C para manter a temperatura corporal, exigindo maior consumo de alimento por massa corporal."),
+    (113, "1997", "A", "Mãe I^A i x Pai I^B i. A chance de cada filho ser O (ii) é 1/4 e de ser AB (I^A I^B) é 1/4. Logo, ter 5 filhos O (1/4)^5 tem exatamente a mesma probabilidade de ter 5 filhos AB (1/4)^5."),
+    (114, "1997", "E", "Para gêmeos monozigóticos: P(afetado) = 50%. Para gêmeos dizigóticos: P(pelo menos um afetado) = 1 - P(ambos sadios) = 1 - (1/2 * 1/2) = 3/4 = 75%."),
+    (115, "1997", "D", "Eliminar água parada combate o vetor Aedes aegypti (dengue e febre amarela) e Anopheles (malária). Cólera é bacteriana e esquistossomose envolve caramujos de água doce."),
+    (116, "1997", "C", "Segundo o neodarwinismo, em ambientes cavernícolas escuros, mutações que reduziram a visão conferiram vantagem adaptativa ao economizar energia e recursos orgânicos."),
+    (117, "1998", "D", "Nitrosomonas realiza quimiossíntese (autotrófica); E. coli é heterotrófica; Halobacterium capta luz por bacteriorrodopsina sem fixar CO2 (foto-heterotrófica/heterotrófica)."),
+    (118, "1998", "A", "No início da fase G1 da intérfase, cada um dos 46 cromossomos da célula somática humana possui uma única fita/molécula de DNA não duplicada."),
+    (119, "1998", "E", "Bactérias são seres procariontes e possuem ribossomos 70S no seu citoplasma para a síntese proteica, mas carecem de organelas membranosas."),
+    (120, "1998", "B", "Flores sem pétalas atrativas, com grande produção de pólen leve e estigmas featrados/pilosos são adaptadas à anemofilia (polinização pelo vento)."),
+    (121, "1998", "A", "Risco de fenilcetonúria ocorre quando ambos os cônjuges são heterozigotos (Aa x Aa). P(Aa) = 1/20. P(ambos Aa) = 1/20 * 1/20 = 1/400. Em 800 casamentos: 800 * 1/400 = 2 casamentos."),
+    (122, "1998", "D", "Antibióticos são eficazes apenas contra infecções bacterianas. Tuberculose, coqueluche e sífilis são todas causadas por bactérias."),
+    (123, "1998", "D", "A relação entre flores e abelhas é um mutualismo: a abelha obtém alimento (néctar/pólen) e a planta garante sua reprodução por polinização cruzada."),
+    (124, "1998", "C", "Um ecossistema auto-sustentável básico exige produtores (para sintetizar matéria orgânica) e decompositores (para reciclar a matéria inorgânica)."),
+    (125, "1998", "B", "A deficiência de ADH (antidiurético) reduz a reabsorção de água nos ductos coletores renais, gerando grande volume de urina diluída (baixa concentração de excretas)."),
+    (126, "1998", "B", "A (gafanhoto - inseto com traqueias e sistema aberto) e B (mexilhão - molusco bivalve com brânquias e sistema aberto)."),
+    (127, "1998", "D", "O 'poder catalítico' mencionado por Berzelius refere-se às enzimas, que são catalisadores biológicos de natureza proteica."),
+    (128, "1998", "D", "Meristemas apicais de raízes contêm tecidos em constante divisão mitótica, ideais para visualização e contagem de cromossomos."),
+    (129, "1998", "E", "Segundo a teoria da coesão-tensão (Dixon), a transpiração foliar cria uma pressão negativa (sucção) que puxa a coluna contínua de água no xilema."),
+    (130, "1998", "E", "O pinhão da Araucaria angustifolia é a semente da gimnosperma, constituída pelo embrião, endosperma primário (n) e tegumento (casca)."),
+    (131, "1998", "D", "Na clonagem por transferência nuclear, o DNA nuclear provém da doadora do núcleo (A) e o DNA mitocondrial provém do citoplasma do óvulo receptor (B)."),
+    (132, "1998", "C", "Tanto Schistosoma mansoni quanto Taenia solium são heteroxenos, necessitando de um hospedeiro intermediário e um hospedeiro definitivo."),
+    (133, "1998", "C", "A fixação do nitrogênio atmosférico (N2) em formas assimiláveis (como amônia e nitrato) é realizada por bactérias fixadoras (ex: Rhizobium, Azotobacter)."),
+    (134, "1998", "C", "Solos ricos em nitrogênio favorecem a síntese vegetal de aminoácidos e proteínas nas pastagens, promovendo maior ganho de massa muscular do gado."),
+    (135, "1998", "A", "Além do suporte mecânico, os ossos servem de reserva orgânica de cálcio e fósforo e abrigam a medula óssea vermelha (hematopoiese de hemácias e leucócitos)."),
+    (136, "1998", "E", "Os répteis foram os primeiros vertebrados a conquistar o meio terrestre definitivamente, graças ao ovo amniótico com casca calcária/córnea resistente à dessecação."),
+    (137, "1999", "C", "O 1º corpúsculo polar é formado ao final da Meiose I (23 cromossomos duplicados); o 2º corpúsculo polar é formado ao final da Meiose II (23 cromossomos simples)."),
+    (138, "1999", "D", "Plantas sintetizam suas próprias moléculas orgânicas; na hidroponia, a solução precisa conter nitratos inorgânicos para que a planta sintetize aminoácidos, proteínas e ácidos nucleicos."),
+    (139, "1999", "E", "Proteínas absorvidas são desintegradas e seus aminoácidos utilizados na síntese de novas proteínas no retículo endoplasmático granuloso."),
+    (140, "1999", "A", "Devido à duplicação semiconservativa do DNA, as 200 fitas parentais marcadas permanecerão em apenas 100 bactérias das 800 geradas. Os RNAs sintetizados no meio não radioativo não estarão marcados."),
+    (141, "1999", "A", "A remoção do duodeno é mais grave, pois é nele que deságuam o suco pancreático e a bile, ocorrendo a maior parte da digestão de carboidratos, lipídios e proteínas."),
+    (142, "1999", "B", "A ausência de tubo digestivo, presença de escólex com ventosas/ganchos e cutícula protetora são adaptações morfofisiológicas das tênias ao endoparasitismo."),
+    (143, "1999", "C", "I está incorreta (tetraciclina inibe a tradução, não a transcrição); II está correta (mitomicina inibe DNA polimerase); III está correta (estreptomicina causa erros na leitura de códons na tradução)."),
+    (144, "1999", "E", "Para obter clones (propagações assexuadas) de samambaias, deve-se utilizar o fracionamento/propagação do rizoma (caule), cujas mitoses geram indivíduos geneticamente idênticos."),
+    (145, "1999", "E", "A remoção das gemas apicais (poda de decapitação apical) elimina a fonte principal de auxina, cessando a inibição das gemas laterais e estimulando a ramificação."),
+    (146, "1999", "E", "I representa a observação da atração das moscas; II representa o fato demonstrado; III a hipótese formulada; IV o teste experimental da hipótese."),
+    (147, "1999", "A", "Na reação alérgica, anticorpos IgE fixados na membrana de mastócitos e basófilos ligam-se aos alergênicos, desencadeando a desgranulação e liberação de histamina."),
+    (148, "1999", "B", "Como escuros x escuros geraram descendentes claros, a cor escura é condicionada por um alelo dominante (EE ou Ee), enquanto a cor clara é recessiva (ee)."),
+    (149, "1999", "D", "Microrganismos atuam na fermentação alcoólica de bebidas (I) e na fixação de nitrogênio em leguminosas por bactérias (III). A produção de açúcar de cana (II) é processo físico-químico industrial."),
+    (150, "1999", "D", "No ecossistema descrito, o mofo atua como decompositor do substrato foliar e as saúvas atuam como consumidoras primárias ao se alimentarem do mofo."),
+    (151, "1999", "C", "A ordem temporal dos eventos evolutivos é: Origem das gimnospermas (Devoniano/Carbonífero) -> Extinção dos dinossauros (fim do Cretáceo) -> Origem da espécie humana (Pleistoceno)."),
+    (152, "2000", "D", "Em ciência, uma teoria é um corpo explplicativo amplo e bem fundamentado que articula leis e hipóteses para explicar e prever fenômenos naturais."),
+    (153, "2000", "E", "O O2 inalado atua como aceptor final de elétrons e prótons H+ no final da cadeia respiratória mitocôndrial, formando moléculas de água (H2O18)."),
+    (154, "2000", "D", "Autótrofos conseguem sintetizar todas as suas moléculas orgânicas a partir de fontes puramente inorgânicas (CO2, H2O e sais minerais)."),
+    (155, "2000", "E", "II é válido (probabilidade de mutação simultânea a múltiplos antibióticos é extremamente baixa); III é válido (o tratamento incompleto pode selecionar cepas multirresistentes)."),
+    (156, "2000", "D", "Células musculares e nervosas possuem exatamente o mesmo genoma, mas diferenciam-se devido à expressão gênica diferencial (sintetizam RNAs e proteínas distintos)."),
+    (157, "2000", "A", "Nas vilosidades intestinais, o sangue libera O2 para os tecidos do órgão e absorve aminoácidos e outros nutrientes fruto da digestão."),
+    (158, "2000", "C", "A informação genética para a produção de proteínas e montagem das cápsulas virais filhas reside exclusivamente no DNA do fago T2 injetado na bactéria."),
+    (159, "2000", "B", "O ciclo da ureia (ureogênese), no qual a amônia resultante da desaminação de aminoácidos é convertida em ureia, ocorre no fígado."),
+    (160, "2000", "C", "Tanto para Lamarck quanto para Darwin, o processo adaptativo resulta da interação contínua entre os organismos vivos e os desafios impostos pelo ambiente."),
+    (161, "2000", "E", "Eritroblastose fetal ocorre quando a mãe é Rh- e o pai é Rh+. Marina (Rh-) e João (Rh+) podem ter gestações de risco ao gerarem filhos com parceiros opostos."),
+    (162, "2000", "B", "A maior parte da massa seca de matéria orgânica de uma árvore provém do carbono fixado do gás carbônico (CO2) atmosférico durante a fotossíntese."),
+    (163, "2000", "A", "200 AA x 200 aa -> 400 Aa. 100 casais Aa x Aa -> 50 AA, 100 Aa, 50 aa. Total: 50 AA, 500 Aa, 50 aa."),
+    (164, "2000", "D", "Entre as plantas vasculares, as pteridófitas não possuem sementes, enquanto gimnospermas e angiospermas são espermatófitas (possuem sementes)."),
+    (165, "2000", "C", "No ciclo vegetal, o gametófito é multicelular e haploide (n) e produz gametas (n) por mitose."),
+    (166, "2001", "E", "Os ovários são as gônadas femininas responsáveis pela produção dos hormônios esteroides estrógeno e progesterona."),
+    (167, "2001", "C", "A ovelha transgênica é heterozigota (possui 1 cópia do gene). Ao cruzar com macho normal, a probabilidade de transmitir a cópia é de 50%."),
+    (168, "2001", "D", "A vinblastina impede a montagem dos microtúbulos do fuso mitótico, bloqueando a anáfase e impedindo a migração dos cromossomos para os polos."),
+    (169, "2001", "C", "Em desnutrição/privação, a célula ativa a autofagia, enviando organelas e porções do citoplasma para degradação enzimática nos lisossomos."),
+    (170, "2001", "B", "O fubá é vegetal (produtor). O tico-tico é consumidor primário ao comer fubá e consumidor secundário ao comer a minhoca (que consome detritos/produtores)."),
+    (171, "2001", "C", "As plantas são organismos autótrofos e sintetizam suas biomoléculas a partir de compostos inorgânicos absorvidos do ar (CO2) e do solo (água e minerais)."),
+    (172, "2001", "E", "Camarão e lagosta são crustáceos. Lula, polvo e mexilhão são moluscos."),
+    (173, "2001", "D", "A doença de Chagas é causada pelo protozoário Trypanosoma cruzi, que circula na corrente sanguínea e pode ser transmitido por transfusão de sangue contaminado."),
+    (174, "2001", "A", "Durante a sístole ventricular, o sangue atinge as artérias sob alta pressão (~120 mmHg) e as paredes arteriais contraem-se/respondem elasticamente."),
+    (175, "2001", "A", "O sequenciamento do genoma consiste em identificar a ordem exata das bases nitrogenadas (nucleotídeos A, T, C, G) nos cromossomos."),
+    (176, "2001", "A", "Entre os homens (XY), 90/1000 daltônicos significa q = 0,09. Em mulheres (XX), a frequência de daltônicas é q^2 = (0,09)^2 = 0,0081 (0,81%)."),
+    (177, "2001", "A", "Células sem núcleo individualizado e sem organelas compartimentadas por membranas são procariontes (bactérias e arqueas)."),
+    (178, "2001", "B", "A osmose é o movimento do solvente através de membrana semipermeável do meio hipotônico para o hipertônico, exigindo diferença de concentração de solutos.")
+]
+
+print(f"Total questions loaded: {len(questions_data)}")
+
+
+Saída de código
+Total questions loaded: 178
+
+
+Python
+html_parts = []
+
+html_parts.append("""<h1 style="color: #1a73e8; font-family: Arial, sans-serif; font-size: 24pt; margin-bottom: 12pt;">Gabarito Comentado - Questões de Biologia USP (1980 – 2001)</h1>
+<p style="font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.25; color: #333333; margin-bottom: 18pt;">
+Este documento contém as respostas corretas e as justificativas detalhadas para todas as 178 questões de Biologia dos vestibulares da USP/FUVEST extraídas do material de estudo.
+</p>
+""")
+
+current_year = None
+
+for qnum, year, ans, explanation in questions_data:
+    if year != current_year:
+        current_year = year
+        html_parts.append(f"""<h2 style="color: #155724; background-color: #d4edda; font-family: Arial, sans-serif; font-size: 16pt; padding: 6pt 10pt; margin-top: 18pt; margin-bottom: 10pt; border-radius: 4px;">Vestibular USP {year}</h2>""")
+    
+    html_parts.append(f"""
+<div style="margin-bottom: 14pt; padding: 8pt 12pt; border-left: 4px solid #1a73e8; background-color: #f8f9fa;">
+  <h3 style="color: #202124; font-family: Arial, sans-serif; font-size: 12pt; margin: 0 0 4pt 0;">Questão #{qnum} | USP {year}</h3>
+  <p style="font-family: Arial, sans-serif; font-size: 11pt; line-height: 1.25; margin: 0 0 4pt 0;"><b>GABARITO: <span style="color: #d93025; font-size: 12pt;">{ans}</span></b></p>
+  <p style="font-family: Arial, sans-serif; font-size: 10.5pt; line-height: 1.25; color: #3c4043; margin: 0;"><b>Comentário:</b> {explanation}</p>
+</div>
+""")
+
+full_html = "".join(html_parts)
+print("Total HTML character length:", len(full_html))
+
+
+Saída de código
+Total HTML character length: 130810
+
+
+Gabarito comentado completo formatado para transferência direta ao Google Docs:
+USP 1980
+#1 — Gabarito: D | Comentário: A seleção artificial cruzando os indivíduos de maior fenótipo (peso) seleciona os alelos responsáveis pelo maior ganho de massa.
+#2 — Gabarito: B | Comentário: Cianobactérias não realizam reprodução sexuada; portanto, a mutação é a fonte primária de variabilidade genética.
+#3 — Gabarito: A | Comentário: O homem atua como hospedeiro intermediário da T. solium na cisticercose ao ingerir água ou alimentos contaminados com ovos do parasita.
+#4 — Gabarito: A | Comentário: Transpiração, arfagem e o hábito de chafurdar na lama são mecanismos de termorregulação por resfriamento evaporativo.
+#5 — Gabarito: D | Comentário: A Mata de Araucárias (Floresta Ombrófila Mista) é dominada pela Araucaria angustifolia, uma gimnosperma.
+#6 — Gabarito: B | Comentário: O Proálcool baseou-se no aproveitamento da fotossíntese para fixação de matéria orgânica e posterior fermentação alcoólica dos açúcares.
+#7 — Gabarito: E | Comentário: As apomorfias do filo Chordata são: notocorda, tubo nervoso dorsal e fendas faríngeas.
+#8 — Gabarito: E | Comentário: Feijão, ervilha e soja pertencem à família Fabaceae (leguminosas).
+#9 — Gabarito: D | Comentário: O $CO_2$ entra pelos estômatos por difusão, dissolve-se na fase aquosa da parede celular do mesófilo e atinge o estroma dos cloroplastos.
+#10 — Gabarito: E | Comentário: A maré vermelha é causada pelo florescimento excessivo de microalgas planctônicas (dinoflagelados) que liberam neurotoxinas na água.
+USP 1981
+#11 — Gabarito: B | Comentário: O cruzamento $Cc \times Cc$ gera $3/4$ dominantes ($1/4\ CC + 2/4\ Cc$). Entre os 360 de pelos curtos, $2/3$ são heterozigotos: $360 \times (2/3) = 240$.
+#12 — Gabarito: A | Comentário: Derme origina-se da mesoderma; pulmão (epitélio respiratório) da endoderma; cérebro da ectoderma.
+#13 — Gabarito: A | Comentário: A planária é um platelminto acelomado de corpo achatado que realiza respiração cutânea direta por difusão simple.
+#14 — Gabarito: B | Comentário: Indivíduos do grupo AB expressam codominância e possuem as aglutinogênios A e B na membrana das hemácias, sem aglutininas no plasma.
+#15 — Gabarito: C | Comentário: Filariose (Wuchereria) = verme; Tuberculose (Mycobacterium) = bactéria; Malária (Plasmodium) = protozoário; Febre amarela = vírus.
+#16 — Gabarito: C | Comentário: O uso contínuo de antibióticos seleciona linhagens bacterianas previamente resistentes por pressão seletiva.
+#17 — Gabarito: B | Comentário: Na metáfase da mitose de uma célula $2n=4$, observam-se 4 cromossomos alinhados na placa equatorial, cada um duplo (com duas cromátides-irmãs).
+#18 — Gabarito: A | Comentário: O fruto verdadeiro é o resultado do desenvolvimento das paredes do ovário da flor após a fecundação.
+#19 — Gabarito: E | Comentário: A vitamina K atua como cofator essencial na síntese hepática dos fatores de coagulação, como a protrombina.
+#20 — Gabarito: C | Comentário: No canal vertebral situa-se a medula espinhal, componente do sistema nervoso central cuja lesão causa paralisia sensório-motora.
+#21 — Gabarito: A | Comentário: O etileno é um fitohormônio gasoso que induz o amadurecimento de frutos e a abscisão (queda) foliar.
+#22 — Gabarito: C | Comentário: A afirmação II está incorreta porque subespécies pertencem à mesma espécie e mantêm compatibilidade reprodutiva; o isolamento reprodutivo estabelece espécies distintas.
+USP 1987
+#23 — Gabarito: E | Comentário: Pela Segunda Lei de Mendel, um indivíduo $AaBb$ com segregação independente forma 4 tipos de gametas em proporções iguais (25% cada).
+#24 — Gabarito: C | Comentário: O acúmulo de água parada facilita a reprodução dos mosquitos vetores (Aedes aegypti e Anopheles).
+#25 — Gabarito: B | Comentário: O $O_2$ é produto da fotossíntese (fase clara/fotólise da água), que só ocorre na presença de luz (dia).
+#26 — Gabarito: E | Comentário: Todos possuem tubo digestório completo, com entrada pela boca e saída pelo ânus.
+#27 — Gabarito: C | Comentário: Algas possuem clorofila para autotrofia fotossintetizante; fungos são heterótrofos e desprovidos de pigmentos fotossintéticos.
+#28 — Gabarito: A | Comentário: Watson e Crick propuseram a estrutura em dupla hélice da molécula de DNA em 1953.
+USP 1988
+#29 — Gabarito: A | Comentário: A fermentação alcoólica por Saccharomyces produz etanol (usado no vinho) e $CO_2$ (gás que faz a massa do pão expandir).
+#30 — Gabarito: C | Comentário: O cerebelo coordena o equilíbrio postural, o tônus muscular e a precisão motora (locomoção/andar).
+#31 — Gabarito: B | Comentário: Borboleta é holometábola (ovo-larva-pupa-adulto); barata é hemimetábola (ovo-ninfa-adulto).
+#32 — Gabarito: B | Comentário: Os líquens são os organismos pioneiros (ecese) na sucessão ecológica primária sobre rochas nuas.
+#33 — Gabarito: D | Comentário: O endosperma das angiospermas é $3n$, formado pela fusão de 2 núcleos polares maternos com 1 núcleo espermático paterno ($2/3$ materno).
+#34 — Gabarito: E | Comentário: A respiração celular é um processo contínuo vital realizado dia e noite em todas as células vivas do vegetal.
+#35 — Gabarito: E | Comentário: Os bronquíolos conduzem o ar diretamente até os alvéolos pulmonares, onde ocorrem as trocas gasosas (hematose).
+#36 — Gabarito: B | Comentário: A minhoca é um anelídeo celomado, monoico (hermafrodita) e possui sistema circulatório fechado.
+#37 — Gabarito: C | Comentário: A associação entre Rhizobium e raízes de leguminosas é um mutualismo: a bactéria fixa $N_2$ e a planta fornece matéria orgânica.
+#38 — Gabarito: D | Comentário: O surgimento do tubo polínico (sifonogamia) permitiu o transporte do gameta masculino sem a dependência da água externa.
+#39 — Gabarito: B | Comentário: A constituição XYY decorre da não-disjunção das cromátides-irmãs do cromossomo Y na meiose II da espermatogênese, gerando um espermatozoide YY.
+USP 1989
+#40 — Gabarito: A | Comentário: Na luz, a fotossíntese consome $CO_2$, alcalinizando o meio. A enzima converte amido em glicose solúvel, aumentando a concentração de solutos e a pressão osmótica.
+#41 — Gabarito: B | Comentário: A queima intensiva de combustíveis fósseis (carvão, petróleo) libera grandes volumes de $CO_2$ estocado no subsolo.
+#42 — Gabarito: E | Comentário: O feijão (leguminosa) possui bactérias simbióticas fixadoras de nitrogênio atmosférico, não esgotando os nitratos do solo.
+#43 — Gabarito: D | Comentário: A descreve um vírus (capsídeo + ácido nucleico); B descreve uma bactéria (parede celular, membrana e DNA circular desprovido de carioteca).
+#44 — Gabarito: D | Comentário: A divergência de hábitos e estruturas refere-se à diferenciação de nichos ecológicos para evitar competição interespecífica.
+#45 — Gabarito: B | Comentário: Permutação em 80% das células gera taxa de recombinação de $80\% / 2 = 40\%$. Como os gametas recombinantes são Ab e aB, a frequência de Ab é $40\% / 2 = 20\%$.
+#46 — Gabarito: C | Comentário: A segunda exposição ativa a memória imunológica, desencadeando uma resposta secundária mais rápida e intensa.
+#47 — Gabarito: E | Comentário: O baço desempenha funções imunológicas e hemocateréticas, mas sua remoção (esplenectomia) é compatível com a vida.
+#48 — Gabarito: A | Comentário: Todas são vasculares (traqueófitas) e possuem tecidos condutores estruturados (xilema e floema).
+#49 — Gabarito: E | Comentário: O anfioxo (cordado) combina simetria bilateral, metameria muscular (miótomos) e tubo nervoso em posição dorsal.
+USP 1990
+#50 — Gabarito: E | Comentário: A decomposição aeróbica da biomassa algal morta consome o oxigênio dissolvido na água, provocando anoxia e mortandade de peixes.
+#51 — Gabarito: B | Comentário: Mitocôndrias e cloroplastos possuem DNA próprio circular de origem endossimbiótica.
+#52 — Gabarito: D | Comentário: Nas pteridófitas, o esporófito ($2n$) realiza meiose espórica nos esporângios para produzir esporos haploides ($n$).
+#53 — Gabarito: D | Comentário: O excesso de vitelo no ovo telolécito restringe a clivagem, alterando o padrão de segmentação (meroblástica) em relação aos oligolécitos (holoblástica).
+#54 — Gabarito: C | Comentário: Como o pai afetado passou a doença para o filho homem (João), o gene não pode estar no cromossomo X (já que o pai passa o Y para o filho). Logo, é autossômico.
+#55 — Gabarito: B | Comentário: Anelídeos e artrópodes compartilham a segmentação corporal metamérica.
+#56 — Gabarito: B | Comentário: A catabolização de aminoácidos provenientes de proteínas gera grupos amina, convertidos em ureia pelo fígado.
+#57 — Gabarito: D | Comentário: A medula óssea vermelha mantém atividade mitótica contínua para a renovação das células sanguíneas.
+#58 — Gabarito: D | Comentário: Cada tétrade é composta por 1 par de homólogos. 16 tétrades correspondem a 16 pares de cromossomos, resultando em um número diploide $2n = 32$.
+USP 1991
+#59 — Gabarito: C | Comentário: O transporte ativo (bomba de $Na^+/K^+$) mantém o gradiente iônico eletroquímico celular utilizando energia na forma de ATP.
+#60 — Gabarito: C | Comentário: Como o cruzamento $A \times C$ produziu descendência de fenótipo recessivo (amarelo), ambos os pais pretos ($A$ e $C$) são heterozigotos e o preto é dominante.
+#61 — Gabarito: A | Comentário: A queima de combustíveis fósseis é a principal emissora de $CO_2$, que intensifica a retenção de calor por efeito estufa.
+#62 — Gabarito: C | Comentário: Genótipo materno: $aaCc$; genótipo paterno: $AaCc$. Probabilidade de ser albino ($aa$) = $1/2$. Probabilidade de cabelo crespo ($C\_$) = $3/4$. Probabilidade total = $1/2 \times 3/4 = 3/8 = 37,5\%$.
+USP 1992
+#63 — Gabarito: A | Comentário: Antibióticos que atacam ribossomos inibem a tradução e síntese de proteínas nas bactérias, levando-as à morte.
+#64 — Gabarito: E | Comentário: Como os zangões derivam por partenogênese dos óvulos ($n$), a variedade de genótipos nos zangões é igual ao número de combinações gaméticas da rainha: $2^4 = 16$.
+#65 — Gabarito: D | Comentário: Em anaerobiose parcial, as células musculares degradam a glicose via fermentação láctica, acumulando ácido láctico.
+#66 — Gabarito: A | Comentário: Gramíneas e fitoplâncton atuam como produtores primários autotróficos em seus respectivos ecossistemas.
+#67 — Gabarito: B | Comentário: Plasmodium, Trypanosoma e Taenia vivem no interior do organismo hospedeiro, atuando como endoparasitas.
+#68 — Gabarito: C | Comentário: Para isolar o efeito da auxina, o grupo controle deve receber a mesma matriz veiculante (lanolina) sem o princípio ativo.
+USP 1993
+#69 — Gabarito: E | Comentário: As leguminosas são plantas (Plantae): organismos eucarióticos, pluricelulares e autótrofos fotossintetizantes.
+#70 — Gabarito: D | Comentário: Ambientes hipóxicos/anóxicos favorecem exclusivamente organismos com metabolismo anaeróbico, como bactérias anaeróbicas.
+#71 — Gabarito: C | Comentário: Os cloroplastos produzem ATP durante a fase clara da fotossíntese e o utilizam na fixação do $CO_2$ na fase escura (Ciclo de Calvin).
+#72 — Gabarito: B | Comentário: O ambiente seco acelera a transpiração foliar, aumentando a tensão-coesão que puxa a solução corante pelo xilema.
+#73 — Gabarito: E | Comentário: O genótipo heterozigoto ($Vv$) pode ser gerado a partir de cruzamentos $VV \times vv$ (100% $Vv$), $Vv \times Vv$ (50% $Vv$) ou $Vv \times vv$ (50% $Vv$).
+USP 1994
+#74 — Gabarito: E | Comentário: O surgimento de radioatividade nas folhas confirma a absorção do íon fosfato pelas raízes e condução via vaso xilemático.
+#75 — Gabarito: C | Comentário: A oxidação completa da glicose na respiração aeróbica gera $CO_2$ e $H_2O$ como subprodutos finais.
+#76 — Gabarito: E | Comentário: Na população ($50\%\ Aa + 50\%\ aa$), o alelo $A$ está presente apenas nos heterozigotos ($0,50 \times 1/2 = 0,25$).
+#77 — Gabarito: A | Comentário: Cada códon de 3 nucleotídeos codifica 1 aminoácido. $600 / 3 = 200$ aminoácidos na cadeia.
+#78 — Gabarito: A | Comentário: No coração humano, o sangue flui no sentido átrio (aurícula) $\rightarrow$ ventrículo do mesmo lado, controlado pelas válvulas atrioventriculares.
+#79 — Gabarito: A | Comentário: Os vasos do xilema possuem paredes espessadas e impregnadas de lignina, provendo sustentação mecânica à planta.
+#80 — Gabarito: D | Comentário: Alimentar-se diretamente de vegetais coloca o homem no nível de consumidor primário, aproveitando a maior taxa de energia da pirâmide.
+#81 — Gabarito: E | Comentário: A fase esporofítica é a única fase diploide ($2n$) do ciclo de vida das pteridófitas, contendo o dobro de DNA por núcleo em relação à fase gametofítica ($n$).
+USP 1995
+#82 — Gabarito: D | Comentário: A espessa cutícula de colágeno inelástica do nematoide sustenta a alta pressão do líquido pseudocelômico, atuando como esqueleto hidrostático.
+#83 — Gabarito: E | Comentário: Preencher uma ficha exige funções cognitivas complexas do córtex cerebral (visão, linguagem, coordenação motora), envolvendo vastas redes neurais.
+#84 — Gabarito: A | Comentário: Decompositores realizam a mineralização da matéria orgânica, convertendo compostos orgânicos (como aminoácidos) em sais inorgânicos.
+#85 — Gabarito: C | Comentário: A dicogamia (amadurecimento em tempos distintos dos órgãos masculinos e femininos) evita a autofecundação, promovendo a variabilidade por fecundação cruzada.
+#86 — Gabarito: B | Comentário: A imigração de indivíduos homozigotos dominantes ($AA$) introduz alelos $A$ na população, reduzindo a frequência relativa do alelo $a$ e do fenótipo recessivo.
+#87 — Gabarito: D | Comentário: Genótipo $Aa\ dd\ FF$. A segregação gera gametas $A \cdot d \cdot F = AdF$ e $a \cdot d \cdot F = adF$.
+#88 — Gabarito: C | Comentário: A energia disponível para os herbívoros é a Produtividade Primária Líquida (PPL), armazenada nos tecidos vegetais sob forma química.
+#89 — Gabarito: A | Comentário: Microvilosidades aumentam a área de superfície de absorção e a abundância de mitocôndrias fornece ATP para o transporte ativo de solutos.
+#90 — Gabarito: E | Comentário: Estômatos ocultos em criptas estomáticas retêm umidade microclimática, reduzindo a taxa de transptração em plantas xerófitas de ambientes secos.
+#91 — Gabarito: A | Comentário: Clones possuem o mesmo genótipo, mas o desenvolvimento no escuro altera a expressão fenotípica (estiolamento), resultando em fenótipos distintos.
+USP 1996
+#92 — Gabarito: E | Comentário: Uma única ovogônia ($2n$) completa a meiose produzindo apenas 1 óvulo funcional ($n$), contendo o alelo $D$ ou $d$.
+#93 — Gabarito: E | Comentário: A ancilostomose é adquirida pela penetração ativa de larvas infectantes (L3) através da pele ao andar descalço sobre solo contaminado.
+#94 — Gabarito: C | Comentário: Mutação (surgimento de novos alelos), segregação independente e recombinação gênica/crossing-over reintroduzem ou rearranjam a variabilidade genética.
+#95 — Gabarito: D | Comentário: A placenta realiza trocas metabólicas por difusão entre as circulações materna e fetal, permitindo passagem de gases, nutrientes e excretas sem mistura sanguínea direta.
+#96 — Gabarito: C | Comentário: Vitamina C = Escorbuto; Vitamina D = Raquitismo; Vitamina A = Cegueira noturna (hemeralopia).
+#97 — Gabarito: A | Comentário: Lipase pancreática atua em meio alcalino no duodeno; amilase salivar atua em pH neutro na boca; pepsina atua em pH ácido no estômago.
+#98 — Gabarito: B | Comentário: As leveduras secretam a enzima exo-celular invertase que hidrolisa a sacarose no meio extracelular, absorvendo a glicose e frutose resultantes.
+#99 — Gabarito: B | Comentário: A Teoria Endossimbiótica é sustentada pela presença de DNA próprio e circular nessas organelas, semelhante ao genoma bacteriano.
+#100 — Gabarito: D | Comentário: A curto prazo ocorre taquicardia e hiperventilação reflexas; a longo prazo ocorre estimulação da eritropoiese pelo hormônio EPO, aumentando as hemácias.
+#101 — Gabarito: D | Comentário: Cruzamento $VvRr \times Vvrr$: $V\_Rr = 3/8$ (300); $V\_rr = 3/8$ (300); $vvRr = 1/8$ (100); $vvrr = 1/8$ (100). Total: 800.
+#102 — Gabarito: D | Comentário: A alta taxa de erros da transcriptase reversa do HIV resulta em constantes mutações na proteína do envoltório, dificultando a eficácia de vacinas.
+#103 — Gabarito: E | Comentário: A probabilidade do filho ser $Aa$ depende do alelo doado pelo pai ($AA$, $Aa$ ou $aa$).
+#104 — Gabarito: B | Comentário: Univitelinos (monozigóticos) originam-se da divisão de 1 zigoto ($1\ \text{óvulo} + 1\ \text{espermatozoide}$); fraternos (dizigóticos) de 2 óvulos fertilizados por 2 espermatozoides.
+#105 — Gabarito: E | Comentário: Cólera é infecção bacteriana entérica via fecal-oral; meningite meningocócica é infecção bacteriana transmitida por gotículas respiratórias.
+USP 1997
+#106 — Gabarito: B | Comentário: O consumo de sódio eleva a osmolaridade plasmática, retendo água por osmose no leito vascular e aumentando o volume sanguíneo e a pressão arterial.
+#107 — Gabarito: B | Comentário: Em situações de demanda energética rápida e aporte insuficiente de $O_2$, o músculo esquelético recorre à fermentação láctica.
+#108 — Gabarito: E | Comentário: Mutações induzidas por radiação UV em células somáticas epiteliais não alteram o DNA das células germinativas e não são transmissíveis à prole.
+#109 — Gabarito: A | Comentário: Um indivíduo afetado ($aa$) por herança autossômica recessiva pode ser filho de pais portadores assintomáticos ($Aa$).
+#110 — Gabarito: D | Comentário: Enzimas de restrição clavam a fita dupla de DNA em sequências palindrômicas específicas de nucleotídeos.
+#111 — Gabarito: A | Comentário: O fígado realiza a homeostase glicêmica (glicogenogênese/glicogenólise), desaminação proteica com conversão de amônia em ureia e secreção de bile.
+#112 — Gabarito: C | Comentário: O sabiá é uma ave (endotérmico); a $18^\circ\text{C}$ necessita gastar mais energia metabolicamente para manter a temperatura corpórea, exigindo maior consumo relativo de alimento.
+#113 — Gabarito: A | Comentário: Casal $I^A i \times I^B i$. As chances de nascer um filho O ($ii$) ou AB ($I^A I^B$) são idênticas ($25\%$). A probabilidade de 5 filhos idênticos para cada tipo é a mesma: $(1/4)^5$.
+#114 — Gabarito: E | Comentário: Cruzamento $Dd \times dd$. Cada filho tem $50\%$ de chance de ser afetado. Em MZ, originados do mesmo zigoto, a chance é $50\%$. Em DZ, a chance de ao menos um afetado é $1 - (0,5 \times 0,5) = 75\%$.
+#115 — Gabarito: D | Comentário: Dengue e febre amarela são transmitidas pelo Aedes aegypti; malária é transmitida pelo Anopheles, cujas larvas se desenvolvem em água parada.
+#116 — Gabarito: C | Comentário: O neodarwinismo explica que variações hereditárias pré-existentes (como mutações para cegueira) foram selecionadas favoravelmente no ambiente sem luz por conferirem economia energética.
+USP 1998
+#117 — Gabarito: D | Comentário: Nitrosomonas obtém energia oxidando compostos inorgânicos (autotrófica/quimiossintetizante); E. coli metaboliza matéria orgânica (heterotrófica); Halobacterium necessita de compostos orgânicos apesar de usar luz via rodopsina (heterotrófica).
+#118 — Gabarito: A | Comentário: Na fase G1 da intérfase, a célula somática humana contém 46 cromossomos não-duplicados, correspondendo a 46 moléculas de DNA.
+#119 — Gabarito: E | Comentário: Células bacterianas (procariontes) não possuem sistema de endomembranas nem carioteca, contendo apenas ribossomos 70S.
+#120 — Gabarito: B | Comentário: Flores sem atrativos coloridos, grande produção de pólen leve e estigmas plumosos são adaptações à polinização anemófila (pelo vento).
+#121 — Gabarito: A | Comentário: Probabilidade de o pai ser heterozigoto = $1/20$; da mãe = $1/20$. Probabilidade do casal ser heterozigoto = $1/400$. Em 800 casamentos: $800 \times (1/400) = 2$.
+#122 — Gabarito: D | Comentário: Tuberculose (Mycobacterium), coqueluche (Bordetella) e sífilis (Treponema) são todas doenças causadas por bactérias, combatidas por antibióticos.
+#123 — Gabarito: D | Comentário: As abelhas obtêm alimento (néctar/pólen) e a planta garante transferência de gametas, caracterizando mutualismo.
+#124 — Gabarito: C | Comentário: A manutenção básica de um ecossistema exige produtores (fixadores de matéria e energia) e decompositores (recicladores de nutrientes).
+#125 — Gabarito: B | Comentário: A falta de ADH reduz a reabsorção de água nos ductos coletores, gerando diurese abundante e urina diluída (baixa osmolalidade).
+#126 — Gabarito: B | Comentário: Artrópodes terrestres (gafanhoto) possuem circulação aberta e respiração traqueal; moluscos aquáticos (mexilhão) possuem circulação aberta e respiração branquial.
+#127 — Gabarito: D | Comentário: Os catalisadores biológicos mencionados no texto histórico correspondem às enzimas, substâncias de natureza proteica.
+#128 — Gabarito: D | Comentário: O meristema apical da raiz apresenta intensa atividade mitótica, ideal para observação de cromossomos em condensação.
+#129 — Gabarito: E | Comentário: A teoria da coesão-tensão (Dixon) estabelece que a transpiração foliar cria uma pressão negativa (sucção) que puxa a coluna ininterrupta de água pelo xilema.
+#130 — Gabarito: E | Comentário: O pinhão é a semente comestível da araucária (gimnosperma), formada pelo megasporângio fertilizado e envolto pelo tegumento.
+#131 — Gabarito: D | Comentário: O DNA nuclear é proveniente do doador do núcleo somático (ovelha A), enquanto o DNA mitocondrial provém do citoplasma do óvulo receptor (ovelha B).
+#132 — Gabarito: C | Comentário: Ambos os parasitas possuem ciclos heteroxenos: exigem um hospedeiro intermediário (caramujo/porco) e um definitivo (humano).
+#133 — Gabarito: C | Comentário: A fixação biológica do $N_2$ atmosférico é realizada primariamente por bactérias fixadoras (livres ou simbióticas).
+#134 — Gabarito: C | Comentário: Solos ricos em nitrogênio aumentam a síntese de aminoácidos e proteínas nas plantas forrageiras, melhorando seu teor proteico e a nutrição do gado.
+#135 — Gabarito: A | Comentário: O tecido ósseo armazena íons cálcio e fosfato e aloja a medula óssea vermelha, responsável pela hematopoiese.
+#136 — Gabarito: E | Comentário: Os répteis foram os primeiros vertebrados totalmente independentes do meio aquático devido ao surgimento do ovo amniótico com casca protetora.
+USP 1999
+#137 — Gabarito: C | Comentário: Na ovogogênese, a Meiose I forma o 1º corpúsculo polar ($n = 23$ cromossomos duplicados) e a Meiose II forma o 2º corpúsculo polar ($n = 23$ cromossomos simples).
+#138 — Gabarito: D | Comentário: Soluções hidroponicas devem fornecer íons inorgânicos essenciais; os nitratos fornecem nitrogênio indispensável à síntese de ácidos nucleicos e proteínas.
+#139 — Gabarito: E | Comentário: Aminoácidos absorvidos são direcionados aos ribossomos associados ao retículo endoplasmático rugoso para síntese de novas proteínas.
+#140 — Gabarito: B | Comentário: A duplicação semiconservativa do DNA mantém as 200 fitas parentais radioativas distribuídas em exatamente 200 bactérias filhas ao longo de 3 gerações ($100 \rightarrow 200 \rightarrow 400 \rightarrow 800$).
+#141 — Gabarito: A | Comentário: A remoção do duodeno impede a atuação dos sucos pancreático e biliar, comprometendo criticamente a digestão da maior parte dos alimentos.
+#142 — Gabarito: B | Comentário: Ausência de sistema digestório, presença de escólex com ganchos/ventosas e proglótes reprodutivas são adaptações evolutivas das tênias ao endoparasitismo intestinal.
+#143 — Gabarito: C | Comentário: II está correta (bloqueio da DNA polimerase impede replicação); III está correta (erros de leitura do RNAm geram proteínas defeituosas). I está incorreta (tetraciclina afeta a tradução, não a transcrição).
+#144 — Gabarito: E | Comentário: A multiplicação vegetativa a partir de fragmentos do caule (rizoma) gera novos indivíduos geneticamente idênticos (clones) por mitose.
+#145 — Gabarito: E | Comentário: A poda das gemas apicais elimina a fonte principal de auxina (AIA), cessando a inibição das gemas laterais que passam a se desenvolver.
+#146 — Gabarito: E | Comentário: I é uma observação factual de um fenômeno; II é um fato consolidado; III é a formulação de uma hipótese explicativa; IV é o teste experimental dessa hipótese.
+#147 — Gabarito: A | Comentário: Na reação alérgica, anticorpos $IgE$ ligados aos receptores da membrana dos mastócitos reconhecem o alergênio, estimulando a desgranulação e liberação de histamina.
+#148 — Gabarito: B | Comentário: O cruzamento entre indivíduos escuros produzindo descendentes claros evidencia que o fenótipo escuro é determinado por um alelo dominante.
+#149 — Gabarito: D | Comentário: Microrganismos realizam a fermentação em bebidas alcoólicas (I) e a fixação de nitrogênio em associação com leguminosas (III); a produção de açúcar (II) é processo de extração industrial sem mediação microbiana.
+#150 — Gabarito: D | Comentário: O mofo atua como decompositor da massa vegetal e a saúva, ao alimentar-se do fungo que cultivou, atua no nível de consumidor primário.
+#151 — Gabarito: C | Comentário: A sequência cronológica correta dos eventos ecológico-evolutivos é: II (Surgimento das gimnospermas no Paleozoico) $\rightarrow$ I (Extinção dos dinossauros no fim do Mesozoico) $\rightarrow$ III (Surgimento do Homo sapiens no Cenozoico).
+USP 2000
+#152 — Gabarito: D | Comentário: Em ciência, uma teoria é um corpo sistematizado de explicações amplamente testadas e fundamentadas, capaz de explicar fatos e fazer previsões.
+#153 — Gabarito: E | Comentário: Na respiração celular, o oxigênio atmosférico ($^{18}O_2$) atua como aceptor final de elétrons e prótons no complexo IV, incorporando-se na molécula de água ($H_2^{18}O$).
+#154 — Gabarito: D | Comentário: Organismos autotróficos possuem a capacidade exclusiva de sintetizar biomassa orgânica utilizando apenas fontes inorgânicas ($CO_2$, água e sais minerais).
+#155 — Gabarito: B | Comentário: O tratamento múltiplo fundamenta-se na probabilidade extremamente baixa de emergência simultânea de mutações de resistência a dois fármacos distintos no mesmo bacilo.
+#156 — Gabarito: D | Comentário: Células somáticas de um mesmo indivíduo contêm o mesmo genoma; a diferenciação celular resulta da expressão gênica seletiva e diferencial.
+#157 — Gabarito: A | Comentário: O sangue capilar irriga o tecido intestinal suprindo $O_2$ (tornando-se venoso) e absorve os nutrientes hidrossolúveis digeridos, como os aminoácidos.
+#158 — Gabarito: C | Comentário: Como as instruções genéticas para a síntese de novas cápsulas proteicas estão contidas exclusivamente no DNA injetado (T2), a prole viral herdará tanto DNA quanto cápsula de T2.
+#159 — Gabarito: B | Comentário: A ureogênese (conversão metabólica da amônia tóxica em ureia através do Ciclo da Ureia) ocorre exclusivamente nos hepatócitos.
+#160 — Gabarito: C | Comentário: Tanto Darwin quanto Lamarck reconheciam que as modificações e a adaptação dos organismos ocorrem em resposta às condições impostas pelo ambiente.
+#161 — Gabarito: E | Comentário: A eritroblastose fetal ocorre quando uma mãe $Rh^-$ (Marina) gesta um feto $Rh^+$ (cujo pai pode ser o irmão $Rh^+$, João, se gerasse um filho com outra mulher $Rh^-$).
+#162 — Gabarito: B | Comentário: A maior parte do incremento de biomassa e carbono orgânico seco de uma árvore deriva da assimilação de $CO_2$ atmosférico via fotossíntese.
+#163 — Gabarito: A | Comentário: Cruzamento $200\ AA \times 200\ aa \rightarrow 400\ Aa$. Cruzamento $100\ Aa \times 100\ Aa \rightarrow 50\ AA : 100\ Aa : 50\ aa$. Soma total dos descendentes: $50\ AA$, $500\ Aa$, $50\ aa$.
+#164 — Gabarito: D | Comentário: A presença de sementes diferencia as Spermatophyta (gimnospermas e angiospermas) das Pteridófitas, embora todas sejam vasculares.
+#165 — Gabarito: C | Comentário: No ciclo haplodiplobionte das plantas, a geração gametofítica multicelular haploide ($n$) produz gametas haploides por divisão mitótica.
+USP 2001
+#166 — Gabarito: E | Comentário: A ovariectomia remove os tecidos secretores encarregados da produção dos hormônios esteroides sexuais femininos: estrógeno e progesterona.
+#167 — Gabarito: C | Comentário: A ovelha transgênica é heterozigota para o transgene incorporado ($T/-$). O cruzamento com indivíduo não-transgênico ($-/-$) gera $50\%$ de descendentes portadores.
+#168 — Gabarito: D | Comentário: A inibição do polímero de tubulina impede a montagem do fuso mitótico, paralisando a divisão na metáfase e impedindo a migração anafásica dos cromossomos.
+#169 — Gabarito: C | Comentário: Na privação de nutrientes, a célula ativa o processo de autofagia celular catalisado pelas enzimas hidrolíticas do lisossomo.
+#170 — Gabarito: B | Comentário: O fubá atua como produtor (derivado do milho). O tico-tico é consumidor primário ao comer fubá e secundário ao alimentar-se da minhoca (herbívora/detritívora).
+#171 — Gabarito: C | Comentário: Como autótrofas, as plantas sintetizam toda a sua matéria orgânica (carboidratos, aminoácidos) utilizando $CO_2$ do ar e água/sais do solo.
+#172 — Gabarito: E | Comentário: Lula e polvo são moluscos (Cefalópodes); mexilhão é molusco (Bivalve). Camarão e lagosta são artrópodes (Crustáceos), podendo ser consumidos por quem tem alergia restrita a moluscos.
+#173 — Gabarito: D | Comentário: A acusação procede porque o Trypanosoma cruzi habita o sangue periférico de indivíduos infectados e pode ser transmitido por transfusão de sangue não testado.
+#174 — Gabarito: C | Comentário: Na sístole ventricular, o sangue ejetado distende/relaxa a parede elástica das grandes artérias, onde a pressão atinge o pico sistólico de cerca de $120\text{ mmHg}$.
+#175 — Gabarito: A | Comentário: O mapeamento do genoma humano consistiu na determinação da ordem linear exata dos nucleotídeos de DNA ao longo dos cromossomos.
+#176 — Gabarito: A | Comentário: A frequência do alelo em homens ($X^dY$) é $q = 90 / 1000 = 0,09$. A frequência de mulheres daltônicas ($X^dX^d$) em equilíbrio é $q^2 = (0,09)^2 = 0,0081 = 0,81\%$.
+#177 — Gabarito: A | Comentário: A ausência de envoltório nuclear e de organelas membranosas citoplasmáticas é a característica definidora dos organismos procariontes (bactérias).
+#178 — Gabarito: B | Comentário: A osmose requer a presença de um gradiente de concentração (meios de tonicidades diferentes) através de uma membrana semipermeável.
+#179 — Gabarito: B | Comentário: O crescimento das florestas promove fixação de $CO_2$ atmosférico via fotossíntese, convertendo-o em carbono orgânico armazenado na biomassa vegetal.
+#180 — Gabarito: D | Comentário: No líquen, o componente autotrófico (alga verde ou cianobactéria) produz matéria orgânica via fotossíntese, transferindo nutrientes ao fungo e à cadeia alimentar.
+#181 — Gabarito: E | Comentário: Plantas aquáticas submersas são sustentadas pelo empuxo da água (tecidos de sustentação reduzidos) e absorvem gases e nutrientes pela epiderme, dispensando estômatos.
+#182 — Gabarito: B | Comentário: Nos animais (abelhas), a meiose gera gametas diretos; nas plantas (samambaias), a meiose é espórica e forma esporos haploides.
+#183 — Gabarito: A | Comentário: Cobra é um vertebrado (Chordata): possui corpo cilíndrico alongado, celoma verdadeiro e fendas branquiais faríngeas na fase embrionária.
+#184 — Gabarito: E | Comentário: O catabolismo dos aminoácidos que compõem as proteínas dietéticas produz grupos amina, convertidos pelo fígado em ureia para excreção renal.
+USP 2002
+#185 — Gabarito: C | Comentário: A meiose nas samambaias ocorre no interior dos esporângios organizados nos soros na superfície das folhas.
+#186 — Gabarito: A | Comentário: Os meristemas apicais do caule contêm células indiferenciadas, altamente mitóticas e totipotentes, ideais para propagação in vitro.
+#187 — Gabarito: D | Comentário: O monóxido de carbono ($CO$) liga-se irreversivelmente à hemoglobina (carboxihemoglobina), impedindo a ligação do oxigênio e provocando asfixia química.
+#188 — Gabarito: A | Comentário: A frase I (introdutória/afirmação) e a afirmação II (florestas temperadas possuem maior biomassa que a tundra) são cientificamente corretas.
+#189 — Gabarito: A | Comentário: Os fatores mendelianos correspondem aos alelos: sequências funcionais de DNA que codificam uma cadeia polipeptídica específica.
+#190 — Gabarito: B | Comentário: Caranguejo/Abelha (Arthropoda); Caramujo/Lesma (Mollusca); Anêmona/Água-viva (Cnidaria).
+#191 — Gabarito: D | Comentário: O sangue chega aos rins pela artéria renal com alta concentração de ureia metabólica, que é filtrada pelos glomérulos e excretada na urina.
+#192 — Gabarito: E | Comentário: Ancestrais humanos de 5 milhões de anos (Plioceno/Cenozoico) viveram muito após a emergência dos anfíbios (Devoniano) e após a extinção dos dinossauros (fim do Cretáceo, 66 Ma).
+#193 — Gabarito: B | Comentário: Solos altamente salinos são hipertônicos em relação às raízes das plantas normais, fazendo-as perder água por osmose e murchar.
+#194 — Gabarito: C | Comentário: N (Nitrogênio) = constituinte de aminoácidos/proteínas e ácidos nucleicos; P (Fósforo) = constituinte do esqueleto de ácidos nucleicos e ATP; K (Potássio) = atua na regulação osmótica estomática.
+#195 — Gabarito: C | Comentário: A alga unicelular Chlamydomonas reinhardtii produz gás hidrogênio através de processos associados à fase clara da fotossíntese (fotólise da água e transferência de elétrons) sob condições anaeróbicas específicas.

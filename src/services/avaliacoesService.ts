@@ -211,6 +211,17 @@ export async function obterQuestoesCompletasDaAvaliacao(id: string): Promise<{ q
 
   const linhas = (data ?? []) as unknown as { ordem: number; valor: number; questions: Question | null }[];
   const questoes = linhas.map((l) => l.questions).filter((q): q is Question => !!q);
+  
+  const { data: areasData } = await supabase.rpc('rpc_mapear_areas_prova', { p_prova_id: id });
+  if (areasData && areasData.length > 0) {
+    const areaMap = new Map(areasData.map((a: any) => [a.question_id, a.area_conhecimento]));
+    for (const q of questoes) {
+      if (areaMap.has(q.id)) {
+        q.area = areaMap.get(q.id) || q.area;
+      }
+    }
+  }
+
   const valoresPorQuestao: Record<string, number> = {};
   linhas.forEach((l) => {
     if (l.questions) valoresPorQuestao[l.questions.id] = Number(l.valor) || 0;
@@ -531,7 +542,19 @@ export async function listarMinhasAvaliacoesAluno(): Promise<AvaliacaoAluno[]> {
 export async function obterQuestoesAvaliacaoAluno(avaliacaoId: string): Promise<QuestaoParaAluno[]> {
   const { data, error } = await supabase.rpc('rpc_questoes_avaliacao_aluno', { p_avaliacao_id: avaliacaoId });
   if (error) throw error;
-  return (data ?? []) as QuestaoParaAluno[];
+  
+  const result = (data ?? []) as QuestaoParaAluno[];
+  const { data: areasData } = await supabase.rpc('rpc_mapear_areas_prova', { p_prova_id: avaliacaoId });
+  if (areasData && areasData.length > 0) {
+    const areaMap = new Map(areasData.map((a: any) => [a.question_id, a.area_conhecimento]));
+    for (const q of result) {
+      if (areaMap.has(q.question_id)) {
+        q.discipline = areaMap.get(q.question_id) || q.discipline;
+      }
+    }
+  }
+
+  return result;
 }
 
 // Mesmo payload da função acima, mas para quem criou a avaliação (ou coordenação/
@@ -540,7 +563,19 @@ export async function obterQuestoesAvaliacaoAluno(avaliacaoId: string): Promise<
 export async function obterQuestoesAvaliacaoPreview(avaliacaoId: string): Promise<QuestaoParaAluno[]> {
   const { data, error } = await supabase.rpc('rpc_questoes_avaliacao_preview', { p_avaliacao_id: avaliacaoId });
   if (error) throw error;
-  return (data ?? []) as QuestaoParaAluno[];
+  
+  const result = (data ?? []) as QuestaoParaAluno[];
+  const { data: areasData } = await supabase.rpc('rpc_mapear_areas_prova', { p_prova_id: avaliacaoId });
+  if (areasData && areasData.length > 0) {
+    const areaMap = new Map(areasData.map((a: any) => [a.question_id, a.area_conhecimento]));
+    for (const q of result) {
+      if (areaMap.has(q.question_id)) {
+        q.discipline = areaMap.get(q.question_id) || q.discipline;
+      }
+    }
+  }
+
+  return result;
 }
 
 export async function submeterRespostasAvaliacao(avaliacaoId: string, respostas: RespostaEnvio[]): Promise<ItemResultadoSubmissao[]> {

@@ -140,9 +140,19 @@ export function GerarProvaModal({ questoes, onClose }: Props) {
               {posicaoCartao === 'inicio' && cartaoResposta}
 
               <div className={`questoes-coluna${colunas === 2 ? ' duas-colunas' : ''}`}>
-                {questoes.map((q, i) => (
-                  <QuestaoImpressa key={q.id} questao={q} indice={i} />
-                ))}
+                {questoes.map((q, i) => {
+                  const isNovaArea = i === 0 || q.discipline !== questoes[i - 1].discipline;
+                  return (
+                    <React.Fragment key={q.id}>
+                      {isNovaArea && q.discipline && Array.from(new Set(questoes.map(x => x.discipline))).length > 1 && (
+                        <div className="col-span-2 text-center font-bold text-lg my-4 border-b border-gray-400 pb-2 uppercase print:border-black">
+                          {q.discipline}
+                        </div>
+                      )}
+                      <QuestaoImpressa questao={q} indice={i} />
+                    </React.Fragment>
+                  );
+                })}
               </div>
 
               {posicaoCartao === 'fim' && cartaoResposta}

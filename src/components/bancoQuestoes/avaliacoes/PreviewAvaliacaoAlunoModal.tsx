@@ -50,16 +50,25 @@ export function PreviewAvaliacaoAlunoModal({ avaliacao, onClose }: Props) {
           {!questoes && !erro && <Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" />}
           {questoes?.length === 0 && <p className="text-sm text-ms-muted">Esta avaliação não tem questões.</p>}
 
-          {questoes?.map((q, i) => (
-            <QuestaoAlunoView
-              key={q.question_id}
-              questao={q}
-              indice={i}
-              letraMarcada={respostas[q.question_id] ?? null}
-              somenteLeitura={false}
-              onMarcar={(letra) => setRespostas((prev) => ({ ...prev, [q.question_id]: letra }))}
-            />
-          ))}
+          {questoes?.map((q, i) => {
+            const isNovaArea = i === 0 || q.discipline !== questoes[i - 1].discipline;
+            return (
+              <React.Fragment key={q.question_id}>
+                {isNovaArea && q.discipline && (
+                  <div className="text-center font-bold text-lg my-6 border-b border-gray-700 pb-2 uppercase text-ms-main">
+                    {q.discipline}
+                  </div>
+                )}
+                <QuestaoAlunoView
+                  questao={q}
+                  indice={i}
+                  letraMarcada={respostas[q.question_id] ?? null}
+                  somenteLeitura={false}
+                  onMarcar={(letra) => setRespostas((prev) => ({ ...prev, [q.question_id]: letra }))}
+                />
+              </React.Fragment>
+            );
+          })}
         </div>
 
         <div className="flex items-center justify-between gap-3 px-6 py-4 border-t border-gray-800">

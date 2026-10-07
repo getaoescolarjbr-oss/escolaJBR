@@ -193,9 +193,19 @@ export function ReimprimirAvaliacaoModal({ avaliacao, onClose }: Props) {
                 {avaliacao.instrucoes && <div className="prova-instrucoes">{avaliacao.instrucoes}</div>}
 
                 <div className="questoes-coluna duas-colunas">
-                  {questoes.map((q, i) => (
-                    <QuestaoImpressa key={q.id} questao={q} indice={i} valor={mostrarPontuacao ? valores[q.id] ?? 0 : undefined} />
-                  ))}
+                  {questoes.map((q, i) => {
+                    const isNovaArea = i === 0 || q.area !== questoes[i - 1].area;
+                    return (
+                      <React.Fragment key={q.id}>
+                        {isNovaArea && q.area && (
+                          <div className="col-span-2 text-center font-bold text-lg my-4 border-b border-gray-400 pb-2 uppercase print:border-black">
+                            {q.area}
+                          </div>
+                        )}
+                        <QuestaoImpressa questao={q} indice={i} valor={mostrarPontuacao ? valores[q.id] ?? 0 : undefined} />
+                      </React.Fragment>
+                    );
+                  })}
                 </div>
 
                 {/* Só as objetivas entram no cartão; a numeração continua sendo a da prova. */}

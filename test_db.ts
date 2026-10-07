@@ -1,0 +1,1 @@
+import { createClient } from '@supabase/supabase-js'; const supabase = createClient('http://127.0.0.1:54321', process.env.VITE_SUPABASE_ANON_KEY || 'dummy'); async function run() { const { data, error } = await supabase.from('prova_geral_sorteios').select('*').limit(1); console.log('DATA:', data); console.log('ERR:', error); } run();

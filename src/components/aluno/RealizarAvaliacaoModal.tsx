@@ -175,22 +175,32 @@ export function RealizarAvaliacaoModal({ avaliacao, onClose, onEnviada }: Props)
             </div>
           )}
 
-          {questoes?.map((q, i) => (
-            <div key={q.question_id}>
-            <QuestaoAlunoView
-              questao={q}
-              indice={i}
-              letraMarcada={respostas[q.question_id] ?? null}
-              textoResposta={textos[q.question_id] ?? ''}
-              resultado={resultadoPorQuestao.get(q.question_id)}
-              somenteLeitura={bloqueado}
-              onMarcar={(letra) => marcar(q.question_id, letra)}
-              onEscrever={(texto) => escrever(q.question_id, texto)}
-              salvamento={ehQuestaoRedacao(q) ? (salvamento[q.question_id] ?? null) : undefined}
-            />
-            {devolutivas[q.question_id] && <DevolutivaRedacao dados={devolutivas[q.question_id]} />}
-            </div>
-          ))}
+          {questoes?.map((q, i) => {
+            const isNovaArea = i === 0 || q.discipline !== questoes[i - 1].discipline;
+            return (
+              <React.Fragment key={q.question_id}>
+                {isNovaArea && q.discipline && (
+                  <div className="text-center font-bold text-lg my-6 border-b border-gray-700 pb-2 uppercase text-ms-main">
+                    {q.discipline}
+                  </div>
+                )}
+                <div>
+                  <QuestaoAlunoView
+                    questao={q}
+                    indice={i}
+                    letraMarcada={respostas[q.question_id] ?? null}
+                    textoResposta={textos[q.question_id] ?? ''}
+                    resultado={resultadoPorQuestao.get(q.question_id)}
+                    somenteLeitura={bloqueado}
+                    onMarcar={(letra) => marcar(q.question_id, letra)}
+                    onEscrever={(texto) => escrever(q.question_id, texto)}
+                    salvamento={ehQuestaoRedacao(q) ? (salvamento[q.question_id] ?? null) : undefined}
+                  />
+                  {devolutivas[q.question_id] && <DevolutivaRedacao dados={devolutivas[q.question_id]} />}
+                </div>
+              </React.Fragment>
+            );
+          })}
         </div>
 
         {questoes && !bloqueado && (
