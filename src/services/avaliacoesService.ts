@@ -217,7 +217,7 @@ export async function obterQuestoesCompletasDaAvaliacao(id: string): Promise<{ q
     const areaMap = new Map(areasData.map((a: any) => [a.question_id, a.area_conhecimento]));
     for (const q of questoes) {
       if (areaMap.has(q.id)) {
-        q.area = areaMap.get(q.id) || q.area;
+        q.area = (areaMap.get(q.id) as string) || q.area;
       }
     }
   }
@@ -549,7 +549,7 @@ export async function obterQuestoesAvaliacaoAluno(avaliacaoId: string): Promise<
     const areaMap = new Map(areasData.map((a: any) => [a.question_id, a.area_conhecimento]));
     for (const q of result) {
       if (areaMap.has(q.question_id)) {
-        q.discipline = areaMap.get(q.question_id) || q.discipline;
+        q.discipline = (areaMap.get(q.question_id) as string) || q.discipline;
       }
     }
   }
@@ -570,7 +570,7 @@ export async function obterQuestoesAvaliacaoPreview(avaliacaoId: string): Promis
     const areaMap = new Map(areasData.map((a: any) => [a.question_id, a.area_conhecimento]));
     for (const q of result) {
       if (areaMap.has(q.question_id)) {
-        q.discipline = areaMap.get(q.question_id) || q.discipline;
+        q.discipline = (areaMap.get(q.question_id) as string) || q.discipline;
       }
     }
   }

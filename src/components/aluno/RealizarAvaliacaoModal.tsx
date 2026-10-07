@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Loader2, Send, X } from 'lucide-react';
 import type { AvaliacaoAluno, ItemResultadoSubmissao, QuestaoParaAluno, RespostaEnvio } from '../../types/avaliacoes';

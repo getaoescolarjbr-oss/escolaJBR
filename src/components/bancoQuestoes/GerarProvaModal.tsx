@@ -1,3 +1,4 @@
+import React from 'react';
 import { useRef, useState } from 'react';
 import { Printer, X } from 'lucide-react';
 import type { Question } from '../../types/bancoQuestoes';

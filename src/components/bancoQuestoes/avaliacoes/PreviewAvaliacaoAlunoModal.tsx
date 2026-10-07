@@ -1,3 +1,4 @@
+import React from 'react';
 import { useEffect, useState } from 'react';
 import { Eye, Loader2, X } from 'lucide-react';
 import type { QuestaoParaAluno } from '../../../types/avaliacoes';
