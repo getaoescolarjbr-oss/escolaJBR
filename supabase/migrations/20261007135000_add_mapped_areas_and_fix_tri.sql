@@ -66,7 +66,8 @@ DECLARE
   v_prova provas;
   v_afetadas integer;
 BEGIN
-  IF NOT public.pode_corrigir_prova(p_prova_id) THEN
+  -- Se for uma chamada do sistema/migration (auth.uid() nulo), permite a execução
+  IF auth.uid() IS NOT NULL AND NOT public.pode_corrigir_prova(p_prova_id) THEN
     RAISE EXCEPTION 'Sem permissão para recalcular as notas desta prova.';
   END IF;
 
