@@ -135,8 +135,12 @@ export function NovaAvaliacaoGeralModal({ onClose, onCriada, avaliacaoExistente:
   async function handleSalvar() {
     if (!campos.titulo.trim()) { setErro('Informe o título da avaliação.'); return; }
     if (areasAtivas.length === 0) { setErro('Selecione pelo menos uma área participante.'); return; }
-    if (!soNota && areasAtivas.some((a) => !areas[a].qtd || areas[a].qtd < 1)) {
-      setErro('Cada área participante precisa de pelo menos 1 questão.');
+    if (!soNota && areasAtivas.some((a) => areas[a].qtd == null || areas[a].qtd < 0)) {
+      setErro('A quantidade de questões não pode ser negativa.');
+      return;
+    }
+    if (!soNota && somaAreas < 1) {
+      setErro('A avaliação precisa ter pelo menos 1 questão no total.');
       return;
     }
     if (!soNota && somaAreas !== totalQuestoes) {
