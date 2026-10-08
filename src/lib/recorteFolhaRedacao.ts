@@ -90,6 +90,38 @@ export function reduzirImagem(img: ImagemRgba, ladoMaximo: number): ImagemRgba {
   return { width: w, height: h, data: saida };
 }
 
+/**
+ * Abertura morfológica (erosão + dilatação com janela quadrada (2r+1)): apaga traços mais finos que a
+ * janela e preserva os quadrados sólidos. A folha impressa tem linhas finas que passam POR DENTRO das marcas
+ * da lateral (vistas numa foto real); coladas à marca, elas formam um único componente comprido que o
+ * filtro de "quadrado cheio" descarta, e a folha inteira falha com "não encontrei os 4 quadrados".
+ */
+export function abrirBinaria(bin: Uint8Array, width: number, height: number, raio: number): Uint8Array {
+  if (raio < 1) return bin;
+  const passo = (entrada: Uint8Array, horizontal: boolean, erodir: boolean): Uint8Array => {
+    const saida = new Uint8Array(entrada.length);
+    const n = horizontal ? width : height;
+    const m = horizontal ? height : width;
+    for (let linha = 0; linha < m; linha++) {
+      for (let i = 0; i < n; i++) {
+        const ini = Math.max(0, i - raio);
+        const fim = Math.min(n - 1, i + raio);
+        let v = erodir ? 1 : 0;
+        for (let k = ini; k <= fim; k++) {
+          const idx = horizontal ? linha * width + k : k * width + linha;
+          if (erodir ? !entrada[idx] : entrada[idx]) { v = erodir ? 0 : 1; break; }
+        }
+        // Erosão: pixel de borda da imagem vê "fora" como fundo (0).
+        if (erodir && v === 1 && (i - raio < 0 || i + raio > n - 1)) v = 0;
+        saida[horizontal ? linha * width + i : i * width + linha] = v;
+      }
+    }
+    return saida;
+  };
+  const erodida = passo(passo(bin, true, true), false, true);
+  return passo(passo(erodida, true, false), false, false);
+}
+
 type Deteccao = { ok: true; codigo: string; marcas: Ponto[] } | { ok: false; motivo: string; progresso: number };
 
 /** QR + 4 marcas numa imagem (nas coordenadas dela). `progresso` diz até onde chegou, para escolher a mensagem. */
@@ -107,7 +139,9 @@ function detectar(img: ImagemRgba): Deteccao {
   const ladoQr = Math.hypot(L.topRightCorner.x - L.topLeftCorner.x, L.topRightCorner.y - L.topLeftCorner.y);
 
   const cinza = paraCinza(img as unknown as ImageData);
-  const bin = binarizar(cinza, img.width, img.height);
+  const bruta = binarizar(cinza, img.width, img.height);
+  // Janela ~2,5% do lado do QR (a marca mede ~25% dele): remove linhas finas coladas nas marcas.
+  const bin = abrirBinaria(bruta, img.width, img.height, Math.max(1, Math.min(6, Math.round(ladoQr * 0.025))));
   const fora = componentes(bin, img.width, img.height).filter(
     (c) => Math.hypot(c.somaX / c.area - centro.x, c.somaY / c.area - centro.y) > ladoQr * 0.85,
   );
