@@ -210,7 +210,9 @@ export function StudentManager({ theme, professor }: StudentManagerProps) {
             ? Math.max(...targetStudents.map(ts => ts.aluno_numero || 0)) + 1 
             : 1;
 
-          // 3. Insert new student in the target class
+          // 3. Insert new student in the target class. A pessoa é a identidade estável (matrícula, consentimentos,
+          // conta de acesso): o cadastro novo aponta para a mesma do antigo; sem isso o banco cria uma pessoa nova.
+          const pessoaDoAntigo = (editingStudent as Student & { pessoa_id?: string | null }).pessoa_id ?? undefined;
           const { data: novoAluno, error: insertError } = await supabase
             .from('alunos')
             .insert([{
@@ -219,7 +221,8 @@ export function StudentManager({ theme, professor }: StudentManagerProps) {
               aluno_numero: nextNumber,
               status: 'Ativo',
               cid_codigo: formData.cid_codigo || null,
-              cid_descricao: formData.cid_descricao || null
+              cid_descricao: formData.cid_descricao || null,
+              ...(pessoaDoAntigo ? { pessoa_id: pessoaDoAntigo } : {})
             }])
             .select('id')
             .single();

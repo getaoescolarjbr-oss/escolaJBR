@@ -1,0 +1,22 @@
+-- (aplicado em produção como migração remanejamento_mesma_pessoa)
+-- Remanejamento: o aluno novo reaproveita a PESSOA do cadastro antigo (a pessoa é a identidade estável; o cadastro
+-- operacional de `alunos` é que muda de id). Com isso dois cadastros de aluno (um Remanejado, um ativo) podem
+-- compartilhar a pessoa, então as funções que assumiam "uma pessoa = um aluno" passam a preferir o ativo:
+--   meu_aluno_id()            -> o ativo/mais recente
+--   rpc_exportar_pessoa       -> 'aluno' = ativo/mais recente; 'aluno_historico' = todos os cadastros da pessoa
+--                                (antes a subconsulta escalar dava erro com 2+ cadastros)
+--   rpc_vinculos_pessoa       -> LIMIT 1 passa a preferir o ativo
+--   rpc_remanejar_herdar      -> também aponta o cadastro novo para a pessoa do antigo (devolve pessoa_unificada)
+-- A pessoa criada automaticamente para o cadastro novo NÃO é apagada (a auditoria já a referencia).
+--
+-- Dados (já feitos em 06-08/10, só onde a pessoa substituída não tinha NENHUM vínculo): alunos.pessoa_id dos
+-- cadastros novos passou à pessoa do cadastro mais antigo de cada nome. Mapa para desfazer (aluno -> pessoa anterior):
+--   264faada-ee19-4322-a615-60dd24b2916f -> fc276493-2696-4a60-a4b8-030173112884   (Emily)
+--   5c407788-c8c5-4607-8988-9a154ad8e7d6 -> 9db11e44-d131-4362-b0a0-4f80ea7df465   (Emily, cadastro intermediário)
+--   3486fb06-8855-4fa9-a622-1c4a7ad7a792 -> 011ee509-5927-4568-9007-c10606abf1cb   (Ingrid Cáceres)
+--   5858d660-292d-4836-80c0-69dc9eea7557 -> 59698591-c9f1-465c-aeea-73891c3031da   (Ana Luisa)
+--   5cdbcb81-189c-438e-b621-d327857fc201 -> da91cee0-db84-415d-a91f-53680f4eac8d   (Ingrid Ortiz)
+--   764b14ac-b527-4ff3-b624-13287777505e -> abaf3528-3c92-43ee-b330-2c2893bc85b4   (Pedro)
+--   032d5851-d576-42c9-a511-d420aa1924dd -> 2bac8314-5fbf-4f2b-b326-fa00a20fa6e2   (Luis Fernando)
+-- Reversão: update alunos set pessoa_id = <pessoa anterior> where id = <aluno>; restaurar as 3 funções acima.
+-- (O corpo das funções está na migração aplicada; ver pg_get_functiondef no banco.)
