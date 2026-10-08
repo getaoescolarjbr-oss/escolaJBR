@@ -7,8 +7,10 @@ import {
   assumirRedacao,
   dividirRedacoes,
   enviarImagemRedacao,
+  corrigirRedacaoComIa,
   liberarRedacao,
   listarRedacoes,
+  obterRedacao,
   prepararRedacao,
   prepararRedacaoAluno,
   salvarRedacao,
@@ -31,13 +33,15 @@ interface Props {
   onCorrigido: () => void;
 }
 
-type Etapa = 'lendo' | 'identificando' | 'enviando' | 'transcrevendo' | 'pronto' | 'erro';
+type Etapa = 'lendo' | 'identificando' | 'enviando' | 'transcrevendo' | 'corrigindo' | 'pronto' | 'erro';
 
 interface Processamento {
   id: number;
   arquivo: string;
   etapa: Etapa;
   detalhe?: string;
+  /** Aviso que não impede a folha de seguir (ex.: transcrita, mas a prévia da IA falhou). */
+  aviso?: string;
 }
 
 const ROTULO_ETAPA: Record<Etapa, string> = {
@@ -45,6 +49,7 @@ const ROTULO_ETAPA: Record<Etapa, string> = {
   identificando: 'Identificando o aluno…',
   enviando: 'Enviando o recorte…',
   transcrevendo: 'Transcrevendo a letra…',
+  corrigindo: 'Gerando a prévia de correção…',
   pronto: 'Pronto para revisar',
   erro: 'Não deu',
 };
@@ -97,6 +102,8 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
   const [dividindo, setDividindo] = useState(false);
   const [ocupadoDono, setOcupadoDono] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [previaAuto, setPreviaAuto] = useState(true);
+  const [gerandoPrevias, setGerandoPrevias] = useState<{ feitas: number; total: number; falhas: number } | null>(null);
   const seq = useRef(0);
   const tentarDeNovo = useRef(new Map<number, { rotulo: string; obter: () => Promise<ImagemRgba> }>());
   const inputRef = useRef<HTMLInputElement>(null);
@@ -123,6 +130,35 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
     setProcessos((ps) => ps.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   }
 
+  // Prévia da IA (nota por competência) sobre o texto já transcrito; o professor só confere e confirma.
+  async function gerarPrevia(envioId: string) {
+    const det = await comTentativas('Gerar a prévia', () => obterRedacao(envioId), 2);
+    if (!det.rubrica) throw new Error('Esta redação não tem modo de correção definido.');
+    const texto = det.texto_final ?? (det.linhas ?? []).map((l) => l.texto).join('\n');
+    if (!texto.trim()) throw new Error('Sem texto transcrito para corrigir.');
+    const r = await comTentativas('Gerar a prévia', () => corrigirRedacaoComIa(texto.split('\n'), det.tema ?? '', det.rubrica!, det.observacoes), 2);
+    await comTentativas('Salvar a prévia', () => salvarRedacao(envioId, { correcaoIa: r }));
+  }
+
+  // Redações já transcritas que ainda não têm prévia (ex.: enviadas antes desta opção): gera 3 por vez.
+  async function gerarPreviasQueFaltam() {
+    const alvo = (lista ?? []).filter((r) => r.envio_id && r.status === 'TRANSCRITA' && !r.bloqueio && (!soMinhas || r.sou_responsavel));
+    if (alvo.length === 0) return;
+    setGerandoPrevias({ feitas: 0, total: alvo.length, falhas: 0 });
+    let proximo = 0;
+    const trabalhador = async () => {
+      while (proximo < alvo.length) {
+        const r = alvo[proximo++];
+        let ok = true;
+        try { await gerarPrevia(r.envio_id!); } catch { ok = false; }
+        setGerandoPrevias((g) => (g ? { ...g, feitas: g.feitas + 1, falhas: g.falhas + (ok ? 0 : 1) } : g));
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(SIMULTANEAS, alvo.length) }, trabalhador));
+    await recarregar();
+    setGerandoPrevias((g) => (g ? { ...g, feitas: g.total } : g));
+  }
+
   // Cada folha é independente (QR, recorte e IA próprios), então várias fotos/páginas são processadas 3 de
   // cada vez em vez de uma a uma: o tempo cai a ~1/3 e 3 pedidos simultâneos ainda respeitam o limite por minuto.
   const SIMULTANEAS = 3;
@@ -130,7 +166,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
   async function processarFolha(rotulo: string, obter: () => Promise<ImagemRgba>, idExistente?: number) {
     const id = idExistente ?? ++seq.current;
     tentarDeNovo.current.set(id, { rotulo, obter });
-    if (idExistente) marcar(id, { etapa: 'lendo', detalhe: undefined });
+    if (idExistente) marcar(id, { etapa: 'lendo', detalhe: undefined, aviso: undefined });
     else setProcessos((ps) => [{ id, arquivo: rotulo, etapa: 'lendo' }, ...ps]);
     try {
       const img = await obter();
@@ -155,7 +191,16 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
       const base64 = await blobParaBase64(jpegIa);
       const tr = await comTentativas('Transcrever', () => transcreverRedacao(base64), 2);
       await comTentativas('Salvar a transcrição', () => salvarRedacao(prep.envio_id, { linhas: tr.linhas, textoFinal: tr.linhas.map((l) => l.texto).join('\n') }));
-      marcar(id, { etapa: 'pronto' });
+      if (previaAuto) {
+        marcar(id, { etapa: 'corrigindo' });
+        try {
+          await gerarPrevia(prep.envio_id);
+        } catch (e) {
+          marcar(id, { etapa: 'pronto', aviso: `transcrita, mas a prévia da IA falhou (${mensagemErro(e)}). Gere na revisão.` });
+          return;
+        }
+      }
+      marcar(id, { etapa: 'pronto', aviso: undefined });
     } catch (e) {
       marcar(id, { etapa: 'erro', detalhe: mensagemErro(e) });
     }
@@ -395,6 +440,27 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                     Enquadre a folha inteira (QR e os 4 quadrados pretos dos cantos visíveis). Pode escolher várias fotos da galeria ou o PDF do scanner (uma página por folha): elas são lidas 3 por vez.
                   </span>
                 </div>
+                <label className="flex items-center gap-2 text-xs font-bold text-ms-main cursor-pointer select-none">
+                  <input type="checkbox" checked={previaAuto} onChange={(e) => setPreviaAuto(e.target.checked)} className="accent-ms-blue" />
+                  Já gerar a prévia de correção da IA (o professor só confere e confirma a nota)
+                </label>
+                {(lista ?? []).some((r) => r.status === 'TRANSCRITA' && r.envio_id) && (
+                  <div className="flex items-center gap-2 flex-wrap text-xs">
+                    <button
+                      type="button"
+                      disabled={!!gerandoPrevias && gerandoPrevias.feitas < gerandoPrevias.total}
+                      onClick={() => void gerarPreviasQueFaltam()}
+                      className="px-3 py-1.5 rounded-lg border border-gray-700 font-bold text-ms-main hover:bg-gray-800 disabled:opacity-50"
+                    >
+                      Gerar prévias das redações já transcritas
+                    </button>
+                    {gerandoPrevias && (
+                      <span className="text-ms-muted">
+                        {gerandoPrevias.feitas}/{gerandoPrevias.total}{gerandoPrevias.falhas > 0 ? ` · ${gerandoPrevias.falhas} falharam (gere na revisão)` : ''}
+                      </span>
+                    )}
+                  </div>
+                )}
                 <p className="text-[11px] text-ms-muted">
                   Só o recorte das 30 linhas é enviado à IA: sem nome, turma nem QR.
                 </p>
@@ -417,6 +483,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                           <span className={p.etapa === 'erro' ? 'text-red-400' : 'text-ms-muted'}>
                             {p.etapa === 'erro' ? p.detalhe : ROTULO_ETAPA[p.etapa]}
                           </span>
+                          {p.aviso && <span className="text-amber-500"> — {p.aviso}</span>}
                           {p.etapa === 'erro' && tentarDeNovo.current.has(p.id) && (
                             <button type="button" onClick={() => void repetir(p.id)} className="ml-2 underline font-bold text-ms-blueText">
                               Tentar de novo
