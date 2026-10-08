@@ -289,7 +289,7 @@ export function printProva(ref: HTMLElement | null, tituloDocumento: string, css
       max-width: 200mm;
       margin: 0 auto;
       padding: 4mm;
-      border: 1.5px solid #002677;
+      border: 1.5px solid transparent; /* transparente, não removida: a largura útil não muda e não vira risco nas margens */
     }
 
     ${PROVA_LAYOUT_CSS}
