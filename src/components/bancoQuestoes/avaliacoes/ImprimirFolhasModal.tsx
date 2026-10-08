@@ -29,6 +29,11 @@ const CSS_LOTE = `
 
   .pagina-folha-redacao { padding: 0; min-height: 0; }
 
+  /* O corpo do documento de impressão tem uma borda azul (printProva) que, com várias páginas, vira um risco vertical
+     em cada margem de cada folha. Na folha de redação e no cartão isso atrapalha a leitura da câmera; a borda fica transparente
+     (e não some) para a largura útil, e com ela as marcas, continuarem exatamente onde estavam. */
+  body { border-color: transparent !important; }
+
   /* Quebras de pÃ¡gina: entre alunos e entre pÃ¡ginas do mesmo aluno */
   .bloco-aluno + .bloco-aluno { break-before: page; page-break-before: always; }
   .bloco-aluno .pagina + .pagina { break-before: page; page-break-before: always; }
