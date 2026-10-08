@@ -10,8 +10,9 @@
 --   1. o código SGDE é do aluno e o acompanha: passa do cadastro antigo (que fica desativado na turma de
 --      origem) para o novo. O índice alunos_codigo_sgde_idx é único em qualquer situação, então o antigo
 --      o libera primeiro. É o que já se fazia à mão nos remanejamentos anteriores.
---   2. nas avaliações em que a TURMA NOVA participa, o antigo tem alocação, não respondeu nada e o novo
---      ainda não tem alocação, passa a alocação (mesmo QR, mesma versão) para o novo.
+--   2. nas avaliações AINDA NÃO APLICADAS (data de aplicação hoje ou futura, ou sem data) em que a TURMA NOVA
+--      participa, o antigo tem alocação, não respondeu nada e o novo ainda não tem alocação, passa a alocação
+--      (mesmo QR, mesma versão) para o novo. Avaliações de bimestres anteriores nunca são tocadas.
 -- Onde o antigo já respondeu, ou a turma nova não participa, nada muda (a nota segue no cadastro em que foi feita).
 --
 -- Reversão: voltar o codigo_sgde e prova_alocacoes.aluno_id ao cadastro antigo nas linhas afetadas; drop function
@@ -44,6 +45,9 @@ begin
     update public.prova_alocacoes pa set aluno_id = p_novo
      where pa.aluno_id = p_antigo
        and exists (select 1 from public.prova_turmas pt where pt.prova_id = pa.prova_id and pt.turma_id = v_new.turma_id)
+       -- só avaliações ainda não aplicadas: as de bimestres anteriores (já aplicadas) não são tocadas
+       and exists (select 1 from public.provas pv where pv.id = pa.prova_id
+                    and (pv.data_aplicacao is null or pv.data_aplicacao >= (now() at time zone 'America/Campo_Grande')::date))
        and not exists (select 1 from public.prova_alocacoes x where x.prova_id = pa.prova_id and x.aluno_id = p_novo)
        and not exists (select 1 from public.prova_respostas r where r.prova_id = pa.prova_id and r.aluno_id = p_antigo)
     returning 1)
