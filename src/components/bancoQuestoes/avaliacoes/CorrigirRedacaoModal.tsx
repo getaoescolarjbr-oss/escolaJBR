@@ -70,7 +70,7 @@ async function comTentativas<T>(passo: string, fn: () => Promise<T>, tentativas 
     } catch (e) {
       if (i >= tentativas || !ehFalhaDeRede(e)) {
         const msg = mensagemErro(e);
-        throw new Error(ehFalhaDeRede(e) ? `${passo}: sem conexão com o servidor (${msg}). Confira o sinal e toque em "Tentar de novo".` : msg);
+        throw new Error(ehFalhaDeRede(e) ? `${passo}: sem conexão com o servidor (${msg}). Confira o sinal e toque em "Tentar de novo".` : msg, { cause: e });
       }
       await new Promise((r) => setTimeout(r, 1500 * i));
     }
