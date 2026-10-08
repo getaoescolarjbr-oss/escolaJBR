@@ -58,6 +58,25 @@ const ROTULO_STATUS: Record<StatusRedacao | 'SEM' | 'DIGITADA_PELO_ALUNO', { tex
   REVISADA: { texto: 'Nota confirmada', classe: 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900' },
 };
 
+/** Falha de rede (sinal do celular oscilando): vale tentar de novo; erro de regra de negócio não. */
+function ehFalhaDeRede(e: unknown): boolean {
+  return /failed to fetch|network|load failed|timeout|fetch/i.test(e instanceof Error ? e.message : String((e as { message?: unknown })?.message ?? e));
+}
+
+async function comTentativas<T>(passo: string, fn: () => Promise<T>, tentativas = 3): Promise<T> {
+  for (let i = 1; ; i++) {
+    try {
+      return await fn();
+    } catch (e) {
+      if (i >= tentativas || !ehFalhaDeRede(e)) {
+        const msg = mensagemErro(e);
+        throw new Error(ehFalhaDeRede(e) ? `${passo}: sem conexão com o servidor (${msg}). Confira o sinal e toque em "Tentar de novo".` : msg);
+      }
+      await new Promise((r) => setTimeout(r, 1500 * i));
+    }
+  }
+}
+
 function mensagemErro(e: unknown): string {
   if (e instanceof Error) return e.message;
   if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message);
@@ -79,6 +98,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
   const [ocupadoDono, setOcupadoDono] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
   const seq = useRef(0);
+  const tentarDeNovo = useRef(new Map<number, { rotulo: string; obter: () => Promise<ImagemRgba> }>());
   const inputRef = useRef<HTMLInputElement>(null);
   const inputCameraRef = useRef<HTMLInputElement>(null);
 
@@ -107,16 +127,18 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
   // cada vez em vez de uma a uma: o tempo cai a ~1/3 e 3 pedidos simultâneos ainda respeitam o limite por minuto.
   const SIMULTANEAS = 3;
 
-  async function processarFolha(rotulo: string, obter: () => Promise<ImagemRgba>) {
-    const id = ++seq.current;
-    setProcessos((ps) => [{ id, arquivo: rotulo, etapa: 'lendo' }, ...ps]);
+  async function processarFolha(rotulo: string, obter: () => Promise<ImagemRgba>, idExistente?: number) {
+    const id = idExistente ?? ++seq.current;
+    tentarDeNovo.current.set(id, { rotulo, obter });
+    if (idExistente) marcar(id, { etapa: 'lendo', detalhe: undefined });
+    else setProcessos((ps) => [{ id, arquivo: rotulo, etapa: 'lendo' }, ...ps]);
     try {
       const img = await obter();
       const rec = await recortarCaixaRedacao(img);
       if (!rec.ok) throw new Error(rec.motivo);
 
       marcar(id, { etapa: 'identificando' });
-      const prep = await prepararRedacao(rec.dados.codigo, questaoId || undefined);
+      const prep = await comTentativas('Identificar o aluno', () => prepararRedacao(rec.dados.codigo, questaoId || undefined));
       if (prep.precisa_escolher_questao) {
         throw new Error('Esta prova tem mais de uma redação. Escolha a questão no seletor acima e envie de novo.');
       }
@@ -124,14 +146,15 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
 
       marcar(id, { etapa: 'enviando', detalhe: prep.aluno_nome });
       const jpeg = await recorteParaJpeg(rec.dados.recorte);
-      const caminho = await enviarImagemRedacao(prep.prova_id, prep.aluno_id, prep.envio_id, jpeg);
-      await salvarRedacao(prep.envio_id, { imagemPath: caminho });
+      const caminho = await comTentativas('Enviar o recorte', () => enviarImagemRedacao(prep.prova_id, prep.aluno_id, prep.envio_id, jpeg));
+      await comTentativas('Salvar a folha', () => salvarRedacao(prep.envio_id, { imagemPath: caminho }));
 
       marcar(id, { etapa: 'transcrevendo' });
       // À IA vai uma versão reduzida (mais leve e rápida); o arquivo guardado fica em resolução máxima.
       const jpegIa = await recorteParaJpeg(rec.dados.recorte, 0.85, LARGURA_RECORTE_IA);
-      const tr = await transcreverRedacao(await blobParaBase64(jpegIa));
-      await salvarRedacao(prep.envio_id, { linhas: tr.linhas, textoFinal: tr.linhas.map((l) => l.texto).join('\n') });
+      const base64 = await blobParaBase64(jpegIa);
+      const tr = await comTentativas('Transcrever', () => transcreverRedacao(base64), 2);
+      await comTentativas('Salvar a transcrição', () => salvarRedacao(prep.envio_id, { linhas: tr.linhas, textoFinal: tr.linhas.map((l) => l.texto).join('\n') }));
       marcar(id, { etapa: 'pronto' });
     } catch (e) {
       marcar(id, { etapa: 'erro', detalhe: mensagemErro(e) });
@@ -173,6 +196,13 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
     await Promise.all(Array.from({ length: Math.min(SIMULTANEAS, fila.length) }, trabalhador));
     pdfs.forEach((p) => p.fechar());
     await recarregar();
+  }
+
+  async function repetir(id: number) {
+    const j = tentarDeNovo.current.get(id);
+    if (!j) return;
+    await processarFolha(j.rotulo, j.obter, id);
+    void recarregar();
   }
 
   // Aluno sem folha escaneada: abre o registro dele (texto digitado online, ou em branco para o
@@ -387,6 +417,11 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                           <span className={p.etapa === 'erro' ? 'text-red-400' : 'text-ms-muted'}>
                             {p.etapa === 'erro' ? p.detalhe : ROTULO_ETAPA[p.etapa]}
                           </span>
+                          {p.etapa === 'erro' && tentarDeNovo.current.has(p.id) && (
+                            <button type="button" onClick={() => void repetir(p.id)} className="ml-2 underline font-bold text-ms-blueText">
+                              Tentar de novo
+                            </button>
+                          )}
                         </span>
                       </li>
                     ))}
