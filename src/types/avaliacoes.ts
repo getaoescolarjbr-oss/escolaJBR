@@ -193,6 +193,8 @@ export interface ResultadoAlunoDetalhado {
   aluno_id: string;
   aluno_nome: string;
   codigo_sgde?: string | null;
+  /** Nº de chamada na turma (identifica o aluno quando o relatório sai sem nomes e ele não tem SGDE). */
+  numero_chamada?: number | null;
   turma_nome: string | null;
   /**
    * A nota que vale para esta prova. Numa prova PONDERADA já vem convertida: o relatório

@@ -1,6 +1,7 @@
 import { aplicarSubstituicoes } from '../utils/substituicoes';
 import type { EspelhoSubstituicao } from '../utils/substituicoes';
 import { supabase } from '../lib/supabase';
+import { SEM_VERSOES, type VersaoRelatorio, type VersoesRelatorio } from '../utils/relatorioResultados';
 import type {
   Avaliacao,
   AvaliacaoAluno,
@@ -392,6 +393,20 @@ export async function listarResultadosAvaliacao(avaliacaoId: string): Promise<Re
   return (data ?? []) as ResultadoAluno[];
 }
 
+/**
+ * Gabarito de cada versão (número na folha e bolha correta por questão) e a versão de cada aluno. Provas sem
+ * versões (online, ou sem sorteio) devolvem vazio, e o relatório usa a numeração e o gabarito do banco.
+ */
+export async function obterVersoesRelatorio(avaliacaoId: string): Promise<VersoesRelatorio> {
+  const { data, error } = await supabase.rpc('rpc_relatorio_versoes', { p_prova_id: avaliacaoId });
+  if (error || !data) return SEM_VERSOES;
+  const d = data as { versoes?: VersaoRelatorio[]; alunos?: { aluno_id: string; rotulo: string }[] };
+  return {
+    versoes: (d.versoes ?? []).filter((v) => v.linhas.length > 0),
+    versaoDoAluno: Object.fromEntries((d.alunos ?? []).map((a) => [a.aluno_id, a.rotulo])),
+  };
+}
+
 export async function obterResultadosDetalhadosAvaliacao(avaliacaoId: string): Promise<RelatorioAvaliacaoCompleto> {
   // 1. Questões da avaliação ordenadas com gabarito
   const { data: questoesData, error: qErr } = await supabase
@@ -420,11 +435,11 @@ export async function obterResultadosDetalhadosAvaliacao(avaliacaoId: string): P
   const turmaIds = (turmasData ?? []).map((t) => t.turma_id as string).filter(Boolean);
 
   // 3. Alunos das turmas
-  let todosAlunos: { id: string; nome: string; codigo_sgde: string | null; turma_nome: string | null }[] = [];
+  let todosAlunos: { id: string; nome: string; codigo_sgde: string | null; numero: number | null; turma_nome: string | null }[] = [];
   if (turmaIds.length > 0) {
     const { data: alunosData } = await supabase
       .from('alunos')
-      .select('id, nome, codigo_sgde, turmas(nome)')
+      .select('id, nome, codigo_sgde, aluno_numero, turmas(nome)')
       .in('turma_id', turmaIds)
       .order('nome');
     todosAlunos = (alunosData ?? []).map((a: Record<string, unknown>) => {
@@ -433,6 +448,7 @@ export async function obterResultadosDetalhadosAvaliacao(avaliacaoId: string): P
         id: a.id as string,
         nome: (a.nome as string) ?? '',
         codigo_sgde: (a.codigo_sgde as string) ?? null,
+        numero: a.aluno_numero != null ? Number(a.aluno_numero) : null,
         turma_nome: tObj?.nome ?? null,
       };
     });
@@ -476,6 +492,7 @@ export async function obterResultadosDetalhadosAvaliacao(avaliacaoId: string): P
       aluno_id: al.id,
       aluno_nome: al.nome,
       codigo_sgde: al.codigo_sgde,
+      numero_chamada: al.numero,
       turma_nome: al.turma_nome,
       nota: resp?.finalizado_em ? Number(resp.nota) || 0 : null,
       nota_ponderada: resp?.finalizado_em && resp.nota_ponderada != null ? Number(resp.nota_ponderada) : null,
