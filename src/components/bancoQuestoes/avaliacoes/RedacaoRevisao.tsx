@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { AlertTriangle, ArrowLeft, Check, Loader2, Save, Settings2, Sparkles } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Check, Loader2, RefreshCw, Save, Settings2, Sparkles } from 'lucide-react';
+import { blobParaBase64, reduzirJpeg } from '../../../lib/recorteFolhaRedacao';
 import { renderLightMarkup } from '../../../lib/questionMarkup';
 import {
   confirmarRedacao,
@@ -9,6 +10,7 @@ import {
   listarRubricas,
   obterRedacao,
   salvarRedacao,
+  transcreverRedacao,
   urlImagemRedacao,
   valoresPermitidos,
   type CorrecaoIa,
@@ -59,7 +61,7 @@ export function RedacaoRevisao({ envioId, onVoltar, onConfirmada }: Props) {
   const [comentarios, setComentarios] = useState<Record<string, string>>({});
   const [comentarioGeral, setComentarioGeral] = useState('');
   const [erro, setErro] = useState<string | null>(null);
-  const [ocupado, setOcupado] = useState<'salvar' | 'ia' | 'confirmar' | 'modo' | null>(null);
+  const [ocupado, setOcupado] = useState<'salvar' | 'ia' | 'confirmar' | 'modo' | 'transcrever' | null>(null);
   const [resultado, setResultado] = useState<ResultadoConfirmacao | null>(null);
   const [mostrarEnunciado, setMostrarEnunciado] = useState(false);
   const [gerenciando, setGerenciando] = useState(false);
@@ -122,6 +124,23 @@ export function RedacaoRevisao({ envioId, onVoltar, onConfirmada }: Props) {
     try {
       await definirRubricaRedacao(envioId, valor || null);
       setResultado(null);
+      await carregar();
+    } catch (e) { setErro(mensagemErro(e)); } finally { setOcupado(null); }
+  }
+
+  // Refaz só a leitura da letra a partir da foto que já está guardada (sem reenviar a folha): serve quando a
+  // transcrição falhou ou saiu ruim.
+  async function transcreverDeNovo() {
+    if (!det?.imagem_path) return;
+    if (texto.trim() && !window.confirm('Substituir o texto atual pela nova transcrição da foto?')) return;
+    setOcupado('transcrever');
+    setErro(null);
+    try {
+      const url = imagemUrl ?? (await urlImagemRedacao(det.imagem_path));
+      if (!url) throw new Error('Não consegui abrir a imagem desta redação.');
+      const original = await (await fetch(url)).blob();
+      const tr = await transcreverRedacao(await blobParaBase64(await reduzirJpeg(original)));
+      await salvarRedacao(envioId, { linhas: tr.linhas, textoFinal: tr.linhas.map((l) => l.texto).join('\n') });
       await carregar();
     } catch (e) { setErro(mensagemErro(e)); } finally { setOcupado(null); }
   }
@@ -285,6 +304,11 @@ export function RedacaoRevisao({ envioId, onVoltar, onConfirmada }: Props) {
               <button onClick={salvarTexto} disabled={ocupado !== null} className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-800 rounded-lg text-xs font-bold text-ms-main hover:bg-gray-800 disabled:opacity-40">
                 {ocupado === 'salvar' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Salvar texto
               </button>
+              {det?.imagem_path && (
+                <button onClick={transcreverDeNovo} disabled={ocupado !== null} className="flex items-center gap-1.5 px-3 py-1.5 border border-gray-800 rounded-lg text-xs font-bold text-ms-main hover:bg-gray-800 disabled:opacity-40" title="Lê a letra da foto de novo, sem reenviar a folha">
+                  {ocupado === 'transcrever' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} Transcrever a foto de novo
+                </button>
+              )}
               <button onClick={corrigirComIa} disabled={ocupado !== null || !texto.trim()} className="flex items-center gap-1.5 px-3 py-1.5 bg-ms-blue text-white rounded-lg text-xs font-bold hover:bg-blue-600 disabled:opacity-40">
                 {ocupado === 'ia' ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
                 {iaAtual ? 'Corrigir de novo com IA' : 'Gerar correção prévia (IA)'}

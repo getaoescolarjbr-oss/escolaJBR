@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Camera, CheckCircle2, Loader2, Pencil, Users, X } from 'lucide-react';
+import { AlertTriangle, Camera, CheckCircle2, FileUp, Loader2, Pencil, Users, X } from 'lucide-react';
 import type { Avaliacao } from '../../../types/avaliacoes';
-import { arquivoParaImagem, recortarCaixaRedacao, recorteParaJpeg } from '../../../lib/recorteFolhaRedacao';
+import { LARGURA_RECORTE_IA, arquivoParaImagem, blobParaBase64, recortarCaixaRedacao, recorteParaJpeg, type ImagemRgba } from '../../../lib/recorteFolhaRedacao';
+import { abrirPdf, ehPdf, type PdfAberto } from '../../../lib/pdfParaImagens';
 import {
   assumirRedacao,
   dividirRedacoes,
@@ -57,15 +58,6 @@ const ROTULO_STATUS: Record<StatusRedacao | 'SEM' | 'DIGITADA_PELO_ALUNO', { tex
   REVISADA: { texto: 'Nota confirmada', classe: 'bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900' },
 };
 
-function blobParaBase64(blob: Blob): Promise<string> {
-  return new Promise((ok, falha) => {
-    const r = new FileReader();
-    r.onload = () => ok(String(r.result).split(',')[1] ?? '');
-    r.onerror = () => falha(new Error('Falha ao preparar a imagem'));
-    r.readAsDataURL(blob);
-  });
-}
-
 function mensagemErro(e: unknown): string {
   if (e instanceof Error) return e.message;
   if (e && typeof e === 'object' && 'message' in e) return String((e as { message: unknown }).message);
@@ -88,6 +80,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
   const [aviso, setAviso] = useState<string | null>(null);
   const seq = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const inputCameraRef = useRef<HTMLInputElement>(null);
 
   const recarregar = useCallback(async () => {
     try {
@@ -110,11 +103,15 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
     setProcessos((ps) => ps.map((p) => (p.id === id ? { ...p, ...patch } : p)));
   }
 
-  async function processarArquivo(arquivo: File) {
+  // Cada folha é independente (QR, recorte e IA próprios), então várias fotos/páginas são processadas 3 de
+  // cada vez em vez de uma a uma: o tempo cai a ~1/3 e 3 pedidos simultâneos ainda respeitam o limite por minuto.
+  const SIMULTANEAS = 3;
+
+  async function processarFolha(rotulo: string, obter: () => Promise<ImagemRgba>) {
     const id = ++seq.current;
-    setProcessos((ps) => [{ id, arquivo: arquivo.name, etapa: 'lendo' }, ...ps]);
+    setProcessos((ps) => [{ id, arquivo: rotulo, etapa: 'lendo' }, ...ps]);
     try {
-      const img = await arquivoParaImagem(arquivo);
+      const img = await obter();
       const rec = await recortarCaixaRedacao(img);
       if (!rec.ok) throw new Error(rec.motivo);
 
@@ -131,7 +128,9 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
       await salvarRedacao(prep.envio_id, { imagemPath: caminho });
 
       marcar(id, { etapa: 'transcrevendo' });
-      const tr = await transcreverRedacao(await blobParaBase64(jpeg));
+      // À IA vai uma versão reduzida (mais leve e rápida); o arquivo guardado fica em resolução máxima.
+      const jpegIa = await recorteParaJpeg(rec.dados.recorte, 0.85, LARGURA_RECORTE_IA);
+      const tr = await transcreverRedacao(await blobParaBase64(jpegIa));
       await salvarRedacao(prep.envio_id, { linhas: tr.linhas, textoFinal: tr.linhas.map((l) => l.texto).join('\n') });
       marcar(id, { etapa: 'pronto' });
     } catch (e) {
@@ -139,11 +138,40 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
     }
   }
 
+  // Aceita fotos (câmera ou galeria, várias de uma vez) e PDF escaneado (uma página por folha).
   async function aoEscolherArquivos(files: FileList | null) {
     if (!files || files.length === 0) return;
     const arquivos = [...files];
     if (inputRef.current) inputRef.current.value = '';
-    for (const a of arquivos) await processarArquivo(a); // um de cada vez: respeita o limite da IA
+    if (inputCameraRef.current) inputCameraRef.current.value = '';
+
+    const fila: { rotulo: string; obter: () => Promise<ImagemRgba> }[] = [];
+    const pdfs: PdfAberto[] = [];
+    for (const a of arquivos) {
+      if (!ehPdf(a)) {
+        fila.push({ rotulo: a.name, obter: () => arquivoParaImagem(a) });
+        continue;
+      }
+      try {
+        const pdf = await abrirPdf(a);
+        pdfs.push(pdf);
+        for (let n = 1; n <= pdf.paginas; n++) fila.push({ rotulo: `${a.name} — pág. ${n}`, obter: () => pdf.renderizar(n) });
+      } catch (e) {
+        const id = ++seq.current;
+        setProcessos((ps) => [{ id, arquivo: a.name, etapa: 'erro', detalhe: `Não consegui abrir o PDF: ${mensagemErro(e)}` }, ...ps]);
+      }
+    }
+
+    let proximo = 0;
+    const trabalhador = async () => {
+      while (proximo < fila.length) {
+        const j = fila[proximo++];
+        await processarFolha(j.rotulo, j.obter);
+        void recarregar(); // a lista de alunos vai se atualizando conforme cada folha termina
+      }
+    };
+    await Promise.all(Array.from({ length: Math.min(SIMULTANEAS, fila.length) }, trabalhador));
+    pdfs.forEach((p) => p.fechar());
     await recarregar();
   }
 
@@ -269,15 +297,31 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                     onClick={() => inputRef.current?.click()}
                     disabled={emAndamento}
                     className="flex items-center gap-2 px-4 py-2 bg-ms-blue text-white rounded-lg text-sm font-bold hover:bg-blue-600 disabled:opacity-40"
+                    title="Escolha várias fotos da galeria ou o PDF do scanner de uma vez"
                   >
-                    {emAndamento ? <Loader2 className="w-4 h-4 animate-spin" /> : <Camera className="w-4 h-4" />}
-                    Fotografar ou enviar folhas
+                    {emAndamento ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileUp className="w-4 h-4" />}
+                    Enviar fotos ou PDF
+                  </button>
+                  <button
+                    onClick={() => inputCameraRef.current?.click()}
+                    disabled={emAndamento}
+                    className="flex items-center gap-2 px-3 py-2 border border-gray-800 text-ms-main rounded-lg text-sm font-bold hover:bg-gray-800 disabled:opacity-40"
+                    title="Abre a câmera do celular para fotografar uma folha"
+                  >
+                    <Camera className="w-4 h-4" /> Tirar foto
                   </button>
                   <input
                     ref={inputRef}
                     type="file"
-                    accept="image/*"
+                    accept="image/*,application/pdf,.pdf"
                     multiple
+                    className="hidden"
+                    onChange={(e) => void aoEscolherArquivos(e.target.files)}
+                  />
+                  <input
+                    ref={inputCameraRef}
+                    type="file"
+                    accept="image/*"
                     capture="environment"
                     className="hidden"
                     onChange={(e) => void aoEscolherArquivos(e.target.files)}
@@ -318,13 +362,18 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                     </label>
                   )}
                   <span className="text-xs text-ms-muted">
-                    Enquadre a folha inteira (QR e os 4 quadrados pretos dos cantos visíveis). Pode escolher várias fotos de uma vez.
+                    Enquadre a folha inteira (QR e os 4 quadrados pretos dos cantos visíveis). Pode escolher várias fotos da galeria ou o PDF do scanner (uma página por folha): elas são lidas 3 por vez.
                   </span>
                 </div>
                 <p className="text-[11px] text-ms-muted">
                   Só o recorte das 30 linhas é enviado à IA: sem nome, turma nem QR.
                 </p>
 
+                {processos.length > 1 && (
+                  <p className="text-xs font-bold text-ms-main">
+                    {processos.filter((p) => p.etapa === 'pronto').length} pronta(s) · {processos.filter((p) => p.etapa === 'erro').length} com problema · {processos.filter((p) => !['pronto', 'erro'].includes(p.etapa)).length} em andamento
+                  </p>
+                )}
                 {processos.length > 0 && (
                   <ul className="space-y-1 max-h-40 overflow-y-auto">
                     {processos.map((p) => (
