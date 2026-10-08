@@ -197,15 +197,60 @@ export async function recortarCaixaRedacao(img: ImagemRgba): Promise<ResultadoRe
   return { ok: true, dados: { codigo, recorte: { width: largura, height: altura, data: saida }, marcas } };
 }
 
-/** Só no navegador: recorte -> JPEG para enviar/guardar. */
-export function recorteParaJpeg(recorte: ImagemRgba, qualidade = 0.85): Promise<Blob> {
+/**
+ * Largura (px) do recorte enviado à IA. 700 px bastam para ler letra de caneta nas 30 linhas (testado: leitura
+ * integral, com rasuras marcadas) e deixam a requisição leve; o arquivo guardado para o professor segue em
+ * resolução máxima.
+ */
+export const LARGURA_RECORTE_IA = 700;
+
+function canvasReduzido(origem: HTMLCanvasElement | ImageBitmap, larguraMax: number): HTMLCanvasElement {
+  const w = 'width' in origem ? origem.width : 0;
+  const h = 'height' in origem ? origem.height : 0;
+  const c = document.createElement('canvas');
+  const k = Math.min(1, larguraMax / w);
+  c.width = Math.round(w * k);
+  c.height = Math.round(h * k);
+  const ctx = c.getContext('2d');
+  if (!ctx) throw new Error('Canvas indisponível');
+  ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(origem, 0, 0, c.width, c.height);
+  return c;
+}
+
+function canvasParaJpeg(canvas: HTMLCanvasElement, qualidade: number): Promise<Blob> {
+  return new Promise((ok, falha) => canvas.toBlob((b) => (b ? ok(b) : falha(new Error('Falha ao gerar JPEG'))), 'image/jpeg', qualidade));
+}
+
+/** Só no navegador: recorte -> JPEG para enviar/guardar. Com `larguraMax`, reduz antes de gerar o JPEG. */
+export function recorteParaJpeg(recorte: ImagemRgba, qualidade = 0.85, larguraMax?: number): Promise<Blob> {
   const canvas = document.createElement('canvas');
   canvas.width = recorte.width;
   canvas.height = recorte.height;
   const ctx = canvas.getContext('2d');
   if (!ctx) return Promise.reject(new Error('Canvas indisponível'));
   ctx.putImageData(new ImageData(recorte.data as Uint8ClampedArray<ArrayBuffer>, recorte.width, recorte.height), 0, 0);
-  return new Promise((ok, falha) => canvas.toBlob((b) => (b ? ok(b) : falha(new Error('Falha ao gerar JPEG'))), 'image/jpeg', qualidade));
+  return canvasParaJpeg(larguraMax && recorte.width > larguraMax ? canvasReduzido(canvas, larguraMax) : canvas, qualidade);
+}
+
+/** Só no navegador: reduz um JPEG já guardado (para transcrever de novo sem refazer a foto). */
+export async function reduzirJpeg(blob: Blob, larguraMax = LARGURA_RECORTE_IA, qualidade = 0.85): Promise<Blob> {
+  const bmp = await createImageBitmap(blob);
+  try {
+    return await canvasParaJpeg(canvasReduzido(bmp, larguraMax), qualidade);
+  } finally {
+    bmp.close();
+  }
+}
+
+/** Blob -> base64 puro (sem o prefixo data:), no formato que a função de IA espera. */
+export function blobParaBase64(blob: Blob): Promise<string> {
+  return new Promise((ok, falha) => {
+    const r = new FileReader();
+    r.onload = () => ok(String(r.result).split(',')[1] ?? '');
+    r.onerror = () => falha(new Error('Falha ao preparar a imagem'));
+    r.readAsDataURL(blob);
+  });
 }
 
 /** Só no navegador: arquivo de imagem (foto da câmera, galeria, escaneamento) -> pixels, com limite de tamanho. */

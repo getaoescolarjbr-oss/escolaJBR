@@ -19,6 +19,7 @@
     "jsqr": "^1.4.0",
     "katex": "^0.18.4",
     "lucide-react": "^1.14.0",
+    "pdfjs-dist": "^6.4.299",
     "qrcode": "^1.5.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",

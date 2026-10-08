@@ -27,7 +27,9 @@ async function chave(): Promise<string> {
   return chaveCache;
 }
 // Cada modelo tem a própria cota gratuita diária; a chave também é usada por scripts, então o rodízio é longo.
-const MODELOS = (Deno.env.get("GEMINI_MODELOS") ?? "gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-flash-latest,gemini-3-flash-preview,gemini-2.5-flash,gemini-3.5-flash-lite,gemini-3.1-flash-lite")
+// A ordem vem de medição: com imagem, o 3.5 e o 3.6 responderam em ~12 s; o 3.8 devolveu "alta demanda" e o 3.7
+// ficou lento. (O 2.5-flash não existe para esta chave.)
+const MODELOS = (Deno.env.get("GEMINI_MODELOS") ?? "gemini-3.5-flash,gemini-3.6-flash,gemini-3.8-flash,gemini-3.7-flash,gemini-3-flash-preview,gemini-flash-latest,gemini-3.5-flash-lite,gemini-3.1-flash-lite")
   .split(",").map((s) => s.trim()).filter(Boolean);
 
 const CORS = {
@@ -42,23 +44,39 @@ function resp(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), { status, headers: { ...CORS, "Content-Type": "application/json" } });
 }
 
-// Tenta o modelo seguinte quando um está sobrecarregado (503) ou sem cota (429).
-async function gemini(partes: unknown[], schema: unknown) {
+// O Gemini às vezes simplesmente NÃO responde (a chamada fica pendurada por minutos). Sem limite, uma chamada
+// assim consome o tempo todo da função e a plataforma a derruba com um "non-2xx" sem explicação. Por isso cada
+// tentativa tem tempo máximo e, passado ele, o próximo modelo é tentado; o conjunto cabe no limite da função (150 s).
+const ORCAMENTO_MS = 125_000;
+
+// Tenta o modelo seguinte quando um está sobrecarregado (503), sem cota (429) ou não responde a tempo.
+async function gemini(partes: unknown[], schema: unknown, tempoPorTentativaMs = 40_000) {
+  const inicio = Date.now();
   let ultimo = "sem resposta";
   for (const modelo of MODELOS) {
     for (let tentativa = 0; tentativa < 2; tentativa++) {
-      const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
-        method: "POST",
-        headers: { "x-goog-api-key": await chave(), "content-type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: partes }],
-          generationConfig: { temperature: 0, responseMimeType: "application/json", responseSchema: schema },
-        }),
-      });
-      const j = await r.json().catch(() => ({}));
-      if (!j.error && j.candidates?.[0]?.content?.parts?.[0]?.text) {
-        return { dados: JSON.parse(j.candidates[0].content.parts[0].text), modelo, uso: j.usageMetadata };
+      const restante = ORCAMENTO_MS - (Date.now() - inicio);
+      if (restante < 8_000) throw new Error(`O Gemini está demorando demais para responder (${ultimo}). Tente de novo em instantes.`);
+      let r: Response;
+      let j: { error?: { status?: string; message?: string }; candidates?: { content?: { parts?: { text?: string }[] } }[]; usageMetadata?: unknown } = {};
+      try {
+        r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${modelo}:generateContent`, {
+          method: "POST",
+          headers: { "x-goog-api-key": await chave(), "content-type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: partes }],
+            generationConfig: { temperature: 0, responseMimeType: "application/json", responseSchema: schema },
+          }),
+          signal: AbortSignal.timeout(Math.min(tempoPorTentativaMs, restante)),
+        });
+        j = await r.json().catch(() => ({}));
+      } catch {
+        // Estourou o tempo (ou a rede caiu): repetir o mesmo modelo tende a repetir o travamento; passa ao próximo.
+        ultimo = `${modelo}: sem resposta em ${Math.round(Math.min(tempoPorTentativaMs, restante) / 1000)} s`;
+        break;
       }
+      const texto = j.candidates?.[0]?.content?.parts?.[0]?.text;
+      if (!j.error && texto) return { dados: JSON.parse(texto), modelo, uso: j.usageMetadata };
       ultimo = `${modelo}: ${j.error?.status ?? r.status} ${String(j.error?.message ?? "").slice(0, 120)}`;
       // Sem cota: tentar de novo o mesmo modelo não adianta, passa ao próximo. Sobrecarga: uma segunda tentativa.
       if (j.error?.status !== "UNAVAILABLE") break;
@@ -152,6 +170,7 @@ async function transcrever(a: { imagemBase64?: string; mimeType?: string }) {
       { inlineData: { mimeType: mime, data: b64 } },
     ],
     SCHEMA_TRANSCRICAO,
+    35_000, // a transcrição de uma folha leva ~12-20 s quando o serviço está normal
   );
   return { linhas: r.dados.linhas, modelo: r.modelo };
 }
@@ -203,6 +222,7 @@ async function corrigir(a: { linhas?: string[]; texto?: string; tema?: string; r
       },
     ],
     schema,
+    55_000, // a correção gera justificativas por critério e leva mais
   );
   const d = r.dados;
   // Validação e soma em código: cada nota cai no múltiplo do passo mais próximo, entre 0 e o max do critério.
