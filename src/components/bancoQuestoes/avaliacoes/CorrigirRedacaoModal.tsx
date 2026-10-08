@@ -18,6 +18,7 @@ import {
   type RedacaoDaLista,
   type StatusRedacao,
 } from '../../../services/redacaoService';
+import { abrirImpressaoDevolutivas, htmlDevolutiva } from '../../../utils/devolutivaRedacaoImpressa';
 import { RedacaoRevisao } from './RedacaoRevisao';
 import { RelatorioRedacoes } from './RelatorioRedacoes';
 import { RubricasModal } from './RubricasModal';
@@ -102,6 +103,11 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
   const [dividindo, setDividindo] = useState(false);
   const [ocupadoDono, setOcupadoDono] = useState<string | null>(null);
   const [aviso, setAviso] = useState<string | null>(null);
+  const [painelDevolutiva, setPainelDevolutiva] = useState(false);
+  const [turmaDevolutiva, setTurmaDevolutiva] = useState('');
+  const [textoDevolutiva, setTextoDevolutiva] = useState(false);
+  const [justDevolutiva, setJustDevolutiva] = useState<'NAO' | 'IA' | 'SEM_IDENTIFICAR'>('IA');
+  const [montandoDevolutiva, setMontandoDevolutiva] = useState(false);
   const [previaAuto, setPreviaAuto] = useState(true);
   const [gerandoPrevias, setGerandoPrevias] = useState<{ feitas: number; total: number; falhas: number } | null>(null);
   const seq = useRef(0);
@@ -128,6 +134,35 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
 
   function marcar(id: number, patch: Partial<Processamento>) {
     setProcessos((ps) => ps.map((p) => (p.id === id ? { ...p, ...patch } : p)));
+  }
+
+  // Devolutiva impressa (uma página por aluno) das redações com nota confirmada, para anexar à folha.
+  async function imprimirDevolutivas() {
+    const alvo = (lista ?? []).filter((r) => r.envio_id && r.status === 'REVISADA' && (!turmaDevolutiva || r.turma_nome === turmaDevolutiva) && (!questaoId || r.question_id === questaoId));
+    if (alvo.length === 0) {
+      setAviso('Nenhuma redação com nota confirmada nesse filtro.');
+      return;
+    }
+    setMontandoDevolutiva(true);
+    try {
+      alvo.sort((a, b) => (a.turma_nome ?? '').localeCompare(b.turma_nome ?? '', 'pt-BR') || (a.numero_chamada ?? 0) - (b.numero_chamada ?? 0));
+      const paginas: string[] = new Array(alvo.length).fill('');
+      let proximo = 0;
+      const trabalhador = async () => {
+        while (proximo < alvo.length) {
+          const i = proximo++;
+          const det = await comTentativas('Carregar a redação', () => obterRedacao(alvo[i].envio_id!), 2);
+          paginas[i] = htmlDevolutiva(det, { tituloAvaliacao: avaliacao.titulo, numeroChamada: alvo[i].numero_chamada, incluirTexto: textoDevolutiva, justificativas: justDevolutiva });
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(5, alvo.length) }, trabalhador));
+      abrirImpressaoDevolutivas(`Devolutivas — ${avaliacao.titulo}`, paginas.join(''));
+      setPainelDevolutiva(false);
+    } catch (e) {
+      setAviso(mensagemErro(e));
+    } finally {
+      setMontandoDevolutiva(false);
+    }
   }
 
   // Prévia da IA (nota por competência) sobre o texto já transcrito; o professor só confere e confirma.
@@ -414,6 +449,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                   )}
                   <button onClick={() => setGerenciando(true)} className="text-xs text-ms-blue underline">Critérios de correção</button>
                   <button onClick={() => setRelatorio(true)} className="text-xs text-ms-blue underline">Relatório da turma</button>
+                  <button onClick={() => setPainelDevolutiva((v) => !v)} className="text-xs text-ms-blue underline">Imprimir devolutivas</button>
                   {souGestor && (
                     <span className="inline-flex items-center gap-2">
                       <button
@@ -440,6 +476,28 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                     Enquadre a folha inteira (QR e os 4 quadrados pretos dos cantos visíveis). Pode escolher várias fotos da galeria ou o PDF do scanner (uma página por folha): elas são lidas 3 por vez.
                   </span>
                 </div>
+                {painelDevolutiva && (
+                  <div className="rounded-lg border border-gray-700 p-3 space-y-2 text-xs">
+                    <p className="font-bold text-ms-main">Devolutivas das redações com nota confirmada (uma página por aluno)</p>
+                    <div className="flex items-center gap-3 flex-wrap">
+                      <select value={turmaDevolutiva} onChange={(e) => setTurmaDevolutiva(e.target.value)} className="px-2 py-1.5 bg-ms-dark border border-gray-800 rounded-lg text-ms-main">
+                        <option value="">Todas as turmas</option>
+                        {[...new Set((lista ?? []).map((r) => r.turma_nome).filter((t): t is string => !!t))].sort((a, b) => a.localeCompare(b, 'pt-BR')).map((t) => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                      <select value={justDevolutiva} onChange={(e) => setJustDevolutiva(e.target.value as 'NAO' | 'IA' | 'SEM_IDENTIFICAR')} className="px-2 py-1.5 bg-ms-dark border border-gray-800 rounded-lg text-ms-main" title="Justificativas por competência geradas pela IA">
+                        <option value="IA">Justificativas: identificar como IA</option>
+                        <option value="SEM_IDENTIFICAR">Justificativas: sem identificar</option>
+                        <option value="NAO">Sem justificativas</option>
+                      </select>
+                      <label className="flex items-center gap-1.5 cursor-pointer select-none text-ms-main">
+                        <input type="checkbox" checked={textoDevolutiva} onChange={(e) => setTextoDevolutiva(e.target.checked)} className="accent-ms-blue" /> Incluir o texto transcrito
+                      </label>
+                      <button type="button" disabled={montandoDevolutiva} onClick={() => void imprimirDevolutivas()} className="px-3 py-1.5 rounded-lg bg-ms-blue text-white font-bold disabled:opacity-50">
+                        {montandoDevolutiva ? 'Montando…' : 'Imprimir'}
+                      </button>
+                    </div>
+                  </div>
+                )}
                 <label className="flex items-center gap-2 text-xs font-bold text-ms-main cursor-pointer select-none">
                   <input type="checkbox" checked={previaAuto} onChange={(e) => setPreviaAuto(e.target.checked)} className="accent-ms-blue" />
                   Já gerar a prévia de correção da IA (o professor só confere e confirma a nota)
