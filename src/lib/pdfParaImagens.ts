@@ -23,12 +23,24 @@ export async function abrirPdf(arquivo: File): Promise<PdfAberto> {
     import('pdfjs-dist/build/pdf.worker.min.mjs?url'),
   ]);
   pdfjs.GlobalWorkerOptions.workerSrc = worker.default;
-  const tarefa = pdfjs.getDocument({ data: new Uint8Array(await arquivo.arrayBuffer()) });
-  const doc = await tarefa.promise;
+  const bytes = new Uint8Array(await arquivo.arrayBuffer());
+  const abrir = () => pdfjs.getDocument({ data: bytes.slice() });
+  let tarefa = abrir();
+  let doc = await tarefa.promise;
+  let fechado = false;
+
+  // "Tentar de novo" numa página depois que o lote terminou: o documento já foi fechado, então reabre sob demanda.
+  const garantirAberto = async () => {
+    if (!fechado) return;
+    tarefa = abrir();
+    doc = await tarefa.promise;
+    fechado = false;
+  };
 
   return {
     paginas: doc.numPages,
     renderizar: async (n: number) => {
+      await garantirAberto();
       const pagina = await doc.getPage(n);
       const base = pagina.getViewport({ scale: 1 });
       const viewport = pagina.getViewport({ scale: LADO_PAGINA_PX / Math.max(base.width, base.height) });
@@ -44,6 +56,6 @@ export async function abrirPdf(arquivo: File): Promise<PdfAberto> {
       const d = ctx.getImageData(0, 0, canvas.width, canvas.height);
       return { width: canvas.width, height: canvas.height, data: d.data };
     },
-    fechar: () => { void tarefa.destroy(); },
+    fechar: () => { fechado = true; void tarefa.destroy(); },
   };
 }
