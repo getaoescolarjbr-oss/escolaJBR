@@ -232,6 +232,15 @@ export function ModoCorrecaoPage({ provaEsperadaId, onFechar, onCorrigido }: Pro
         setLeitura(null);
         setErro(null);
         setAnuladas(new Set());
+        if (cache.gabarito.length === 0) {
+          // Prova sem questão objetiva (ex.: só redação): não existe cartão-resposta para ler, e o QR da
+          // folha de redação identifica o aluno mas não leva a nenhuma bolha. Sem este aviso a tela
+          // ficava dizendo "nenhuma marcação detectada" para uma folha que nunca teve marcação.
+          setErro('Esta prova não tem questões objetivas (só redação), então não há cartão-resposta para ler. Para corrigir a redação, feche esta tela e use "Corrigir redações" na avaliação.');
+          void bipe('erro');
+          mudarFase('PRONTO');
+          return;
+        }
         void bipe('identificado');
         mudarFase('LENDO_CARTAO');
         return;

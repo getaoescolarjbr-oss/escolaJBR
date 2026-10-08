@@ -60,16 +60,45 @@ function amostraBilinear(img: ImagemRgba, x: number, y: number, saida: Uint8Clam
   saida[o + 3] = 255;
 }
 
-/**
- * Lê o QR, acha as marcas e devolve a caixa de texto endireitada. `ok: false` traz o motivo em
- * português para a tela dizer ao professor o que ajustar (foto cortada, sem QR, etc.).
- */
-export async function recortarCaixaRedacao(img: ImagemRgba): Promise<ResultadoRecorte> {
+const MSG_SEM_QR = 'Não encontrei o QR Code. Enquadre a folha inteira, com o QR visível e bem iluminado.';
+const MSG_SEM_MARCAS = 'Não encontrei os 4 quadrados pretos dos cantos. Fotografe a folha inteira, sem cortar os cantos nem cobri-los com o dedo.';
+
+/** Reduz a imagem por média de área (sem canvas, então também roda fora do navegador). Sem ampliar. */
+export function reduzirImagem(img: ImagemRgba, ladoMaximo: number): ImagemRgba {
+  const f = Math.max(img.width, img.height) / ladoMaximo;
+  if (f <= 1) return img;
+  const w = Math.max(1, Math.round(img.width / f));
+  const h = Math.max(1, Math.round(img.height / f));
+  const saida = new Uint8ClampedArray(w * h * 4);
+  for (let y = 0; y < h; y++) {
+    const y0 = Math.floor(y * f);
+    const y1 = Math.max(y0 + 1, Math.min(img.height, Math.floor((y + 1) * f)));
+    for (let x = 0; x < w; x++) {
+      const x0 = Math.floor(x * f);
+      const x1 = Math.max(x0 + 1, Math.min(img.width, Math.floor((x + 1) * f)));
+      let r = 0, g = 0, b = 0, n = 0;
+      for (let yy = y0; yy < y1; yy++) {
+        for (let xx = x0; xx < x1; xx++) {
+          const i = (yy * img.width + xx) * 4;
+          r += img.data[i]; g += img.data[i + 1]; b += img.data[i + 2]; n++;
+        }
+      }
+      const o = (y * w + x) * 4;
+      saida[o] = r / n; saida[o + 1] = g / n; saida[o + 2] = b / n; saida[o + 3] = 255;
+    }
+  }
+  return { width: w, height: h, data: saida };
+}
+
+type Deteccao = { ok: true; codigo: string; marcas: Ponto[] } | { ok: false; motivo: string; progresso: number };
+
+/** QR + 4 marcas numa imagem (nas coordenadas dela). `progresso` diz até onde chegou, para escolher a mensagem. */
+function detectar(img: ImagemRgba): Deteccao {
   // O QR vem do jsQR direto (não de lerQrCode) porque aqui preciso também do TAMANHO dele na foto:
   // diferente do cartão-resposta, o QR desta folha fica DENTRO do retângulo das marcas, e os quadrados
   // sólidos dos cantos do QR são candidatos a "marca" que precisam ser descartados.
   const achado = jsQR(img.data, img.width, img.height, { inversionAttempts: 'attemptBoth' });
-  if (!achado) return { ok: false, motivo: 'Não encontrei o QR Code. Enquadre a folha inteira, com o QR visível e bem iluminado.' };
+  if (!achado) return { ok: false, motivo: MSG_SEM_QR, progresso: 0 };
   const L = achado.location;
   const centro: Ponto = {
     x: (L.topLeftCorner.x + L.topRightCorner.x + L.bottomLeftCorner.x + L.bottomRightCorner.x) / 4,
@@ -83,10 +112,40 @@ export async function recortarCaixaRedacao(img: ImagemRgba): Promise<ResultadoRe
     (c) => Math.hypot(c.somaX / c.area - centro.x, c.somaY / c.area - centro.y) > ladoQr * 0.85,
   );
   const marcas = acharMarcas(fora, img.width, img.height, ASPECTO_MARCAS, centro);
-  if (!marcas) {
-    return { ok: false, motivo: 'Não encontrei os 4 quadrados pretos dos cantos. Fotografe a folha inteira, sem cortar os cantos nem cobri-los com o dedo.' };
+  if (!marcas) return { ok: false, motivo: MSG_SEM_MARCAS, progresso: 1 };
+  return { ok: true, codigo: achado.data, marcas };
+}
+
+/** Lados maiores (px) em que a detecção é tentada: a imagem inteira e, se falhar, versões menores. */
+const ESCALAS_DETECCAO = [1800, 1200, 800];
+
+/**
+ * Lê o QR, acha as marcas e devolve a caixa de texto endireitada. `ok: false` traz o motivo em
+ * português para a tela dizer ao professor o que ajustar (foto cortada, sem QR, etc.).
+ *
+ * A detecção é tentada na imagem inteira e, se falhar, em versões reduzidas: em foto de celular de alta
+ * resolução o ruído e a compressão atrapalham o QR e as marcas, e a média de área ao reduzir limpa isso
+ * (a leitura ao vivo pela câmera já trabalha em ~1600 px). Achadas as marcas, o recorte sai da imagem
+ * ORIGINAL, na resolução máxima.
+ */
+export async function recortarCaixaRedacao(img: ImagemRgba): Promise<ResultadoRecorte> {
+  const lado = Math.max(img.width, img.height);
+  const tentativas: ImagemRgba[] = [img];
+  for (const l of ESCALAS_DETECCAO) if (l < lado * 0.9) tentativas.push(reduzirImagem(img, l));
+
+  let melhorFalha: { motivo: string; progresso: number } | null = null;
+  let achado: { codigo: string; marcas: Ponto[] } | null = null;
+  for (const base of tentativas) {
+    const d = detectar(base);
+    if (d.ok) {
+      const k = img.width / base.width;
+      achado = { codigo: d.codigo, marcas: d.marcas.map((m) => ({ x: m.x * k, y: m.y * k })) };
+      break;
+    }
+    if (!melhorFalha || d.progresso > melhorFalha.progresso) melhorFalha = { motivo: d.motivo, progresso: d.progresso };
   }
-  const qr = { valor: achado.data };
+  if (!achado) return { ok: false, motivo: melhorFalha?.motivo ?? MSG_SEM_QR };
+  const { codigo, marcas } = achado;
 
   const h = calcularHomografia(CANTOS_PAPEL, marcas);
   if (!h) return { ok: false, motivo: 'A folha ficou muito torta na foto. Tire outra, com o celular mais paralelo à mesa.' };
@@ -101,7 +160,7 @@ export async function recortarCaixaRedacao(img: ImagemRgba): Promise<ResultadoRe
       amostraBilinear(img, p.x, p.y, saida, (v * largura + u) * 4);
     }
   }
-  return { ok: true, dados: { codigo: qr.valor, recorte: { width: largura, height: altura, data: saida }, marcas } };
+  return { ok: true, dados: { codigo, recorte: { width: largura, height: altura, data: saida }, marcas } };
 }
 
 /** Só no navegador: recorte -> JPEG para enviar/guardar. */
