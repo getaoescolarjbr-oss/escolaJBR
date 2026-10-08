@@ -50,7 +50,7 @@ export function MinhasAvaliacoesTab() {
   const [reimprimirDe, setReimprimirDe] = useState<Avaliacao | null>(null);
   const [previewDe, setPreviewDe] = useState<Avaliacao | null>(null);
   const [corrigindoDe, setCorrigindoDe] = useState<Avaliacao | null>(null);
-  const [corrigindoRedacaoDe, setCorrigindoRedacaoDe] = useState<Avaliacao | null>(null);
+  const [corrigindoRedacaoDe, setCorrigindoRedacaoDe] = useState<Pick<Avaliacao, 'id' | 'titulo'> | null>(null);
   // Ids das provas que têm questão de redação — decide se o botão "Corrigir redações" aparece.
   const [comRedacao, setComRedacao] = useState<Set<string>>(new Set());
   const [inserindoCota, setInserindoCota] = useState<{ avaliacao: AvaliacaoArea; cota: ProvaAreaCota } | null>(null);
@@ -207,7 +207,7 @@ export function MinhasAvaliacoesTab() {
   if (loading) return <div className="py-12 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-ms-blueText" /></div>;
 
   const proprias = avaliacoes.filter((a) => grupoDe(a) === grupo);
-  // Cotas do professor nas avaliações de área/geral do grupo. A que ele mesmo criou já
+  // Cotas (ou correção, quando é corretor de turma) do professor nas avaliações de área/geral do grupo. A que ele mesmo criou já
   // aparece acima com todas as ações — aqui entra só a parte de inserir questões dela.
   const cotasDoGrupo = cotasDeOutros(grupo);
 
@@ -218,7 +218,7 @@ export function MinhasAvaliacoesTab() {
     return avaliacoesArea.filter(
       (av) =>
         (g === 'GERAL') === !!av.eh_prova_geral &&
-        (av.cotas ?? []).some((c) => c.eh_minha_cota) &&
+        ((av.cotas ?? []).some((c) => c.eh_minha_cota) || !!av.sou_corretor) &&
         !avaliacoes.some((a) => a.id === av.id)
     );
   }
@@ -465,9 +465,9 @@ export function MinhasAvaliacoesTab() {
           <div className="flex items-center gap-2">
             <Layers className="w-5 h-5 text-blue-400" />
             <div>
-              <h3 className="text-sm font-bold text-ms-main">Suas cotas de questões</h3>
+              <h3 className="text-sm font-bold text-ms-main">Suas cotas e correções</h3>
               <p className="text-xs text-ms-muted">
-                O coordenador de área disponibilizou cotas de questões para você inserir na prova colaborativa.
+                Provas colaborativas em que você tem cota de questões para inserir ou foi escolhido como corretor de uma turma.
               </p>
             </div>
           </div>
@@ -500,6 +500,15 @@ export function MinhasAvaliacoesTab() {
                         className="flex items-center gap-1.5 px-2.5 py-1 bg-ms-card border border-gray-700 text-ms-main rounded-full text-[11px] font-bold hover:bg-gray-800"
                       >
                         <Eye className="w-3 h-3" /> Pré-visualizar
+                      </button>
+                    )}
+                    {comRedacao.has(av.id) && av.status === 'PUBLICADA' && (
+                      <button
+                        onClick={() => setCorrigindoRedacaoDe({ id: av.id, titulo: av.titulo })}
+                        className="flex items-center gap-1.5 px-2.5 py-1 bg-ms-blue text-white rounded-full text-[11px] font-bold hover:bg-blue-600"
+                        title="Fotografar as folhas de redação, transcrever e corrigir com prévia da IA"
+                      >
+                        <FileText className="w-3 h-3" /> Corrigir redações
                       </button>
                     )}
                     {!av.edicao_permitida && (

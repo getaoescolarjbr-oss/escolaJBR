@@ -19,8 +19,9 @@ interface Opcao {
   area_conhecimento: string | null;
 }
 
-// Corretor por turma: só ele (e a coordenação) altera a nota daquela turma; os demais
-// professores que recebem a nota só a veem. A regra fica no banco.
+// Corretores por turma: só eles (e a coordenação) alteram a nota daquela turma; os demais
+// professores que recebem a nota só a veem. A regra fica no banco. Pode haver mais de um corretor por
+// turma, para dividir o trabalho (na redação, cada um assume as suas: ver CorrigirRedacaoModal).
 //
 // Avaliação geral, em duas etapas:
 //   1. quem criou (o "dono") escolhe qual ÁREA corrige cada turma;
@@ -39,9 +40,11 @@ export function CorretoresModal({ avaliacao, area, onClose, onSalvo }: Props) {
   const [areaDaTurma, setAreaDaTurma] = useState<Record<string, string>>(() =>
     Object.fromEntries((avaliacao.correcao_areas ?? []).map((c) => [c.turma_id, c.area_conhecimento]))
   );
-  const [escolha, setEscolha] = useState<Record<string, string>>(() =>
-    Object.fromEntries((avaliacao.corretores ?? []).map((c) => [c.turma_id, c.professor_id]))
-  );
+  const [escolha, setEscolha] = useState<Record<string, string[]>>(() => {
+    const m: Record<string, string[]> = {};
+    for (const c of avaliacao.corretores ?? []) (m[c.turma_id] ??= []).push(c.professor_id);
+    return m;
+  });
   const [todas, setTodas] = useState('');
   const [loading, setLoading] = useState(true);
   const [salvando, setSalvando] = useState(false);
@@ -108,20 +111,23 @@ export function CorretoresModal({ avaliacao, area, onClose, onSalvo }: Props) {
     setEscolha((prev) => {
       const novo = { ...prev };
       for (const t of turmasEditaveis) {
-        if (opcoesDaTurma(t.id).some((p) => p.professor_id === professorId)) novo[t.id] = professorId;
+        if (opcoesDaTurma(t.id).some((p) => p.professor_id === professorId) && !(novo[t.id] ?? []).includes(professorId)) {
+          novo[t.id] = [...(novo[t.id] ?? []), professorId];
+        }
       }
       return novo;
     });
+    setTodas('');
   }
 
   function mudarAreaDaTurma(turmaId: string, novaArea: string) {
     setAreaDaTurma((prev) => ({ ...prev, [turmaId]: novaArea }));
     // O corretor escolhido precisa ser da área que corrige; se não for, limpa.
     setEscolha((prev) => {
-      const atual = prev[turmaId];
-      if (!atual || !novaArea) return prev;
-      const ehDaArea = recebem.some((p) => p.professor_id === atual && p.area_conhecimento === novaArea);
-      return ehDaArea ? prev : { ...prev, [turmaId]: '' };
+      const atuais = prev[turmaId] ?? [];
+      if (atuais.length === 0 || !novaArea) return prev;
+      const daArea = atuais.filter((id) => recebem.some((p) => p.professor_id === id && p.area_conhecimento === novaArea));
+      return daArea.length === atuais.length ? prev : { ...prev, [turmaId]: daArea };
     });
   }
 
@@ -135,9 +141,14 @@ export function CorretoresModal({ avaliacao, area, onClose, onSalvo }: Props) {
           turmas.map((t) => ({ turma_id: t.id, area: areaDaTurma[t.id] || null }))
         );
       }
+      // Uma linha por (turma, corretor); turma sem corretor vai com professor_id nulo para limpar o que havia.
       await definirCorretores(
         avaliacao.id,
-        turmasEditaveis.map((t) => ({ turma_id: t.id, professor_id: escolha[t.id] || null }))
+        turmasEditaveis.flatMap((t): { turma_id: string; professor_id: string | null }[] =>
+          (escolha[t.id] ?? []).length > 0
+            ? (escolha[t.id] ?? []).map((professor_id) => ({ turma_id: t.id, professor_id }))
+            : [{ turma_id: t.id, professor_id: null }]
+        )
       );
       onSalvo();
     } catch (e: any) {
@@ -149,6 +160,7 @@ export function CorretoresModal({ avaliacao, area, onClose, onSalvo }: Props) {
 
   const nomeProfessor = (id?: string) => recebem.find((p) => p.professor_id === id)?.professor_nome
     ?? (avaliacao.corretores ?? []).find((c) => c.professor_id === id)?.professor_nome ?? '';
+  const nomesDaTurma = (turmaId: string) => (escolha[turmaId] ?? []).map(nomeProfessor).filter(Boolean).join(', ');
 
   const selectClass =
     'w-full px-3 py-2 bg-white dark:bg-ms-dark border border-gray-300 dark:border-gray-800 rounded-xl text-sm text-ms-main outline-none focus:ring-2 focus:ring-ms-blue';
@@ -164,8 +176,8 @@ export function CorretoresModal({ avaliacao, area, onClose, onSalvo }: Props) {
               <UserCheck className="w-5 h-5 text-ms-blueText" /> Corretores por turma
             </h2>
             <p className="text-xs text-ms-muted">
-              {avaliacao.titulo} · Só o corretor da turma (e a coordenação) lança e altera a nota. Os demais professores que
-              recebem a nota apenas a veem no diário.
+              {avaliacao.titulo} · Só os corretores da turma (e a coordenação) lançam e alteram a nota. Pode haver mais de um
+              corretor por turma, para dividir o trabalho. Os demais professores que recebem a nota apenas a veem no diário.
             </p>
           </div>
           <button onClick={onClose} className="text-ms-muted hover:text-ms-main p-1 rounded-lg">
@@ -209,9 +221,9 @@ export function CorretoresModal({ avaliacao, area, onClose, onSalvo }: Props) {
 
               {turmasEditaveis.length > 1 && (
                 <div>
-                  <label className="block text-xs font-bold text-ms-muted mb-1">Mesmo corretor para várias turmas</label>
+                  <label className="block text-xs font-bold text-ms-muted mb-1">Incluir o mesmo corretor em várias turmas</label>
                   <select value={todas} onChange={(e) => aplicarATodas(e.target.value)} className={selectClass}>
-                    <option value="">Escolha para aplicar em todas as suas turmas em que ele recebe a nota...</option>
+                    <option value="">Escolha para incluir em todas as suas turmas em que ele recebe a nota...</option>
                     {opcoesAplicarTodas.map((p) => (
                       <option key={p.professor_id} value={p.professor_id}>{p.professor_nome}</option>
                     ))}
@@ -248,21 +260,49 @@ export function CorretoresModal({ avaliacao, area, onClose, onSalvo }: Props) {
                         </select>
                       )}
                       {editavel ? (
-                        <select
-                          value={escolha[t.id] ?? ''}
-                          onChange={(e) => setEscolha((prev) => ({ ...prev, [t.id]: e.target.value }))}
-                          className={selectClass}
-                        >
-                          <option value="">Sem corretor — todos que recebem a nota podem alterar</option>
-                          {opcoes.map((p) => (
-                            <option key={p.professor_id} value={p.professor_id}>{p.professor_nome}</option>
-                          ))}
-                        </select>
+                        <div className="space-y-1.5">
+                          {(escolha[t.id] ?? []).length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {(escolha[t.id] ?? []).map((id) => (
+                                <span key={id} className="inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-full bg-ms-blue/10 text-ms-blueText text-xs font-bold">
+                                  {nomeProfessor(id)}
+                                  <button
+                                    type="button"
+                                    aria-label={`Remover ${nomeProfessor(id)}`}
+                                    onClick={() => setEscolha((prev) => ({ ...prev, [t.id]: (prev[t.id] ?? []).filter((x) => x !== id) }))}
+                                    className="p-0.5 rounded-full hover:bg-ms-blue/20"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          <select
+                            value=""
+                            onChange={(e) => {
+                              const id = e.target.value;
+                              if (id) setEscolha((prev) => ({ ...prev, [t.id]: [...(prev[t.id] ?? []), id] }));
+                            }}
+                            className={selectClass}
+                          >
+                            <option value="">
+                              {(escolha[t.id] ?? []).length === 0
+                                ? 'Sem corretor — todos que recebem a nota podem alterar'
+                                : 'Incluir outro corretor...'}
+                            </option>
+                            {opcoes.filter((p) => !(escolha[t.id] ?? []).includes(p.professor_id)).map((p) => (
+                              <option key={p.professor_id} value={p.professor_id}>{p.professor_nome}</option>
+                            ))}
+                          </select>
+                        </div>
                       ) : (
                         <span className="text-xs text-ms-muted">
                           {areaT ? <>Corrigida por <b className="text-ms-main">{areaT}</b></> : 'Ainda sem área'}
                           {' · '}
-                          {escolha[t.id] ? <>corretor: <b className="text-ms-main">{nomeProfessor(escolha[t.id])}</b></> : 'corretor não definido'}
+                          {(escolha[t.id] ?? []).length > 0
+                            ? <>{(escolha[t.id] ?? []).length > 1 ? 'corretores' : 'corretor'}: <b className="text-ms-main">{nomesDaTurma(t.id)}</b></>
+                            : 'corretor não definido'}
                         </span>
                       )}
                     </div>

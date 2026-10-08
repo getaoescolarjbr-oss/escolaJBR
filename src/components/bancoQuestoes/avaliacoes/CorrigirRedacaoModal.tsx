@@ -1,9 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { AlertTriangle, Camera, CheckCircle2, Loader2, Pencil, X } from 'lucide-react';
+import { AlertTriangle, Camera, CheckCircle2, Loader2, Pencil, Users, X } from 'lucide-react';
 import type { Avaliacao } from '../../../types/avaliacoes';
 import { arquivoParaImagem, recortarCaixaRedacao, recorteParaJpeg } from '../../../lib/recorteFolhaRedacao';
 import {
+  assumirRedacao,
+  dividirRedacoes,
   enviarImagemRedacao,
+  liberarRedacao,
   listarRedacoes,
   prepararRedacao,
   prepararRedacaoAluno,
@@ -21,7 +24,7 @@ import { RubricasModal } from './RubricasModal';
 // transcreve, e o professor confere o texto, gera a prévia por competência e confirma a nota dele.
 
 interface Props {
-  avaliacao: Avaliacao;
+  avaliacao: Pick<Avaliacao, 'id' | 'titulo'>;
   onClose: () => void;
   /** Chamado ao fechar depois de ter confirmado alguma nota, para a lista de avaliações recarregar. */
   onCorrigido: () => void;
@@ -79,6 +82,10 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
   const [houveNota, setHouveNota] = useState(false);
   const [gerenciando, setGerenciando] = useState(false);
   const [relatorio, setRelatorio] = useState(false);
+  const [soMinhas, setSoMinhas] = useState(false);
+  const [dividindo, setDividindo] = useState(false);
+  const [ocupadoDono, setOcupadoDono] = useState<string | null>(null);
+  const [aviso, setAviso] = useState<string | null>(null);
   const seq = useRef(0);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -157,7 +164,64 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
     }
   }
 
-  const visiveis = (lista ?? []).filter((r) => !questaoId || r.question_id === questaoId);
+  const chave = (r: RedacaoDaLista) => `${r.aluno_id}-${r.question_id}`;
+
+  // Assumir/liberar: com mais de um corretor por turma, cada um fica com as suas redações.
+  async function assumir(r: RedacaoDaLista) {
+    setOcupadoDono(chave(r));
+    setErro(null);
+    setAviso(null);
+    try {
+      await assumirRedacao(avaliacao.id, r.aluno_id, r.question_id);
+      await recarregar();
+    } catch (e) {
+      setErro(mensagemErro(e));
+      await recarregar();
+    } finally {
+      setOcupadoDono(null);
+    }
+  }
+
+  async function liberar(r: RedacaoDaLista) {
+    setOcupadoDono(chave(r));
+    setErro(null);
+    setAviso(null);
+    try {
+      await liberarRedacao(avaliacao.id, r.aluno_id, r.question_id);
+      await recarregar();
+    } catch (e) {
+      setErro(mensagemErro(e));
+    } finally {
+      setOcupadoDono(null);
+    }
+  }
+
+  async function dividir(refazer: boolean) {
+    if (refazer && !window.confirm('Redistribuir TODAS as redações ainda não corrigidas entre os corretores? Quem já tinha assumido uma perde a atribuição.')) return;
+    setDividindo(true);
+    setErro(null);
+    setAviso(null);
+    try {
+      const res = await dividirRedacoes(avaliacao.id, refazer);
+      setAviso(
+        res.atribuidas === 0 && res.sem_corretor === 0
+          ? 'Nada a distribuir: todas as redações já têm responsável ou já foram corrigidas.'
+          : `${res.atribuidas} redação(ões) distribuída(s) entre os corretores.` +
+            (res.sem_corretor > 0 ? ` ${res.sem_corretor} ficaram de fora porque a turma não tem corretor definido (Corretores, na coordenação de área).` : '')
+      );
+      await recarregar();
+    } catch (e) {
+      setErro(mensagemErro(e));
+    } finally {
+      setDividindo(false);
+    }
+  }
+
+  // A divisão aparece quando alguma turma tem 2+ corretores ou alguém já assumiu uma redação; para quem
+  // corrige sozinho a tela fica como era.
+  const haResponsaveis = (lista ?? []).some((r) => r.responsavel_nome || (r.n_corretores ?? 0) > 1);
+  const souGestor = (lista ?? []).some((r) => r.sou_gestor);
+  const visiveis = (lista ?? []).filter((r) => (!questaoId || r.question_id === questaoId) && (!soMinhas || r.sou_responsavel));
   const emAndamento = processos.some((p) => !['pronto', 'erro'].includes(p.etapa));
 
   return (
@@ -186,6 +250,12 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
             />
           ) : (
             <div className="p-6 space-y-5">
+              {aviso && (
+                <div className="flex items-start gap-2 bg-emerald-100 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-900 rounded-lg px-4 py-3">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 mt-0.5 shrink-0" />
+                  <p className="text-sm text-emerald-900 dark:text-emerald-300 font-medium">{aviso}</p>
+                </div>
+              )}
               {erro && (
                 <div className="flex items-start gap-2 bg-red-100 dark:bg-red-950/40 border border-red-300 dark:border-red-900 rounded-lg px-4 py-3">
                   <AlertTriangle className="w-4 h-4 text-red-400 mt-0.5 shrink-0" />
@@ -225,6 +295,28 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                   )}
                   <button onClick={() => setGerenciando(true)} className="text-xs text-ms-blue underline">Critérios de correção</button>
                   <button onClick={() => setRelatorio(true)} className="text-xs text-ms-blue underline">Relatório da turma</button>
+                  {souGestor && (
+                    <span className="inline-flex items-center gap-2">
+                      <button
+                        onClick={() => void dividir(false)}
+                        disabled={dividindo}
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-800 text-xs font-bold text-ms-main hover:bg-gray-800 disabled:opacity-40"
+                        title="Reparte as redações sem responsável entre os corretores de cada turma"
+                      >
+                        {dividindo ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Users className="w-3.5 h-3.5" />} Dividir entre os corretores
+                      </button>
+                      {haResponsaveis && (
+                        <button onClick={() => void dividir(true)} disabled={dividindo} className="text-[11px] text-ms-muted underline disabled:opacity-40">
+                          redistribuir tudo
+                        </button>
+                      )}
+                    </span>
+                  )}
+                  {haResponsaveis && (
+                    <label className="flex items-center gap-1.5 text-xs text-ms-main cursor-pointer">
+                      <input type="checkbox" checked={soMinhas} onChange={(e) => setSoMinhas(e.target.checked)} /> Só as minhas
+                    </label>
+                  )}
                   <span className="text-xs text-ms-muted">
                     Enquadre a folha inteira (QR e os 4 quadrados pretos dos cantos visíveis). Pode escolher várias fotos de uma vez.
                   </span>
@@ -267,6 +359,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                         <th className="text-left px-3 py-2 w-12">Nº</th>
                         <th className="text-left px-3 py-2">Aluno</th>
                         <th className="text-left px-3 py-2 hidden sm:table-cell">Turma</th>
+                        {haResponsaveis && <th className="text-left px-3 py-2">Responsável</th>}
                         <th className="text-left px-3 py-2">Situação</th>
                         <th className="text-right px-3 py-2">Nota</th>
                         <th className="px-3 py-2 w-36" />
@@ -280,12 +373,39 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                             <td className="px-3 py-2 text-ms-muted">{r.numero_chamada ?? '—'}</td>
                             <td className="px-3 py-2 text-ms-main font-medium">{r.aluno_nome}</td>
                             <td className="px-3 py-2 text-ms-muted hidden sm:table-cell">{r.turma_nome ?? '—'}</td>
+                            {haResponsaveis && (
+                              <td className="px-3 py-2 text-xs">
+                                {r.responsavel_nome ? (
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <span className={r.sou_responsavel ? 'font-bold text-ms-main' : 'text-ms-muted'}>{r.sou_responsavel ? 'Você' : r.responsavel_nome}</span>
+                                    {(r.sou_responsavel || r.sou_gestor) && (
+                                      <button onClick={() => void liberar(r)} disabled={ocupadoDono === chave(r)} className="text-[11px] text-ms-blue underline disabled:opacity-40">liberar</button>
+                                    )}
+                                  </span>
+                                ) : (
+                                  <span className="text-ms-muted">—</span>
+                                )}
+                              </td>
+                            )}
                             <td className="px-3 py-2"><span className={`text-[11px] px-2 py-0.5 rounded-full border ${st.classe}`}>{st.texto}</span></td>
                             <td className="px-3 py-2 text-right text-ms-main">{r.nota_total != null ? `${r.nota_total}/${r.nota_maxima ?? 1000}` : '—'}</td>
                             <td className="px-3 py-2 text-right">
-                              {r.envio_id ? (
+                              {r.bloqueio && r.bloqueio.startsWith('Esta redação está com') && !r.sou_gestor && !r.envio_id ? (
+                                <span className="text-[11px] text-ms-muted" title={r.bloqueio}>Com {r.responsavel_nome}</span>
+                              ) : r.bloqueio && !r.sou_gestor && !r.envio_id ? (
+                                <span className="text-[11px] text-ms-muted" title={r.bloqueio}>Sem acesso</span>
+                              ) : haResponsaveis && !r.responsavel_nome && !r.bloqueio ? (
+                                <button
+                                  onClick={() => void assumir(r)}
+                                  disabled={ocupadoDono === chave(r)}
+                                  className="px-3 py-1 rounded-lg border border-gray-800 text-xs font-bold text-ms-main hover:bg-gray-800 disabled:opacity-40"
+                                  title="Reservar esta redação para você corrigir"
+                                >
+                                  {ocupadoDono === chave(r) ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Assumir'}
+                                </button>
+                              ) : r.envio_id ? (
                                 <button onClick={() => setAbertoId(r.envio_id)} className="px-3 py-1 rounded-lg border border-gray-800 text-xs font-bold text-ms-main hover:bg-gray-800">
-                                  {r.status === 'REVISADA' ? 'Ver / ajustar' : 'Revisar'}
+                                  {r.bloqueio && !r.sou_gestor ? 'Ver' : r.status === 'REVISADA' ? 'Ver / ajustar' : 'Revisar'}
                                 </button>
                               ) : (
                                 <button
