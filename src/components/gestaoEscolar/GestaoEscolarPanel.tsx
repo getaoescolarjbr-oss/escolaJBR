@@ -11,6 +11,7 @@ import { PatrimonioPanel } from './patrimonio/PatrimonioPanel';
 import { RHPanel } from './rh/RHPanel';
 import { GovernancaPanel } from './governanca/GovernancaPanel';
 import { DocumentosInstitucionaisPanel } from './documentos/DocumentosInstitucionaisPanel';
+import { ChamadasLancadasPanel } from '../ChamadasLancadasPanel';
 import { OcorrenciasIndicador } from './indicadores/OcorrenciasIndicador';
 import { OcorrenciasModal } from './indicadores/OcorrenciasModal';
 import { AlunosStatusModal } from './indicadores/AlunosStatusModal';
@@ -231,7 +232,7 @@ function IndicadoresTab() {
   );
 }
 
-type Aba = 'indicadores' | 'almoxarifado' | 'manutencao' | 'portaria' | 'patrimonio' | 'rh' | 'governanca' | 'documentos';
+type Aba = 'indicadores' | 'almoxarifado' | 'manutencao' | 'portaria' | 'patrimonio' | 'rh' | 'governanca' | 'documentos' | 'chamadas';
 
 // A partir desta fase, o módulo Gestão Escolar passa a abrigar sub-módulos
 // administrativos (Almoxarifado, e futuramente Manutenção Predial e Portaria/
@@ -253,6 +254,7 @@ export function GestaoEscolarPanel() {
     { id: 'rh', label: 'RH', roles: ['GESTAO', 'SECRETARIA'] },
     { id: 'governanca', label: 'Governança', roles: ['GESTAO', 'COORDENACAO', 'SECRETARIA'] },
     { id: 'documentos', label: 'Documentos Institucionais', roles: ['GESTAO', 'COORDENACAO'] },
+    { id: 'chamadas', label: 'Chamadas lançadas', roles: ['GESTAO', 'COORDENACAO', 'SECRETARIA'] },
   ];
 
   return (
@@ -282,6 +284,7 @@ export function GestaoEscolarPanel() {
       {aba === 'rh' && hasAnyRole(['GESTAO', 'SECRETARIA']) && <RHPanel />}
       {aba === 'governanca' && hasAnyRole(['GESTAO', 'COORDENACAO', 'SECRETARIA']) && <GovernancaPanel />}
       {aba === 'documentos' && hasAnyRole(['GESTAO', 'COORDENACAO']) && <DocumentosInstitucionaisPanel />}
+      {aba === 'chamadas' && hasAnyRole(['GESTAO', 'COORDENACAO', 'SECRETARIA']) && <ChamadasLancadasPanel />}
     </div>
   );
 }

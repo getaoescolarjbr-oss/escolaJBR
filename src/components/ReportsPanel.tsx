@@ -7,6 +7,7 @@ import { arredondarNotaMS, getConfigPorTurma, getCorGradiente, estaAprovado, get
 import { MatriculaModal } from './MatriculaModal';
 import { ExameFinalPanel } from './ExameFinalPanel';
 import { printReport } from '../utils/printUtils';
+import { ChamadasLancadasPanel } from './ChamadasLancadasPanel';
 
 interface ReportsPanelProps {
   professor: Professor;
@@ -24,7 +25,7 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
   const [loading, setLoading] = useState(true);
   
   // Estados para o Painel de Desempenho Anual
-  const [reportTab, setReportTab] = useState<'bimestral' | 'anual'>(bimestreId === 5 ? 'anual' : 'bimestral');
+  const [reportTab, setReportTab] = useState<'bimestral' | 'anual' | 'chamadas'>(bimestreId === 5 ? 'anual' : 'bimestral');
   // Exame Final não tem "bimestre" pra comparar — só o menu de Desempenho Anual
   // faz sentido aqui, com um botão pra abrir o lançamento das notas do exame.
   const [mostrarLancamentoExame, setMostrarLancamentoExame] = useState(false);
@@ -439,6 +440,18 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
             >
                 Desempenho Anual
             </button>
+            <button
+              onClick={() => setReportTab('chamadas')}
+              className={`px-6 py-2 rounded-lg text-xs font-black uppercase tracking-widest transition-all ${
+                  reportTab === 'chamadas'
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-900/20'
+                    : theme === 'light'
+                      ? 'text-blue-700 hover:text-blue-900 hover:bg-blue-100/40'
+                      : 'text-blue-200 hover:text-white'
+              }`}
+            >
+                Chamadas lançadas
+            </button>
         </div>
       )}
 
@@ -455,7 +468,9 @@ export function ReportsPanel({ professor, turmaId, disciplinaId, bimestreId, the
         <ExameFinalPanel professor={professor} turmaId={turmaId} disciplinaId={disciplinaId} theme={theme} isLocked={isLocked} />
       ) : (
       <>
-      {reportTab === 'anual' ? (
+      {reportTab === 'chamadas' ? (
+        <ChamadasLancadasPanel professorId={professor.id} />
+      ) : reportTab === 'anual' ? (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2">
             {loadingAnual ? (
               <div className="p-20 text-center">
