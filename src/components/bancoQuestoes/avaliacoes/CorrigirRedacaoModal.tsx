@@ -109,6 +109,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
   const [justDevolutiva, setJustDevolutiva] = useState<'NAO' | 'IA' | 'SEM_IDENTIFICAR'>('IA');
   const [montandoDevolutiva, setMontandoDevolutiva] = useState(false);
   const [previaAuto, setPreviaAuto] = useState(true);
+  const [pularFeitas, setPularFeitas] = useState(true);
   const [gerandoPrevias, setGerandoPrevias] = useState<{ feitas: number; total: number; falhas: number } | null>(null);
   const seq = useRef(0);
   const tentarDeNovo = useRef(new Map<number, { rotulo: string; obter: () => Promise<ImagemRgba> }>());
@@ -214,6 +215,18 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
         throw new Error('Esta prova tem mais de uma redação. Escolha a questão no seletor acima e envie de novo.');
       }
       if (prep.prova_id !== avaliacao.id) throw new Error('Esta folha é de outra prova.');
+
+      // Reenvio do mesmo arquivo (ex.: o PDF único com todas as redações): o que já foi lido não gasta a IA de novo.
+      if (pularFeitas && prep.status !== 'ENVIADA') {
+        if (prep.status === 'TRANSCRITA' && previaAuto) {
+          marcar(id, { etapa: 'corrigindo', detalhe: prep.aluno_nome });
+          await gerarPrevia(prep.envio_id);
+          marcar(id, { etapa: 'pronto', detalhe: prep.aluno_nome, aviso: 'já transcrita; só a prévia foi gerada' });
+        } else {
+          marcar(id, { etapa: 'pronto', detalhe: prep.aluno_nome, aviso: 'já estava lida: pulada' });
+        }
+        return;
+      }
 
       marcar(id, { etapa: 'enviando', detalhe: prep.aluno_nome });
       const jpeg = await recorteParaJpeg(rec.dados.recorte);
@@ -498,6 +511,10 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
                     </div>
                   </div>
                 )}
+                <label className="flex items-center gap-2 text-xs font-bold text-ms-main cursor-pointer select-none">
+                  <input type="checkbox" checked={pularFeitas} onChange={(e) => setPularFeitas(e.target.checked)} className="accent-ms-blue" />
+                  Pular as redações que já foram lidas (ao reenviar o mesmo PDF, só as que faltam vão para a IA)
+                </label>
                 <label className="flex items-center gap-2 text-xs font-bold text-ms-main cursor-pointer select-none">
                   <input type="checkbox" checked={previaAuto} onChange={(e) => setPreviaAuto(e.target.checked)} className="accent-ms-blue" />
                   Já gerar a prévia de correção da IA (o professor só confere e confirma a nota)
