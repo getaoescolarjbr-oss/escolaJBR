@@ -171,7 +171,7 @@ export function CorrigirRedacaoModal({ avaliacao, onClose, onCorrigido }: Props)
     if (!det.rubrica) throw new Error('Esta redação não tem modo de correção definido.');
     const texto = det.texto_final ?? (det.linhas ?? []).map((l) => l.texto).join('\n');
     if (!texto.trim()) throw new Error('Sem texto transcrito para corrigir.');
-    const r = await comTentativas('Gerar a prévia', () => corrigirRedacaoComIa(texto.split('\n'), det.tema ?? '', det.rubrica!, det.observacoes), 2);
+    const r = await comTentativas('Gerar a prévia', () => corrigirRedacaoComIa(texto.split('\n'), det.tema ?? '', det.rubrica!, det.observacoes, det.enunciado), 2);
     await comTentativas('Salvar a prévia', () => salvarRedacao(envioId, { correcaoIa: r }));
   }
 
