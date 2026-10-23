@@ -86,6 +86,11 @@ export interface CompetenciaIa {
   nota: number;
   justificativa: string;
   trechos: string[];
+  /** Nota mínima e máxima plausíveis (modo ENEM): a nota prévia fica no topo da faixa quando há dúvida real. */
+  faixa?: { min: number; max: number };
+  confianca?: 'ALTA' | 'MEDIA' | 'BAIXA';
+  /** O que limitou a nota (tetos oficiais, regras da grade). */
+  motivos?: string[];
 }
 
 export interface CorrecaoIa {
@@ -98,6 +103,13 @@ export interface CorrecaoIa {
   alertas: string[];
   linhas_preenchidas: number;
   modelo: string;
+  // Modo ENEM (correção por evidências): campos opcionais, ausentes nas prévias antigas.
+  duvidas?: { competencia: string; motivo: string }[];
+  pontos_fortes?: string[];
+  melhorias?: { competencia: string; linha: number; orientacao: string }[];
+  marcas_por_paragrafo?: { paragrafo: number; marca: string }[];
+  faixa_total?: { min: number; max: number };
+  modo?: 'FORMATIVO' | 'ESTRITO';
 }
 
 export interface CompetenciaProf {
@@ -400,11 +412,13 @@ export async function transcreverRedacao(imagemBase64: string): Promise<{ linhas
   return chamarRedacaoIa('transcrever', { imagemBase64, mimeType: 'image/jpeg' });
 }
 
-export async function corrigirRedacaoComIa(linhas: string[], tema: string, rubrica: RubricaEfetiva, esperado?: string | null): Promise<CorrecaoIa> {
+export async function corrigirRedacaoComIa(linhas: string[], tema: string, rubrica: RubricaEfetiva, esperado?: string | null, proposta?: string | null): Promise<CorrecaoIa> {
   return chamarRedacaoIa('corrigir', {
     linhas,
     tema,
     esperado: esperado ?? undefined,
+    // Enunciado completo (frase temática e textos motivadores): sem ele a IA não sabe o tema exato nem o que é cópia.
+    proposta: proposta ?? undefined,
     rubrica: {
       id: rubrica.id,
       nome: rubrica.nome,

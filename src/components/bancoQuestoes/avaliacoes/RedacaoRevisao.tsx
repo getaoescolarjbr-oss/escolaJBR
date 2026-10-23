@@ -159,7 +159,7 @@ export function RedacaoRevisao({ envioId, onVoltar, onConfirmada }: Props) {
     setErro(null);
     try {
       await salvarRedacao(envioId, { textoFinal: texto });
-      const r = await corrigirRedacaoComIa(texto.split('\n'), det.tema ?? '', rubrica, det.observacoes);
+      const r = await corrigirRedacaoComIa(texto.split('\n'), det.tema ?? '', rubrica, det.observacoes, det.enunciado);
       await salvarRedacao(envioId, { correcaoIa: r });
       setIa(r);
       // Preenche as notas do professor com as da IA só se ele ainda não decidiu nada neste modo.
@@ -331,6 +331,18 @@ export function RedacaoRevisao({ envioId, onVoltar, onConfirmada }: Props) {
                   <p className="text-xs text-amber-900 dark:text-amber-200"><strong>Alertas da IA:</strong> {iaAtual.alertas.join(' · ')}</p>
                 </div>
               )}
+              {iaAtual.pontos_fortes && iaAtual.pontos_fortes.length > 0 && (
+                <details className="text-xs text-ms-main" open>
+                  <summary className="cursor-pointer font-bold">O que o texto faz bem</summary>
+                  <ul className="list-disc pl-5 mt-1 space-y-0.5">{iaAtual.pontos_fortes.map((p, i) => <li key={i}>{p}</li>)}</ul>
+                </details>
+              )}
+              {iaAtual.duvidas && iaAtual.duvidas.length > 0 && (
+                <details className="text-xs text-ms-main">
+                  <summary className="cursor-pointer font-bold">Pontos de dúvida para você conferir ({iaAtual.duvidas.length})</summary>
+                  <ul className="list-disc pl-5 mt-1 space-y-0.5">{iaAtual.duvidas.map((d, i) => <li key={i}><strong>{d.competencia}:</strong> {d.motivo}</li>)}</ul>
+                </details>
+              )}
               {iaAtual.desvios.length > 0 && (
                 <details className="text-xs text-ms-main">
                   <summary className="cursor-pointer font-bold">Desvios apontados ({iaAtual.desvios.length})</summary>
@@ -356,10 +368,13 @@ export function RedacaoRevisao({ envioId, onVoltar, onConfirmada }: Props) {
                   <div className="flex items-center justify-between gap-2">
                     <p className="text-xs font-bold text-ms-main">{c.rotulo}</p>
                     <span className="text-[11px] px-2 py-0.5 rounded-full bg-ms-dark border border-gray-800 text-ms-muted">
-                      {prev ? `IA: ${prev.nota} · ` : ''}máx. {c.max}
+                      {prev ? `IA: ${prev.nota}${prev.faixa && prev.faixa.max > prev.faixa.min ? ` (faixa ${prev.faixa.min}–${prev.faixa.max})` : ''} · ` : ''}máx. {c.max}
                     </span>
                   </div>
                   {prev && <p className="text-xs text-ms-muted leading-relaxed">{prev.justificativa}</p>}
+                  {prev?.motivos && prev.motivos.length > 0 && (
+                    <p className="text-[11px] text-amber-600 dark:text-amber-400">{prev.motivos.join(' · ')}</p>
+                  )}
                   {prev && prev.trechos.length > 0 && (
                     <ul className="text-[11px] text-ms-muted list-disc pl-4 space-y-0.5">{prev.trechos.slice(0, 4).map((t, i) => <li key={i}>{t}</li>)}</ul>
                   )}
